@@ -11,7 +11,7 @@
     "dependencies": {
         "@biomejs/biome": "^2.0.0-beta.1",
         "@hookform/resolvers": "^3.9.1",
-        "@nostr-dev-kit/ndk": "^2.13.1",
+        "@nostr-dev-kit/ndk": "2.13.2",
         "@nostr-dev-kit/ndk-cache-dexie": "^2.6.1-rc2",
         "@nostr-dev-kit/ndk-hooks": "^0.1.8",
         "@radix-ui/react-accordion": "^1.2.2",
