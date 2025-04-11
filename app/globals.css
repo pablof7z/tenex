@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 0 0% 10%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 10%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 10%;
+        --primary: 0 0% 9%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 0 0% 96%;
+        --secondary-foreground: 0 0% 9%;
+        --muted: 0 0% 96%;
+        --muted-foreground: 0 0% 45%;
+        --accent: 0 0% 96%;
+        --accent-foreground: 0 0% 9%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 90%;
+        --input: 0 0% 90%;
+        --ring: 0 0% 70%;
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 0 0% 8%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 10%;
+        --card-foreground: 0 0% 98%;
+        --popover: 0 0% 10%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 0 0% 15%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 0 0% 15%;
+        --muted-foreground: 0 0% 65%;
+        --accent: 0 0% 15%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62% 30%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 20%;
+        --input: 0 0% 20%;
+        --ring: 0 0% 40%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+.title-text {
+    @apply text-foreground font-medium;
+}
+
+.card-hover {
+    @apply transition-all duration-300 hover:shadow-sm;
+}
+
+.card-highlight {
+    @apply relative overflow-hidden;
+}
+
+.stat-card {
+    @apply relative overflow-hidden bg-white dark:bg-gray-900 rounded-md border border-border shadow-sm;
+}
+
+.task-status-todo {
+    @apply bg-gray-300 dark:bg-gray-600;
+}
+
+.task-status-in-progress {
+    @apply bg-gray-500;
+}
+
+.task-status-completed {
+    @apply bg-black dark:bg-white;
+}
+
+.hashtag {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80;
+}
+
+.sidebar-icon {
+    @apply transition-all duration-200 hover:text-primary dark:hover:text-primary;
+}
+
+.button-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-none transition-all duration-200;
+}
+
+.button-secondary {
+    @apply bg-white dark:bg-gray-900 text-foreground border border-border hover:bg-secondary dark:hover:bg-secondary transition-all duration-200;
+}
