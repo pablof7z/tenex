@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react"; // Add useState, useCallback
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NoteCard, QuoteData } from "@/components/events/note/card";
+import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
+import { toast } from "@/components/ui/use-toast"; // Import toast
 
 interface RelatedTweetsProps {
     project: NDKProject;
@@ -10,6 +12,7 @@ interface RelatedTweetsProps {
     onRepost: (tweetId: string) => void;
     onQuote: (quoteData: QuoteData) => void;
     onZap: (tweetId: string) => void;
+    // No need for onCreateIssue prop here, handled internally
 }
 
 export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: RelatedTweetsProps) {
@@ -22,7 +25,12 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState("");
 
+    // State for Create Issue Dialog
+    const [isCreateIssueDialogOpen, setIsCreateIssueDialogOpen] = useState(false);
+    const [issueInitialContent, setIssueInitialContent] = useState("");
+
     const sortedEvents = useMemo(() => {
+        // ... (existing sort logic)
         return events.sort((a, b) => {
             const aTimestamp = a.created_at || 0;
             const bTimestamp = b.created_at || 0;
@@ -32,31 +40,45 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
     }, [events]);
 
     const handleSendReply = (tweetId: string) => {
-        // Ensure content is trimmed and not empty before sending
+        // ... (existing reply logic)
         const trimmedContent = replyContent.trim();
         if (trimmedContent) {
             onReply(tweetId, trimmedContent);
             setReplyContent("");
-            setReplyingTo(null); // Also close reply box on send
+            setReplyingTo(null);
         }
         setReplyingTo(null);
     };
 
+    // Handler to open the Create Issue dialog
+    const handleCreateIssueClick = useCallback((content: string) => {
+        setIssueInitialContent(content);
+        setIsCreateIssueDialogOpen(true);
+    }, []); // Use useCallback
+
+    // Handler for submitting the new issue (placeholder)
+    const handleCreateIssueSubmit = useCallback((description: string) => {
+        console.log("Creating issue from Related Tweet with description:", description);
+        // TODO: Implement actual issue creation logic here (similar to ActivityFeed)
+        toast({ title: "Issue Creation Requested", description: "Issue creation logic not yet implemented." });
+    }, []); // Use useCallback
+
     return (
         <Card className="rounded-md border-border">
             <CardHeader className="pb-3">
-                <CardTitle className="text-xl">Related Tweets</CardTitle>
-                <CardDescription>
-                    Conversations about{" "}
-                    {project.hashtags?.map((tag) => (
-                        <span
-                            key={tag}
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground mr-1"
-                        >
-                            #{tag}
-                        </span>
-                    ))}
-                </CardDescription>
+                {/* ... Card Header content ... */}
+                 <CardTitle className="text-xl">Related Tweets</CardTitle>
+                 <CardDescription>
+                     Conversations about{" "}
+                     {project.hashtags?.map((tag) => (
+                         <span
+                             key={tag}
+                             className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground mr-1"
+                         >
+                             #{tag}
+                         </span>
+                     ))}
+                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
@@ -74,12 +96,20 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
                             onCancelReply={() => setReplyingTo(null)}
                             onSendReply={handleSendReply}
                             onRepost={onRepost}
-                            onQuote={onQuote} // Pass the handler directly
+                            onQuote={onQuote}
                             onZap={onZap}
+                            onCreateIssue={handleCreateIssueClick} // Pass the handler
                         />
                     ))}
                 </div>
             </CardContent>
+             {/* Render the Create Issue dialog */}
+             <CreateIssueDialog
+                 isOpen={isCreateIssueDialogOpen}
+                 onClose={() => setIsCreateIssueDialogOpen(false)}
+                 initialContent={issueInitialContent}
+                 onSubmit={handleCreateIssueSubmit}
+             />
         </Card>
     );
 }

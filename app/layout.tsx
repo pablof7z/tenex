@@ -3,7 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { NDKProvider } from "@/components/ndk-provider";
+import { NDKProvider } from "@/components/providers/ndk"; // Corrected import path
 
 const inter = Inter({
     subsets: ["latin"],
@@ -18,7 +18,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "NostrPM - Project Management for Nostr",
+    title: "TENEX - Project Management for Nostr",
     description: "Manage your projects on the Nostr network",
     generator: "v0.dev",
 };

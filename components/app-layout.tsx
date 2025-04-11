@@ -11,15 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useNDKSessions, useNDKSessionLogout, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks"; // Removed useNDKSessionLogin, NDKNip07Signer, useProfile
-// Removed NDKUser type import
-import NostrAvatar from "./nostr-avatar"; // Keep for potential future use or remove if definitely unused elsewhere
 
 import { toast } from "@/components/ui/use-toast"; // Keep for sidebar logout toast
 // Removed Avatar imports
 // Removed DropdownMenu imports
 import { UserDropdown } from "./navigation/user-dropdown"; // Import the new component
 import { SidebarProvider } from "@/components/ui/sidebar"; // Import SidebarProvider
-
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -42,10 +39,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     // Removed profile fetching - handled by UserDropdown
 
     return (
-        <SidebarProvider> {/* Wrap the layout with SidebarProvider */}
+        <SidebarProvider>
+            {" "}
+            {/* Wrap the layout with SidebarProvider */}
             {/* Sidebar */}
             <aside className="hidden w-16 flex-col border-r border-border bg-card sm:flex">
-                 <div className="flex h-16 items-center justify-center border-b border-border">
+                <div className="flex h-16 items-center justify-center border-b border-border">
                     <Link href="/dashboard" className="flex items-center justify-center">
                         <Boxes className="h-7 w-7" />
                         <span className="sr-only">NostrPM</span>
@@ -123,12 +122,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </TooltipProvider>
                 </nav>
             </aside>
-
             {/* Main content */}
             <div className="flex flex-1 flex-col">
                 {/* Header */}
                 <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 sm:px-6">
-                     <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2">
                         <Button variant="ghost" size="icon" className="sm:hidden">
                             <Boxes className="h-6 w-6" />
                             <span className="sr-only">Home</span>

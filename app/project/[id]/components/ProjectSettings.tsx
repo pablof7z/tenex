@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { toast } from "@/components/ui/use-toast"; // Assuming you use shadcn/ui toast
-import { Copy, Eye, EyeOff } from 'lucide-react'; // Icons for buttons
+import { Copy, Eye, EyeOff } from "lucide-react"; // Icons for buttons
 
 interface ProjectSettingsProps {
     project: NDKProject;
@@ -13,7 +13,7 @@ interface ProjectSettingsProps {
 
 export function ProjectSettings({ project }: ProjectSettingsProps) {
     const [name, setName] = useState(project.title || "");
-    const [tagline, setTagline] = useState(project.tagline || "");
+    // const [tagline, setTagline] = useState(project.tagline || ""); // Removed tagline state
     const [hashtags, setHashtags] = useState(project.hashtags?.join(", ") || "");
     const [gitRepo, setGitRepo] = useState(project.repo || "");
     const [nsec, setNsec] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
 
     const handleSave = async () => {
         project.title = name;
-        project.tagline = tagline;
+        // project.tagline = tagline; // Removed tagline update
         project.repo = gitRepo;
         project.hashtags = hashtags.split(",").map((tag) => tag.trim());
         try {
@@ -76,14 +76,14 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
     // Helper function to call the configure API
     const callConfigureApi = async (nsecValue: string) => {
         if (!project?.id) {
-             toast({ title: "Error", description: "Project ID is missing.", variant: "destructive" });
-             return;
+            toast({ title: "Error", description: "Project ID is missing.", variant: "destructive" });
+            return;
         }
         setIsConfiguringMcp(true);
         try {
             const response = await fetch(`/api/projects/${project.id}/configure`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ nsec: nsecValue }),
             });
 
@@ -95,11 +95,12 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
             console.log("MCP configuration updated successfully via API.");
             // Optional: Show success toast specifically for MCP config if needed
             // toast({ title: "MCP Configured", description: "Backend MCP settings updated." });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Failed to configure MCP via API:", error);
+            const errorMessage = error instanceof Error ? error.message : "Could not update backend MCP settings.";
             toast({
                 title: "MCP Configuration Failed",
-                description: `Could not update backend MCP settings: ${error.message}`,
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -140,13 +141,18 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
 
     const handleCopyNsec = () => {
         if (nsec) {
-            navigator.clipboard.writeText(nsec)
+            navigator.clipboard
+                .writeText(nsec)
                 .then(() => {
                     toast({ title: "Nsec Copied", description: "Project nsec copied to clipboard." });
                 })
-                .catch(err => {
-                    console.error('Failed to copy nsec: ', err);
-                    toast({ title: "Copy Failed", description: "Could not copy nsec to clipboard.", variant: "destructive" });
+                .catch((err) => {
+                    console.error("Failed to copy nsec: ", err);
+                    toast({
+                        title: "Copy Failed",
+                        description: "Could not copy nsec to clipboard.",
+                        variant: "destructive",
+                    });
                 });
         }
     };
@@ -166,15 +172,6 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                         id="project-name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="rounded-md"
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="project-tagline">Tagline</Label>
-                    <Input
-                        id="project-tagline"
-                        value={tagline}
-                        onChange={(e) => setTagline(e.target.value)}
                         className="rounded-md"
                     />
                 </div>
@@ -214,7 +211,12 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                                 className="rounded-md flex-grow"
                                 placeholder="nsec..."
                             />
-                            <Button variant="outline" size="icon" onClick={() => setShowNsec(!showNsec)} title={showNsec ? "Hide Nsec" : "Show Nsec"}>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShowNsec(!showNsec)}
+                                title={showNsec ? "Hide Nsec" : "Show Nsec"}
+                            >
                                 {showNsec ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                             <Button variant="outline" size="icon" onClick={handleCopyNsec} title="Copy Nsec">
@@ -223,20 +225,26 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                         </div>
                     ) : (
                         <div className="flex flex-col space-y-2">
-                             <p className="text-sm text-muted-foreground">
-                                No nsec found for this project. Generate one to allow the project to sign events and configure backend tools.
+                            <p className="text-sm text-muted-foreground">
+                                No nsec found for this project. Generate one to allow the project to sign events and
+                                configure backend tools.
                             </p>
                             <Button
                                 className="rounded-md w-fit"
                                 onClick={handleGenerateNsec}
                                 disabled={isGeneratingNsec || isConfiguringMcp} // Disable while generating or configuring
                             >
-                                {isGeneratingNsec ? "Generating..." : (isConfiguringMcp ? "Configuring..." : "Generate Nsec")}
+                                {isGeneratingNsec
+                                    ? "Generating..."
+                                    : isConfiguringMcp
+                                      ? "Configuring..."
+                                      : "Generate Nsec"}
                             </Button>
                         </div>
                     )}
-                     <p className="text-xs text-muted-foreground pt-1">
-                        This key allows the project to publish updates and interact on Nostr. Keep it secret. It's also used to configure backend tools.
+                    <p className="text-xs text-muted-foreground pt-1">
+                        This key allows the project to publish updates and interact on Nostr. Keep it secret. It's also
+                        used to configure backend tools.
                     </p>
                 </div>
 

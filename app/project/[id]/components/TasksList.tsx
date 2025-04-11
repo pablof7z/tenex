@@ -1,16 +1,21 @@
-import { MessageSquare, Plus } from "lucide-react";
+import { Plus } from "lucide-react"; // Removed MessageSquare as it's now in TaskCard
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Task } from "./types";
+import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKTask } from "@/lib/nostr/events/task";
+import { NDKProject } from "@/lib/nostr/events/project";
 
 interface TasksListProps {
-    tasks?: Task[];
-    onTaskSelect: (task: Task) => void;
-    onAddTask?: () => void;
+    project: NDKProject;
+    onTaskSelect: (task: NDKTask) => void; // Expect NDKTask
+    onAddTaskClick?: () => void; // Renamed prop
     onDeleteTask?: (taskId: string) => void;
 }
 
-export function TasksList({ tasks = [], onTaskSelect, onAddTask, onDeleteTask }: TasksListProps) {
+export function TasksList({ project, onTaskSelect, onAddTaskClick, onDeleteTask }: TasksListProps) {
+    const { events } = useSubscribe([{ kinds: [NDKTask.kind], ...project.filter() }]);
+
     return (
         <Card className="rounded-md border-border">
             <CardHeader className="pb-3">
@@ -19,7 +24,7 @@ export function TasksList({ tasks = [], onTaskSelect, onAddTask, onDeleteTask }:
                         <CardTitle className="text-xl">Tasks</CardTitle>
                         <CardDescription>Manage project tasks and track progress</CardDescription>
                     </div>
-                    <Button size="sm" className="rounded-md" onClick={onAddTask}>
+                    <Button size="sm" className="rounded-md" onClick={onAddTaskClick}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Task
                     </Button>
@@ -27,67 +32,21 @@ export function TasksList({ tasks = [], onTaskSelect, onAddTask, onDeleteTask }:
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                    {tasks.length > 0 ? (
-                        tasks.map((task) => (
-                            <div
-                                key={task.id}
-                                className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-4 last:border-0 gap-3"
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div>
-                                        <p className="font-medium text-lg">{task.title}</p>
-                                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
-                                            <span className="flex items-center">
-                                                <span className="font-medium">@{task.creatorName}</span>
-                                            </span>
-                                            <span>•</span>
-                                            <span>{task.createdAt}</span>
-                                            {task.references > 0 && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span className="flex items-center">
-                                                        <MessageSquare className="h-3 w-3 mr-1" />
-                                                        {task.references} references
-                                                    </span>
-                                                </>
-                                            )}
-                                            {task.comments.length > 0 && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span className="flex items-center">
-                                                        <MessageSquare className="h-3 w-3 mr-1" />
-                                                        {task.comments.length} comments
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 ml-7 sm:ml-0">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => onTaskSelect(task)}
-                                        className="rounded-md"
-                                    >
-                                        View
-                                    </Button>
-                                    {onDeleteTask && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive rounded-md"
-                                            onClick={() => onDeleteTask(task.id)}
-                                        >
-                                            Delete
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        ))
+                    {events.length > 0 ? (
+                        events.map((event) => {
+                            const task = NDKTask.from(event); // Convert NDKEvent to NDKTask
+                            return (
+                                <TaskCard
+                                    key={task.id}
+                                    task={task}
+                                    onTaskSelect={onTaskSelect}
+                                    onDeleteTask={onDeleteTask}
+                                />
+                            );
+                        })
                     ) : (
                         <div className="text-center py-6 text-muted-foreground">
-                            No tasks yet. Create your first task!
+                            No tasks found for this project. Create the first one!
                         </div>
                     )}
                 </div>

@@ -2,7 +2,13 @@
 
 import React, { useState } from "react";
 import { LogIn, LogOut } from "lucide-react";
-import { useNDKCurrentUser, useProfile, useNDKSessionLogin, useNDKSessionLogout, NDKNip07Signer } from "@nostr-dev-kit/ndk-hooks";
+import {
+    useNDKCurrentUser,
+    useProfile,
+    useNDKSessionLogin,
+    useNDKSessionLogout,
+    NDKNip07Signer,
+} from "@nostr-dev-kit/ndk-hooks";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +19,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import NostrAvatar from "../nostr-avatar"; // Assuming NostrAvatar is in components/nostr-avatar.tsx
 import { toast } from "@/components/ui/use-toast";
+import UserAvatar from "../user/avatar";
 
 export function UserDropdown() {
     const [isLoading, setIsLoading] = useState(false);
@@ -29,22 +35,24 @@ export function UserDropdown() {
         try {
             const signer = new NDKNip07Signer();
             // Wait for the signer to be ready, potentially resolving the user
-            await signer.blockUntilReady(); 
+            await signer.blockUntilReady();
             const user = await signer.user(); // Get user after signer is ready
 
-            if (!user?.npub) { // Check if user or npub is available
+            if (!user?.npub) {
+                // Check if user or npub is available
                 // Attempt to fetch user profile if not immediately available
-                await user?.fetchProfile(); 
-                if (!user?.npub) { // Check again after fetching profile
-                     throw new Error("Failed to get user details from NDKNip07Signer.");
+                await user?.fetchProfile();
+                if (!user?.npub) {
+                    // Check again after fetching profile
+                    throw new Error("Failed to get user details from NDKNip07Signer.");
                 }
             }
-            
+
             await ndkLogin(signer);
-            
+
             toast({
                 title: "Login Successful",
-                description: `Logged in as ${user.profile?.displayName || user.profile?.name || user.npub.substring(0,10)}...`,
+                description: `Logged in as ${user.profile?.displayName || user.profile?.name || user.npub.substring(0, 10)}...`,
             });
         } catch (error: unknown) {
             console.error("NIP-07 Login failed (UserDropdown):", error);
@@ -87,7 +95,7 @@ export function UserDropdown() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <NostrAvatar
+                    <UserAvatar
                         pubkey={currentUser.pubkey}
                         size="default" // Adjust size as needed, or make it a prop
                     />
@@ -100,7 +108,7 @@ export function UserDropdown() {
                             {profile?.displayName || profile?.name || "Anon"}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground">
-                            {currentUser.npub ? `${currentUser.npub.substring(0, 15)}...` : 'npub missing'}
+                            {currentUser.npub ? `${currentUser.npub.substring(0, 15)}...` : "npub missing"}
                         </p>
                     </div>
                 </DropdownMenuLabel>

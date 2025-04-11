@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
-import { MessageSquare, Repeat, Send, Zap } from "lucide-react";
+import { MessageSquare, Repeat, Send, Zap, Plus } from "lucide-react"; // Import Plus
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { QuoteData } from "@/components/events/note/card";
-import NostrAvatar from "@/components/nostr-avatar"; // Assuming NostrAvatar component exists
+import UserAvatar from "@/components/user/avatar";
 
 interface TweetCardProps {
     event: NDKEvent;
@@ -18,6 +18,7 @@ interface TweetCardProps {
     onRepost: (eventId: string) => void;
     onQuote: (quoteData: QuoteData) => void;
     onZap: (eventId: string) => void;
+    onCreateIssue: (content: string) => void; // Add new prop
 }
 
 // Function to format timestamp (Example)
@@ -38,7 +39,6 @@ const getAuthorHandle = (author: NDKUser): string => {
     return author.npub;
 };
 
-
 export function TweetCard({
     event,
     isReplying,
@@ -50,8 +50,8 @@ export function TweetCard({
     onRepost,
     onQuote,
     onZap,
+    onCreateIssue, // Destructure new prop
 }: TweetCardProps) {
-
     // Note: Repost count and Zap amount require fetching related events (kind 6 for reposts, kind 9735 for zaps)
     // This basic component doesn't include that logic yet.
     const repostCount = 0; // Placeholder
@@ -66,14 +66,14 @@ export function TweetCard({
             content: event.content,
             User: authorDisplayName, // Use display name for quote context (Matches NoteCard's QuoteData)
             pubkey: event.pubkey, // Pass pubkey for potential NIP-19 encoding
-            nevent: event.encode() // Pass nevent for better referencing
+            nevent: event.encode(), // Pass nevent for better referencing
         });
     };
 
     return (
         <div className="border-b border-border pb-3 last:border-0">
             <div className="flex items-start gap-3">
-                <NostrAvatar pubkey={event.pubkey} size='lg' />
+                <UserAvatar pubkey={event.pubkey} size="lg" />
                 <div className="flex-1">
                     <div className="flex items-center gap-1">
                         <span className="font-medium text-sm">{authorDisplayName}</span>
@@ -94,12 +94,7 @@ export function TweetCard({
                                     onChange={(e) => onReplyContentChange(e.target.value)}
                                 />
                                 <div className="flex justify-end gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={onCancelReply}
-                                        className="rounded-md"
-                                    >
+                                    <Button variant="outline" size="sm" onClick={onCancelReply} className="rounded-md">
                                         Cancel
                                     </Button>
                                     <Button
@@ -133,9 +128,7 @@ export function TweetCard({
                                             className="rounded-md hover:bg-secondary h-8 px-2"
                                         >
                                             <Repeat className="h-3.5 w-3.5 mr-1.5" />
-                                            {repostCount > 0 && (
-                                                <span className="text-xs">{repostCount}</span>
-                                            )}
+                                            {repostCount > 0 && <span className="text-xs">{repostCount}</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-48 p-2">
@@ -170,6 +163,16 @@ export function TweetCard({
                                     {zapAmount > 0 && (
                                         <span className="text-xs">{zapAmount}</span> // Needs formatting if large
                                     )}
+                                </Button>
+
+                                {/* Add Create Issue Button */}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="rounded-md hover:bg-secondary h-8 px-2"
+                                    onClick={() => onCreateIssue(event.content)}
+                                >
+                                    <Plus className="h-3.5 w-3.5" /> {/* Use Plus icon */}
                                 </Button>
                             </>
                         )}

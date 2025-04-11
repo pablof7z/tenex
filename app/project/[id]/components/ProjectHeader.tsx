@@ -12,7 +12,14 @@ interface ProjectHeaderProps {
     isCreatingProject: boolean; // To disable button while creating
 }
 
-export function ProjectHeader({ project, onSettingsClick, onEditorLaunch, onProjectCreate, projectExists, isCreatingProject }: ProjectHeaderProps) {
+export function ProjectHeader({
+    project,
+    onSettingsClick,
+    onEditorLaunch,
+    onProjectCreate,
+    projectExists,
+    isCreatingProject,
+}: ProjectHeaderProps) {
     return (
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
             <Button variant="ghost" size="icon" asChild className="h-10 w-10 rounded-md hover:bg-secondary">
@@ -24,7 +31,7 @@ export function ProjectHeader({ project, onSettingsClick, onEditorLaunch, onProj
             <div>
                 <h1 className="text-3xl font-medium">{project.title || "Untitled Project"}</h1>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <p className="text-muted-foreground">{project.tagline || "No tagline"}</p>
+                    {/* Tagline removed */}
                     {project.repo && (
                         <>
                             <span className="text-muted-foreground hidden md:inline">•</span>
@@ -36,7 +43,7 @@ export function ProjectHeader({ project, onSettingsClick, onEditorLaunch, onProj
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
-                                    {project.repo} // Use project.repo
+                                    {project.repo} {/* Use project.repo */}
                                 </a>
                             </p>
                         </>
@@ -49,22 +56,31 @@ export function ProjectHeader({ project, onSettingsClick, onEditorLaunch, onProj
                     Settings
                 </Button>
                 {projectExists === null && (
-                   <Button size="sm" className="rounded-md w-[140px]" disabled>
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       Checking...
-                   </Button>
+                    <Button size="sm" className="rounded-md w-[140px]" disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Checking...
+                    </Button>
                 )}
                 {projectExists === true && (
-                   <Button size="sm" className="rounded-md w-[140px]" onClick={onEditorLaunch}>
-                       <Code className="mr-2 h-4 w-4" />
-                       Launch Editor
-                   </Button>
+                    <Button size="sm" className="rounded-md w-[140px]" onClick={onEditorLaunch}>
+                        <Code className="mr-2 h-4 w-4" />
+                        Launch Editor
+                    </Button>
                 )}
                 {projectExists === false && (
-                   <Button size="sm" className="rounded-md w-[140px]" onClick={onProjectCreate} disabled={isCreatingProject}>
-                       {isCreatingProject ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
-                       {isCreatingProject ? "Creating..." : "Create Project"}
-                   </Button>
+                    <Button
+                        size="sm"
+                        className="rounded-md w-[140px]"
+                        onClick={onProjectCreate}
+                        disabled={isCreatingProject}
+                    >
+                        {isCreatingProject ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <FolderPlus className="mr-2 h-4 w-4" />
+                        )}
+                        {isCreatingProject ? "Creating..." : "Create Project"}
+                    </Button>
                 )}
             </div>
         </div>

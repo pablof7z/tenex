@@ -27,9 +27,9 @@ export default function DashboardPage() {
     const { ndk } = useNDK();
     const currentUser = useNDKCurrentUser();
     // Subscribe to projects created by the current user
-    const { events: projects, eose } = useSubscribe(currentUser ? [
-        { kinds: [NDKProject.kind], authors: [currentUser?.pubkey] },
-    ] : false);
+    const { events: projects, eose } = useSubscribe(
+        currentUser ? [{ kinds: [NDKProject.kind], authors: [currentUser?.pubkey] }] : false,
+    );
     const { toast } = useToast();
     const [isCreatingProject, setIsCreatingProject] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -38,60 +38,59 @@ export default function DashboardPage() {
         tagline: "",
         description: "",
         hashtags: "",
-        gitRepo: ""
+        gitRepo: "",
     });
     const [error, setError] = useState<string | null>(null);
-    
+
     console.log("Fetched projects:", projects);
-    
+
     const handleCreateProject = async () => {
         if (!formData.name || !formData.description) {
             setError("Project name and description are required");
             return;
         }
-        
+
         if (!ndk || !currentUser) {
             setError("You must be logged in to create a project");
             return;
         }
-        
+
         try {
             setIsCreating(true);
             setError(null);
-            
+
             // Create a new NDK Project with the NDK instance
             const project = new NDKProject(ndk);
             project.ndk = ndk;
             project.content = formData.description;
-            
+
             // Set project properties
             project.title = formData.name;
-            project.tagline = formData.tagline;
-            
+
             // Process hashtags (convert comma-separated string to array)
             if (formData.hashtags) {
                 const hashtagArray = formData.hashtags
-                    .split(',')
-                    .map(tag => tag.trim())
-                    .filter(tag => tag.length > 0);
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag.length > 0);
                 project.hashtags = hashtagArray;
             }
-            
+
             // Set git repository if provided
             if (formData.gitRepo) {
                 project.repo = formData.gitRepo;
             }
-            
+
             // Publish the project event
             await project.publish();
             console.log("Project published successfully:", project);
 
             // Now, create the local project structure
             try {
-                const localCreateResponse = await fetch('/api/projects/create-local', {
-                    method: 'POST',
+                const localCreateResponse = await fetch("/api/projects/create-local", {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
+                        "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         name: formData.name,
@@ -101,7 +100,10 @@ export default function DashboardPage() {
 
                 if (!localCreateResponse.ok) {
                     const errorData = await localCreateResponse.json();
-                    throw new Error(errorData.error || `Failed to create local project structure: ${localCreateResponse.statusText}`);
+                    throw new Error(
+                        errorData.error ||
+                            `Failed to create local project structure: ${localCreateResponse.statusText}`,
+                    );
                 }
 
                 const localCreateData = await localCreateResponse.json();
@@ -113,43 +115,42 @@ export default function DashboardPage() {
                 //     description: `Project files initialized at ${localCreateData.path}`,
                 //     variant: "default",
                 // });
-
             } catch (localError) {
-                 console.error("Error creating local project structure:", localError);
-                 // Show an error toast, but don't block the overall success flow
-                 // as the Nostr event was already published.
-                 toast({
-                     title: "Local Files Error",
-                     description: localError instanceof Error ? localError.message : "Failed to create local project files.",
-                     variant: "default", // Use default as warning is not available; main op succeeded
-                 });
+                console.error("Error creating local project structure:", localError);
+                // Show an error toast, but don't block the overall success flow
+                // as the Nostr event was already published.
+                toast({
+                    title: "Local Files Error",
+                    description:
+                        localError instanceof Error ? localError.message : "Failed to create local project files.",
+                    variant: "default", // Use default as warning is not available; main op succeeded
+                });
             }
-            
+
             // Show success toast
             toast({
                 title: "Project created",
                 description: `${formData.name} has been created successfully.`,
                 variant: "default",
             });
-            
+
             // Reset form and close dialog
             setFormData({
                 name: "",
                 tagline: "",
                 description: "",
                 hashtags: "",
-                gitRepo: ""
+                gitRepo: "",
             });
             setIsCreatingProject(false);
-            
+
             // You might want to add a success notification here
             console.log("Project created successfully:", project);
-            
         } catch (err) {
             console.error("Error creating project:", err);
             const errorMessage = err instanceof Error ? err.message : "Failed to create project";
             setError(errorMessage);
-            
+
             // Show error toast
             toast({
                 title: "Error",
@@ -160,7 +161,6 @@ export default function DashboardPage() {
             setIsCreating(false);
         }
     };
-
 
     return (
         <AppLayout>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
                                     placeholder="My Awesome Project"
                                     className="rounded-md"
                                     value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     required
                                 />
                             </div>
@@ -198,8 +198,7 @@ export default function DashboardPage() {
                                     id="tagline"
                                     placeholder="A short description of your project"
                                     className="rounded-md"
-                                    value={formData.tagline}
-                                    onChange={(e) => setFormData({...formData, tagline: e.target.value})}
+                                    // Removed tagline input
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -209,7 +208,7 @@ export default function DashboardPage() {
                                     placeholder="Describe what you're building..."
                                     className="rounded-md min-h-[100px]"
                                     value={formData.description}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     required
                                 />
                             </div>
@@ -220,7 +219,7 @@ export default function DashboardPage() {
                                     placeholder="nostr, bitcoin, development (comma separated)"
                                     className="rounded-md"
                                     value={formData.hashtags}
-                                    onChange={(e) => setFormData({...formData, hashtags: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, hashtags: e.target.value })}
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -230,14 +229,10 @@ export default function DashboardPage() {
                                     placeholder="github.com/username/repository"
                                     className="rounded-md"
                                     value={formData.gitRepo}
-                                    onChange={(e) => setFormData({...formData, gitRepo: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, gitRepo: e.target.value })}
                                 />
                             </div>
-                            {error && (
-                                <div className="text-red-500 text-sm mt-2">
-                                    {error}
-                                </div>
-                            )}
+                            {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
                         </div>
                         <DialogFooter>
                             <Button
@@ -249,7 +244,7 @@ export default function DashboardPage() {
                                         tagline: "",
                                         description: "",
                                         hashtags: "",
-                                        gitRepo: ""
+                                        gitRepo: "",
                                     });
                                     setError(null);
                                 }}
@@ -258,11 +253,7 @@ export default function DashboardPage() {
                             >
                                 Cancel
                             </Button>
-                            <Button
-                                onClick={handleCreateProject}
-                                className="rounded-md"
-                                disabled={isCreating}
-                            >
+                            <Button onClick={handleCreateProject} className="rounded-md" disabled={isCreating}>
                                 {isCreating ? "Creating..." : "Create project"}
                             </Button>
                         </DialogFooter>
@@ -275,9 +266,7 @@ export default function DashboardPage() {
                         <p>Loading projects...</p>
                     </div>
                 ) : projects && projects.length > 0 ? (
-                    projects.map((project) => (
-                        <ProjectCard key={project.id} project={project} />
-                    ))
+                    projects.map((project) => <ProjectCard key={project.id} project={project} />)
                 ) : (
                     <div className="col-span-3 text-center py-10 text-muted-foreground">
                         {currentUser ? (

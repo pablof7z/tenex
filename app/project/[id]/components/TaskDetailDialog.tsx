@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Code, Send } from "lucide-react";
+import { Code, MessageSquare, Send } from "lucide-react"; // Added MessageSquare
+import { nip19 } from "nostr-tools";
+import { NDKEvent } from "@nostr-dev-kit/ndk"; // Added NDKEvent
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -11,10 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Task } from "./types";
+// import { Task } from "./types"; // Removed local Task type
+import { NDKTask } from "@/lib/nostr/events/task"; // Import NDKTask
 
 interface TaskDetailDialogProps {
-    task: Task | null;
+    task: NDKTask | null; // Expect NDKTask
     onClose: () => void;
     onAddComment?: (taskId: string, comment: string) => void;
     onLaunchEditor?: (taskId: string) => void;
@@ -25,9 +28,19 @@ export function TaskDetailDialog({ task, onClose, onAddComment, onLaunchEditor }
 
     if (!task) return null;
 
+    // TODO: Fetch profile metadata for creatorName
+    // TODO: Fetch related events for references/comments count
+    const creatorName =
+        task.author.profile?.displayName ||
+        task.author.profile?.name ||
+        nip19.npubEncode(task.author.pubkey).substring(0, 12) + "...";
+    const createdAt = task.created_at ? new Date(task.created_at * 1000).toLocaleString() : "Unknown date";
+    const references = 0; // Placeholder
+    const comments: NDKEvent[] = []; // Use NDKEvent[] for placeholder
+
     const handleAddComment = () => {
         if (commentText.trim() && onAddComment) {
-            onAddComment(task.id, commentText);
+            onAddComment(task.id, commentText); // Use task.id
             setCommentText("");
         }
     };
@@ -36,67 +49,58 @@ export function TaskDetailDialog({ task, onClose, onAddComment, onLaunchEditor }
         <Dialog open={!!task} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[600px] rounded-md">
                 <DialogHeader>
-                    <DialogTitle className="text-xl">{task.title}</DialogTitle>
+                    <DialogTitle className="text-xl">{task.title || "Untitled Task"}</DialogTitle>
                     <DialogDescription>
-                        Created by <span className="font-medium">@{task.creatorName}</span> • {task.createdAt}
+                        Created by <span className="font-medium">@{creatorName}</span> • {createdAt}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                    {task.references > 0 && (
+                <div className="space-y-6 py-4">
+                    {" "}
+                    {/* Increased spacing */}
+                    {/* Task Content/Description */}
+                    <div>
+                        <h4 className="text-sm font-medium mb-2">Description</h4>
+                        <p className="text-sm border rounded-md p-3 bg-secondary/50 border-border">
+                            {task.content || "No description provided."}
+                        </p>
+                    </div>
+                    {references > 0 && (
                         <div>
-                            <h4 className="text-sm font-medium mb-2">Referenced Items ({task.references})</h4>
+                            <h4 className="text-sm font-medium mb-2">Referenced Items ({references})</h4>
                             <div className="space-y-3 border rounded-md p-4 bg-secondary/50 border-border">
-                                {/* Mock referenced items - in a real app, these would be fetched */}
-                                <div className="border-b border-border pb-3">
-                                    <p className="text-sm">
-                                        Just saw an amazing visualization of the #nostr network. The social connections
-                                        are fascinating!
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        <span className="font-medium">@nostr_dev</span> • 5 hours ago
-                                    </p>
-                                </div>
-                                <div className="border-b border-border pb-3">
-                                    <p className="text-sm">
-                                        Working on some new #visualization techniques that could be perfect for #nostr
-                                        social graphs
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        <span className="font-medium">@viz_expert</span> • 1 day ago
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm">
-                                        The intersection of #bitcoin and #nostr communities is clearly visible in these
-                                        new social graphs
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        <span className="font-medium">@bitcoin_enthusiast</span> • 2 days ago
-                                    </p>
-                                </div>
+                                {/* Placeholder for actual referenced items */}
+                                <p className="text-sm text-muted-foreground">
+                                    Referenced item fetching not implemented yet.
+                                </p>
                             </div>
                         </div>
                     )}
-
                     {/* Comments section */}
                     <div>
-                        <h4 className="text-sm font-medium mb-2">Comments ({task.comments?.length || 0})</h4>
+                        <h4 className="text-sm font-medium mb-2">Comments ({comments.length})</h4>
                         <div className="space-y-3 border rounded-md p-4 bg-secondary/50 border-border mb-4">
-                            {task.comments && task.comments.length > 0 ? (
-                                task.comments.map((comment) => (
-                                    <div key={comment.id} className="border-b border-border pb-3 last:border-0">
-                                        <p className="text-sm">{comment.content}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            <span className="font-medium">@{comment.authorName}</span> •{" "}
-                                            {comment.timestamp}
-                                        </p>
-                                    </div>
-                                ))
+                            {comments.length > 0 ? (
+                                comments.map(
+                                    (
+                                        comment: NDKEvent, // Use NDKEvent for placeholder type
+                                    ) => (
+                                        <div key={comment.id} className="border-b border-border pb-3 last:border-0">
+                                            <p className="text-sm">{comment.content}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {/* Placeholder for comment author/time */}
+                                                <span className="font-medium">@comment_author</span> • comment_timestamp
+                                            </p>
+                                        </div>
+                                    ),
+                                )
                             ) : (
-                                <p className="text-sm text-muted-foreground">No comments yet</p>
+                                <p className="text-sm text-muted-foreground">
+                                    No comments yet (fetching not implemented).
+                                </p>
                             )}
                         </div>
 
+                        {/* Add comment form */}
                         {/* Add comment form */}
                         <div className="space-y-2">
                             <Label htmlFor="comment">Add a comment</Label>
@@ -121,12 +125,16 @@ export function TaskDetailDialog({ task, onClose, onAddComment, onLaunchEditor }
                         </div>
                     </div>
                 </div>
-                <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
+                <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2 pt-4">
+                    {" "}
+                    {/* Added padding top */}
                     <Button variant="outline" onClick={onClose} className="rounded-md mt-2 sm:mt-0">
                         Close
                     </Button>
                     {onLaunchEditor && (
                         <Button className="rounded-md" onClick={() => onLaunchEditor(task.id)}>
+                            {" "}
+                            {/* Use task.id */}
                             <Code className="mr-2 h-4 w-4" />
                             Launch Editor
                         </Button>

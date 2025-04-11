@@ -1,29 +1,43 @@
 "use client";
 
-import React from 'react';
-import { TasksList } from './TasksList';
-import { Task } from './types'; // Assuming Task type is defined here
+import React, { useState } from "react";
+import { TasksList } from "./TasksList";
+// import { Task } from "./types"; // Removed local Task type
+import { CreateTaskDialog } from "./CreateTaskDialog"; // Import the dialog
+import { NDKProject } from "@/lib/nostr/events/project";
+import { NDKTask } from "@/lib/nostr/events/task"; // Import NDKTask
 
 interface ProjectTasksTabProps {
-  // Define necessary props, e.g., tasks data, handlers
-  tasks: Task[]; // Example: Pass tasks data
-  onTaskSelect: (task: Task | null) => void;
-  onAddTask: () => void;
-  onDeleteTask: (taskId: string) => void;
+    project: NDKProject;
+    // tasks: Task[]; // Removed tasks prop
+    onTaskSelect: (task: NDKTask) => void; // Expect NDKTask
+    // onAddTask prop is removed, handled internally now
+    onDeleteTask: (taskId: string) => void;
+    onTasksUpdate?: () => void; // Optional callback to refresh tasks list
 }
 
 export function ProjectTasksTab({
-  tasks,
-  onTaskSelect,
-  onAddTask,
-  onDeleteTask,
+    project,
+    // tasks, // Removed tasks prop
+    onTaskSelect,
+    onDeleteTask,
+    onTasksUpdate,
 }: ProjectTasksTabProps) {
-  return (
-    <TasksList
-      tasks={tasks}
-      onTaskSelect={onTaskSelect}
-      onAddTask={onAddTask}
-      onDeleteTask={onDeleteTask}
-    />
-  );
+    const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+    return (
+        <>
+            <TasksList
+                project={project}
+                onTaskSelect={onTaskSelect} // Now expects NDKTask
+                onDeleteTask={onDeleteTask}
+                onAddTaskClick={() => setIsCreateTaskOpen(true)}
+            />
+            <CreateTaskDialog
+                project={project}
+                open={isCreateTaskOpen}
+                onOpenChange={setIsCreateTaskOpen}
+                onTaskCreated={onTasksUpdate} // Call update callback after creation
+            />
+        </>
+    );
 }

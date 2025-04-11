@@ -3,10 +3,11 @@ import { Plus } from "lucide-react"; // Removed unused icons: MessageSquare, Rep
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NDKProject } from "@/lib/nostr/events/project";
-import { NoteCard, QuoteData } from "@/components/events/note/card";
+import { NoteCard, QuoteData } from "@/components/events/note/card"; // Using NoteCard
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { CreatePostDialog } from "./CreatePostDialog"; // Import the dialog
+import { CreatePostDialog } from "./CreatePostDialog";
+import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
 import { toast } from "@/components/ui/use-toast";
 
 interface ActivityFeedProps {
@@ -17,6 +18,7 @@ interface ActivityFeedProps {
     onRepost: (activityId: string) => void;
     onQuote: (quoteData: QuoteData) => void; // Added
     onZap: (activityId: string) => void;
+    // We don't need onCreateIssue prop here, we handle it internally
 }
 
 export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZap }: ActivityFeedProps) { // onCreatePost removed
@@ -27,12 +29,16 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
     ], {}, [projectPubkey]);
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState("");
-    const [isCreatingPost, setIsCreatingPost] = useState(false); // State for dialog visibility
-    const [isPublishing, setIsPublishing] = useState(false); // State for publishing status
+    const [isCreatingPost, setIsCreatingPost] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
 
+    // State for Create Issue Dialog
+    const [isCreateIssueDialogOpen, setIsCreateIssueDialogOpen] = useState(false);
+    const [issueInitialContent, setIssueInitialContent] = useState("");
     const handleCreatePostClick = () => setIsCreatingPost(true);
 
     const handlePostSubmit = useCallback(async (content: string) => {
+        // ... (existing post submit logic)
         if (!ndk || !signer || isPublishing) return;
         setIsPublishing(true);
         console.log("Creating post with content:", content);
@@ -40,7 +46,7 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
             const event = new NDKEvent(ndk);
             event.kind = 1;
             event.content = content;
-            // Add project reference tag if needed, e.g., event.tags.push(['a', `${project.kind}:${project.pubkey}:${project.identifier}`]);
+            // Add project reference tag if needed
             await event.sign(signer);
             await event.publish();
             toast({ title: "Post Published", description: "Your update has been sent to the network." });
@@ -51,50 +57,67 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
         } finally {
             setIsPublishing(false);
         }
-    }, [ndk, signer, project, isPublishing]); // Added dependencies
+    }, [ndk, signer, project, isPublishing]);
 
     const handleSendReply = (activityId: string) => {
         onReply(activityId, replyContent);
         setReplyContent("");
         setReplyingTo(null);
     };
+// Handler to open the Create Issue dialog
+const handleCreateIssueClick = (content: string) => {
+    setIssueInitialContent(content);
+    setIsCreateIssueDialogOpen(true);
+};
 
-    return (
-        <Card className="rounded-md border-border">
+// Handler for submitting the new issue
+const handleCreateIssueSubmit = (description: string) => {
+    console.log("Creating issue with description:", description);
+    // TODO: Implement actual issue creation logic here
+    // - Create a Nostr event (e.g., kind 30023 for long-form, or a custom kind)
+    // - Tag the project, the original event, etc.
+    // - Sign and publish
+    toast({ title: "Issue Creation Requested", description: "Issue creation logic not yet implemented." });
+    // Close dialog is handled internally by CreateIssueDialog on submit
+};
+
+return (
+    <Card className="rounded-md border-border">
             <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">Activity Feed</CardTitle>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md hover:bg-secondary"
-                        onClick={handleCreatePostClick} // Updated onClick
-                    >
-                        <Plus className="h-4 w-4" />
-                        <span className="sr-only">Create post</span>
-                    </Button>
-                </div>
-                <CardDescription>Updates from the project agent</CardDescription>
+                 <div className="flex items-center justify-between">
+                     <CardTitle className="text-xl">Activity Feed</CardTitle>
+                     <Button
+                         variant="ghost"
+                         size="icon"
+                         className="h-8 w-8 rounded-md hover:bg-secondary"
+                         onClick={handleCreatePostClick}
+                     >
+                         <Plus className="h-4 w-4" />
+                         <span className="sr-only">Create post</span>
+                     </Button>
+                 </div>
+                 <CardDescription>Updates from the project agent</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                    {(() => { // IIFE to allow sorting logic before mapping
+                    {(() => {
                         const sortedEvents = [...events].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
                         return sortedEvents.length > 0 ? (
                             sortedEvents.map((event) => (
-                            <NoteCard
-                                key={event.id}
-                                event={event}
-                                isReplying={replyingTo === event.id}
-                                replyContent={replyContent}
-                                onReplyContentChange={setReplyContent}
-                                onShowReply={setReplyingTo}
-                                onCancelReply={() => setReplyingTo(null)}
-                                onSendReply={handleSendReply}
-                                onRepost={onRepost}
-                                onQuote={onQuote} // Pass the onQuote prop down
-                                onZap={onZap}
-                            />
+                                <NoteCard
+                                    key={event.id}
+                                    event={event}
+                                    isReplying={replyingTo === event.id}
+                                    replyContent={replyContent}
+                                    onReplyContentChange={setReplyContent}
+                                    onShowReply={setReplyingTo}
+                                    onCancelReply={() => setReplyingTo(null)}
+                                    onSendReply={handleSendReply}
+                                    onRepost={onRepost}
+                                    onQuote={onQuote}
+                                    onZap={onZap}
+                                    onCreateIssue={handleCreateIssueClick} // Pass the handler
+                                />
                             ))
                         ) : (
                             <div className="text-center py-6 text-muted-foreground">
@@ -104,12 +127,19 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
                     })()}
                 </div>
             </CardContent>
-            {/* Render the dialog inside the Card, after CardContent */}
+            {/* Render the Create Post dialog */}
             <CreatePostDialog
                 open={isCreatingPost}
                 onClose={() => setIsCreatingPost(false)}
                 onPost={handlePostSubmit}
-                isPosting={isPublishing} // Pass publishing state
+                isPosting={isPublishing}
+            />
+            {/* Render the Create Issue dialog */}
+            <CreateIssueDialog
+                isOpen={isCreateIssueDialogOpen}
+                onClose={() => setIsCreateIssueDialogOpen(false)}
+                initialContent={issueInitialContent}
+                onSubmit={handleCreateIssueSubmit}
             />
         </Card>
     );

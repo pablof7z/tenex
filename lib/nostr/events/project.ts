@@ -13,15 +13,6 @@ export class NDKProject extends NDKArticle {
         return new NDKProject(event.ndk!, event);
     }
 
-    get tagline(): string | undefined {
-        return this.tagValue("tagline");
-    }
-
-    set tagline(value: string | undefined) {
-        this.removeTag("tagline");
-        if (value) this.tags.push(["tagline", value]);
-    }
-
     set repo(value: string | undefined) {
         this.removeTag("repo");
         if (value) this.tags.push(["repo", value]);
@@ -36,13 +27,17 @@ export class NDKProject extends NDKArticle {
         const tag = this.tags.find((tag) => tag[0] === "hashtags");
         return tag ? tag.slice(1) : [];
     }
-    
+
     get repo(): string | undefined {
         return this.tagValue("repo");
     }
 
-    set description(value: string) { this.content = value; }
-    get description(): string { return this.content; }
+    set description(value: string) {
+        this.content = value;
+    }
+    get description(): string {
+        return this.content;
+    }
 
     public async getSigner(): Promise<NDKPrivateKeySigner> {
         if (this._signer) return this._signer;
