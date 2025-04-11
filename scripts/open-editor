@@ -1,0 +1,143 @@
+#!/bin/bash
+
+# Script to open a directory in VS Code and optionally trigger a Cline task
+
+# --- Configuration ---
+# Delay in seconds before triggering the VS Code command URI (allows VS Code to open)
+VSCODE_URI_DELAY=2
+# The prompt for the Cline task when src directory is missing
+CLINE_PROMPT="Follow instructions in context/SPEC.md"
+
+# --- Helper Functions ---
+# URL encodes a string (basic version for required characters)
+# Note: For more complex strings, a more robust method (like python or node) is better.
+urlencode() {
+    local string="${1}"
+    local strlen=${#string}
+    local encoded=""
+    local pos c o
+
+    for (( pos=0 ; pos<strlen ; pos++ )); do
+        c=${string:$pos:1}
+        case "$c" in
+            [-_.~a-zA-Z0-9] ) o="${c}" ;;
+            * )               printf -v o '%%%02x' "'$c"
+        esac
+        encoded+="${o}"
+    done
+    echo "${encoded}"
+}
+
+# --- Main Script ---
+
+# Check if a directory path is provided
+if [ -z "$1" ]; then
+  echo "Usage: $0 <directory_path>"
+  exit 1
+fi
+
+DIRECTORY_PATH="$1"
+
+# Check if the directory exists
+if [ ! -d "$DIRECTORY_PATH" ]; then
+  echo "Error: Directory '$DIRECTORY_PATH' not found."
+  exit 1
+fi
+
+
+# --- Add .clinerules check ---
+CLINE_RULES_PATH="$DIRECTORY_PATH/.clinerules"
+if [ ! -f "$CLINE_RULES_PATH" ]; then
+  echo "Creating '$CLINE_RULES_PATH'..."
+  echo "Whenever you are about to do something, publish an update on nostr, and whenever you make some porgress also publish to nostr" > "$CLINE_RULES_PATH"
+  if [ $? -ne 0 ]; then
+    echo "Warning: Failed to create '$CLINE_RULES_PATH'."
+    # Continue execution even if file creation fails, as opening the editor is the primary goal
+  fi
+fi
+# --- End .clinerules check ---
+
+# Resolve the absolute path (optional, but good practice)
+# DIRECTORY_PATH=$(cd "$DIRECTORY_PATH"; pwd) # Uncomment if needed
+
+# Check if the 'src' directory exists within the target directory
+SRC_DIR_PATH="$DIRECTORY_PATH/src"
+CONTEXT_SPEC_PATH="$DIRECTORY_PATH/context/SPEC.md" # Path to check for prompt relevance
+
+echo "Checking for src directory at: $SRC_DIR_PATH"
+
+# Attempt to open the directory in VS Code first
+echo "Opening '$DIRECTORY_PATH' in VS Code..."
+code "$DIRECTORY_PATH"
+
+# Check if the 'code' command was successful (basic check)
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to open directory with 'code' command."
+  echo "Ensure VS Code is installed and the 'code' command is available in your PATH."
+  exit 1
+fi
+echo "VS Code launched for directory."
+
+# If 'src' directory does NOT exist, trigger the Cline task
+if [ ! -d "$SRC_DIR_PATH" ]; then
+  echo "'src' directory not found in '$DIRECTORY_PATH'."
+
+  # Check if context/SPEC.md exists to make the prompt relevant
+  if [ ! -f "$CONTEXT_SPEC_PATH" ]; then
+      echo "Warning: 'context/SPEC.md' not found. The triggered prompt might not be applicable."
+  fi
+
+  echo "Preparing to trigger Cline task..."
+
+  # Determine the OS-specific command to open URIs
+  OS_COMMAND=""
+  OS_NAME=$(uname -s)
+  case "$OS_NAME" in
+    Darwin)
+      OS_COMMAND="open"
+      ;;
+    Linux)
+      OS_COMMAND="xdg-open"
+      ;;
+    CYGWIN*|MINGW*|MSYS*)
+      OS_COMMAND="start"
+      ;;
+    *)
+      echo "Warning: Unsupported OS '$OS_NAME'. Cannot automatically trigger VS Code command URI."
+      echo "Directory opened, but please manually trigger the task: '$CLINE_PROMPT'"
+      exit 0 # Exit gracefully after opening the directory
+      ;;
+  esac
+  echo "Using '$OS_COMMAND' to trigger URI."
+
+  # Construct the JSON payload for the command
+  JSON_PAYLOAD='[{"id":"roo-cline.newTask","args":{"prompt":"'"$CLINE_PROMPT"'"}}]'
+
+  # URL-encode the payload
+  ENCODED_PAYLOAD=$(urlencode "$JSON_PAYLOAD")
+
+  # Construct the full VS Code command URI
+  VSCODE_URI="vscode://ionutvmi.vscode-commands-executor/runCommands?data=${ENCODED_PAYLOAD}"
+
+  # Wait a moment for VS Code to potentially initialize
+  echo "Waiting ${VSCODE_URI_DELAY}s before triggering command URI..."
+  sleep "$VSCODE_URI_DELAY"
+
+  # Execute the command URI
+  echo "Triggering VS Code command URI..."
+  "$OS_COMMAND" "$VSCODE_URI"
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to trigger VS Code command URI using '$OS_COMMAND'."
+    echo "Please ensure the 'ionutvmi.vscode-commands-executor' extension is installed."
+    echo "You might need to manually trigger the task in VS Code: '$CLINE_PROMPT'"
+    # Don't exit with error, as the directory was opened successfully
+  else
+    echo "VS Code command URI triggered successfully."
+  fi
+else
+  echo "'src' directory found. No Cline task triggered."
+fi
+
+echo "Script finished."
+exit 0

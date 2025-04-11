@@ -47,11 +47,10 @@ export default function LandingPage() {
                 <section className="container py-24 sm:py-32">
                     <div className="mx-auto flex max-w-[980px] flex-col items-center gap-4 text-center">
                         <h1 className="text-4xl font-medium leading-tight tracking-tight md:text-6xl lg:text-7xl lg:leading-[1.1]">
-                            Project Management for the Nostr Ecosystem
+                            TENEX
                         </h1>
                         <p className="max-w-[750px] text-lg text-muted-foreground sm:text-xl">
-                            Seamlessly manage your projects, collaborate with others, and stay updated with real-time
-                            feeds from the Nostr network.
+                            Orchestrate the orchestrators.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
                             <Button
@@ -65,9 +64,6 @@ export default function LandingPage() {
                             >
                                 Get Started {/* Simplification: Static text */}
                                 <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="lg" className="rounded-md px-8" asChild>
-                                <Link href="/demo">View Demo</Link>
                             </Button>
                         </div>
                     </div>

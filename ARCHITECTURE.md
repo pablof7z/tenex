@@ -87,11 +87,35 @@ Contains additional global styles.
 
 *   `styles/globals.css`: Potentially overridden or supplemented by `app/globals.css`.
 
-## 8. Component Organization Guidelines
+## 8. API Routes (`app/api/`)
+
+Contains backend API endpoints built with Next.js API Routes.
+
+*   `app/api/projects/create-local/route.ts`
+    *   **Responsibility:** Handles `POST` requests to create a new project directory structure on the local filesystem, including the initial `context/SPEC.md` file.
+    *   **Likely Called From:** `app/dashboard/page.tsx` (when creating a new project).
+*   `app/api/projects/[id]/route.ts`
+    *   **Responsibility:** Likely handles standard CRUD operations (`GET`, `PUT`, `DELETE`) for a specific project identified by `[id]`. (Exact implementation needs verification).
+    *   **Likely Called From:** `app/project/[id]/page.tsx` or related components for fetching/updating/deleting project details.
+*   `app/api/projects/[id]/configure/route.ts`
+    *   **Responsibility:** Handles project-specific configuration updates.
+    *   **Likely Called From:** `app/project/[id]/components/ProjectSettingsTab.tsx` or similar settings UI.
+*   `app/api/projects/[id]/open-editor/route.ts`
+    *   **Responsibility:** Handles `POST` requests to trigger opening the specified project's directory in the user's configured editor (via a script).
+    *   **Likely Called From:** `app/project/[id]/page.tsx` or `app/dashboard/page.tsx` (e.g., an "Open in Editor" button).
+*   `app/api/projects/[id]/specs/route.ts`
+    *   **Responsibility:** Handles `GET` requests to retrieve project specification files (e.g., `SPEC.md`) and `PUT` requests to update the `SPEC.md` file content.
+    *   **Likely Called From:** `app/project/[id]/components/ProjectSpecsTab.tsx` (for displaying and editing the spec).
+*   `app/api/run/route.ts`
+    *   **Responsibility:** Purpose needs further investigation based on implementation. Could be for running project-related commands or processes.
+    *   **Likely Called From:** Potentially various parts of the application depending on its function.
+
+
+## 9. Component Organization Guidelines
 
 When creating new components, follow these guidelines to maintain a consistent and logical structure:
 
-### 8.1 Event-specific Components
+### 9.1 Event-specific Components
 
 All components that render Nostr events should be placed in the appropriate subdirectory under `components/events/`:
 
@@ -107,7 +131,7 @@ All components that render Nostr events should be placed in the appropriate subd
   * Example: `components/events/task/card.tsx` - Renders a task card
   * Example: `components/events/task/list.tsx` - Renders a list of tasks
 
-### 8.2 User-related Components
+### 9.2 User-related Components
 
 Components related to user profiles and interactions should be placed in `components/user/`:
 
@@ -115,28 +139,28 @@ Components related to user profiles and interactions should be placed in `compon
 * Example: `components/user/profile.tsx` - Renders a user profile
 * Example: `components/user/login.tsx` - Handles user login
 
-### 8.3 Provider Components
+### 9.3 Provider Components
 
 Components that provide context or services to the application should be placed in `components/providers/`:
 
 * Example: `components/providers/ndk.tsx` - Provides NDK context and session management
 * Example: `components/providers/theme.tsx` - Provides theme context
 
-### 8.4 Layout Components
+### 9.4 Layout Components
 
 Components that define the overall layout of the application should be placed directly in the `components/` directory:
 
 * Example: `components/app-layout.tsx` - Main application layout
 * Example: `components/sidebar.tsx` - Sidebar navigation
 
-### 8.5 UI Components
+### 9.5 UI Components
 
 Generic UI components that are not specific to Nostr should be placed in `components/ui/`:
 
 * Example: `components/ui/button.tsx` - Button component
 * Example: `components/ui/card.tsx` - Card component
 
-### 8.6 Page-specific Components
+### 9.6 Page-specific Components
 
 Components that are only used on a specific page and not shared across the application should be placed in the corresponding page directory:
 

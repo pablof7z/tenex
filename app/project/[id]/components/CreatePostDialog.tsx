@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react"; // Added Loader2 for loading state
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -15,10 +15,11 @@ interface CreatePostDialogProps {
     open: boolean;
     onClose: () => void;
     onPost: (content: string) => void;
+    isPosting?: boolean; // Added optional isPosting prop
 }
 
-export function CreatePostDialog({ open, onClose, onPost }: CreatePostDialogProps) {
-    const [content, setContent] = useState("");
+export function CreatePostDialog({ open, onClose, onPost, isPosting = false }: CreatePostDialogProps) { // Destructure isPosting with default
+    const [content, setContent] = useState(""); // Keep local content state
 
     const handlePost = () => {
         if (content.trim()) {
@@ -52,9 +53,13 @@ export function CreatePostDialog({ open, onClose, onPost }: CreatePostDialogProp
                     <Button variant="outline" onClick={onClose} className="rounded-md">
                         Cancel
                     </Button>
-                    <Button onClick={handlePost} className="rounded-md" disabled={!content.trim()}>
-                        <Send className="mr-2 h-4 w-4" />
-                        Post
+                    <Button onClick={handlePost} className="rounded-md" disabled={!content.trim() || isPosting}>
+                        {isPosting ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Send className="mr-2 h-4 w-4" />
+                        )}
+                        {isPosting ? "Posting..." : "Post"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

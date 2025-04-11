@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
@@ -17,10 +17,19 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
     const tagsToSubscribe = Array.isArray(project.hashtags) && project.hashtags.length > 0 ? project.hashtags : undefined;
 
     const { events } = useSubscribe(tagsToSubscribe ? [
-        { kinds: [1], "#t": tagsToSubscribe },
+        { kinds: [1], "#t": tagsToSubscribe, limit: 50 },
     ] : false, {}, [ project.id, tagsToSubscribe])
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState("");
+
+    const sortedEvents = useMemo(() => {
+        return events.sort((a, b) => {
+            const aTimestamp = a.created_at || 0;
+            const bTimestamp = b.created_at || 0;
+            return bTimestamp - aTimestamp; // Sort in descending order
+        })
+            .slice(0, 50);
+    }, [events]);
 
     const handleSendReply = (tweetId: string) => {
         // Ensure content is trimmed and not empty before sending
@@ -54,7 +63,7 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
                     {events.length === 0 && (
                         <p className="text-sm text-muted-foreground">No related tweets found yet.</p>
                     )}
-                    {events.map((event) => (
+                    {sortedEvents.map((event) => (
                         <NoteCard
                             key={event.id}
                             event={event}

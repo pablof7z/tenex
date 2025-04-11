@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Code, GitBranch, Settings } from "lucide-react";
+import { ArrowLeft, Code, GitBranch, Settings, Loader2, FolderPlus } from "lucide-react"; // Added Loader2, FolderPlus
 import { Button } from "@/components/ui/button";
 import { NDKProject } from "@/lib/nostr/events/project";
 
@@ -7,9 +7,12 @@ interface ProjectHeaderProps {
     project: NDKProject;
     onSettingsClick: () => void;
     onEditorLaunch: () => void;
+    onProjectCreate: () => void; // Changed from Promise<void> to void for simplicity here, parent handles async
+    projectExists: boolean | null; // null = loading, true = exists, false = doesn't exist
+    isCreatingProject: boolean; // To disable button while creating
 }
 
-export function ProjectHeader({ project, onSettingsClick, onEditorLaunch }: ProjectHeaderProps) {
+export function ProjectHeader({ project, onSettingsClick, onEditorLaunch, onProjectCreate, projectExists, isCreatingProject }: ProjectHeaderProps) {
     return (
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
             <Button variant="ghost" size="icon" asChild className="h-10 w-10 rounded-md hover:bg-secondary">
@@ -45,10 +48,24 @@ export function ProjectHeader({ project, onSettingsClick, onEditorLaunch }: Proj
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                 </Button>
-                <Button size="sm" className="rounded-md" onClick={onEditorLaunch}>
-                    <Code className="mr-2 h-4 w-4" />
-                    Launch Editor
-                </Button>
+                {projectExists === null && (
+                   <Button size="sm" className="rounded-md w-[140px]" disabled>
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       Checking...
+                   </Button>
+                )}
+                {projectExists === true && (
+                   <Button size="sm" className="rounded-md w-[140px]" onClick={onEditorLaunch}>
+                       <Code className="mr-2 h-4 w-4" />
+                       Launch Editor
+                   </Button>
+                )}
+                {projectExists === false && (
+                   <Button size="sm" className="rounded-md w-[140px]" onClick={onProjectCreate} disabled={isCreatingProject}>
+                       {isCreatingProject ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
+                       {isCreatingProject ? "Creating..." : "Create Project"}
+                   </Button>
+                )}
             </div>
         </div>
     );

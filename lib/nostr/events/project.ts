@@ -50,6 +50,7 @@ export class NDKProject extends NDKArticle {
         const encryptedKey = this.tagValue("key");
         if (!encryptedKey) {
             this._signer = NDKPrivateKeySigner.generate();
+            await this.encryptAndSaveNsec();
         } else {
             const decryptedKey = await this.ndk?.signer?.decrypt(this.ndk.activeUser!, encryptedKey);
             if (!decryptedKey) {
@@ -59,5 +60,25 @@ export class NDKProject extends NDKArticle {
         }
 
         return this._signer;
+    }
+
+    public async getNsec(): Promise<string> {
+        const signer = await this.getSigner();
+        return signer.nsec;
+    }
+
+    public async setNsec(value: string) {
+        this._signer = new NDKPrivateKeySigner(value, this.ndk);
+        await this.encryptAndSaveNsec();
+    }
+
+    private async encryptAndSaveNsec() {
+        if (!this._signer) throw new Error("Signer is not set.");
+        const key = this._signer.nsec;
+        const encryptedKey = await this.ndk?.signer?.encrypt(this.ndk.activeUser!, key);
+        if (encryptedKey) {
+            this.removeTag("key");
+            this.tags.push(["key", encryptedKey]);
+        }
     }
 }

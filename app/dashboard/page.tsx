@@ -84,8 +84,46 @@ export default function DashboardPage() {
             
             // Publish the project event
             await project.publish();
-            
             console.log("Project published successfully:", project);
+
+            // Now, create the local project structure
+            try {
+                const localCreateResponse = await fetch('/api/projects/create-local', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        description: formData.description, // This is the spec content
+                    }),
+                });
+
+                if (!localCreateResponse.ok) {
+                    const errorData = await localCreateResponse.json();
+                    throw new Error(errorData.error || `Failed to create local project structure: ${localCreateResponse.statusText}`);
+                }
+
+                const localCreateData = await localCreateResponse.json();
+                console.log("Local project structure created:", localCreateData);
+
+                // Optionally, show a specific toast for local creation success
+                // toast({
+                //     title: "Local files created",
+                //     description: `Project files initialized at ${localCreateData.path}`,
+                //     variant: "default",
+                // });
+
+            } catch (localError) {
+                 console.error("Error creating local project structure:", localError);
+                 // Show an error toast, but don't block the overall success flow
+                 // as the Nostr event was already published.
+                 toast({
+                     title: "Local Files Error",
+                     description: localError instanceof Error ? localError.message : "Failed to create local project files.",
+                     variant: "default", // Use default as warning is not available; main op succeeded
+                 });
+            }
             
             // Show success toast
             toast({

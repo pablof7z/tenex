@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/use-toast"; // Keep for sidebar logout to
 // Removed Avatar imports
 // Removed DropdownMenu imports
 import { UserDropdown } from "./navigation/user-dropdown"; // Import the new component
+import { SidebarProvider } from "@/components/ui/sidebar"; // Import SidebarProvider
 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -41,7 +42,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     // Removed profile fetching - handled by UserDropdown
 
     return (
-        <div className="flex min-h-screen">
+        <SidebarProvider> {/* Wrap the layout with SidebarProvider */}
             {/* Sidebar */}
             <aside className="hidden w-16 flex-col border-r border-border bg-card sm:flex">
                  <div className="flex h-16 items-center justify-center border-b border-border">
@@ -142,6 +143,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 {/* Page content */}
                 <main className="flex-1 p-4 sm:p-6 bg-background">{children}</main>
             </div>
-        </div>
+        </SidebarProvider>
     );
 }
