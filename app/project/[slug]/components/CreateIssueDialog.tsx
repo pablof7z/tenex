@@ -19,12 +19,7 @@ interface CreateIssueDialogProps {
     onSubmit: (description: string) => void; // Function to handle issue creation logic
 }
 
-export function CreateIssueDialog({
-    isOpen,
-    onClose,
-    initialContent,
-    onSubmit,
-}: CreateIssueDialogProps) {
+export function CreateIssueDialog({ isOpen, onClose, initialContent, onSubmit }: CreateIssueDialogProps) {
     const [description, setDescription] = useState(initialContent);
 
     // Update description when initialContent changes (e.g., clicking on a different tweet)
@@ -58,7 +53,7 @@ export function CreateIssueDialog({
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid w-full gap-1.5">
-                         <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description">Description</Label>
                         <Textarea
                             id="description"
                             placeholder="Type the issue description here."

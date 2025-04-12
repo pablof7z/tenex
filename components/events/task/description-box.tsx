@@ -27,17 +27,15 @@ export function DescriptionBox({
     const [replyContent, setReplyContent] = useState("");
     const [isPublishingReply, setIsPublishingReply] = useState(false);
     const { toast } = useToast();
-    const { events: replies } = useSubscribe(task ? [
-        { kinds: [1111], "#E": [task.id] }
-    ] : false);
+    const { events: replies } = useSubscribe(task ? [{ kinds: [1111], "#E": [task.id] }] : false);
 
     const handlePublishClick = async () => {
         if (!task || !replyContent.trim()) {
-             toast({
-                 title: "Error",
-                 description: "Task data not loaded or comment is empty.",
-                 variant: "destructive",
-             });
+            toast({
+                title: "Error",
+                description: "Task data not loaded or comment is empty.",
+                variant: "destructive",
+            });
             return;
         }
 
@@ -56,12 +54,12 @@ export function DescriptionBox({
             setReplyContent("");
             setShowReplyInput(false);
         } catch (error) {
-             console.error("Failed to publish reply:", error);
-             toast({
-                 title: "Error Publishing Reply",
-                 description: "Could not publish comment.",
-                 variant: "destructive",
-             });
+            console.error("Failed to publish reply:", error);
+            toast({
+                title: "Error Publishing Reply",
+                description: "Could not publish comment.",
+                variant: "destructive",
+            });
         } finally {
             setIsPublishingReply(false);
         }
@@ -75,11 +73,15 @@ export function DescriptionBox({
             <CardContent>
                 <p>{taskDescription || "No description provided."}</p>
 
-                {replies.map((reply: NDKEvent) => ( // Add type annotation
-                    <div key={reply.id} className="mt-4 pt-4 border-t">
-                        <p className="text-sm">{reply.content}</p>
-                    </div>
-                ))}
+                {replies.map(
+                    (
+                        reply: NDKEvent, // Add type annotation
+                    ) => (
+                        <div key={reply.id} className="mt-4 pt-4 border-t">
+                            <p className="text-sm">{reply.content}</p>
+                        </div>
+                    ),
+                )}
             </CardContent>
 
             <div className="p-4 border-t">
@@ -96,7 +98,11 @@ export function DescriptionBox({
                             disabled={isPublishingReply}
                         />
                         <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setShowReplyInput(false)} disabled={isPublishingReply}>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setShowReplyInput(false)}
+                                disabled={isPublishingReply}
+                            >
                                 Cancel
                             </Button>
                             <Button onClick={handlePublishClick} disabled={isPublishingReply || !replyContent.trim()}>

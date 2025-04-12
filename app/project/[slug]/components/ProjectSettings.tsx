@@ -72,55 +72,67 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
     }, [project]);
 
     // Helper function to call the configure API, wrapped in useCallback
-    const callConfigureApi = useCallback(async (nsecValue: string): Promise<boolean> => {
-        // Check readiness using the hook's state
-        if (!isConfigReady) {
-            toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
-            return false;
-        }
-        if (!project?.id) {
-            toast({ title: "Error", description: "Project ID is missing.", variant: "destructive" });
-            return false;
-        }
-
-        const apiUrl = getApiUrl(`/projects/${project.id}/configure`);
-        // getApiUrl now always returns a string, no need to check for null
-
-        setIsConfiguringMcp(true);
-        try {
-            const response = await fetch(apiUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nsec: nsecValue }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
-                throw new Error(errorData.error);
+    const callConfigureApi = useCallback(
+        async (nsecValue: string): Promise<boolean> => {
+            // Check readiness using the hook's state
+            if (!isConfigReady) {
+                toast({
+                    title: "Configuration Error",
+                    description: configError || "Configuration not ready.",
+                    variant: "destructive",
+                });
+                return false;
+            }
+            if (!project?.id) {
+                toast({ title: "Error", description: "Project ID is missing.", variant: "destructive" });
+                return false;
             }
 
-            console.log("MCP configuration updated successfully via API.");
-            return true; // Indicate success
-        } catch (error: unknown) {
-            console.error("Failed to configure MCP via API:", error);
-            const errorMessage = error instanceof Error ? error.message : "Could not update backend MCP settings.";
-            toast({
-                title: "MCP Configuration Failed",
-                description: errorMessage,
-                variant: "destructive",
-            });
-            // configError from the hook will display the persistent error if it was the cause
-            return false; // Indicate failure
-        } finally {
-            setIsConfiguringMcp(false);
-        }
-    }, [isConfigReady, project, getApiUrl, configError]); // Added configError dependency
+            const apiUrl = getApiUrl(`/projects/${project.id}/configure`);
+            // getApiUrl now always returns a string, no need to check for null
+
+            setIsConfiguringMcp(true);
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ nsec: nsecValue }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response
+                        .json()
+                        .catch(() => ({ error: `HTTP error! status: ${response.status}` }));
+                    throw new Error(errorData.error);
+                }
+
+                console.log("MCP configuration updated successfully via API.");
+                return true; // Indicate success
+            } catch (error: unknown) {
+                console.error("Failed to configure MCP via API:", error);
+                const errorMessage = error instanceof Error ? error.message : "Could not update backend MCP settings.";
+                toast({
+                    title: "MCP Configuration Failed",
+                    description: errorMessage,
+                    variant: "destructive",
+                });
+                // configError from the hook will display the persistent error if it was the cause
+                return false; // Indicate failure
+            } finally {
+                setIsConfiguringMcp(false);
+            }
+        },
+        [isConfigReady, project, getApiUrl, configError],
+    ); // Added configError dependency
 
     const handleSave = async () => {
         setIsSaving(true);
         project.title = name;
         project.repo = gitRepo;
-        project.hashtags = hashtags.split(",").map((tag) => tag.trim()).filter(t => t);
+        project.hashtags = hashtags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((t) => t);
         try {
             await project.publishReplaceable();
             toast({
@@ -159,15 +171,14 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                     description: "A new nsec has been generated, saved, and configured.",
                 });
             } else if (newNsec) {
-                 toast({
+                toast({
                     title: "Nsec Generated (Config Failed)",
                     description: "Nsec generated and saved, but backend configuration failed. Check errors.",
                     variant: "default",
                 });
             } else {
-                 throw new Error("Failed to retrieve generated NSEC after generation.");
+                throw new Error("Failed to retrieve generated NSEC after generation.");
             }
-
         } catch (error) {
             console.error("Failed to generate nsec:", error);
             toast({
@@ -201,16 +212,16 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
-            const existingDeletedTag = project.tags.find(t => t[0] === 'deleted');
+            const existingDeletedTag = project.tags.find((t) => t[0] === "deleted");
             if (!existingDeletedTag) {
-                project.tags.push(['deleted']);
+                project.tags.push(["deleted"]);
             }
             await project.publishReplaceable();
             toast({
                 title: "Project Marked for Deletion",
                 description: "The project event has been updated.",
             });
-            router.push('/dashboard');
+            router.push("/dashboard");
         } catch (error) {
             console.error("Failed to delete project:", error);
             toast({
@@ -227,8 +238,11 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
     const generateDisabled = actionsDisabled || isGeneratingNsec || isConfiguringMcp;
     const saveDisabled = isSaving;
     const deleteDisabled = isDeleting;
-    const configErrorTooltip = configError ? `Configuration Error: ${configError}` : !isConfigReady ? "Loading configuration..." : "";
-
+    const configErrorTooltip = configError
+        ? `Configuration Error: ${configError}`
+        : !isConfigReady
+          ? "Loading configuration..."
+          : "";
 
     return (
         <div className="flex flex-col space-y-4">
@@ -242,7 +256,11 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                             <AlertTriangle className="h-4 w-4" />
                             <AlertTitle>Configuration Error</AlertTitle>
                             <AlertDescription>
-                                {configError} Please check <Link href="/settings" className="underline">Application Settings</Link>. API interactions may fail.
+                                {configError} Please check{" "}
+                                <Link href="/settings" className="underline">
+                                    Application Settings
+                                </Link>
+                                . API interactions may fail.
                             </AlertDescription>
                         </Alert>
                     )}
@@ -307,7 +325,13 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                                 >
                                     {showNsec ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>
-                                <Button variant="outline" size="icon" onClick={handleCopyNsec} title={configErrorTooltip || "Copy Nsec"} disabled={actionsDisabled}>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleCopyNsec}
+                                    title={configErrorTooltip || "Copy Nsec"}
+                                    disabled={actionsDisabled}
+                                >
                                     <Copy className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -330,15 +354,15 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                                     {isGeneratingNsec
                                         ? "Generating..."
                                         : isConfiguringMcp
-                                        ? "Configuring..."
-                                        : "Generate Nsec"}
+                                          ? "Configuring..."
+                                          : "Generate Nsec"}
                                 </Button>
                             </div>
                         )}
 
                         <p className="text-xs text-muted-foreground pt-1">
-                            This key allows the project to publish updates and interact on Nostr. Keep it secret. It's also
-                            used to configure backend tools.
+                            This key allows the project to publish updates and interact on Nostr. Keep it secret. It's
+                            also used to configure backend tools.
                         </p>
                     </div>
 
@@ -352,7 +376,8 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                     <div className="pt-6 border-t border-destructive/20 mt-6">
                         <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Deleting your project marks it as deleted on Nostr relays. This action cannot be easily undone.
+                            Deleting your project marks it as deleted on Nostr relays. This action cannot be easily
+                            undone.
                         </p>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -366,13 +391,17 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         This action cannot be easily undone. This will mark the project event as deleted
-                                        on Nostr relays. Are you sure you want to delete the project
-                                        named "{project.title || 'Untitled Project'}"?
+                                        on Nostr relays. Are you sure you want to delete the project named "
+                                        {project.title || "Untitled Project"}"?
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    <AlertDialogAction
+                                        onClick={handleDelete}
+                                        disabled={isDeleting}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
                                         {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                         {isDeleting ? "Deleting..." : "Yes, delete project"}
                                     </AlertDialogAction>
@@ -384,6 +413,6 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
             </Card>
 
             <ProjectAgentProfileSettings project={project} projectSlug={projectSlug} />
-        </div> 
+        </div>
     );
 }

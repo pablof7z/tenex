@@ -17,7 +17,7 @@ interface ProjectAgentProfileSettingsProps {
 }
 
 export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAgentProfileSettingsProps) {
-    // get the pubkey 
+    // get the pubkey
     const getPubkeyBySlug = useProjectStore((state) => state.getPubkeyBySlug);
     const getSignerBySlug = useProjectStore((state) => state.getSignerBySlug);
     const pubkey = getPubkeyBySlug(projectSlug);
@@ -51,7 +51,7 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
         };
 
         // Remove undefined fields
-        Object.keys(updatedProfile).forEach(key => {
+        Object.keys(updatedProfile).forEach((key) => {
             if (updatedProfile[key as keyof NDKUserProfile] === undefined) {
                 delete updatedProfile[key as keyof NDKUserProfile];
             }
@@ -60,7 +60,7 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
         const profileEvent = new NDKEvent(ndk, {
             kind: 0,
             content: serializeProfile(updatedProfile),
-        })
+        });
         console.log("Profile Event:", profileEvent.content);
         await profileEvent.sign(signer);
         profileEvent.publish();
@@ -88,9 +88,9 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
                         placeholder="e.g., project-bot"
                         disabled={isSaving}
                     />
-                     <p className="text-xs text-muted-foreground">Short, technical name (like a username).</p>
+                    <p className="text-xs text-muted-foreground">Short, technical name (like a username).</p>
                 </div>
-                 <div className="grid gap-2">
+                <div className="grid gap-2">
                     <Label htmlFor="agent-display-name">Display Name</Label>
                     <Input
                         id="agent-display-name"
@@ -100,9 +100,9 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
                         placeholder="e.g., Project Assistant Bot"
                         disabled={isSaving}
                     />
-                     <p className="text-xs text-muted-foreground">Human-friendly name shown in interfaces.</p>
+                    <p className="text-xs text-muted-foreground">Human-friendly name shown in interfaces.</p>
                 </div>
-                 <div className="grid gap-2">
+                <div className="grid gap-2">
                     <Label htmlFor="agent-bio">Bio</Label>
                     <Textarea
                         id="agent-bio"
@@ -114,7 +114,7 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
                         rows={3}
                     />
                 </div>
-                 <div className="grid gap-2">
+                <div className="grid gap-2">
                     <Label htmlFor="agent-image">Image URL</Label>
                     <Input
                         id="agent-image"
@@ -128,7 +128,7 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
                 </div>
 
                 <Button className="rounded-md mt-2" onClick={handleSaveProfile} disabled={isSaving}>
-                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {isSaving ? "Saving Profile..." : "Save Agent Profile"}
                 </Button>
             </CardContent>

@@ -35,10 +35,10 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
 
     // Get project from the Zustand store
-    const findProjectById = useProjectStore(state => state.findProjectById);
+    const findProjectById = useProjectStore((state) => state.findProjectById);
     const project = useMemo(() => findProjectById(projectSlug), [findProjectById, projectSlug]);
-    const isLoadingStoreProjects = useProjectStore(state => state.isLoading); // Check if store is loading
-    const storeError = useProjectStore(state => state.error); // Check for store errors
+    const isLoadingStoreProjects = useProjectStore((state) => state.isLoading); // Check if store is loading
+    const storeError = useProjectStore((state) => state.error); // Check for store errors
 
     // Remove useSubscribe hook
     // const { events: projects } = useSubscribe(...);
@@ -59,7 +59,11 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
         // setFetchStatusError(null); // Clear previous errors - State removed
         // Config readiness check remains important for API calls
         if (!isConfigReady) {
-            toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
+            toast({
+                title: "Configuration Error",
+                description: configError || "Configuration not ready.",
+                variant: "destructive",
+            });
             return;
         }
         if (!projectSlug) {
@@ -117,20 +121,38 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     // --- Render Logic ---
 
     if (isConfigLoading) {
-        return <AppLayout><div className="p-4">Loading configuration...</div></AppLayout>;
+        return (
+            <AppLayout>
+                <div className="p-4">Loading configuration...</div>
+            </AppLayout>
+        );
     }
     if (isLoadingStoreProjects) {
-        return <AppLayout><div className="p-4">Loading projects from store...</div></AppLayout>;
+        return (
+            <AppLayout>
+                <div className="p-4">Loading projects from store...</div>
+            </AppLayout>
+        );
     }
 
     // Error state checks
     if (storeError) {
-        return <AppLayout><div className="p-4 text-red-600">Error loading projects from store: {storeError}</div></AppLayout>;
+        return (
+            <AppLayout>
+                <div className="p-4 text-red-600">Error loading projects from store: {storeError}</div>
+            </AppLayout>
+        );
     }
 
     // If project not found in store after loading
     if (!project) {
-        return <AppLayout><div className="p-4 text-red-600">Error: Project with ID '{projectSlug}' not found in the store. Did you visit the dashboard first?</div></AppLayout>;
+        return (
+            <AppLayout>
+                <div className="p-4 text-red-600">
+                    Error: Project with ID '{projectSlug}' not found in the store. Did you visit the dashboard first?
+                </div>
+            </AppLayout>
+        );
     }
 
     // Determine if main content actions should be disabled (only config error now)
@@ -143,7 +165,12 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
             {configError && (
                 <div className="mb-4 p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
                     <h3 className="font-semibold">Configuration Error</h3>
-                    <p>{configError} <Link href="/settings" className="underline ml-1">Check Settings</Link></p>
+                    <p>
+                        {configError}{" "}
+                        <Link href="/settings" className="underline ml-1">
+                            Check Settings
+                        </Link>
+                    </p>
                 </div>
             )}
 
@@ -152,7 +179,9 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 onSettingsClick={handleSettingsClick}
                 onEditorLaunch={handleEditorLaunch}
                 // Provide dummy props for removed functionality to satisfy types
-                onProjectCreate={() => { console.warn("Project creation called from header, but functionality removed."); }}
+                onProjectCreate={() => {
+                    console.warn("Project creation called from header, but functionality removed.");
+                }}
                 projectExists={true} // Assume exists if on this page
                 isCreatingProject={false} // Creation state removed
                 isConfigReady={isConfigReady}
@@ -195,8 +224,8 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
                 {/* Conditionally render tab content based on readiness */}
                 <TabsContent value="overview" className="mt-6">
-                {/* Render tab content directly, disabling handled by TabsTrigger */}
-                {/* Removed duplicate TabsContent tag */}
+                    {/* Render tab content directly, disabling handled by TabsTrigger */}
+                    {/* Removed duplicate TabsContent tag */}
                     <ProjectOverviewTab
                         project={project}
                         projectSigner={projectSigner}

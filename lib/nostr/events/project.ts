@@ -20,7 +20,7 @@ export class NDKProject extends NDKArticle {
 
     set hashtags(values: string[]) {
         this.removeTag("hashtags");
-        if (values.filter(t => t.length > 0).length) this.tags.push(["hashtags", ...values]);
+        if (values.filter((t) => t.length > 0).length) this.tags.push(["hashtags", ...values]);
     }
 
     get hashtags(): string[] {
@@ -38,7 +38,6 @@ export class NDKProject extends NDKArticle {
     get description(): string {
         return this.content;
     }
-
 
     /**
      * The project slug, derived from the 'd' tag.

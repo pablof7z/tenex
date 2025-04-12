@@ -17,7 +17,7 @@ const DEFAULT_RELAYS = ["wss://relay.damus.io", "wss://relay.primal.net", "wss:/
 const DEFAULT_DB_PATH = join(homedir(), ".tenex.db");
 
 // Default Projects directory path (relative to project root)
-const DEFAULT_PROJECTS_DIR = join(process.cwd(), 'mcp', 'projects');
+const DEFAULT_PROJECTS_DIR = join(process.cwd(), "mcp", "projects");
 
 /**
  * Initialize configuration by loading the private key from environment

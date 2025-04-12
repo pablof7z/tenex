@@ -25,9 +25,7 @@ export default function TaskDetailPage() {
     const [isStartingWork, setIsStartingWork] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
     const [combinedContent, setCombinedContent] = useState(""); // State for combined content
-    const { events: replies } = useSubscribe(task ? [
-        { kinds: [1111], "#E": [task.id] }
-    ] : false);
+    const { events: replies } = useSubscribe(task ? [{ kinds: [1111], "#E": [task.id] }] : false);
 
     const sortedReplies = useMemo(() => {
         if (!replies) return [];
@@ -79,12 +77,12 @@ export default function TaskDetailPage() {
         setIsStartingWork(true);
         try {
             const apiUrl = `/api/projects/${projectId}/tasks/${taskId}/work`;
-            const context = referencedEvents.map(event => event.content).join("\n---\n");
+            const context = referencedEvents.map((event) => event.content).join("\n---\n");
 
             const response = await fetch(apiUrl, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     title: taskTitle,
@@ -98,7 +96,7 @@ export default function TaskDetailPage() {
             if (response.ok && response.status === 202) {
                 toast({
                     title: "Success",
-                    description: `Agent work initiated for task ${taskId}. ${result.message || ''}`,
+                    description: `Agent work initiated for task ${taskId}. ${result.message || ""}`,
                 });
                 setIsModalOpen(false); // Close modal on success
                 // Optionally, navigate away or update UI
@@ -135,7 +133,7 @@ export default function TaskDetailPage() {
 
         if (sortedReplies && sortedReplies.length > 0) {
             // Replies exist, show modal
-            const replyContents = sortedReplies.map(reply => reply.content);
+            const replyContents = sortedReplies.map((reply) => reply.content);
             const initialModalContent = [taskDescription, ...replyContents].join("\n\n");
             setCombinedContent(initialModalContent);
             setIsModalOpen(true);
@@ -158,10 +156,10 @@ export default function TaskDetailPage() {
             <div className="flex flex-col h-screen p-4 md:p-6 lg:p-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">
-                        {taskTitle}
-                    </h1>
-                    <Button onClick={handleInitiateWork} disabled={!task || isStartingWork}> {/* Use new handler */}
+                    <h1 className="text-2xl font-bold">{taskTitle}</h1>
+                    <Button onClick={handleInitiateWork} disabled={!task || isStartingWork}>
+                        {" "}
+                        {/* Use new handler */}
                         {isStartingWork ? "Starting..." : "Start Agent Work"}
                     </Button>
                 </div>
@@ -169,7 +167,9 @@ export default function TaskDetailPage() {
                 {/* Main Content Area */}
                 <div className="flex flex-1 gap-6 overflow-hidden">
                     {/* Left Column (Agent Updates) */}
-                    <div className="w-1/3 border rounded-lg p-4 overflow-hidden"> {/* Changed overflow-y-auto to overflow-hidden */}
+                    <div className="w-1/3 border rounded-lg p-4 overflow-hidden">
+                        {" "}
+                        {/* Changed overflow-y-auto to overflow-hidden */}
                         <TaskUpdates taskId={taskId} projectSlug={projectId} />
                     </div>
 

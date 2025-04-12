@@ -58,8 +58,8 @@ async function readFilesFromDir(dirPath: string): Promise<SpecFile[]> {
     return validFiles;
 }
 
-
-export async function GET(request: Request, { params }: { params: { slug: string } }) { // Changed id to slug
+export async function GET(request: Request, { params }: { params: { slug: string } }) {
+    // Changed id to slug
     const projectSlug = params.slug; // Changed projectId to projectSlug
     if (!projectSlug) {
         return NextResponse.json({ error: "Project slug is required" }, { status: 400 }); // Updated error message
@@ -72,17 +72,18 @@ export async function GET(request: Request, { params }: { params: { slug: string
         // Read files from both directories concurrently
         const [specFiles, ruleFiles] = await Promise.all([
             readFilesFromDir(projectContextDir),
-            readFilesFromDir(projectRulesDir)
+            readFilesFromDir(projectRulesDir),
         ]);
 
-        console.log(`Fetched ${specFiles.length} spec files and ${ruleFiles.length} rule files for project ${projectSlug}.`); // Use projectSlug
+        console.log(
+            `Fetched ${specFiles.length} spec files and ${ruleFiles.length} rule files for project ${projectSlug}.`,
+        ); // Use projectSlug
 
         // Return grouped files
         return NextResponse.json({
             specs: specFiles,
-            rules: ruleFiles
+            rules: ruleFiles,
         });
-
     } catch (error: unknown) {
         console.error(`Failed to get project files for ${projectSlug}:`, error); // Use projectSlug
         const message = error instanceof Error ? error.message : "Failed to get project files";
@@ -90,7 +91,8 @@ export async function GET(request: Request, { params }: { params: { slug: string
     }
 }
 
-export async function PUT(request: Request, { params }: { params: { slug: string } }) { // Changed id to slug
+export async function PUT(request: Request, { params }: { params: { slug: string } }) {
+    // Changed id to slug
     const projectSlug = params.slug; // Changed projectId to projectSlug
     if (!projectSlug) {
         return NextResponse.json({ error: "Project slug is required" }, { status: 400 }); // Updated error message
@@ -98,7 +100,7 @@ export async function PUT(request: Request, { params }: { params: { slug: string
 
     let fileName: string | undefined;
     let content: string | undefined;
-    let group: 'specs' | 'rules' | undefined; // Add group parameter
+    let group: "specs" | "rules" | undefined; // Add group parameter
 
     try {
         // Expect fileName, content, and group in the body
@@ -114,14 +116,18 @@ export async function PUT(request: Request, { params }: { params: { slug: string
             // Allow empty string for content when creating new files initially
             return NextResponse.json({ error: "File content must be a string" }, { status: 400 });
         }
-        if (group !== 'specs' && group !== 'rules') {
-            return NextResponse.json({ error: "Invalid or missing 'group' parameter (must be 'specs' or 'rules')" }, { status: 400 });
+        if (group !== "specs" && group !== "rules") {
+            return NextResponse.json(
+                { error: "Invalid or missing 'group' parameter (must be 'specs' or 'rules')" },
+                { status: 400 },
+            );
         }
 
         // Determine the target directory based on the group
-        const targetDirectory = group === 'specs'
-            ? getProjectContextPath(projectSlug) // Use projectSlug
-            : getProjectRulesPath(projectSlug); // Use projectSlug
+        const targetDirectory =
+            group === "specs"
+                ? getProjectContextPath(projectSlug) // Use projectSlug
+                : getProjectRulesPath(projectSlug); // Use projectSlug
 
         const targetFilePath = path.join(targetDirectory, fileName);
 
@@ -136,9 +142,10 @@ export async function PUT(request: Request, { params }: { params: { slug: string
 
         console.log(`Successfully updated ${group} file: ${targetFilePath}`);
         return NextResponse.json({ message: `${fileName} (${group}) updated successfully` });
-
     } catch (error: unknown) {
-        const errorContext = fileName ? `${group || 'unknown group'} file ${fileName}` : `${group || 'unknown group'} file`;
+        const errorContext = fileName
+            ? `${group || "unknown group"} file ${fileName}`
+            : `${group || "unknown group"} file`;
         console.error(`Failed to update ${errorContext} for ${projectSlug}:`, error); // Use projectSlug
         if (error instanceof SyntaxError) {
             return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });

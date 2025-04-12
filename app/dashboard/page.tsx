@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useConfig } from "@/hooks/useConfig"; // Import useConfig
 import { useProjectStore } from "@/lib/store/projects"; // Import the Zustand store
 
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -43,13 +42,20 @@ interface ApiProject {
     deleted?: boolean; // Added based on filter logic
 }
 
-
 export default function DashboardPage() {
     const { ndk } = useNDK(); // Still needed for creating projects
     const currentUser = useNDKCurrentUser(); // Still needed for creating projects and context
 
     // State for projects fetched from API
-    const { projects, isLoading: isLoadingProjects, error: projectsError, setProjects, setLoading: setIsLoadingProjects, setError: setProjectsError, loadProjectDetails } = useProjectStore();
+    const {
+        projects,
+        isLoading: isLoadingProjects,
+        error: projectsError,
+        setProjects,
+        setLoading: setIsLoadingProjects,
+        setError: setProjectsError,
+        loadProjectDetails,
+    } = useProjectStore();
     const { toast } = useToast();
     // Use the hook, getting isReady and error state
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
@@ -73,7 +79,7 @@ export default function DashboardPage() {
         setIsLoadingProjects(true);
         setProjectsError(null);
         try {
-            const apiUrl = getApiUrl('/projects');
+            const apiUrl = getApiUrl("/projects");
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: "Failed to fetch projects" }));
@@ -82,7 +88,7 @@ export default function DashboardPage() {
             const data: ApiProject[] = await response.json();
 
             // Load signer and pubkey details into the store from the API data
-            data.forEach(apiProject => {
+            data.forEach((apiProject) => {
                 if (apiProject.projectName && apiProject.nsec && apiProject.pubkey) {
                     loadProjectDetails(apiProject.projectName, apiProject.nsec, apiProject.pubkey);
                 } else {
@@ -91,13 +97,10 @@ export default function DashboardPage() {
             });
 
             // Fetch NDK events based on event IDs from API data (if available)
-            const slugs = data.map(p => p.projectName).filter(Boolean) as string[]; // Use projectName as slug
+            const slugs = data.map((p) => p.projectName).filter(Boolean) as string[]; // Use projectName as slug
 
             // Fetch based on slugs (#d tag) as primary identifier if eventId is missing
-            const ndkProjects = await ndk.fetchEvents([
-                { kinds: [NDKProject.kind], "#d": slugs },
-            ]);
-
+            const ndkProjects = await ndk.fetchEvents([{ kinds: [NDKProject.kind], "#d": slugs }]);
 
             setProjects(Array.from(ndkProjects).map(NDKProject.from));
             console.log("Fetched NDK events and set projects in store:", ndkProjects);
@@ -135,9 +138,13 @@ export default function DashboardPage() {
         }
         // Check if config is ready and has no errors
         if (!isConfigReady) {
-             // Error is already displayed via configError state, just prevent action
-             toast({ title: "Configuration Error", description: configError || "Configuration is not ready.", variant: "destructive" });
-             return;
+            // Error is already displayed via configError state, just prevent action
+            toast({
+                title: "Configuration Error",
+                description: configError || "Configuration is not ready.",
+                variant: "destructive",
+            });
+            return;
         }
 
         try {
@@ -189,12 +196,14 @@ export default function DashboardPage() {
                         pubkey: projectSigner.pubkey,
                         repo: formData.gitRepo || undefined,
                         hashtags: formData.hashtags || undefined, // Send raw hashtags string
-                        eventId: project.tagId()
+                        eventId: project.tagId(),
                     }),
                 });
 
                 if (!localCreateResponse.ok) {
-                    const errorData = await localCreateResponse.json().catch(() => ({ error: "Failed to parse error response" }));
+                    const errorData = await localCreateResponse
+                        .json()
+                        .catch(() => ({ error: "Failed to parse error response" }));
                     throw new Error(
                         errorData.error ||
                             `Failed to create project backend structure: ${localCreateResponse.statusText}`,
@@ -205,13 +214,14 @@ export default function DashboardPage() {
 
                 const localCreateData = await localCreateResponse.json();
                 console.log("Project backend structure created:", localCreateData);
-
             } catch (backendError) {
                 console.error("Error creating project backend structure:", backendError);
                 toast({
                     title: "Backend Error",
                     description:
-                        backendError instanceof Error ? backendError.message : "Failed to create project backend files.",
+                        backendError instanceof Error
+                            ? backendError.message
+                            : "Failed to create project backend files.",
                     variant: "default", // Keep as default/warning since Nostr event succeeded
                 });
             }
@@ -229,7 +239,6 @@ export default function DashboardPage() {
             console.log("Project created successfully via Nostr:", project);
             // Refetch projects from the API to update the list
             fetchProjects();
-
         } catch (err) {
             console.error("Error creating project:", err);
             const errorMessage = err instanceof Error ? err.message : "Failed to create project";
@@ -246,17 +255,25 @@ export default function DashboardPage() {
 
     // Determine if actions requiring API calls should be disabled
     const actionsDisabled = !isConfigReady || isConfigLoading;
-    const configErrorTooltip = configError ? `Configuration Error: ${configError}` : !isConfigReady ? "Loading configuration..." : "";
+    const configErrorTooltip = configError
+        ? `Configuration Error: ${configError}`
+        : !isConfigReady
+          ? "Loading configuration..."
+          : "";
 
     return (
         <AppLayout>
             {/* Display Configuration Error Alert if present */}
             {configError && !isConfigLoading && (
-                 <Alert variant="destructive" className="mb-4">
+                <Alert variant="destructive" className="mb-4">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Configuration Error</AlertTitle>
                     <AlertDescription>
-                        {configError} Please check <Link href="/settings" className="underline">Application Settings</Link>. API interactions may fail.
+                        {configError} Please check{" "}
+                        <Link href="/settings" className="underline">
+                            Application Settings
+                        </Link>
+                        . API interactions may fail.
                     </AlertDescription>
                 </Alert>
             )}
@@ -341,7 +358,12 @@ export default function DashboardPage() {
                                 Cancel
                             </Button>
                             {/* Disable create button if config not ready/error or already creating */}
-                            <Button onClick={handleCreateProject} className="rounded-md" disabled={isCreating || actionsDisabled} title={configErrorTooltip}>
+                            <Button
+                                onClick={handleCreateProject}
+                                className="rounded-md"
+                                disabled={isCreating || actionsDisabled}
+                                title={configErrorTooltip}
+                            >
                                 {isCreating ? "Creating..." : "Create project"}
                             </Button>
                         </DialogFooter>
@@ -355,13 +377,15 @@ export default function DashboardPage() {
                         <p>Loading projects...</p>
                     </div>
                 ) : projectsError ? (
-                     <div className="col-span-3">
+                    <div className="col-span-3">
                         <Alert variant="destructive">
                             <AlertTriangle className="h-4 w-4" />
                             <AlertTitle>Error Loading Projects</AlertTitle>
                             <AlertDescription>
                                 {projectsError}
-                                <Button variant="outline" size="sm" onClick={fetchProjects} className="ml-4">Retry</Button>
+                                <Button variant="outline" size="sm" onClick={fetchProjects} className="ml-4">
+                                    Retry
+                                </Button>
                             </AlertDescription>
                         </Alert>
                     </div>
@@ -373,8 +397,8 @@ export default function DashboardPage() {
                             // Adapt the passed project object to match ProjectCardDisplayProps
                             project={{
                                 id: project.id,
-                                slug: project.dTag || project.id || 'unknown-slug', // Use dTag, fallback to id or placeholder
-                                title: project.title || project.dTag || 'Untitled Project', // Ensure title is always a string, fallback to dTag or placeholder
+                                slug: project.dTag || project.id || "unknown-slug", // Use dTag, fallback to id or placeholder
+                                title: project.title || project.dTag || "Untitled Project", // Ensure title is always a string, fallback to dTag or placeholder
                                 description: project.content,
                                 hashtags: project.hashtags,
                                 repo: project.repo,

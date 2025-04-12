@@ -1,4 +1,4 @@
-import path from 'path';
+import path from "path";
 
 // Ensure PROJECTS_PATH is set in your environment variables
 const PROJECTS_PATH = process.env.PROJECTS_PATH;
@@ -30,7 +30,7 @@ export function getProjectPath(projectSlug: string): string {
  */
 export function getProjectContextPath(projectSlug: string): string {
     const projectPath = getProjectPath(projectSlug);
-    return path.join(projectPath, 'context');
+    return path.join(projectPath, "context");
 }
 
 /**
@@ -41,5 +41,5 @@ export function getProjectContextPath(projectSlug: string): string {
 export function getProjectRulesPath(projectSlug: string): string {
     const projectPath = getProjectPath(projectSlug);
     // Use path.join to correctly handle the hidden directory '.roo'
-    return path.join(projectPath, '.roo', 'rules');
+    return path.join(projectPath, ".roo", "rules");
 }

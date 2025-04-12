@@ -6,7 +6,7 @@ const explicitRelayUrls = ["wss://relay.damus.io", "wss://relay.primal.net", "ws
 
 // Setup Dexie cache adapter (Client-side only)
 let cacheAdapter: NDKCacheAdapterDexie | undefined;
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
     cacheAdapter = new NDKCacheAdapterDexie({ dbName: "tenex" });
 }
 

@@ -1,8 +1,8 @@
 import { NDKEvent, type NDKTag } from "@nostr-dev-kit/ndk";
 import { z } from "zod";
-import { promises as fs } from 'fs';
-import path from 'path';
-import os from 'os';
+import { promises as fs } from "fs";
+import path from "path";
+import os from "os";
 import { ndk } from "../ndk.js"; // ndk instance should have the signer configured
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Reverting to original path with .js
 import { log } from "../lib/utils/log.js"; // Use the correct log import
@@ -12,10 +12,13 @@ import { log } from "../lib/utils/log.js"; // Use the correct log import
  * @param content The content of the note to publish
  * @returns Publication results
  */
-export async function publishNote(content: string, taskId: string | undefined): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+export async function publishNote(
+    content: string,
+    taskId: string | undefined,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
     log(`INFO: Publishing note: "${content.substring(0, 50)}..."`);
 
-    const taskFilePath = taskId ? path.join(os.homedir(), '.tenex', 'tasks', taskId) : undefined;
+    const taskFilePath = taskId ? path.join(os.homedir(), ".tenex", "tasks", taskId) : undefined;
     let previousEventId: string | undefined = undefined;
 
     try {
@@ -33,11 +36,11 @@ export async function publishNote(content: string, taskId: string | undefined): 
         // If taskId is provided, try to read the previous event ID
         if (taskFilePath) {
             try {
-                previousEventId = await fs.readFile(taskFilePath, 'utf-8');
+                previousEventId = await fs.readFile(taskFilePath, "utf-8");
                 log(`INFO: Found previous event ID ${previousEventId} for task ${taskId}`);
             } catch (error: unknown) {
                 // Check if it's a Node.js file system error
-                if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
+                if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
                     log(`INFO: No previous event file found for task ${taskId}.`);
                 } else if (error instanceof Error) {
                     log(`WARN: Error reading task file ${taskFilePath}: ${error.message}`);
@@ -50,15 +53,13 @@ export async function publishNote(content: string, taskId: string | undefined): 
         // Create the event
         // Prepare tags
         const tags: NDKTag[] = [];
-        if (taskId)
-             tags.push(["e", taskId]);
-        
+        if (taskId) tags.push(["e", taskId]);
+
         if (previousEventId) {
             // Tag the previous event in the sequence for this task
             tags.push(["e", previousEventId]);
             log(`INFO: Tagging previous event ${previousEventId}`);
         }
-
 
         // Create the event
         const event = new NDKEvent(ndk, {
@@ -82,17 +83,18 @@ export async function publishNote(content: string, taskId: string | undefined): 
         }
 
         // If taskId is provided and publish was successful (or attempted), save the new event ID
-        if (taskFilePath && event.id) { // Check event.id exists
-             try {
-                 const dir = path.dirname(taskFilePath);
-                 await fs.mkdir(dir, { recursive: true }); // Ensure directory exists
-                 await fs.writeFile(taskFilePath, event.id, 'utf-8');
-                 log(`INFO: Saved current event ID ${event.id} to ${taskFilePath}`);
-             } catch (error: unknown) {
-                 const message = error instanceof Error ? error.message : String(error);
-                 log(`ERROR: Failed to write task file ${taskFilePath}: ${message}`);
-                 // Decide how to handle this error - maybe add to the return message?
-             }
+        if (taskFilePath && event.id) {
+            // Check event.id exists
+            try {
+                const dir = path.dirname(taskFilePath);
+                await fs.mkdir(dir, { recursive: true }); // Ensure directory exists
+                await fs.writeFile(taskFilePath, event.id, "utf-8");
+                log(`INFO: Saved current event ID ${event.id} to ${taskFilePath}`);
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
+                log(`ERROR: Failed to write task file ${taskFilePath}: ${message}`);
+                // Decide how to handle this error - maybe add to the return message?
+            }
         }
 
         return {
@@ -127,10 +129,9 @@ export function addPublishCommand(server: McpServer) {
         // Handler uses only content
         async (
             { content, taskId }: { content: string; taskId?: string },
-             _extra: unknown // Use unknown since it's unused
+            _extra: unknown, // Use unknown since it's unused
         ) => {
             return await publishNote(content, taskId);
         },
     );
 }
-

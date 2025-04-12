@@ -21,7 +21,8 @@ interface CreatePostDialogProps {
     signer: NDKPrivateKeySigner | null; // Added signer prop
 }
 
-export function CreatePostDialog({ open, onClose, signer }: CreatePostDialogProps) { // Removed ndk from props
+export function CreatePostDialog({ open, onClose, signer }: CreatePostDialogProps) {
+    // Removed ndk from props
     const { ndk } = useNDK(); // Get NDK instance from hook
     const [content, setContent] = useState("");
     const [isPublishing, setIsPublishing] = useState(false); // Moved isPublishing state here
@@ -60,7 +61,7 @@ export function CreatePostDialog({ open, onClose, signer }: CreatePostDialogProp
         handlePostSubmit(); // Call the actual submission logic
     };
 
-     // Close handler ensures state is reset if dialog is closed externally
+    // Close handler ensures state is reset if dialog is closed externally
     const handleClose = () => {
         if (!isPublishing) {
             setContent(""); // Reset content if not publishing
@@ -68,9 +69,10 @@ export function CreatePostDialog({ open, onClose, signer }: CreatePostDialogProp
         }
     };
 
-
     return (
-        <Dialog open={open} onOpenChange={handleClose}> {/* Use handleClose */}
+        <Dialog open={open} onOpenChange={handleClose}>
+            {" "}
+            {/* Use handleClose */}
             <DialogContent className="sm:max-w-[500px] rounded-md">
                 <DialogHeader>
                     <DialogTitle>Create Post</DialogTitle>
@@ -91,10 +93,16 @@ export function CreatePostDialog({ open, onClose, signer }: CreatePostDialogProp
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={handleClose} className="rounded-md" disabled={isPublishing}> {/* Use handleClose */}
+                    <Button variant="outline" onClick={handleClose} className="rounded-md" disabled={isPublishing}>
+                        {" "}
+                        {/* Use handleClose */}
                         Cancel
                     </Button>
-                    <Button onClick={handleTriggerPost} className="rounded-md" disabled={!content.trim() || isPublishing}>
+                    <Button
+                        onClick={handleTriggerPost}
+                        className="rounded-md"
+                        disabled={!content.trim() || isPublishing}
+                    >
                         {isPublishing ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (

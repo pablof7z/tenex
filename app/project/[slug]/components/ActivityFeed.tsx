@@ -24,9 +24,7 @@ interface ActivityFeedProps {
 export function ActivityFeed({ project, signer, onReply, onRepost, /* onQuote removed */ onZap }: ActivityFeedProps) {
     const { ndk } = useNDK();
     const projectPubkey = signer.pubkey;
-    const { events } = useSubscribe([
-        { kinds: [1], authors: [projectPubkey], limit: 50 },
-    ], {}, [projectPubkey]);
+    const { events } = useSubscribe([{ kinds: [1], authors: [projectPubkey], limit: 50 }], {}, [projectPubkey]);
     const [isCreatingPost, setIsCreatingPost] = useState(false);
     // const [isPublishing, setIsPublishing] = useState(false); // Removed, handled in CreatePostDialog
 
@@ -56,19 +54,19 @@ export function ActivityFeed({ project, signer, onReply, onRepost, /* onQuote re
     return (
         <Card className="rounded-md border-border">
             <CardHeader className="pb-3">
-                 <div className="flex items-center justify-between">
-                     <CardTitle className="text-xl">Activity Feed</CardTitle>
-                     <Button
-                         variant="ghost"
-                         size="icon"
-                         className="h-8 w-8 rounded-md hover:bg-secondary"
-                         onClick={handleCreatePostClick}
-                     >
-                         <Plus className="h-4 w-4" />
-                         <span className="sr-only">Create post</span>
-                     </Button>
-                 </div>
-                 <CardDescription>Updates from the project agent</CardDescription>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Activity Feed</CardTitle>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md hover:bg-secondary"
+                        onClick={handleCreatePostClick}
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span className="sr-only">Create post</span>
+                    </Button>
+                </div>
+                <CardDescription>Updates from the project agent</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">

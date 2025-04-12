@@ -60,7 +60,13 @@ export function ProjectHeader({
                     <Tooltip>
                         <TooltipTrigger asChild>
                             {/* Disable Settings button if config not ready */}
-                            <Button variant="outline" size="sm" className="rounded-md" onClick={onSettingsClick} disabled={!isConfigReady}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-md"
+                                onClick={onSettingsClick}
+                                disabled={!isConfigReady}
+                            >
                                 <Settings className="mr-2 h-4 w-4" />
                                 Settings
                             </Button>
@@ -77,11 +83,16 @@ export function ProjectHeader({
                     </Button>
                 )}
                 {projectExists === true && (
-                     <TooltipProvider>
+                    <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 {/* Disable Launch Editor button if config not ready */}
-                                <Button size="sm" className="rounded-md w-[140px]" onClick={onEditorLaunch} disabled={!isConfigReady}>
+                                <Button
+                                    size="sm"
+                                    className="rounded-md w-[140px]"
+                                    onClick={onEditorLaunch}
+                                    disabled={!isConfigReady}
+                                >
                                     <Code className="mr-2 h-4 w-4" />
                                     Launch Editor
                                 </Button>
@@ -91,7 +102,7 @@ export function ProjectHeader({
                     </TooltipProvider>
                 )}
                 {projectExists === false && (
-                     <TooltipProvider>
+                    <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 {/* Disable Create Project button if config not ready or already creating */}
@@ -109,7 +120,7 @@ export function ProjectHeader({
                                     {isCreatingProject ? "Creating..." : "Create Project"}
                                 </Button>
                             </TooltipTrigger>
-                             {!isConfigReady && <TooltipContent>{configNotReadyTooltip}</TooltipContent>}
+                            {!isConfigReady && <TooltipContent>{configNotReadyTooltip}</TooltipContent>}
                         </Tooltip>
                     </TooltipProvider>
                 )}

@@ -60,7 +60,7 @@ export default function LandingPage() {
                                 // We need a way to know if the user *is* logged in to change the button behavior
                                 // For now, let's keep the button text static or link directly to dashboard
                                 // A better solution would involve lifting state or using a shared context/store
-                                onClick={() => window.location.href = "/dashboard"} // Simplification: always go to dashboard
+                                onClick={() => (window.location.href = "/dashboard")} // Simplification: always go to dashboard
                             >
                                 Get Started {/* Simplification: Static text */}
                                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -166,7 +166,7 @@ export default function LandingPage() {
                                     <Button
                                         className="rounded-md px-6"
                                         // Same simplification as above
-                                        onClick={() => window.location.href = "/dashboard"}
+                                        onClick={() => (window.location.href = "/dashboard")}
                                     >
                                         Get Started Now {/* Simplification: Static text */}
                                     </Button>

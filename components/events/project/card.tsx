@@ -24,7 +24,9 @@ export function ProjectCard({ project }: { project: ProjectCardDisplayProps }) {
 
     // Format timestamp if available
     const updatedAt = updatedAtTimestamp
-        ? new Date(updatedAtTimestamp * 1000).toLocaleDateString() + ' ' + new Date(updatedAtTimestamp * 1000).toLocaleTimeString()
+        ? new Date(updatedAtTimestamp * 1000).toLocaleDateString() +
+          " " +
+          new Date(updatedAtTimestamp * 1000).toLocaleTimeString()
         : "?";
 
     const peopleTalking = "?";
@@ -54,7 +56,7 @@ export function ProjectCard({ project }: { project: ProjectCardDisplayProps }) {
                     {/* Use repo directly */}
                     {repo ? (
                         <a
-                            href={repo.startsWith('http') ? repo : `https://${repo}`}
+                            href={repo.startsWith("http") ? repo : `https://${repo}`}
                             className="text-foreground hover:underline truncate"
                             target="_blank"
                             rel="noopener noreferrer"

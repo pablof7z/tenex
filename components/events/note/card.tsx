@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import NDK, { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK default
 import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
 import { MessageSquare, Repeat, Send, Zap, Plus, Loader2 } from "lucide-react"; // Import Plus, Loader2
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import UserAvatar from "../../user/avatar";
 import { toast } from "@/components/ui/use-toast";
-import { QuotePostDialog } from '@/app/project/[slug]/components/QuotePostDialog'; // Import QuotePostDialog
+import { QuotePostDialog } from "@/app/project/[slug]/components/QuotePostDialog"; // Import QuotePostDialog
 
 // Define QuoteData interface here to avoid circular dependencies
 export interface QuoteData {
@@ -39,7 +39,8 @@ const getUserDisplayName = (profile: NDKUserProfile | undefined, user: NDKUser):
 };
 
 // Function to get User handle (npub or nprofile)
-const getUserHandle = (profile: NDKUserProfile | undefined, user: NDKUser): string => {; // Add semicolon
+const getUserHandle = (profile: NDKUserProfile | undefined, user: NDKUser): string => {
+    // Add semicolon
     // Prefer npub for simplicity here, adjust if nprofile is needed
     return profile?.nip05 ?? user.npub;
 };
@@ -76,39 +77,50 @@ export function NoteCard({
             content: event.content,
             User: UserDisplayName,
             pubkey: event.pubkey,
-            nevent: event.encode()
+            nevent: event.encode(),
         });
     };
 
     // New handler for submitting the quote from the dialog
-    const handleQuoteSubmit = useCallback(async (originalQuoteData: QuoteData, comment: string) => {
-        if (!ndk?.signer || !comment.trim() || !originalQuoteData.nevent) {
-            toast({ title: "Error", description: "Cannot quote post. Signer or required data missing.", variant: "destructive" });
-            return;
-        }
-        setIsQuoting(true);
-        try {
-            const quoteEvent = new NDKEvent(ndk);
-            quoteEvent.kind = 1;
-            quoteEvent.content = comment;
+    const handleQuoteSubmit = useCallback(
+        async (originalQuoteData: QuoteData, comment: string) => {
+            if (!ndk?.signer || !comment.trim() || !originalQuoteData.nevent) {
+                toast({
+                    title: "Error",
+                    description: "Cannot quote post. Signer or required data missing.",
+                    variant: "destructive",
+                });
+                return;
+            }
+            setIsQuoting(true);
+            try {
+                const quoteEvent = new NDKEvent(ndk);
+                quoteEvent.kind = 1;
+                quoteEvent.content = comment;
 
-            // Add 'e' tag referencing the quoted event using event.id
-            quoteEvent.tags.push(["e", event.id, "", "mention"]);
-            // Embed the nevent URI in the content
-            quoteEvent.content += `\n\nnostr:${originalQuoteData.nevent}`;
+                // Add 'e' tag referencing the quoted event using event.id
+                quoteEvent.tags.push(["e", event.id, "", "mention"]);
+                // Embed the nevent URI in the content
+                quoteEvent.content += `\n\nnostr:${originalQuoteData.nevent}`;
 
-            await quoteEvent.sign();
-            await quoteEvent.publish();
+                await quoteEvent.sign();
+                await quoteEvent.publish();
 
-            toast({ title: "Success", description: "Quote post published!" });
-            setQuoteDataForDialog(null); // Close dialog on success
-        } catch (error) {
-            console.error("Failed to publish quote:", error);
-            toast({ title: "Error", description: `Failed to publish quote: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
-        } finally {
-            setIsQuoting(false);
-        }
-    }, [ndk, event]); // Added dependencies
+                toast({ title: "Success", description: "Quote post published!" });
+                setQuoteDataForDialog(null); // Close dialog on success
+            } catch (error) {
+                console.error("Failed to publish quote:", error);
+                toast({
+                    title: "Error",
+                    description: `Failed to publish quote: ${error instanceof Error ? error.message : "Unknown error"}`,
+                    variant: "destructive",
+                });
+            } finally {
+                setIsQuoting(false);
+            }
+        },
+        [ndk, event],
+    ); // Added dependencies
     const handleRepostClick = useCallback(async () => {
         if (!ndk?.signer) {
             toast({ title: "Error", description: "Cannot repost. Signer not available.", variant: "destructive" });
@@ -122,7 +134,7 @@ export function NoteCard({
             // repostEvent.content = JSON.stringify(event.rawEvent()); // Example: Stringify original event
             repostEvent.tags = [
                 ["e", event.id, "", ""], // Tag original event ID
-                ["p", event.pubkey]      // Tag original author pubkey
+                ["p", event.pubkey], // Tag original author pubkey
             ];
 
             await repostEvent.sign();
@@ -130,9 +142,13 @@ export function NoteCard({
             toast({ title: "Success", description: "Reposted!" });
         } catch (error) {
             console.error("Failed to repost:", error);
-            toast({ title: "Error", description: `Failed to repost: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+            toast({
+                title: "Error",
+                description: `Failed to repost: ${error instanceof Error ? error.message : "Unknown error"}`,
+                variant: "destructive",
+            });
         } finally {
-             setIsSendingReply(false); // Reuse sending state visually
+            setIsSendingReply(false); // Reuse sending state visually
         }
     }, [ndk, event]);
 
@@ -150,10 +166,15 @@ export function NoteCard({
         setInternalReplyContent(e.target.value);
     }, []);
 
-    const handleSendReplyClick = useCallback(async () => {; // Add semicolon
+    const handleSendReplyClick = useCallback(async () => {
+        // Add semicolon
         // Check if NDK instance and its signer are available
         if (!ndk?.signer || !internalReplyContent.trim()) {
-            toast({ title: "Error", description: "Cannot send reply. Signer not available or content empty.", variant: "destructive" });
+            toast({
+                title: "Error",
+                description: "Cannot send reply. Signer not available or content empty.",
+                variant: "destructive",
+            });
             return;
         }
         setIsSendingReply(true);
@@ -164,25 +185,24 @@ export function NoteCard({
             // Basic reply tagging: tag original event and author
             replyEvent.tags = [
                 ["e", event.id, "", "reply"], // Tag event being replied to
-                ["p", event.pubkey] // Tag author being replied to
+                ["p", event.pubkey], // Tag author being replied to
             ];
             // Add root tag if the original event is also a reply
-            const rootTag = event.tags.find(t => t[0] === 'e' && t[3] === 'root');
+            const rootTag = event.tags.find((t) => t[0] === "e" && t[3] === "root");
             if (rootTag) {
                 replyEvent.tags.push(rootTag); // Keep the root tag
                 // Ensure the direct reply tag is marked as 'reply'
-                const replyTagIndex = replyEvent.tags.findIndex(t => t[0] === 'e' && t[1] === event.id);
+                const replyTagIndex = replyEvent.tags.findIndex((t) => t[0] === "e" && t[1] === event.id);
                 if (replyTagIndex !== -1 && replyEvent.tags[replyTagIndex].length < 4) {
-                    replyEvent.tags[replyTagIndex][3] = 'reply';
+                    replyEvent.tags[replyTagIndex][3] = "reply";
                 }
             } else {
-                 // If original is not a reply, mark its 'e' tag as root
-                 const replyTagIndex = replyEvent.tags.findIndex(t => t[0] === 'e' && t[1] === event.id);
-                 if (replyTagIndex !== -1) {
-                     replyEvent.tags[replyTagIndex][3] = 'root';
-                 }
+                // If original is not a reply, mark its 'e' tag as root
+                const replyTagIndex = replyEvent.tags.findIndex((t) => t[0] === "e" && t[1] === event.id);
+                if (replyTagIndex !== -1) {
+                    replyEvent.tags[replyTagIndex][3] = "root";
+                }
             }
-
 
             // TODO: Add mentions tagging if needed (parse content for @npub, @note, etc.)
 
@@ -195,7 +215,11 @@ export function NoteCard({
             setInternalReplyContent("");
         } catch (error) {
             console.error("Failed to send reply:", error);
-            toast({ title: "Error", description: `Failed to send reply: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+            toast({
+                title: "Error",
+                description: `Failed to send reply: ${error instanceof Error ? error.message : "Unknown error"}`,
+                variant: "destructive",
+            });
         } finally {
             setIsSendingReply(false);
         }
@@ -213,145 +237,146 @@ export function NoteCard({
         // 4. Make request to LNURL endpoint
         // 5. Handle payment (WebLN?)
         // 6. Publish zap receipt (kind 9735) - optional but good practice
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate async operation
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate async operation
         setIsZapping(false);
     }, [event]);
     // --- End Internal Handlers ---
 
-
     return (
-        <> {/* Wrap in Fragment */}
-        <div className="border-b border-border pb-3 last:border-0">
-            <div className="flex items-start gap-3">
-                <UserAvatar pubkey={event.pubkey} size='lg' />
-                <div className="flex-1">
-                    <div className="flex items-center gap-1">
-                        <span className="font-medium text-sm">{UserDisplayName}</span>
-                        <span className="text-xs text-muted-foreground">@{UserHandle.substring(0, 8)}...</span>
-                    </div>
-                    <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <span>{formatTimestamp(event.created_at)}</span>
-                        {/* Add other metadata like relays if needed */}
-                    </div>
-                    <div className="flex items-center justify-between gap-3 mt-2"> {/* Add justify-between */}
-                        {showReplyInput ? (
-                            <div className="mt-3 space-y-2 w-full">
-                                <Textarea
-                                    placeholder="Write your reply..."
-                                    className="min-h-[80px] rounded-md border-border focus-visible:ring-ring"
-                                    value={internalReplyContent}
-                                    onChange={handleReplyContentChange}
-                                    disabled={isSendingReply}
-                                />
-                                <div className="flex justify-end gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCancelReplyClick}
-                                        className="rounded-md"
+        <>
+            {" "}
+            {/* Wrap in Fragment */}
+            <div className="border-b border-border pb-3 last:border-0">
+                <div className="flex items-start gap-3">
+                    <UserAvatar pubkey={event.pubkey} size="lg" />
+                    <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                            <span className="font-medium text-sm">{UserDisplayName}</span>
+                            <span className="text-xs text-muted-foreground">@{UserHandle.substring(0, 8)}...</span>
+                        </div>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <span>{formatTimestamp(event.created_at)}</span>
+                            {/* Add other metadata like relays if needed */}
+                        </div>
+                        <div className="flex items-center justify-between gap-3 mt-2">
+                            {" "}
+                            {/* Add justify-between */}
+                            {showReplyInput ? (
+                                <div className="mt-3 space-y-2 w-full">
+                                    <Textarea
+                                        placeholder="Write your reply..."
+                                        className="min-h-[80px] rounded-md border-border focus-visible:ring-ring"
+                                        value={internalReplyContent}
+                                        onChange={handleReplyContentChange}
                                         disabled={isSendingReply}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="rounded-md"
-                                        onClick={handleSendReplyClick}
-                                        disabled={!internalReplyContent.trim() || isSendingReply}
-                                    >
-                                        {isSendingReply ? (
-                                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                        ) : (
-                                            <Send className="mr-2 h-3 w-3" />
-                                        )}
-                                        Send
-                                    </Button>
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleCancelReplyClick}
+                                            className="rounded-md"
+                                            disabled={isSendingReply}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            className="rounded-md"
+                                            onClick={handleSendReplyClick}
+                                            disabled={!internalReplyContent.trim() || isSendingReply}
+                                        >
+                                            {isSendingReply ? (
+                                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <Send className="mr-2 h-3 w-3" />
+                                            )}
+                                            Send
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <>
-                                {/* Wrapper for left-aligned buttons */}
-                                <div className="flex items-center gap-3">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="rounded-md hover:bg-secondary h-8 px-2"
-                                        onClick={handleShowReplyClick} // Use internal handler
-                                    >
-                                        <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                                        Reply
-                                    </Button>
+                            ) : (
+                                <>
+                                    {/* Wrapper for left-aligned buttons */}
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="rounded-md hover:bg-secondary h-8 px-2"
+                                            onClick={handleShowReplyClick} // Use internal handler
+                                        >
+                                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                                            Reply
+                                        </Button>
 
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="rounded-md hover:bg-secondary h-8 px-2"
-                                            >
-                                                <Repeat className="h-3.5 w-3.5 mr-1.5" />
-                                                {repostCount > 0 && (
-                                                    <span className="text-xs">{repostCount}</span>
-                                                )}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-48 p-2">
-                                            <div className="grid gap-1">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
                                                 <Button
                                                     variant="ghost"
-                                                    className="justify-start h-8 px-2 text-sm"
-                                                    onClick={handleRepostClick} // Use internal handler
+                                                    size="sm"
+                                                    className="rounded-md hover:bg-secondary h-8 px-2"
                                                 >
-                                                    <Repeat className="h-3.5 w-3.5 mr-2" />
-                                                    Repost
+                                                    <Repeat className="h-3.5 w-3.5 mr-1.5" />
+                                                    {repostCount > 0 && <span className="text-xs">{repostCount}</span>}
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    className="justify-start h-8 px-2 text-sm"
-                                                    onClick={handleOpenQuoteDialog} // Use new handler to open dialog
-                                                >
-                                                    <MessageSquare className="h-3.5 w-3.5 mr-2" />
-                                                    Quote
-                                                </Button>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-48 p-2">
+                                                <div className="grid gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        className="justify-start h-8 px-2 text-sm"
+                                                        onClick={handleRepostClick} // Use internal handler
+                                                    >
+                                                        <Repeat className="h-3.5 w-3.5 mr-2" />
+                                                        Repost
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        className="justify-start h-8 px-2 text-sm"
+                                                        onClick={handleOpenQuoteDialog} // Use new handler to open dialog
+                                                    >
+                                                        <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                                                        Quote
+                                                    </Button>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
 
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="rounded-md hover:bg-secondary h-8 px-2"
-                                        onClick={handleZapClick} // Use internal handler
-                                        disabled={isZapping} // Disable while zapping
-                                    >
-                                        {isZapping ? (
-                                             <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                        ) : (
-                                             <Zap className="h-3.5 w-3.5 mr-1.5" />
-                                        )}
-                                        {zapAmount > 0 && !isZapping && (
-                                            <span className="text-xs">{zapAmount}</span>
-                                        )}
-                                    </Button>
-                                </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="rounded-md hover:bg-secondary h-8 px-2"
+                                            onClick={handleZapClick} // Use internal handler
+                                            disabled={isZapping} // Disable while zapping
+                                        >
+                                            {isZapping ? (
+                                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                            ) : (
+                                                <Zap className="h-3.5 w-3.5 mr-1.5" />
+                                            )}
+                                            {zapAmount > 0 && !isZapping && (
+                                                <span className="text-xs">{zapAmount}</span>
+                                            )}
+                                        </Button>
+                                    </div>
 
-                                {/* Right-aligned button */}
-                                {onCreateIssue && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="rounded-md hover:bg-secondary h-8 px-2"
-                                        onClick={() => onCreateIssue(event.content)}
-                                    >
-                                        <Plus className="h-3.5 w-3.5" />
-                                    </Button>
-                                )}
-                            </>
-                        )}
+                                    {/* Right-aligned button */}
+                                    {onCreateIssue && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="rounded-md hover:bg-secondary h-8 px-2"
+                                            onClick={() => onCreateIssue(event.content)}
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                        </Button>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
             </div>
             {/* Render the Quote Post Dialog */}
             <QuotePostDialog

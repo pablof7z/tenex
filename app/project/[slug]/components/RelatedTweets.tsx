@@ -17,11 +17,13 @@ interface RelatedTweetsProps {
 
 export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: RelatedTweetsProps) {
     // Ensure project.hashtags is an array before using it in the filter
-    const tagsToSubscribe = Array.isArray(project.hashtags) && project.hashtags.length > 0 ? project.hashtags : undefined;
+    const tagsToSubscribe =
+        Array.isArray(project.hashtags) && project.hashtags.length > 0 ? project.hashtags : undefined;
 
-    const { events } = useSubscribe(tagsToSubscribe ? [
-        { kinds: [1], "#t": tagsToSubscribe, limit: 50 },
-    ] : false, {}, [ project.id, tagsToSubscribe])
+    const { events } = useSubscribe(tagsToSubscribe ? [{ kinds: [1], "#t": tagsToSubscribe, limit: 50 }] : false, {}, [
+        project.id,
+        tagsToSubscribe,
+    ]);
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState("");
 
@@ -31,11 +33,12 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
 
     const sortedEvents = useMemo(() => {
         // ... (existing sort logic)
-        return events.sort((a, b) => {
-            const aTimestamp = a.created_at || 0;
-            const bTimestamp = b.created_at || 0;
-            return bTimestamp - aTimestamp; // Sort in descending order
-        })
+        return events
+            .sort((a, b) => {
+                const aTimestamp = a.created_at || 0;
+                const bTimestamp = b.created_at || 0;
+                return bTimestamp - aTimestamp; // Sort in descending order
+            })
             .slice(0, 50);
     }, [events]);
 
@@ -67,18 +70,18 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
         <Card className="rounded-md border-border">
             <CardHeader className="pb-3">
                 {/* ... Card Header content ... */}
-                 <CardTitle className="text-xl">Related Tweets</CardTitle>
-                 <CardDescription>
-                     Conversations about{" "}
-                     {project.hashtags?.map((tag) => (
-                         <span
-                             key={tag}
-                             className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground mr-1"
-                         >
-                             #{tag}
-                         </span>
-                     ))}
-                 </CardDescription>
+                <CardTitle className="text-xl">Related Tweets</CardTitle>
+                <CardDescription>
+                    Conversations about{" "}
+                    {project.hashtags?.map((tag) => (
+                        <span
+                            key={tag}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground mr-1"
+                        >
+                            #{tag}
+                        </span>
+                    ))}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
@@ -103,13 +106,13 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
                     ))}
                 </div>
             </CardContent>
-             {/* Render the Create Issue dialog */}
-             <CreateIssueDialog
-                 isOpen={isCreateIssueDialogOpen}
-                 onClose={() => setIsCreateIssueDialogOpen(false)}
-                 initialContent={issueInitialContent}
-                 onSubmit={handleCreateIssueSubmit}
-             />
+            {/* Render the Create Issue dialog */}
+            <CreateIssueDialog
+                isOpen={isCreateIssueDialogOpen}
+                onClose={() => setIsCreateIssueDialogOpen(false)}
+                initialContent={issueInitialContent}
+                onSubmit={handleCreateIssueSubmit}
+            />
         </Card>
     );
 }
