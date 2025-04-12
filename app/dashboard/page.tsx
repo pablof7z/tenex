@@ -49,11 +49,7 @@ export default function DashboardPage() {
     const currentUser = useNDKCurrentUser(); // Still needed for creating projects and context
 
     // State for projects fetched from API
-    // Replace local state with Zustand store state
-    const { projects, isLoading: isLoadingProjects, error: projectsError, setProjects, setLoading: setIsLoadingProjects, setError: setProjectsError } = useProjectStore();
-    // const [apiProjects, setApiProjects] = useState<ApiProject[]>([]); // Removed
-    // const [isLoadingProjects, setIsLoadingProjects] = useState(true); // Removed
-    // const [projectsError, setProjectsError] = useState<string | null>(null); // Removed
+    const { projects, isLoading: isLoadingProjects, error: projectsError, setProjects, setLoading: setIsLoadingProjects, setError: setProjectsError, loadProjectDetails } = useProjectStore();
     const { toast } = useToast();
     // Use the hook, getting isReady and error state
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
@@ -72,33 +68,39 @@ export default function DashboardPage() {
     const fetchProjects = useCallback(async () => {
         if (!ndk) {
             console.warn("NDK not available yet, skipping fetchProjects.");
-            // Optionally set an error or loading state specific to NDK readiness
-            // setProjectsError("Nostr connection not ready.");
             return;
         }
         setIsLoadingProjects(true);
         setProjectsError(null);
         try {
-            // TODO: Use getApiUrl when fetching from the backend API
-            // const apiUrl = getApiUrl('/projects');
-            const response = await fetch('/api/projects'); // Using relative path for now
+            const apiUrl = getApiUrl('/projects');
+            const response = await fetch(apiUrl);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: "Failed to fetch projects" }));
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             const data: ApiProject[] = await response.json();
 
-            const slugs = data
-                .map((project) => project.eventId?.split(/:/)[2])
-                .filter(Boolean) as string[];
+            // Load signer and pubkey details into the store from the API data
+            data.forEach(apiProject => {
+                if (apiProject.projectName && apiProject.nsec && apiProject.pubkey) {
+                    loadProjectDetails(apiProject.projectName, apiProject.nsec, apiProject.pubkey);
+                } else {
+                    console.warn("Missing data for loading project details:", apiProject);
+                }
+            });
 
+            // Fetch NDK events based on event IDs from API data (if available)
+            const slugs = data.map(p => p.projectName).filter(Boolean) as string[]; // Use projectName as slug
+
+            // Fetch based on slugs (#d tag) as primary identifier if eventId is missing
             const ndkProjects = await ndk.fetchEvents([
                 { kinds: [NDKProject.kind], "#d": slugs },
             ]);
 
-            setProjects(Array.from(ndkProjects).map(NDKProject.from));
-            console.log("Fetched and processed projects into store:", ndkProjects);
 
+            setProjects(Array.from(ndkProjects).map(NDKProject.from));
+            console.log("Fetched NDK events and set projects in store:", ndkProjects);
         } catch (error) {
             console.error("Failed to fetch projects:", error);
             const message = error instanceof Error ? error.message : "An unknown error occurred";
@@ -107,7 +109,7 @@ export default function DashboardPage() {
         } finally {
             setIsLoadingProjects(false);
         }
-    }, [ndk, setIsLoadingProjects, setProjectsError, setProjects]); // Add ndk and store setters as dependencies
+    }, [ndk, setIsLoadingProjects, setProjectsError, setProjects, loadProjectDetails, getApiUrl]); // Add loadProjectDetails and getApiUrl
 
     // Fetch projects on component mount
     // Fetch projects when NDK is ready

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import crypto from 'crypto';
 import { getProjectPath } from '@/lib/projectUtils'; // Assuming this utility exists and works
 
 // Get the base path from environment variable for security check
@@ -16,7 +15,7 @@ if (!PROJECTS_PATH) {
 interface RequestBody {
     title?: string;
     description?: string;
-    context?: string[]; // Array of strings for additional context
+    context?: string; // Array of strings for additional context
     clinePrompt?: string; // Optional override for the Cline prompt
 }
 
@@ -38,7 +37,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { title = 'Untitled Task', description = '', context = [], clinePrompt: customClinePrompt } = body;
+  const { title = 'Untitled Task', description = '', context = '', clinePrompt: customClinePrompt } = body;
 
   let projectDirPath: string;
   try {
@@ -81,9 +80,7 @@ export async function POST(
   if (context.length > 0) {
     fileContent += `\n---------\n\n`;
     fileContent += `Here is some more context that might be useful:\n`;
-    context.forEach(item => {
-      fileContent += `- ${item}\n`;
-    });
+    fileContent += `${context}\n`;
   }
 
   try {

@@ -21,13 +21,14 @@ import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig"; // Import useConfig
 import { Copy, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react"; // Added Loader2, AlertTriangle
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
-
+import { ProjectAgentProfileSettings } from "./ProjectAgentProfileSettings"; // Import the new component
 
 interface ProjectSettingsProps {
     project: NDKProject;
+    projectSlug: string;
 }
 
-export function ProjectSettings({ project }: ProjectSettingsProps) {
+export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) {
     const [name, setName] = useState(project.title || "");
     const [hashtags, setHashtags] = useState(project.hashtags?.join(", ") || "");
     const [gitRepo, setGitRepo] = useState(project.repo || "");
@@ -230,155 +231,159 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
 
 
     return (
-        <Card className="rounded-md border-border">
-            <CardHeader>
-                <CardTitle className="text-xl">Project Settings</CardTitle>
-                <CardDescription>Manage your project configuration and signing key.</CardDescription>
-                 {/* Display persistent config error Alert if any */}
-                 {configError && !isConfigLoading && (
-                    <Alert variant="destructive" className="mt-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Configuration Error</AlertTitle>
-                        <AlertDescription>
-                             {configError} Please check <Link href="/settings" className="underline">Application Settings</Link>. API interactions may fail.
-                        </AlertDescription>
-                    </Alert>
-                 )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Existing Fields */}
-                <div className="grid gap-2">
-                    <Label htmlFor="project-name">Project name</Label>
-                    <Input
-                        id="project-name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="rounded-md"
-                        disabled={saveDisabled}
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="project-hashtags">Related hashtags</Label>
-                    <Input
-                        id="project-hashtags"
-                        value={hashtags}
-                        onChange={(e) => setHashtags(e.target.value)}
-                        className="rounded-md"
-                        placeholder="nostr, project, development"
-                        disabled={saveDisabled}
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="project-repo">Git Repository</Label>
-                    <Input
-                        id="project-repo"
-                        value={gitRepo}
-                        onChange={(e) => setGitRepo(e.target.value)}
-                        className="rounded-md"
-                        placeholder="github.com/username/repo"
-                        disabled={saveDisabled}
-                    />
-                </div>
-
-                {/* Nsec Section */}
-                <div className="grid gap-2">
-                    <Label htmlFor="project-nsec">Project Nsec (Secret Key)</Label>
-                    {isLoadingNsec ? (
-                        <p className="text-sm text-muted-foreground">Loading nsec...</p>
-                    ) : nsec ? (
-                        <div className="flex items-center space-x-2">
-                            <Input
-                                id="project-nsec"
-                                type={showNsec ? "text" : "password"}
-                                value={nsec}
-                                readOnly
-                                className="rounded-md flex-grow"
-                                placeholder="nsec..."
-                            />
-                            {/* Disable buttons if config has error or is loading */}
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setShowNsec(!showNsec)}
-                                title={showNsec ? "Hide Nsec" : "Show Nsec"}
-                                disabled={actionsDisabled}
-                            >
-                                {showNsec ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="outline" size="icon" onClick={handleCopyNsec} title={configErrorTooltip || "Copy Nsec"} disabled={actionsDisabled}>
-                                <Copy className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col space-y-2">
-                            <p className="text-sm text-muted-foreground">
-                                No nsec found for this project. Generate one to allow the project to sign events and
-                                configure backend tools.
-                            </p>
-                            {/* Disable button if config has error or is loading, or during generation/configuration */}
-                            <Button
-                                className="rounded-md w-fit"
-                                onClick={handleGenerateNsec}
-                                disabled={generateDisabled}
-                                title={configErrorTooltip || ""}
-                            >
-                                {isGeneratingNsec || isConfiguringMcp ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : null}
-                                {isGeneratingNsec
-                                    ? "Generating..."
-                                    : isConfiguringMcp
-                                      ? "Configuring..."
-                                      : "Generate Nsec"}
-                            </Button>
-                        </div>
+        <div className="flex flex-col space-y-4">
+            <Card className="rounded-md border-border">
+                <CardHeader>
+                    <CardTitle className="text-xl">Project Settings</CardTitle>
+                    <CardDescription>Manage your project configuration and signing key.</CardDescription>
+                    {/* Display persistent config error Alert if any */}
+                    {configError && !isConfigLoading && (
+                        <Alert variant="destructive" className="mt-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle>Configuration Error</AlertTitle>
+                            <AlertDescription>
+                                {configError} Please check <Link href="/settings" className="underline">Application Settings</Link>. API interactions may fail.
+                            </AlertDescription>
+                        </Alert>
                     )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Existing Fields */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="project-name">Project name</Label>
+                        <Input
+                            id="project-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="rounded-md"
+                            disabled={saveDisabled}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="project-hashtags">Related hashtags</Label>
+                        <Input
+                            id="project-hashtags"
+                            value={hashtags}
+                            onChange={(e) => setHashtags(e.target.value)}
+                            className="rounded-md"
+                            placeholder="nostr, project, development"
+                            disabled={saveDisabled}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="project-repo">Git Repository</Label>
+                        <Input
+                            id="project-repo"
+                            value={gitRepo}
+                            onChange={(e) => setGitRepo(e.target.value)}
+                            className="rounded-md"
+                            placeholder="github.com/username/repo"
+                            disabled={saveDisabled}
+                        />
+                    </div>
 
-                    <p className="text-xs text-muted-foreground pt-1">
-                        This key allows the project to publish updates and interact on Nostr. Keep it secret. It's also
-                        used to configure backend tools.
-                    </p>
-                </div>
+                    {/* Nsec Section */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="project-nsec">Project Nsec (Secret Key)</Label>
+                        {isLoadingNsec ? (
+                            <p className="text-sm text-muted-foreground">Loading nsec...</p>
+                        ) : nsec ? (
+                            <div className="flex items-center space-x-2">
+                                <Input
+                                    id="project-nsec"
+                                    type={showNsec ? "text" : "password"}
+                                    value={nsec}
+                                    readOnly
+                                    className="rounded-md flex-grow"
+                                    placeholder="nsec..."
+                                />
+                                {/* Disable buttons if config has error or is loading */}
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setShowNsec(!showNsec)}
+                                    title={showNsec ? "Hide Nsec" : "Show Nsec"}
+                                    disabled={actionsDisabled}
+                                >
+                                    {showNsec ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                                <Button variant="outline" size="icon" onClick={handleCopyNsec} title={configErrorTooltip || "Copy Nsec"} disabled={actionsDisabled}>
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col space-y-2">
+                                <p className="text-sm text-muted-foreground">
+                                    No nsec found for this project. Generate one to allow the project to sign events and
+                                    configure backend tools.
+                                </p>
+                                {/* Disable button if config has error or is loading, or during generation/configuration */}
+                                <Button
+                                    className="rounded-md w-fit"
+                                    onClick={handleGenerateNsec}
+                                    disabled={generateDisabled}
+                                    title={configErrorTooltip || ""}
+                                >
+                                    {isGeneratingNsec || isConfiguringMcp ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : null}
+                                    {isGeneratingNsec
+                                        ? "Generating..."
+                                        : isConfiguringMcp
+                                        ? "Configuring..."
+                                        : "Generate Nsec"}
+                                </Button>
+                            </div>
+                        )}
 
-                {/* Save Button */}
-                <Button className="rounded-md mt-4" onClick={handleSave} disabled={saveDisabled}>
-                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {isSaving ? "Saving..." : "Save Changes"}
-                </Button>
+                        <p className="text-xs text-muted-foreground pt-1">
+                            This key allows the project to publish updates and interact on Nostr. Keep it secret. It's also
+                            used to configure backend tools.
+                        </p>
+                    </div>
 
-                {/* Delete Project Section */}
-                <div className="pt-6 border-t border-destructive/20 mt-6">
-                    <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        Deleting your project marks it as deleted on Nostr relays. This action cannot be easily undone.
-                    </p>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="rounded-md" disabled={deleteDisabled}>
-                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                {isDeleting ? "Deleting..." : "Delete Project"}
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be easily undone. This will mark the project event as deleted
-                                    on Nostr relays. Are you sure you want to delete the project
-                                    named "{project.title || 'Untitled Project'}"?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {/* Save Button */}
+                    <Button className="rounded-md mt-4" onClick={handleSave} disabled={saveDisabled}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isSaving ? "Saving..." : "Save Changes"}
+                    </Button>
+
+                    {/* Delete Project Section */}
+                    <div className="pt-6 border-t border-destructive/20 mt-6">
+                        <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Deleting your project marks it as deleted on Nostr relays. This action cannot be easily undone.
+                        </p>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" className="rounded-md" disabled={deleteDisabled}>
                                     {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    {isDeleting ? "Deleting..." : "Yes, delete project"}
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </div>
-            </CardContent>
-        </Card>
+                                    {isDeleting ? "Deleting..." : "Delete Project"}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be easily undone. This will mark the project event as deleted
+                                        on Nostr relays. Are you sure you want to delete the project
+                                        named "{project.title || 'Untitled Project'}"?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                        {isDeleting ? "Deleting..." : "Yes, delete project"}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <ProjectAgentProfileSettings project={project} projectSlug={projectSlug} />
+        </div> 
     );
 }

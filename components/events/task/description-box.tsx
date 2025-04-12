@@ -74,7 +74,7 @@ export function DescriptionBox({
             </CardHeader>
             <CardContent>
                 <p>{taskDescription || "No description provided."}</p>
-            
+
                 {replies.map((reply: NDKEvent) => ( // Add type annotation
                     <div key={reply.id} className="mt-4 pt-4 border-t">
                         <p className="text-sm">{reply.content}</p>

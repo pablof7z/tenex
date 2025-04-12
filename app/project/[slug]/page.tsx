@@ -29,14 +29,14 @@ import { ProjectSpecsTab } from "./components/ProjectSpecsTab";
 
 export default function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
     const unwrappedParams = React.use(params);
-    const projectId = unwrappedParams.slug;
+    const projectSlug = unwrappedParams.slug;
     const router = useRouter();
     // Use the config hook primarily for API URL construction now
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
 
     // Get project from the Zustand store
     const findProjectById = useProjectStore(state => state.findProjectById);
-    const project = useMemo(() => findProjectById(projectId), [findProjectById, projectId]);
+    const project = useMemo(() => findProjectById(projectSlug), [findProjectById, projectSlug]);
     const isLoadingStoreProjects = useProjectStore(state => state.isLoading); // Check if store is loading
     const storeError = useProjectStore(state => state.error); // Check for store errors
 
@@ -62,13 +62,13 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
             toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
             return;
         }
-        if (!projectId) {
+        if (!projectSlug) {
             toast({ title: "Error", description: "Project ID is missing.", variant: "destructive" });
             return;
         }
-        console.log("Requesting to launch editor for project:", projectId);
+        console.log("Requesting to launch editor for project:", projectSlug);
         try {
-            const apiUrl = getApiUrl(`/projects/${projectId}/open-editor`);
+            const apiUrl = getApiUrl(`/projects/${projectSlug}/open-editor`);
             const response = await fetch(apiUrl, { method: "POST" });
             const data = await response.json();
             if (!response.ok) {
@@ -94,14 +94,10 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
         setIsQuoting(null);
     };
     const handleZap = (itemId: string) => console.log("Zapping:", itemId);
-    const handleAddTask = () => console.log("Adding task");
     const handleDeleteTask = (taskId: string) => console.log("Deleting task:", taskId);
-    const handleAddComment = (taskId: string, comment: string) =>
-        console.log("Adding comment to task:", taskId, "comment:", comment);
-    const handleLaunchEditor = (taskId: string) => console.log("Launching editor for task:", taskId);
     const handleNavigateToTask = (task: NDKTask) => {
-        if (task && projectId) {
-            router.push(`/project/${projectId}/${task.id}`);
+        if (task && projectSlug) {
+            router.push(`/project/${projectSlug}/${task.id}`);
         }
     };
     // --- End Event Handlers ---
@@ -134,7 +130,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
     // If project not found in store after loading
     if (!project) {
-         return <AppLayout><div className="p-4 text-red-600">Error: Project with ID '{projectId}' not found in the store. Did you visit the dashboard first?</div></AppLayout>;
+        return <AppLayout><div className="p-4 text-red-600">Error: Project with ID '{projectSlug}' not found in the store. Did you visit the dashboard first?</div></AppLayout>;
     }
 
     // Determine if main content actions should be disabled (only config error now)
@@ -221,11 +217,11 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 </TabsContent>
 
                 <TabsContent value="specs" className="mt-6">
-                    <ProjectSpecsTab project={project} projectSlug={projectId} />
+                    <ProjectSpecsTab project={project} projectSlug={projectSlug} />
                 </TabsContent>
 
                 <TabsContent value="settings" className="mt-6">
-                    <ProjectSettingsTab project={project} />
+                    <ProjectSettingsTab project={project} projectSlug={projectSlug} />
                 </TabsContent>
             </Tabs>
 

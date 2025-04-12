@@ -10,11 +10,12 @@ import ndk from "@/lib/nostr/ndk";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NoteCard } from "@/components/events/note/card";
-// import { QuoteData } from "@/components/events/note/card"; // Removed, NoteCard handles quoting internally
 import { AppLayout } from "@/components/app-layout";
 import { DescriptionBox } from "@/components/events/task/description-box";
+import { TaskUpdates } from "@/components/events/task/TaskUpdates"; // Import TaskUpdates
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { ConfirmWorkModal } from "@/components/modals/ConfirmWorkModal"; // Import the modal
+
 export default function TaskDetailPage() {
     const params = useParams();
     const projectId = params.slug as string; // Assuming project context might be needed later
@@ -167,11 +168,9 @@ export default function TaskDetailPage() {
 
                 {/* Main Content Area */}
                 <div className="flex flex-1 gap-6 overflow-hidden">
-                    {/* Left Column (Agent Updates - Placeholder) */}
-                    <div className="w-1/4 border rounded-lg p-4 overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-4">Agent Updates</h2>
-                        {/* Placeholder for agent updates */}
-                        <p className="text-muted-foreground">Agent updates will appear here.</p>
+                    {/* Left Column (Agent Updates) */}
+                    <div className="w-1/3 border rounded-lg p-4 overflow-hidden"> {/* Changed overflow-y-auto to overflow-hidden */}
+                        <TaskUpdates taskId={taskId} projectSlug={projectId} />
                     </div>
 
                     {/* Right Column (Task Details, References, Comments) */}

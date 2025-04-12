@@ -4,8 +4,11 @@ import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie";
 // Define explicit relays or use defaults
 const explicitRelayUrls = ["wss://relay.damus.io", "wss://relay.primal.net", "wss://nos.lol", "wss://purplepag.es"];
 
-// Setup Dexie cache adapter
-const cacheAdapter = new NDKCacheAdapterDexie({ dbName: "tenex" });
+// Setup Dexie cache adapter (Client-side only)
+let cacheAdapter: NDKCacheAdapterDexie | undefined;
+if (typeof window !== 'undefined') {
+    cacheAdapter = new NDKCacheAdapterDexie({ dbName: "tenex" });
+}
 
 // Create the singleton NDK instance
 const ndk = new NDK({

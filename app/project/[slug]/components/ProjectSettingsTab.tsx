@@ -6,13 +6,14 @@ import { NDKProject } from '@/lib/nostr/events/project';
 
 interface ProjectSettingsTabProps {
   project: NDKProject;
-  // Add any other props needed by ProjectSettings or this tab
+  projectSlug: string;
 }
 
-export function ProjectSettingsTab({ project }: ProjectSettingsTabProps) {
+export function ProjectSettingsTab({ project, projectSlug }: ProjectSettingsTabProps) {
   return (
     <ProjectSettings
       project={project}
+      projectSlug={projectSlug}
       // Pass other necessary props if any
     />
   );

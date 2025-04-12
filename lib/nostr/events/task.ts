@@ -27,6 +27,6 @@ export class NDKTask extends NDKEvent {
 
     set project(project: NDKProject) {
         this.removeTag("a");
-        this.tag(project);
+        this.tags.push(project.tagReference()); // we use this to only get the 'a' tag, no need for e or p tags
     }
 }
