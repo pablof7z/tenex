@@ -1,13 +1,13 @@
-import React, { useState, useCallback } from 'react'; // Import useState, useCallback
-import { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk";
-import { useNDK } from "@nostr-dev-kit/ndk-hooks"; // Only need useNDK
+import React, { useState, useCallback } from 'react';
+import NDK, { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK default
+import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
 import { MessageSquare, Repeat, Send, Zap, Plus, Loader2 } from "lucide-react"; // Import Plus, Loader2
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import UserAvatar from "../../user/avatar";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { toast } from "@/components/ui/use-toast"; // Import toast
+import { toast } from "@/components/ui/use-toast";
+import { QuotePostDialog } from '@/app/project/[slug]/components/QuotePostDialog'; // Import QuotePostDialog
 
 // Define QuoteData interface here to avoid circular dependencies
 export interface QuoteData {
@@ -21,8 +21,8 @@ export interface QuoteData {
 interface NoteCardProps {
     event: NDKEvent;
     // Removed reply/zap related props
-    onRepost: (eventId: string) => void; // Keep repost/quote props
-    onQuote: (quoteData: QuoteData) => void;
+    // onRepost prop removed, handled internally
+    // onQuote: (quoteData: QuoteData) => void; // Removed
     onCreateIssue?: (content: string) => void; // Keep optional prop
 }
 
@@ -46,8 +46,8 @@ const getUserHandle = (profile: NDKUserProfile | undefined, user: NDKUser): stri
 
 export function NoteCard({
     event,
-    onRepost,
-    onQuote,
+    // onRepost prop removed
+    // onQuote, // Removed
     onCreateIssue,
 }: NoteCardProps) {
     const { ndk } = useNDK(); // Get NDK instance
@@ -55,7 +55,9 @@ export function NoteCard({
     const [showReplyInput, setShowReplyInput] = useState(false);
     const [internalReplyContent, setInternalReplyContent] = useState("");
     const [isSendingReply, setIsSendingReply] = useState(false);
-    const [isZapping, setIsZapping] = useState(false); // State for zap loading/disabled
+    const [isZapping, setIsZapping] = useState(false);
+    const [quoteDataForDialog, setQuoteDataForDialog] = useState<QuoteData | null>(null); // State for Quote Dialog
+    const [isQuoting, setIsQuoting] = useState(false); // Loading state for quoting
 
     // Note: Repost count and Zap amount require fetching related events (kind 6 for reposts, kind 9735 for zaps)
     // This basic component doesn't include that logic yet.
@@ -67,15 +69,72 @@ export function NoteCard({
     const UserDisplayName = getUserDisplayName(profile, user);
     const UserHandle = getUserHandle(profile, user);
 
-    const handleQuote = () => {
-        onQuote({
+    // Renamed handleQuote to handleOpenQuoteDialog
+    const handleOpenQuoteDialog = () => {
+        setQuoteDataForDialog({
             id: event.id,
             content: event.content,
-            User: UserDisplayName, // Use display name for quote context
-            pubkey: event.pubkey, // Pass pubkey for potential NIP-19 encoding
-            nevent: event.encode() // Pass nevent for better referencing
+            User: UserDisplayName,
+            pubkey: event.pubkey,
+            nevent: event.encode()
         });
     };
+
+    // New handler for submitting the quote from the dialog
+    const handleQuoteSubmit = useCallback(async (originalQuoteData: QuoteData, comment: string) => {
+        if (!ndk?.signer || !comment.trim() || !originalQuoteData.nevent) {
+            toast({ title: "Error", description: "Cannot quote post. Signer or required data missing.", variant: "destructive" });
+            return;
+        }
+        setIsQuoting(true);
+        try {
+            const quoteEvent = new NDKEvent(ndk);
+            quoteEvent.kind = 1;
+            quoteEvent.content = comment;
+
+            // Add 'e' tag referencing the quoted event using event.id
+            quoteEvent.tags.push(["e", event.id, "", "mention"]);
+            // Embed the nevent URI in the content
+            quoteEvent.content += `\n\nnostr:${originalQuoteData.nevent}`;
+
+            await quoteEvent.sign();
+            await quoteEvent.publish();
+
+            toast({ title: "Success", description: "Quote post published!" });
+            setQuoteDataForDialog(null); // Close dialog on success
+        } catch (error) {
+            console.error("Failed to publish quote:", error);
+            toast({ title: "Error", description: `Failed to publish quote: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+        } finally {
+            setIsQuoting(false);
+        }
+    }, [ndk, event]); // Added dependencies
+    const handleRepostClick = useCallback(async () => {
+        if (!ndk?.signer) {
+            toast({ title: "Error", description: "Cannot repost. Signer not available.", variant: "destructive" });
+            return;
+        }
+        setIsSendingReply(true); // Reuse sending state visually, or create a new one
+        try {
+            const repostEvent = new NDKEvent(ndk);
+            repostEvent.kind = 6;
+            // Content is often empty for reposts, but some clients add it
+            // repostEvent.content = JSON.stringify(event.rawEvent()); // Example: Stringify original event
+            repostEvent.tags = [
+                ["e", event.id, "", ""], // Tag original event ID
+                ["p", event.pubkey]      // Tag original author pubkey
+            ];
+
+            await repostEvent.sign();
+            await repostEvent.publish();
+            toast({ title: "Success", description: "Reposted!" });
+        } catch (error) {
+            console.error("Failed to repost:", error);
+            toast({ title: "Error", description: `Failed to repost: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+        } finally {
+             setIsSendingReply(false); // Reuse sending state visually
+        }
+    }, [ndk, event]);
 
     // --- Internal Handlers ---
     const handleShowReplyClick = useCallback(() => {
@@ -161,6 +220,7 @@ export function NoteCard({
 
 
     return (
+        <> {/* Wrap in Fragment */}
         <div className="border-b border-border pb-3 last:border-0">
             <div className="flex items-start gap-3">
                 <UserAvatar pubkey={event.pubkey} size='lg' />
@@ -241,7 +301,7 @@ export function NoteCard({
                                                 <Button
                                                     variant="ghost"
                                                     className="justify-start h-8 px-2 text-sm"
-                                                    onClick={() => onRepost(event.id)} // Keep external repost
+                                                    onClick={handleRepostClick} // Use internal handler
                                                 >
                                                     <Repeat className="h-3.5 w-3.5 mr-2" />
                                                     Repost
@@ -249,7 +309,7 @@ export function NoteCard({
                                                 <Button
                                                     variant="ghost"
                                                     className="justify-start h-8 px-2 text-sm"
-                                                    onClick={handleQuote} // Keep external quote
+                                                    onClick={handleOpenQuoteDialog} // Use new handler to open dialog
                                                 >
                                                     <MessageSquare className="h-3.5 w-3.5 mr-2" />
                                                     Quote
@@ -292,6 +352,15 @@ export function NoteCard({
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
+            {/* Render the Quote Post Dialog */}
+            <QuotePostDialog
+                quoting={quoteDataForDialog}
+                onClose={() => setQuoteDataForDialog(null)}
+                onQuote={handleQuoteSubmit} // Pass the internal submit handler
+                // Pass isQuoting state if QuotePostDialog is updated to show loading
+                // isPosting={isQuoting}
+            />
+        </>
     );
 }

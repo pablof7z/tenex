@@ -1,35 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+// Textarea import removed as it's now in DescriptionBox
 import { useToast } from "@/components/ui/use-toast"; // Import useToast
 import { useParams } from "next/navigation";
 import { NDKEvent, NDKKind, NDKTag, NDKFilter } from "@nostr-dev-kit/ndk";
 import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
 import ndk from "@/lib/nostr/ndk";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NoteCard } from "@/components/events/note/card";
+// import { QuoteData } from "@/components/events/note/card"; // Removed, NoteCard handles quoting internally
 import { AppLayout } from "@/components/app-layout";
-
+import { DescriptionBox } from "@/components/events/task/description-box";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { ConfirmWorkModal } from "@/components/modals/ConfirmWorkModal"; // Import the modal
 export default function TaskDetailPage() {
     const params = useParams();
-    const projectId = params.id as string; // Assuming project context might be needed later
+    const projectId = params.slug as string; // Assuming project context might be needed later
     const taskId = params.taskId as string;
-
     const [task, setTask] = useState<NDKTask | null>(null);
     const [referencedEvents, setReferencedEvents] = useState<NDKEvent[]>([]);
-    const [loadingTask, setLoadingTask] = useState(true);
-    const [loadingRefs, setLoadingRefs] = useState(true);
     const [isStartingWork, setIsStartingWork] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
+    const [combinedContent, setCombinedContent] = useState(""); // State for combined content
+    const { events: replies } = useSubscribe(task ? [
+        { kinds: [1111], "#E": [task.id] }
+    ] : false);
 
+    const sortedReplies = useMemo(() => {
+        if (!replies) return [];
+        return replies.sort((a, b) => {
+            const aCreatedAt = a.created_at || 0;
+            const bCreatedAt = b.created_at || 0;
+            return aCreatedAt - bCreatedAt;
+        });
+    }, [replies]);
+
+    // Reply state (showReplyInput, replyContent, isPublishingReply) moved to DescriptionBox
+    // isPublishingReply state removed, now handled by DescriptionBox
     const { toast } = useToast(); // Initialize toast
+
     useEffect(() => {
         if (!ndk || !taskId) return;
 
         const fetchTask = async () => {
-            setLoadingTask(true);
+            // setLoadingTask removed
             const taskEvent = await ndk.fetchEvent({ ids: [taskId] });
             if (taskEvent) {
                 const ndkTask = NDKTask.from(taskEvent);
@@ -40,40 +56,29 @@ export default function TaskDetailPage() {
                 const refIds = eTags.map((tag: NDKTag) => tag[1]).filter(Boolean); // Get the event IDs from 'e' tags
 
                 if (refIds.length > 0) {
-                    setLoadingRefs(true);
                     const filter: NDKFilter = { ids: refIds };
                     const events = await ndk.fetchEvents(filter);
-                    // Convert Set<NDKEvent> to Array<NDKEvent>
                     setReferencedEvents(Array.from(events));
-                    setLoadingRefs(false);
                 } else {
-                    setLoadingRefs(false);
                 }
             }
-            setLoadingTask(false);
+            // setLoadingTask removed
         };
 
         fetchTask();
     }, [taskId]);
 
-    const taskTitle = task?.tags.find((tag) => tag[0] === "title")?.[1] ?? "Loading Task...";
+    const taskTitle = task?.tags.find((tag) => tag[0] === "title")?.[1] ?? "Task"; // Default title if task is null initially
     const taskDescription = task?.content ?? "";
 
-    const handleStartWork = async () => {
-        if (!projectId || !taskId || !task) {
-            toast({
-                title: "Error",
-                description: "Task data not loaded yet.",
-                variant: "destructive",
-            });
-            return;
-        }
+    // Function to handle the actual API submission
+    const submitWork = async (descriptionToSubmit: string) => {
+        if (!projectId || !taskId || !task) return; // Guard clause already checked before calling
 
         setIsStartingWork(true);
         try {
             const apiUrl = `/api/projects/${projectId}/tasks/${taskId}/work`;
-            // Extract referenced event IDs to pass as context
-            const context = referencedEvents.map(event => `Referenced Event ID: ${event.id}`);
+            const context = referencedEvents.map(event => event.content).join("\n---\n");
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -82,10 +87,8 @@ export default function TaskDetailPage() {
                 },
                 body: JSON.stringify({
                     title: taskTitle,
-                    description: taskDescription,
+                    description: descriptionToSubmit, // Use the provided description
                     context: context,
-                    // Optionally add a specific clinePrompt here if needed
-                    // clinePrompt: "Custom prompt for this specific task start..."
                 }),
             });
 
@@ -96,31 +99,68 @@ export default function TaskDetailPage() {
                     title: "Success",
                     description: `Agent work initiated for task ${taskId}. ${result.message || ''}`,
                 });
-                // Optionally, you might want to navigate away or update UI state
+                setIsModalOpen(false); // Close modal on success
+                // Optionally, navigate away or update UI
             } else {
                 throw new Error(result.error || `Failed to start agent work (status ${response.status})`);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Failed to start agent work:", error);
+            let errorMessage = "An unexpected error occurred.";
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            }
             toast({
                 title: "Error Starting Work",
-                description: error.message || "An unexpected error occurred.",
+                description: errorMessage,
                 variant: "destructive",
             });
+            // Keep modal open on error for user to retry or cancel
         } finally {
             setIsStartingWork(false);
         }
     };
 
+    // Renamed original handler, now decides whether to show modal or submit directly
+    const handleInitiateWork = async () => {
+        if (!projectId || !taskId || !task) {
+            toast({
+                title: "Error",
+                description: "Task data not loaded yet.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (sortedReplies && sortedReplies.length > 0) {
+            // Replies exist, show modal
+            const replyContents = sortedReplies.map(reply => reply.content);
+            const initialModalContent = [taskDescription, ...replyContents].join("\n\n");
+            setCombinedContent(initialModalContent);
+            setIsModalOpen(true);
+        } else {
+            // No replies, submit directly
+            await submitWork(taskDescription);
+        }
+    };
+
+    // Handler for modal submission
+    const handleModalSubmit = async (editedContent: string) => {
+        await submitWork(editedContent);
+    };
+
+    // publishReplyHandler removed, logic is now fully inside DescriptionBox
+
+    // handleQuotePlaceholder removed as NoteCard now handles quoting internally
     return (
         <AppLayout>
             <div className="flex flex-col h-screen p-4 md:p-6 lg:p-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-2xl font-bold">
-                        {loadingTask ? <Skeleton className="h-8 w-64" /> : taskTitle}
+                        {taskTitle}
                     </h1>
-                    <Button onClick={handleStartWork} disabled={loadingTask || isStartingWork}>
+                    <Button onClick={handleInitiateWork} disabled={!task || isStartingWork}> {/* Use new handler */}
                         {isStartingWork ? "Starting..." : "Start Agent Work"}
                     </Button>
                 </div>
@@ -137,44 +177,26 @@ export default function TaskDetailPage() {
                     {/* Right Column (Task Details, References, Comments) */}
                     <div className="flex-1 flex flex-col gap-4 overflow-hidden">
                         {/* Task Description */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Description</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {loadingTask ? (
-                                    <Skeleton className="h-20 w-full" />
-                                ) : (
-                                    <p>{taskDescription || "No description provided."}</p>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <DescriptionBox
+                            task={task}
+                            // loadingTask prop removed
+                            taskDescription={taskDescription}
+                            // onPublishReply prop removed
+                        />
 
                         {/* Tabs for References and Comments */}
                         <Tabs defaultValue="references" className="flex-1 flex flex-col overflow-hidden">
                             <TabsList>
                                 <TabsTrigger value="references">References</TabsTrigger>
-                                <TabsTrigger value="comments">Comments</TabsTrigger>
                             </TabsList>
                             <TabsContent value="references" className="flex-1 overflow-y-auto p-1">
-                                {loadingRefs ? (
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-24 w-full" />
-                                        <Skeleton className="h-24 w-full" />
-                                        <Skeleton className="h-24 w-full" />
-                                    </div>
-                                ) : referencedEvents.length > 0 ? (
+                                {referencedEvents.length > 0 ? (
                                     <div className="space-y-4">
                                         {referencedEvents.map((event) => (
                                             <NoteCard
                                                 key={event.id}
                                                 event={event}
-                                                // Provide dummy props as interactions are not needed here
-                                                // Removed internal handling props: isReplying, replyContent, onReplyContentChange, onShowReply, onCancelReply, onSendReply, onZap
-                                                // Keep external interaction props if needed, or provide dummies if not applicable in this context
-                                                onRepost={() => { console.log("Repost clicked in task detail"); }} // Example dummy handler
-                                                onQuote={() => { console.log("Quote clicked in task detail"); }}   // Example dummy handler
-                                                // onCreateIssue is optional and not needed here
+                                                // onQuote={handleQuotePlaceholder} // Removed, NoteCard handles quoting internally
                                             />
                                         ))}
                                     </div>
@@ -182,16 +204,20 @@ export default function TaskDetailPage() {
                                     <p className="text-muted-foreground text-center p-4">No references found.</p>
                                 )}
                             </TabsContent>
-                            <TabsContent value="comments" className="flex-1 overflow-y-auto p-4">
-                                <h3 className="text-lg font-semibold mb-4">Comments</h3>
-                                {/* Placeholder for comments section */}
-                                <p className="text-muted-foreground">Comments feature coming soon.</p>
-                                {/* TODO: Add comment input and display */}
-                            </TabsContent>
                         </Tabs>
                     </div>
                 </div>
             </div>
+            {/* Render the modal */}
+            {isModalOpen && (
+                <ConfirmWorkModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    initialContent={combinedContent}
+                    onSubmit={handleModalSubmit}
+                    isSubmitting={isStartingWork}
+                />
+            )}
         </AppLayout>
     );
 }

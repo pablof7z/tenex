@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { NoteCard, QuoteData } from "@/components/events/note/card"; // Using NoteCard
-import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Removed NDKEvent
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { CreatePostDialog } from "./CreatePostDialog";
 import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast"; // Keep toast for issue creation feedback
 
 interface ActivityFeedProps {
     project: NDKProject;
@@ -16,47 +16,26 @@ interface ActivityFeedProps {
     // onCreatePost removed
     onReply: (activityId: string, content: string) => void;
     onRepost: (activityId: string) => void;
-    onQuote: (quoteData: QuoteData) => void; // Added
+    // onQuote: (quoteData: QuoteData) => void; // Removed, handled by NoteCard
     onZap: (activityId: string) => void;
     // We don't need onCreateIssue prop here, we handle it internally
 }
 
-export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZap }: ActivityFeedProps) { // onCreatePost removed
+export function ActivityFeed({ project, signer, onReply, onRepost, /* onQuote removed */ onZap }: ActivityFeedProps) {
     const { ndk } = useNDK();
     const projectPubkey = signer.pubkey;
     const { events } = useSubscribe([
         { kinds: [1], authors: [projectPubkey], limit: 50 },
     ], {}, [projectPubkey]);
     const [isCreatingPost, setIsCreatingPost] = useState(false);
-    const [isPublishing, setIsPublishing] = useState(false);
+    // const [isPublishing, setIsPublishing] = useState(false); // Removed, handled in CreatePostDialog
 
     // State for Create Issue Dialog
     const [isCreateIssueDialogOpen, setIsCreateIssueDialogOpen] = useState(false);
     const [issueInitialContent, setIssueInitialContent] = useState("");
     const handleCreatePostClick = () => setIsCreatingPost(true);
 
-    const handlePostSubmit = useCallback(async (content: string) => {
-        // ... (existing post submit logic)
-        if (!ndk || !signer || isPublishing) return;
-        setIsPublishing(true);
-        console.log("Creating post with content:", content);
-        try {
-            const event = new NDKEvent(ndk);
-            event.kind = 1;
-            event.content = content;
-            // Add project reference tag if needed
-            await event.sign(signer);
-            await event.publish();
-            toast({ title: "Post Published", description: "Your update has been sent to the network." });
-            setIsCreatingPost(false);
-        } catch (error) {
-            console.error("Failed to publish post:", error);
-            toast({ title: "Publishing Failed", description: "Could not publish your post.", variant: "destructive" });
-        } finally {
-            setIsPublishing(false);
-        }
-    }, [ndk, signer, isPublishing]);
-
+    // Removed handlePostSubmit - logic moved to CreatePostDialog
     // Handler to open the Create Issue dialog
     const handleCreateIssueClick = (content: string) => {
         setIssueInitialContent(content);
@@ -100,8 +79,8 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
                                 <NoteCard
                                     key={event.id}
                                     event={event}
-                                    onRepost={onRepost}
-                                    onQuote={onQuote}
+                                    // onRepost={onRepost} // Removed, handled internally by NoteCard
+                                    // onQuote={onQuote} // Removed, handled by NoteCard
                                     onCreateIssue={handleCreateIssueClick} // Pass the handler
                                 />
                             ))
@@ -117,8 +96,10 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
             <CreatePostDialog
                 open={isCreatingPost}
                 onClose={() => setIsCreatingPost(false)}
-                onPost={handlePostSubmit}
-                isPosting={isPublishing}
+                // ndk={ndk} // Removed, CreatePostDialog uses useNDK() hook
+                signer={signer} // Pass signer
+                // onPost removed
+                // isPosting removed
             />
             {/* Render the Create Issue dialog */}
             <CreateIssueDialog
