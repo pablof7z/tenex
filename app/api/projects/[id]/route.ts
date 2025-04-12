@@ -76,6 +76,7 @@ export async function POST(
     const projectId = params.id;
     let description: string = ''; // Default description
     let nsec: string | undefined;
+    let gitRepoUrl: string | undefined; // Added for potential git repo cloning
 
     // 1. Validate Project ID
     if (!projectId) {
@@ -86,14 +87,22 @@ export async function POST(
     try {
         if (request.headers.get('content-type')?.includes('application/json')) {
             const body = await request.json();
-            // NSEC is now optional during initial creation
+            // NSEC is optional
             if (body.nsec && typeof body.nsec === 'string' && body.nsec.trim() !== '') {
-                nsec = body.nsec; // Assign if valid NSEC is provided
+                nsec = body.nsec;
             }
-            // Description is optional, default handled above
-            if (typeof body.description === 'string') {
+            // Description is optional
+            if (typeof body.description === 'string' && body.description.trim() !== '') {
                 description = body.description;
+            } else {
+                 // Use a default description if not provided
+                 description = `Project specification for ${projectId}`;
             }
+            // Git Repo URL is optional
+            if (body.repo && typeof body.repo === 'string' && body.repo.trim() !== '') {
+                gitRepoUrl = body.repo;
+            }
+
         } else {
              return NextResponse.json({ error: 'Request body must be JSON' }, { status: 415 });
         }
@@ -102,104 +111,128 @@ export async function POST(
          return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    // Remove the strict NSEC check here, as it's now optional
-
-
-    let projectPath: string;
+    // --- Execute the create-project script ---
     try {
-        projectPath = getProjectPath(projectId);
-    } catch (error: any) {
-        console.error("Error getting project path:", error);
-        return NextResponse.json({ error: error.message || 'Server configuration error' }, { status: 500 });
-    }
+        const scriptPath = path.resolve(process.cwd(), 'scripts', 'create-project');
+        // Ensure script path is correctly quoted if it contains spaces, though unlikely here
+        const safeScriptPath = `"${scriptPath}"`;
 
-    // --- Main Project Creation Logic ---
-    try {
-        // 3. Check if project directory already exists
-        try {
-            await access(projectPath, fs.constants.F_OK);
-            // If access doesn't throw, directory exists
-            console.log(`Project directory already exists: ${projectPath}`);
-            // Check config status for existing project
-             const isConfigured = await checkMcpConfigStatus(projectPath);
-            return NextResponse.json({
-                message: 'Project directory already exists.',
-                configured: isConfigured // Report current config status
-            }, { status: 409 }); // Use 409 Conflict for existing resource
+        // Build command arguments safely
+        const commandArgs = [
+            safeScriptPath,
+            '--id', `"${projectId.replace(/"/g, '\\"')}"`, // Basic quoting for ID
+            '--desc', `"${description.replace(/"/g, '\\"')}"` // Basic quoting for description
+        ];
 
-        } catch (accessError: any) {
-            if (accessError.code !== 'ENOENT') {
-                throw accessError; // Re-throw unexpected errors
-            }
-            // ENOENT: Directory doesn't exist, proceed with creation
-        }
-
-        // 4. Copy template directory
-        console.log(`Copying template from ${TEMPLATE_DIR} to ${projectPath}...`);
-        // Ensure TEMPLATE_DIR exists before copying
-        try {
-            await access(TEMPLATE_DIR, fs.constants.F_OK);
-        } catch (templateAccessError: any) {
-             console.error(`Template directory not found at ${TEMPLATE_DIR}:`, templateAccessError);
-             throw new Error(`Server configuration error: Template directory missing.`);
-        }
-
-        // Use cp -a to preserve permissions and ownership if possible
-        // Copy contents of template dir into projectPath
-        await execAsync(`mkdir -p "${projectPath}" && cp -a "${TEMPLATE_DIR}/." "${projectPath}/"`);
-        console.log(`Template copied successfully to ${projectPath}`);
-
-        // 5. Update SPEC.md
-        const specFilePath = path.join(projectPath, 'context', 'SPEC.md');
-        try {
-            await writeFile(specFilePath, description); // Write the provided description
-            console.log(`SPEC.md updated successfully at ${specFilePath}`);
-        } catch (specWriteError: any) {
-             console.error(`Failed to write SPEC.md at ${specFilePath}:`, specWriteError);
-             // Decide if this is critical. Maybe proceed but log warning?
-             // For now, let's throw to indicate partial failure.
-             throw new Error(`Failed to update project specification: ${specWriteError.message}`);
-        }
-
-
-        // 6. Update mcp.json with NSEC (only if provided)
-        let isConfigured = false;
         if (nsec) {
-            const mcpConfigFile = path.join(projectPath, '.roo', 'mcp.json');
-            try {
-                let mcpConfigContent = await readFile(mcpConfigFile, 'utf-8');
-                mcpConfigContent = mcpConfigContent.replace(NSEC_PLACEHOLDER, nsec); // Replace placeholder
-                await writeFile(mcpConfigFile, mcpConfigContent);
-                console.log(`mcp.json updated successfully with NSEC at ${mcpConfigFile}`);
-                isConfigured = true; // Mark as configured since NSEC was applied
-            } catch (mcpUpdateError: any) {
-                 console.error(`Failed to update mcp.json at ${mcpConfigFile}:`, mcpUpdateError);
-                 // This is likely critical. Throw an error as configuration failed despite NSEC being provided.
-                 throw new Error(`Failed to configure project MCP: ${mcpUpdateError.message}`);
-            }
-        } else {
-            console.log(`NSEC not provided during creation for ${projectId}. MCP configuration pending.`);
+            commandArgs.push('--nsec', `"${nsec.replace(/"/g, '\\"')}"`); // Basic quoting
+        }
+        if (gitRepoUrl) {
+            commandArgs.push('--repo', `"${gitRepoUrl.replace(/"/g, '\\"')}"`); // Basic quoting
         }
 
-        // 7. Return Success Response
-        return NextResponse.json({
-            message: 'Project created successfully from template.',
-            projectId: projectId,
-            path: projectPath,
-            configured: isConfigured // Reflect whether NSEC was applied
-        }, { status: 201 });
+        const command = commandArgs.join(' ');
+
+        console.log(`Executing script: ${command}`);
+        // Execute using bun directly if preferred and available, otherwise rely on shebang
+        // const commandToRun = `bun ${command}`; // Or just `command` if relying on shebang + PATH
+        const { stdout, stderr } = await execAsync(command); // Use the command with args
+
+        // Process stdout: Look for the JSON output line
+        const outputLines = stdout.trim().split('\n');
+        let scriptResult = null;
+        for (let i = outputLines.length - 1; i >= 0; i--) {
+            try {
+                scriptResult = JSON.parse(outputLines[i]);
+                // If parsing succeeds, break the loop
+                if (scriptResult) break;
+            } catch (e) {
+                // Ignore lines that are not valid JSON
+            }
+        }
+
+        if (scriptResult && scriptResult.success) {
+            console.log(`Script executed successfully for project ${projectId}:`, scriptResult);
+            return NextResponse.json({
+                message: scriptResult.message || 'Project created successfully via script.',
+                projectId: scriptResult.projectId,
+                path: scriptResult.path,
+                configured: scriptResult.configured
+            }, { status: 201 });
+        } else if (scriptResult && !scriptResult.success) {
+            // Handle specific errors reported by the script (via JSON output)
+            console.error(`Script reported failure for project ${projectId}:`, scriptResult.error);
+            console.error("Full stdout:", stdout);
+            console.error("Full stderr:", stderr);
+            if (scriptResult.code === 'CONFLICT') {
+                 // Check config status for existing project before returning conflict
+                 let projectPathCheck: string;
+                 try {
+                     projectPathCheck = getProjectPath(projectId);
+                     const isConfigured = await checkMcpConfigStatus(projectPathCheck);
+                     return NextResponse.json({
+                         message: scriptResult.error || 'Project directory already exists.',
+                         configured: isConfigured
+                     }, { status: 409 });
+                 } catch (pathError: any) {
+                      console.error("Error getting project path during conflict check:", pathError);
+                      // Fallback to generic conflict if path fails
+                      return NextResponse.json({ error: scriptResult.error || 'Project directory already exists.' }, { status: 409 });
+                 }
+            }
+            // Generic script error reported via JSON
+            return NextResponse.json({ error: `Project creation script failed: ${scriptResult.error || 'Unknown error'}` }, { status: 500 });
+        } else {
+             // Script finished but didn't output expected JSON success/failure
+             console.error("Script finished but did not produce expected JSON output.");
+             console.error("Full stdout:", stdout);
+             console.error("Full stderr:", stderr);
+             throw new Error("Invalid output from project creation script.");
+        }
 
     } catch (error: any) {
-        console.error(`Error processing POST request for project ${projectId}:`, error);
-        // Attempt cleanup? If copy failed partially, it might leave an incomplete dir.
-        // Simple cleanup: remove the target dir if it exists after an error during creation.
-        try {
-             await access(projectPath, fs.constants.F_OK);
-             console.warn(`Creation failed, attempting to remove partially created directory: ${projectPath}`);
-             await execAsync(`rm -rf "${projectPath}"`);
-        } catch (cleanupError: any) {
-             console.error(`Failed to cleanup partially created directory ${projectPath}:`, cleanupError);
+        // Handle errors from execAsync itself (e.g., script not found, non-zero exit code without JSON output)
+        console.error(`Error executing create-project script for ${projectId}:`, error);
+        const stderr = error.stderr || '';
+        const stdout = error.stdout || ''; // Include stdout for context
+
+        // Attempt to parse the last line of stderr for a JSON error message
+        const errorLines = stderr.trim().split('\n');
+        let scriptErrorResult = null;
+        if (errorLines.length > 0) {
+             try {
+                 scriptErrorResult = JSON.parse(errorLines[errorLines.length - 1]);
+             } catch (e) { /* Ignore parse error */ }
         }
-        return NextResponse.json({ error: `Failed to create project from template: ${error.message}` }, { status: 500 });
+
+
+        if (scriptErrorResult && !scriptErrorResult.success && scriptErrorResult.error) {
+             // Handle specific errors reported by the script (via stderr JSON)
+             if (scriptErrorResult.code === 'CONFLICT') {
+                 // Check config status for existing project before returning conflict
+                 let projectPathCheck: string;
+                 try {
+                     projectPathCheck = getProjectPath(projectId);
+                     const isConfigured = await checkMcpConfigStatus(projectPathCheck);
+                     return NextResponse.json({
+                         message: scriptErrorResult.error || 'Project directory already exists.',
+                         configured: isConfigured
+                     }, { status: 409 });
+                 } catch (pathError: any) {
+                      console.error("Error getting project path during conflict check:", pathError);
+                      // Fallback to generic conflict if path fails
+                      return NextResponse.json({ error: scriptErrorResult.error || 'Project directory already exists.' }, { status: 409 });
+                 }
+             }
+             // Return specific error from script (stderr JSON)
+             return NextResponse.json({ error: `Project creation script failed: ${scriptErrorResult.error}` }, { status: 500 });
+        }
+
+        // Generic execution error (non-zero exit without specific JSON error)
+        return NextResponse.json({
+             error: `Failed to execute project creation script: ${error.message}`,
+             stderr: stderr,
+             stdout: stdout // Include stdout for debugging context
+            }, { status: 500 });
     }
 }

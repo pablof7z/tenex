@@ -1,0 +1,242 @@
+#!/usr/bin/env bun
+// scripts/create-project
+
+import path from 'path';
+import { mkdir, readFile, writeFile, access } from 'fs/promises';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { getProjectPath } from '../lib/projectUtils'; // Adjust path relative to script location
+
+const execAsync = promisify(exec);
+
+// --- Configuration ---
+// Define the path to the template directory relative to the project root
+const PROJECT_ROOT = path.resolve(__dirname, '..'); // Assumes script is in PROJECT_ROOT/scripts
+const TEMPLATE_DIR = path.resolve(PROJECT_ROOT, 'project-template');
+const NSEC_PLACEHOLDER = '__NSEC_PLACEHOLDER__';
+
+// --- Argument Parsing ---
+// Simple argument parsing: expects --id <id> --desc <desc> [--nsec <nsec>] [--repo <repoUrl>]
+interface Args {
+    id?: string;
+    desc?: string;
+    nsec?: string;
+    repo?: string;
+}
+
+const args: Args = {};
+const argv = process.argv.slice(2); // Skip node/bun executable and script path
+
+for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--id' && i + 1 < argv.length) {
+        args.id = argv[i + 1];
+        i++;
+    } else if (argv[i] === '--desc' && i + 1 < argv.length) {
+        args.desc = argv[i + 1];
+        i++;
+    } else if (argv[i] === '--nsec' && i + 1 < argv.length) {
+        args.nsec = argv[i + 1];
+        i++;
+    } else if (argv[i] === '--repo' && i + 1 < argv.length) {
+        args.repo = argv[i + 1];
+        i++;
+    }
+}
+
+// --- Validation ---
+if (!args.id) {
+    console.error(JSON.stringify({ success: false, error: 'Project ID is required (--id)' }));
+    process.exit(1);
+}
+if (!args.desc) {
+    // Default description if not provided
+    args.desc = `Project specification for ${args.id}`;
+    console.warn(`Description not provided (--desc), using default: "${args.desc}"`);
+}
+
+const projectId = args.id;
+const description = args.desc;
+const nsec = args.nsec;
+const gitRepoUrl = args.repo;
+
+// --- Main Logic ---
+async function createProject() {
+    let projectPath: string;
+    try {
+        projectPath = getProjectPath(projectId);
+    } catch (error: any) {
+        console.error(JSON.stringify({ success: false, error: `Error getting project path: ${error.message || 'Server configuration error'}` }));
+        process.exit(1);
+    }
+
+    try {
+        // 1. Check if project directory already exists
+        try {
+            await access(projectPath);
+            // Directory exists
+            console.error(JSON.stringify({ success: false, error: 'Project directory already exists.', code: 'CONFLICT' }));
+            process.exit(1);
+        } catch (accessError: any) {
+            if (accessError.code !== 'ENOENT') {
+                throw accessError; // Re-throw unexpected errors
+            }
+            // ENOENT: Directory doesn't exist, proceed
+        }
+
+        // 2. Create project directory
+        console.log(`Creating project directory: ${projectPath}`);
+        await mkdir(projectPath, { recursive: true });
+
+        // 3. Clone Git repo if provided
+        if (gitRepoUrl) {
+            console.log(`Cloning repository from ${gitRepoUrl} into ${projectPath}...`);
+            try {
+                // Clone directly into the project path. Assumes the target dir is empty or non-existent before clone.
+                // We might need to adjust if the repo itself contains conflicting structure,
+                // or clone to a temp dir and merge. For now, direct clone.
+                await execAsync(`git clone --depth 1 "${gitRepoUrl}" "${projectPath}"`);
+                console.log(`Repository cloned successfully.`);
+                // Optionally remove .git directory if we don't want to keep repo history
+                // await execAsync(`rm -rf "${path.join(projectPath, '.git')}"`);
+            } catch (cloneError: any) {
+                 console.error(`Failed to clone repository: ${cloneError.stderr || cloneError.message}`);
+                 // Decide if we should proceed with template copy or fail here. Let's fail.
+                 throw new Error(`Failed to clone repository: ${cloneError.message}`);
+            }
+        }
+
+        // 4. Copy template directory contents (only if NOT cloning, or maybe merge?)
+        // Current logic: If cloning, we assume the repo IS the project structure.
+        // If not cloning, we copy the template.
+        // Alternative: Always copy template, potentially overwriting cloned files (careful!).
+        // Let's stick to: Clone OR Template Copy.
+        if (!gitRepoUrl) {
+            console.log(`Copying template from ${TEMPLATE_DIR} to ${projectPath}...`);
+            try {
+                await access(TEMPLATE_DIR);
+            } catch (templateAccessError: any) {
+                 console.error(`Template directory not found at ${TEMPLATE_DIR}:`, templateAccessError);
+                 throw new Error(`Server configuration error: Template directory missing.`);
+            }
+            // Use cp -a to preserve permissions and ownership if possible
+            // Copy contents of template dir into projectPath
+            await execAsync(`cp -a "${TEMPLATE_DIR}/." "${projectPath}/"`);
+            console.log(`Template copied successfully to ${projectPath}`);
+        } else {
+            console.log(`Skipping template copy because a git repository was cloned.`);
+            // Ensure essential directories/files from template exist if missing in repo?
+            // e.g., ensure context/SPEC.md exists, .roo/mcp.json exists
+            await mkdir(path.join(projectPath, 'context'), { recursive: true });
+            await mkdir(path.join(projectPath, '.roo'), { recursive: true });
+            // Maybe copy specific essential files if they don't exist after clone?
+            // Example: Copy mcp.json if it wasn't in the repo
+            const mcpTemplatePath = path.join(TEMPLATE_DIR, '.roo', 'mcp.json');
+            const mcpTargetPath = path.join(projectPath, '.roo', 'mcp.json');
+            try {
+                await access(mcpTargetPath);
+            } catch (e: any) {
+                if (e.code === 'ENOENT') {
+                    console.log(`Copying missing mcp.json from template...`);
+                    await execAsync(`cp "${mcpTemplatePath}" "${mcpTargetPath}"`);
+                }
+            }
+             // Example: Create empty SPEC.md if it wasn't in the repo
+            const specTemplatePath = path.join(TEMPLATE_DIR, 'context', 'SPEC.md'); // Not really template, just path
+            const specTargetPath = path.join(projectPath, 'context', 'SPEC.md');
+             try {
+                await access(specTargetPath);
+            } catch (e: any) {
+                if (e.code === 'ENOENT') {
+                    console.log(`Creating missing SPEC.md...`);
+                    await writeFile(specTargetPath, `# Project Specification: ${projectId}\n\n${description}`);
+                }
+            }
+        }
+
+
+        // 5. Update SPEC.md (or create if cloning didn't include it and we didn't create above)
+        const specFilePath = path.join(projectPath, 'context', 'SPEC.md');
+        try {
+            // Read existing content if it exists (e.g., from cloned repo) and append/prepend, or just overwrite?
+            // Let's overwrite for simplicity now, assuming the provided description is the source of truth.
+            await writeFile(specFilePath, description);
+            console.log(`SPEC.md updated/created successfully at ${specFilePath}`);
+        } catch (specWriteError: any) {
+             console.error(`Failed to write SPEC.md at ${specFilePath}:`, specWriteError);
+             throw new Error(`Failed to update project specification: ${specWriteError.message}`);
+        }
+
+        // 6. Update mcp.json with NSEC (only if provided)
+        let isConfigured = false;
+        const mcpConfigFile = path.join(projectPath, '.roo', 'mcp.json');
+        if (nsec) {
+            try {
+                // Ensure the file exists first (might not if template copy failed or repo didn't have it)
+                 try {
+                    await access(mcpConfigFile);
+                } catch (e:any) {
+                     if (e.code === 'ENOENT') {
+                        console.warn(`mcp.json not found at ${mcpConfigFile}. Cannot apply NSEC.`);
+                        // Decide whether to throw or continue. Let's continue but report not configured.
+                     } else {
+                         throw e; // Other access error
+                     }
+                }
+
+                // Proceed only if file exists
+                let mcpConfigContent = await readFile(mcpConfigFile, 'utf-8');
+                if (mcpConfigContent.includes(NSEC_PLACEHOLDER)) {
+                    mcpConfigContent = mcpConfigContent.replace(NSEC_PLACEHOLDER, nsec);
+                    await writeFile(mcpConfigFile, mcpConfigContent);
+                    console.log(`mcp.json updated successfully with NSEC at ${mcpConfigFile}`);
+                    isConfigured = true;
+                } else {
+                    console.warn(`NSEC placeholder not found in ${mcpConfigFile}. NSEC not applied.`);
+                    // Check if it's already configured (no placeholder, but has a value)
+                    try {
+                        const config = JSON.parse(mcpConfigContent);
+                         if (config?.mcpServers?.tenex?.env?.NSEC && config.mcpServers.tenex.env.NSEC !== NSEC_PLACEHOLDER && config.mcpServers.tenex.env.NSEC.length > 0) {
+                             console.log("mcp.json seems to be already configured.");
+                             isConfigured = true; // Already configured
+                         }
+                    } catch (parseError) {
+                        console.error(`Error parsing existing mcp.json: ${parseError}`);
+                    }
+                }
+            } catch (mcpUpdateError: any) {
+                 console.error(`Failed to read/update mcp.json at ${mcpConfigFile}:`, mcpUpdateError);
+                 // Don't throw, but report configuration failed
+                 console.warn(`Configuration with NSEC failed.`);
+            }
+        } else {
+            console.log(`NSEC not provided during creation for ${projectId}. MCP configuration pending.`);
+        }
+
+        // 7. Output Success JSON
+        console.log(JSON.stringify({
+            success: true,
+            message: 'Project created successfully.',
+            projectId: projectId,
+            path: projectPath,
+            configured: isConfigured
+        }));
+        process.exit(0);
+
+    } catch (error: any) {
+        console.error(`Error during project creation for ${projectId}:`, error);
+        // Attempt cleanup: remove the target dir if it exists
+        try {
+             await access(projectPath);
+             console.warn(`Creation failed, attempting to remove directory: ${projectPath}`);
+             await execAsync(`rm -rf "${projectPath}"`);
+        } catch (cleanupError: any) {
+             // Log cleanup error but don't mask original error
+             console.error(`Failed to cleanup directory ${projectPath}:`, cleanupError);
+        }
+        console.error(JSON.stringify({ success: false, error: `Failed to create project: ${error.message}` }));
+        process.exit(1);
+    }
+}
+
+// --- Execute ---
+createProject();

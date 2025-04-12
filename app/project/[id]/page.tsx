@@ -240,7 +240,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             const response = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ repoUrl }),
+                body: JSON.stringify({ repo: repoUrl }),
             });
             if (response.ok) {
                 console.log("Project directory created or verified.");
