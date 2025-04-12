@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
-import { useNDK, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useMemo, useState, useEffect } from "react";
+import { Plus, AlertTriangle } from "lucide-react"; // Added AlertTriangle
+import Link from "next/link"; // Added Link import
+import { NDKSubscriptionCacheUsage, useNDK, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { ProjectCard } from "@/components/events/project/card";
 import { useToast } from "@/hooks/use-toast";
+import { useConfig } from "@/hooks/useConfig"; // Import useConfig
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AppLayout } from "@/components/app-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
 
 export default function DashboardPage() {
     const { ndk } = useNDK();
@@ -31,6 +34,8 @@ export default function DashboardPage() {
         currentUser ? [{ kinds: [NDKProject.kind], authors: [currentUser?.pubkey] }] : false,
     );
     const { toast } = useToast();
+    // Use the hook, getting isReady and error state
+    const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
     const [isCreatingProject, setIsCreatingProject] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [formData, setFormData] = useState({
@@ -40,24 +45,36 @@ export default function DashboardPage() {
         hashtags: "",
         gitRepo: "",
     });
-    const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null); // Renamed local error state
 
-    console.log("Fetched projects:", projects);
+    // Removed local useEffect for isConfigReady
+
+    const activeProjects = useMemo(() => {
+        return projects.filter((project) => project.hasTag("deleted") === false);
+    }, [projects]);
+
+    console.log("Fetched projects:", activeProjects.map(p => p.inspect).join("\n\n"));
 
     const handleCreateProject = async () => {
+        setFormError(null); // Clear previous form errors
         if (!formData.name || !formData.description) {
-            setError("Project name and description are required");
+            setFormError("Project name and description are required.");
             return;
         }
 
         if (!ndk || !currentUser) {
-            setError("You must be logged in to create a project");
+            setFormError("You must be logged in to create a project.");
             return;
+        }
+        // Check if config is ready and has no errors
+        if (!isConfigReady) {
+             // Error is already displayed via configError state, just prevent action
+             toast({ title: "Configuration Error", description: configError || "Configuration is not ready.", variant: "destructive" });
+             return;
         }
 
         try {
             setIsCreating(true);
-            setError(null);
 
             // Create a new NDK Project with the NDK instance
             const project = new NDKProject(ndk);
@@ -67,7 +84,7 @@ export default function DashboardPage() {
             // Set project properties
             project.title = formData.name;
 
-            // Process hashtags (convert comma-separated string to array)
+            // Process hashtags
             if (formData.hashtags) {
                 const hashtagArray = formData.hashtags
                     .split(",")
@@ -76,7 +93,7 @@ export default function DashboardPage() {
                 project.hashtags = hashtagArray;
             }
 
-            // Set git repository if provided
+            // Set git repository
             if (formData.gitRepo) {
                 project.repo = formData.gitRepo;
             }
@@ -87,19 +104,21 @@ export default function DashboardPage() {
 
             // Now, create the local project structure
             try {
-                const localCreateResponse = await fetch("/api/projects/create-local", {
+                // getApiUrl will now always return a string (relative or absolute)
+                const apiUrl = getApiUrl('/projects/create-local');
+                const localCreateResponse = await fetch(apiUrl, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         name: formData.name,
-                        description: formData.description, // This is the spec content
+                        description: formData.description,
                     }),
                 });
 
                 if (!localCreateResponse.ok) {
-                    const errorData = await localCreateResponse.json();
+                    const errorData = await localCreateResponse.json().catch(() => ({ error: "Failed to parse error response" }));
                     throw new Error(
                         errorData.error ||
                             `Failed to create local project structure: ${localCreateResponse.statusText}`,
@@ -109,21 +128,13 @@ export default function DashboardPage() {
                 const localCreateData = await localCreateResponse.json();
                 console.log("Local project structure created:", localCreateData);
 
-                // Optionally, show a specific toast for local creation success
-                // toast({
-                //     title: "Local files created",
-                //     description: `Project files initialized at ${localCreateData.path}`,
-                //     variant: "default",
-                // });
             } catch (localError) {
                 console.error("Error creating local project structure:", localError);
-                // Show an error toast, but don't block the overall success flow
-                // as the Nostr event was already published.
                 toast({
                     title: "Local Files Error",
                     description:
                         localError instanceof Error ? localError.message : "Failed to create local project files.",
-                    variant: "default", // Use default as warning is not available; main op succeeded
+                    variant: "default", // Keep as default/warning since Nostr event succeeded
                 });
             }
 
@@ -135,23 +146,14 @@ export default function DashboardPage() {
             });
 
             // Reset form and close dialog
-            setFormData({
-                name: "",
-                tagline: "",
-                description: "",
-                hashtags: "",
-                gitRepo: "",
-            });
+            setFormData({ name: "", tagline: "", description: "", hashtags: "", gitRepo: "" });
             setIsCreatingProject(false);
-
-            // You might want to add a success notification here
             console.log("Project created successfully:", project);
+
         } catch (err) {
             console.error("Error creating project:", err);
             const errorMessage = err instanceof Error ? err.message : "Failed to create project";
-            setError(errorMessage);
-
-            // Show error toast
+            setFormError(errorMessage); // Set form-specific error
             toast({
                 title: "Error",
                 description: errorMessage,
@@ -162,15 +164,31 @@ export default function DashboardPage() {
         }
     };
 
+    // Determine if actions requiring API calls should be disabled
+    const actionsDisabled = !isConfigReady || isConfigLoading;
+    const configErrorTooltip = configError ? `Configuration Error: ${configError}` : !isConfigReady ? "Loading configuration..." : "";
+
     return (
         <AppLayout>
+            {/* Display Configuration Error Alert if present */}
+            {configError && !isConfigLoading && (
+                 <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Configuration Error</AlertTitle>
+                    <AlertDescription>
+                        {configError} Please check <Link href="/settings" className="underline">Application Settings</Link>. API interactions may fail.
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <div className="flex items-center justify-between mb-8">
                 <h1 className="text-3xl font-medium tracking-tight">Projects</h1>
                 <Dialog open={isCreatingProject} onOpenChange={setIsCreatingProject}>
-                    <DialogTrigger asChild>
-                        <Button className="rounded-md">
+                    <DialogTrigger asChild disabled={actionsDisabled}>
+                        {/* Add tooltip for disabled state */}
+                        <Button className="rounded-md" disabled={actionsDisabled} title={configErrorTooltip}>
                             <Plus className="mr-2 h-4 w-4" />
-                            New Project
+                            New Project {isConfigLoading ? "(Loading Config...)" : ""}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[525px]">
@@ -181,6 +199,7 @@ export default function DashboardPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
+                            {/* Form fields remain the same */}
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Project name</Label>
                                 <Input
@@ -232,28 +251,26 @@ export default function DashboardPage() {
                                     onChange={(e) => setFormData({ ...formData, gitRepo: e.target.value })}
                                 />
                             </div>
-                            {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
+                            {/* Display form-specific error */}
+                            {formError && <div className="text-red-500 text-sm mt-2">{formError}</div>}
+                            {/* Display config error as well if relevant */}
+                            {configError && <div className="text-orange-600 text-sm mt-2">Note: {configError}</div>}
                         </div>
                         <DialogFooter>
                             <Button
                                 variant="outline"
                                 onClick={() => {
                                     setIsCreatingProject(false);
-                                    setFormData({
-                                        name: "",
-                                        tagline: "",
-                                        description: "",
-                                        hashtags: "",
-                                        gitRepo: "",
-                                    });
-                                    setError(null);
+                                    setFormData({ name: "", tagline: "", description: "", hashtags: "", gitRepo: "" });
+                                    setFormError(null); // Clear form error on cancel
                                 }}
                                 className="rounded-md"
                                 disabled={isCreating}
                             >
                                 Cancel
                             </Button>
-                            <Button onClick={handleCreateProject} className="rounded-md" disabled={isCreating}>
+                            {/* Disable create button if config not ready/error or already creating */}
+                            <Button onClick={handleCreateProject} className="rounded-md" disabled={isCreating || actionsDisabled} title={configErrorTooltip}>
                                 {isCreating ? "Creating..." : "Create project"}
                             </Button>
                         </DialogFooter>
@@ -265,8 +282,9 @@ export default function DashboardPage() {
                     <div className="col-span-3 text-center py-10 text-muted-foreground">
                         <p>Loading projects...</p>
                     </div>
-                ) : projects && projects.length > 0 ? (
-                    projects.map((project) => <ProjectCard key={project.id} project={project} />)
+                ) : activeProjects && activeProjects.length > 0 ? (
+                    activeProjects
+                        .map((project) => <ProjectCard key={project.id} project={project} />)
                 ) : (
                     <div className="col-span-3 text-center py-10 text-muted-foreground">
                         {currentUser ? (

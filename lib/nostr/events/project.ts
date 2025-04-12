@@ -20,7 +20,7 @@ export class NDKProject extends NDKArticle {
 
     set hashtags(values: string[]) {
         this.removeTag("hashtags");
-        if (values.length) this.tags.push(["hashtags", ...values]);
+        if (values.filter(t => t.length > 0).length) this.tags.push(["hashtags", ...values]);
     }
 
     get hashtags(): string[] {

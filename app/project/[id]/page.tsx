@@ -2,19 +2,21 @@
 
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { NDKPrivateKeySigner, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
+import Link from "next/link"; // Added Link import
 import { AppLayout } from "@/components/app-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NDKProject } from "@/lib/nostr/events/project";
-import { NDKTask } from "@/lib/nostr/events/task"; // Import NDKTask
+import { NDKTask } from "@/lib/nostr/events/task";
 import { toast } from "@/components/ui/use-toast";
-// import { Task } from "./components/types"; // Removed local Task type
+import { useConfig } from "@/hooks/useConfig"; // Import useConfig
 import { QuoteData } from "@/components/events/note/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
+import { AlertTriangle } from "lucide-react"; // Added AlertTriangle
 
 // Import common components
 import { ProjectHeader } from "./components/ProjectHeader";
 import { ProjectStatCards } from "./components/ProjectStatCards";
-// import { TaskDetailDialog } from "./components/TaskDetailDialog"; // No longer needed
 import { QuotePostDialog } from "./components/QuotePostDialog";
 
 // Import the new Tab components
@@ -26,8 +28,10 @@ import { ProjectSpecsTab } from "./components/ProjectSpecsTab";
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
     const unwrappedParams = React.use(params);
     const projectId = unwrappedParams.id;
-    const router = useRouter(); // Get router instance
+    const router = useRouter();
     const currentUser = useNDKCurrentUser();
+    // Use the hook, getting isReady and error state
+    const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
 
     // Fetch project using useSubscribe with correct filtering
     const { events: projects } = useSubscribe(
@@ -37,39 +41,43 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     );
 
     // Get the project from the events
-    const projectEvent = useMemo(() => projects[0], [projects]); // Depend on the projects array
+    const projectEvent = useMemo(() => projects[0], [projects]);
     const project = useMemo(() => (projectEvent ? NDKProject.from(projectEvent) : null), [projectEvent]);
 
     console.log("project loaded", project?.inspect);
 
     // State management for UI interactions
     const [activeTab, setActiveTab] = useState("overview");
-    // const [selectedTask, setSelectedTask] = useState<NDKTask | null>(null); // No longer needed
     const [projectExistsLocally, setProjectExistsLocally] = useState<boolean | null>(null);
     const [projectConfigured, setProjectConfigured] = useState<boolean | null>(null);
     const [isConfiguringMcp, setIsConfiguringMcp] = useState(false);
     const [isCreatingProject, setIsCreatingProject] = useState(false);
     const [isQuoting, setIsQuoting] = useState<QuoteData | null>(null);
     const [projectSigner, setProjectSigner] = useState<NDKPrivateKeySigner | null>(null);
+    const [fetchStatusError, setFetchStatusError] = useState<string | null>(null); // Specific error for status fetch
+
+    // Removed local useEffect for isConfigReady/configError
 
     // --- Event Handlers ---
     const handleSettingsClick = () => setActiveTab("settings");
     const handleEditorLaunch = async () => {
+        setFetchStatusError(null); // Clear previous errors
+        if (!isConfigReady) {
+            toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
+            return;
+        }
         if (!projectId) {
             toast({ title: "Error", description: "Project ID is missing.", variant: "destructive" });
             return;
         }
         console.log("Requesting to launch editor for project:", projectId);
         try {
-            const response = await fetch(`/api/projects/${projectId}/open-editor`, {
-                method: "POST",
-            });
+            const apiUrl = getApiUrl(`/projects/${projectId}/open-editor`);
+            const response = await fetch(apiUrl, { method: "POST" });
             const data = await response.json();
             if (!response.ok) {
                 throw new Error(data.error || `HTTP error! status: ${response.status}`);
             }
-            // The backend responds with 202 Accepted immediately.
-            // The script runs asynchronously. We can provide feedback that the request was sent.
             toast({
                 title: "Editor Launch Requested",
                 description: "Attempting to open the project in your editor...",
@@ -90,7 +98,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         setIsQuoting(null);
     };
     const handleZap = (itemId: string) => console.log("Zapping:", itemId);
-    // const handleSaveSpec = (content: string) => console.log("Saving spec:", content); // Now handled within ProjectSpecsTab
     const handleAddTask = () => console.log("Adding task");
     const handleDeleteTask = (taskId: string) => console.log("Deleting task:", taskId);
     const handleAddComment = (taskId: string, comment: string) =>
@@ -105,10 +112,22 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     // Fetch project existence and configuration status
     useEffect(() => {
-        if (!projectId) return;
+        // Only run if config is ready and projectId exists
+        if (!isConfigReady || !projectId) {
+            if (!isConfigReady && !isConfigLoading) { // Only reset if config loading finished but wasn't ready
+                setProjectExistsLocally(null);
+                setProjectConfigured(null);
+            }
+            return;
+        }
+
         setProjectExistsLocally(null);
         setProjectConfigured(null);
-        fetch(`/api/projects/${projectId}`)
+        setFetchStatusError(null); // Clear previous status fetch errors
+
+        const apiUrl = getApiUrl(`/projects/${projectId}`);
+
+        fetch(apiUrl)
             .then(async (res) => {
                 if (res.ok) {
                     const data = await res.json();
@@ -118,52 +137,66 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     setProjectExistsLocally(false);
                     setProjectConfigured(false);
                 } else {
-                    console.error("Failed to check project status:", res.status, await res.text());
+                    const errorText = await res.text().catch(() => `Status ${res.status}`);
+                    console.error("Failed to check project status:", res.status, errorText);
+                    setFetchStatusError(`Failed to check project status: ${res.status}. Check backend logs.`);
                     setProjectExistsLocally(false);
                     setProjectConfigured(false);
                 }
             })
             .catch((error) => {
                 console.error("Error fetching project status:", error);
+                setFetchStatusError(`Network error fetching project status: ${error.message}`);
                 setProjectExistsLocally(false);
                 setProjectConfigured(false);
             });
-    }, [projectId]);
+    }, [projectId, isConfigReady, getApiUrl, isConfigLoading]); // Added isConfigLoading
 
     // Helper function to call the configure API, wrapped in useCallback
     const callConfigureApi = useCallback(
-        async (nsecValue: string) => {
-            // Dependencies: projectId, isConfiguringMcp, toast
-            if (!projectId || isConfiguringMcp) return;
+        async (nsecValue: string): Promise<boolean> => { // Return boolean success
+            setFetchStatusError(null); // Clear previous errors
+            if (!isConfigReady) {
+                toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
+                return false;
+            }
+            if (!projectId || isConfiguringMcp) return false;
+
+            const apiUrl = getApiUrl(`/projects/${projectId}/configure`);
+
             setIsConfiguringMcp(true);
             console.log("Attempting to auto-configure MCP via API...");
             try {
-                const response = await fetch(`/api/projects/${projectId}/configure`, {
+                const response = await fetch(apiUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ nsec: nsecValue }),
                 });
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
+                    throw new Error(errorData.error);
                 }
                 console.log("MCP auto-configuration successful.");
                 setProjectConfigured(true); // Update state
                 toast({ title: "Project Configured", description: "Backend MCP settings updated automatically." });
+                return true; // Indicate success
             } catch (error: unknown) {
                 console.error("Failed to auto-configure MCP via API:", error);
                 const message = error instanceof Error ? error.message : "Could not update backend MCP settings.";
                 toast({ title: "MCP Auto-Configuration Failed", description: message, variant: "destructive" });
+                setFetchStatusError(`MCP Auto-Configuration Failed: ${message}`); // Show error persistently
+                return false; // Indicate failure
             } finally {
                 setIsConfiguringMcp(false);
             }
         },
-        [projectId, isConfiguringMcp], // Removed toast from dependencies
-    ); // Add dependencies for useCallback
+        [projectId, isConfiguringMcp, isConfigReady, getApiUrl, configError], // Added configError
+    );
 
     // Effect to trigger auto-configuration if needed
     useEffect(() => {
-        if (projectExistsLocally === true && projectConfigured === false && project && !isConfiguringMcp) {
+        // Run only if config is ready, project exists locally, is not configured, project data loaded, and not already configuring
+        if (isConfigReady && projectExistsLocally === true && projectConfigured === false && project && !isConfiguringMcp) {
             const attemptAutoConfigure = async () => {
                 console.log("Project exists but not configured, attempting to get NSEC...");
                 try {
@@ -172,9 +205,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                         console.log("NSEC retrieved, calling configure API...");
                         await callConfigureApi(nsec);
                     } else {
-                        console.warn(
-                            "Could not retrieve NSEC automatically. Manual configuration might be needed in settings.",
-                        );
+                        console.warn("Could not retrieve NSEC automatically. Manual configuration might be needed in settings.");
+                        // Don't set fetchStatusError here, let user configure manually
                     }
                 } catch (error) {
                     console.error("Error trying to get NSEC for auto-configuration:", error);
@@ -183,45 +215,53 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                         description: "Could not get NSEC for auto-configuration. Please check settings.",
                         variant: "destructive",
                     });
+                    setFetchStatusError("Could not retrieve NSEC for auto-configuration.");
                 }
             };
             attemptAutoConfigure();
         }
-    }, [projectExistsLocally, projectConfigured, project, isConfiguringMcp, callConfigureApi]); // Added callConfigureApi, removed projectId
+    }, [projectExistsLocally, projectConfigured, project, isConfiguringMcp, callConfigureApi, isConfigReady]); // Dependencies updated
 
-    // Handle project creation
+    // Handle project creation (local directory/setup)
     const handleCreateProject = async () => {
-        if (!projectId || isCreatingProject || !project) return; // Ensure project exists
+        setFetchStatusError(null); // Clear previous errors
+        if (!isConfigReady) {
+             toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
+            return;
+        }
+        if (!projectId || isCreatingProject || !project) return;
+
+        const apiUrl = getApiUrl(`/projects/${projectId}`);
+
         setIsCreatingProject(true);
-        console.log("Attempting to create project directory for:", projectId);
+        console.log("Attempting to create/verify project directory for:", projectId);
         const repoUrl = project?.repo;
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ repoUrl }),
             });
             if (response.ok) {
-                console.log("Project directory created or already exists.");
+                console.log("Project directory created or verified.");
                 setProjectExistsLocally(true);
-                setProjectConfigured(false); // Assume not configured initially
+                setProjectConfigured(false); // Assume not configured initially, let auto-configure handle it
             } else {
-                const errorData = await response.json();
-                console.error(
-                    "Failed to create project directory:",
-                    response.status,
-                    errorData.error || "Unknown error",
-                );
+                const errorData = await response.json().catch(() => ({ error: `Failed with status: ${response.status}` }));
+                const errorMsg = errorData.error;
+                console.error("Failed to create/verify project directory:", response.status, errorMsg);
                 toast({
-                    title: "Project Creation Failed",
-                    description: errorData.error || "Unknown error",
+                    title: "Project Setup Failed",
+                    description: errorMsg,
                     variant: "destructive",
                 });
+                setFetchStatusError(`Project Setup Failed: ${errorMsg}`);
             }
         } catch (error: unknown) {
             console.error("Error calling create project API:", error);
             const message = error instanceof Error ? error.message : "Unknown project creation error.";
-            toast({ title: "Project Creation Error", description: message, variant: "destructive" });
+            toast({ title: "Project Setup Error", description: message, variant: "destructive" });
+            setFetchStatusError(`Project Setup Error: ${message}`);
         } finally {
             setIsCreatingProject(false);
         }
@@ -239,10 +279,40 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         }
     }, [project, projectSigner]);
 
-    if (!project) return null; // Render loading or placeholder?
+    // --- Render Logic ---
+
+    // Loading state for configuration
+    if (isConfigLoading) {
+        return <AppLayout><div className="p-4">Loading configuration...</div></AppLayout>;
+    }
+
+    // If config is ready but project hasn't loaded yet from Nostr
+    if (isConfigReady && !project) {
+        return <AppLayout><div className="p-4">Loading project details from Nostr...</div></AppLayout>;
+    }
+
+    // If project failed to load from Nostr (shouldn't happen if ID is valid, but good practice)
+    if (!project) {
+         return <AppLayout><div className="p-4 text-red-600">Error: Project not found or could not be loaded.</div></AppLayout>;
+    }
+
+    // Determine if main content actions should be disabled (config error or status fetch error)
+    const actionsDisabled = !isConfigReady || !!fetchStatusError;
+    const overallError = configError || fetchStatusError;
 
     return (
         <AppLayout>
+            {/* Display Configuration or Status Fetch Error Alert if present */}
+            {overallError && (
+                 <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                        {overallError} {configError && <Link href="/settings" className="underline ml-1">Check Settings</Link>}
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <ProjectHeader
                 project={project}
                 onSettingsClick={handleSettingsClick}
@@ -250,78 +320,84 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 onProjectCreate={handleCreateProject}
                 projectExists={projectExistsLocally}
                 isCreatingProject={isCreatingProject}
+                isConfigReady={isConfigReady} // Pass config readiness from hook
             />
 
             <ProjectStatCards project={project} />
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-6">
                 <TabsList className="grid w-full grid-cols-3 md:w-auto md:grid-cols-4 rounded-md p-1 bg-muted">
+                    {/* Disable tabs if actions are disabled */}
                     <TabsTrigger
                         value="overview"
                         className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
+                        disabled={actionsDisabled}
                     >
                         Overview
                     </TabsTrigger>
                     <TabsTrigger
                         value="tasks"
                         className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
+                        disabled={actionsDisabled}
                     >
                         Tasks
                     </TabsTrigger>
                     <TabsTrigger
                         value="specs"
                         className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
+                        disabled={actionsDisabled}
                     >
                         Specs
                     </TabsTrigger>
                     <TabsTrigger
                         value="settings"
                         className="hidden md:block rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
+                        disabled={actionsDisabled}
                     >
                         Settings
                     </TabsTrigger>
                 </TabsList>
 
+                {/* Conditionally render tab content based on readiness */}
                 <TabsContent value="overview" className="mt-6">
-                    <ProjectOverviewTab
-                        project={project}
-                        projectSigner={projectSigner}
-                        onReply={handleReply}
-                        onRepost={handleRepost}
-                        onQuote={handleQuote}
-                        onZap={handleZap}
-                    />
+                    {isConfigReady ? (
+                        <ProjectOverviewTab
+                            project={project}
+                            projectSigner={projectSigner}
+                            onReply={handleReply}
+                            onRepost={handleRepost}
+                            onQuote={handleQuote}
+                            onZap={handleZap}
+                        />
+                    ) : <p className="text-muted-foreground">Overview unavailable due to configuration issues.</p>}
                 </TabsContent>
 
                 <TabsContent value="tasks" className="mt-6">
-                    <ProjectTasksTab
-                        project={project} // Pass project object
-                        // tasks prop removed
-                        onTaskSelect={handleNavigateToTask} // Use navigation handler
-                        // onAddTask removed
-                        onDeleteTask={handleDeleteTask}
-                        onTasksUpdate={() => console.log("Tasks updated, refetch needed")} // Placeholder update handler
-                    />
+                     {isConfigReady ? (
+                        <ProjectTasksTab
+                            project={project}
+                            onTaskSelect={handleNavigateToTask}
+                            onDeleteTask={handleDeleteTask}
+                            onTasksUpdate={() => console.log("Tasks updated, refetch needed")}
+                        />
+                     ) : <p className="text-muted-foreground">Tasks unavailable due to configuration issues.</p>}
                 </TabsContent>
 
                 <TabsContent value="specs" className="mt-6">
-                    <ProjectSpecsTab project={project} projectId={projectId} />
+                     {isConfigReady ? (
+                        <ProjectSpecsTab project={project} projectId={projectId} />
+                     ) : <p className="text-muted-foreground">Specs unavailable due to configuration issues.</p>}
                 </TabsContent>
 
                 <TabsContent value="settings" className="mt-6">
-                    <ProjectSettingsTab project={project} />
+                     {isConfigReady ? (
+                        <ProjectSettingsTab project={project} />
+                     ) : <p className="text-muted-foreground">Settings unavailable due to configuration issues.</p>}
                 </TabsContent>
             </Tabs>
 
             {/* Dialogs */}
-            {/* <TaskDetailDialog
-                task={selectedTask}
-                onClose={() => setSelectedTask(null)}
-                onAddComment={handleAddComment}
-                onLaunchEditor={handleLaunchEditor}
-            /> */}
             <QuotePostDialog quoting={isQuoting} onClose={() => setIsQuoting(null)} onQuote={handleQuoteSubmit} />
-            {/* CreatePostDialog is handled within ActivityFeed */}
         </AppLayout>
     );
 }

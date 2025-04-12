@@ -27,8 +27,6 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
     const { events } = useSubscribe([
         { kinds: [1], authors: [projectPubkey], limit: 50 },
     ], {}, [projectPubkey]);
-    const [replyingTo, setReplyingTo] = useState<string | null>(null);
-    const [replyContent, setReplyContent] = useState("");
     const [isCreatingPost, setIsCreatingPost] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
 
@@ -57,13 +55,8 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
         } finally {
             setIsPublishing(false);
         }
-    }, [ndk, signer, project, isPublishing]);
+    }, [ndk, signer, isPublishing]);
 
-    const handleSendReply = (activityId: string) => {
-        onReply(activityId, replyContent);
-        setReplyContent("");
-        setReplyingTo(null);
-    };
     // Handler to open the Create Issue dialog
     const handleCreateIssueClick = (content: string) => {
         setIssueInitialContent(content);
@@ -99,7 +92,6 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
                  <CardDescription>Updates from the project agent</CardDescription>
             </CardHeader>
             <CardContent>
-                {projectPubkey}
                 <div className="space-y-4">
                     {(() => {
                         const sortedEvents = [...events].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
