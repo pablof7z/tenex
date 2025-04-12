@@ -68,8 +68,7 @@ export async function POST(
 
 
   // --- Prepare Task File ---
-  const uniqueId = crypto.randomUUID();
-  const taskFileName = `${uniqueId}.md`;
+  const taskFileName = `${taskId}.md`;
   const tempTasksDir = path.join(projectDirPath, 'temp', 'tasks');
   const taskFilePath = path.join(tempTasksDir, taskFileName);
 
