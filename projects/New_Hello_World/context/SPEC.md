@@ -1,1 +1,0 @@
-Using bun, create a simple typescript project that just says hello world
