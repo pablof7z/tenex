@@ -113,11 +113,45 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
         } finally {
             setIsLoadingFiles(false);
         }
-    }, [projectSlug, selectedFileName, isConfigReady, getApiUrl]); // Removed selectedGroup dependency
+// Only re-run fetchFiles if projectSlug, config readiness, or the API URL getter changes
+}, [projectSlug, isConfigReady, getApiUrl]); // REMOVED selectedFileName, selectedGroup
 
-    useEffect(() => {
-        fetchFiles();
-    }, [fetchFiles]);
+useEffect(() => {
+    fetchFiles();
+}, [fetchFiles]);
+
+// --- Effect for Selection Validation ---
+useEffect(() => {
+    // Don't run validation if files are loading or config isn't ready
+    if (isLoadingFiles || !isConfigReady) return;
+
+    const allFiles = [...specFiles, ...ruleFiles];
+    const currentSelectionExists = allFiles.some(f => f.name === selectedFileName && (
+        (selectedGroup === 'specs' && specFiles.some(s => s.name === selectedFileName)) ||
+        (selectedGroup === 'rules' && ruleFiles.some(r => r.name === selectedFileName))
+    ));
+    const defaultSpecExists = specFiles.some((f: FileData) => f.name === DEFAULT_SPEC_FILENAME);
+
+    if (!currentSelectionExists) {
+        // If current selection is no longer valid, reset it
+        if (defaultSpecExists) {
+            setSelectedFileName(DEFAULT_SPEC_FILENAME);
+            setSelectedGroup('specs');
+        } else if (specFiles.length > 0) {
+            setSelectedFileName(specFiles[0].name);
+            setSelectedGroup('specs');
+        } else if (ruleFiles.length > 0) {
+            setSelectedFileName(ruleFiles[0].name);
+            setSelectedGroup('rules');
+        } else {
+            // Default to SPEC.md even if it doesn't exist in fetched data yet
+            setSelectedFileName(DEFAULT_SPEC_FILENAME);
+            setSelectedGroup('specs');
+        }
+    }
+    // If current selection is still valid, do nothing
+// Run this logic when fetched files change, or if the user manually changes selection
+}, [specFiles, ruleFiles, selectedFileName, selectedGroup, isLoadingFiles, isConfigReady]);
 
     // --- Update Editor Content Effect ---
     useEffect(() => {
@@ -134,18 +168,21 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
             file = ruleFiles.find((f) => f.name === selectedFileName);
         }
 
-        if (selectedGroup === 'specs' && selectedFileName === DEFAULT_SPEC_FILENAME) {
-            setEditorContent(file?.content ?? DEFAULT_SPEC_CONTENT);
-        } else {
-            setEditorContent(file?.content ?? "");
-        }
+    if (selectedGroup === 'specs' && selectedFileName === DEFAULT_SPEC_FILENAME) {
+        // Use fetched content if available, otherwise default content
+        setEditorContent(file?.content ?? (specFiles.length > 0 || ruleFiles.length > 0 ? "" : DEFAULT_SPEC_CONTENT));
+    } else {
+        setEditorContent(file?.content ?? "");
+    }
 
-        if (!(selectedGroup === 'specs' && selectedFileName === DEFAULT_SPEC_FILENAME)) {
-            setIsAiContent(false);
-            setPreviousEditorContent(null);
-        }
-        setIsSaving(false);
-    }, [selectedFileName, selectedGroup, specFiles, ruleFiles, isConfigReady]); // Added isConfigReady
+    // Reset AI state only if the file is NOT the default spec OR if it's the default spec but doesn't exist yet
+    const isDefaultSpecPlaceholder = selectedGroup === 'specs' && selectedFileName === DEFAULT_SPEC_FILENAME && !specFiles.some(f => f.name === DEFAULT_SPEC_FILENAME);
+    if (!(selectedGroup === 'specs' && selectedFileName === DEFAULT_SPEC_FILENAME) || isDefaultSpecPlaceholder) {
+        setIsAiContent(false);
+        setPreviousEditorContent(null);
+    }
+    setIsSaving(false); // Reset saving state when selection changes
+}, [selectedFileName, selectedGroup, specFiles, ruleFiles, isConfigReady]); // Keep dependencies as they are relevant to finding the content
 
     // --- Handlers ---
 

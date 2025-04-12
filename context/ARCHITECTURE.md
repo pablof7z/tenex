@@ -25,8 +25,8 @@ Contains the core application routes, pages, and global styles.
 *   `app/page.tsx`: Defines `LandingPage`, the public-facing homepage.
 *   `app/globals.css`: Global styles applied to the application.
 *   `app/dashboard/page.tsx`: Defines `DashboardPage`, showing a list of projects and allowing creation of new ones. Uses `AppLayout`.
-*   `app/project/[id]/page.tsx`: Defines `ProjectPage`, a dynamic route displaying detailed information for a specific project (`id`). Includes tabs for Overview, Tasks, Specs, and Settings. Uses `AppLayout`, various UI components, and dialogs.
-*   `app/project/[id]/[taskId]/page.tsx`: Defines `TaskDetailPage`, showing details for a specific task within a project. Uses `AppLayout`.
+*   `app/project/[slug]/page.tsx`: Defines `ProjectPage`, a dynamic route displaying detailed information for a specific project (`slug`). Retrieves project data from the `useProjectStore` (Zustand). Includes tabs for Overview, Tasks, Specs, and Settings. Uses `AppLayout`, various UI components, and dialogs.
+*   `app/project/[slug]/[taskId]/page.tsx`: Defines `TaskDetailPage`, showing details for a specific task within a project. Uses `AppLayout`.
 *   `app/settings/page.tsx`: Defines `SettingsPage`, allowing users to configure application-wide settings, such as the backend API URL. Uses `AppLayout` and `SettingsForm`.
 
 ## 3. Reusable Components (`components/`)
@@ -78,15 +78,21 @@ Contains custom React hooks for reusable logic.
 *   `hooks/use-toast.ts`: Defines `useToast` hook and related logic for managing and displaying toast notifications.
 *   `hooks/useConfig.ts`: Defines `useConfig` hook to retrieve the backend API URL from `localStorage` and provide a helper function (`getApiUrl`) to construct full API endpoint URLs.
 
-## 5. Utilities (`lib/`)
+## 5. Utilities & State (`lib/`)
 
-Contains utility functions.
+Contains utility functions and client-side state management.
 
+### 5.1 Utilities
 *   `lib/utils.ts`: Defines `cn` utility for conditional class names.
 *   `lib/projectUtils.ts`: Defines `getProjectPath` and `getProjectContextPath` for resolving project file paths based on `PROJECTS_PATH` env var.
+
+### 5.2 Nostr Helpers
 *   `lib/nostr/ndk.ts`: Initializes and configures the NDK instance.
 *   `lib/nostr/events/project.ts`: Defines `NDKProject` class extending `NDKArticle` for project-specific event handling (kind 30023).
 *   `lib/nostr/events/task.ts`: Defines `NDKTask` class extending `NDKEvent` for task-specific event handling (kind 1934).
+
+### 5.3 State Management (Zustand)
+*   `lib/store/projects.ts`: Defines `useProjectStore`, a Zustand store for managing the list of projects fetched on the dashboard and accessed by project detail pages.
 
 ## 6. Static Assets (`public/`)
 
@@ -104,24 +110,24 @@ Contains additional global styles.
 
 Contains backend API endpoints built with Next.js API Routes. **Note:** Frontend components now use the `useConfig` hook (`hooks/useConfig.ts`) to determine the base URL for these API calls, reading the configuration from `localStorage`.
 
-*   `app/api/projects/create-local/route.ts`
-    *   **Responsibility:** Handles `POST` requests to create a new project directory structure on the local filesystem.
-    *   **Called From:** `app/dashboard/page.tsx` (via `useConfig`).
-*   `app/api/projects/[id]/route.ts`
-    *   **Responsibility:** Handles `GET` requests to check project existence/configuration status and `POST` requests to initialize the project locally.
-    *   **Called From:** `app/project/[id]/page.tsx` (via `useConfig`).
-*   `app/api/projects/[id]/configure/route.ts`
-    *   **Responsibility:** Handles project-specific configuration updates (saving NDK nsec).
-    *   **Called From:** `app/project/[id]/page.tsx` (auto-configure effect) and `app/project/[id]/components/ProjectSettings.tsx` (via `useConfig`).
-*   `app/api/projects/[id]/open-editor/route.ts`
+*   `app/api/projects/route.ts` (Root endpoint)
+    *   **Responsibility:** Handles `GET` requests to list all projects (reading from local filesystem/`.tenex.json` files). Handles `POST` requests to create the local project structure and `.tenex.json` after a Nostr event is published.
+    *   **Called From:** `app/dashboard/page.tsx` (via `useConfig` and `useProjectStore`).
+*   `app/api/projects/[slug]/route.ts` (Specific project endpoint)
+    *   **Responsibility:** Handles `GET` requests to check project existence/configuration status (though this is less used now with client-side state). Handles `POST` requests to initialize the project locally (called during creation from dashboard).
+    *   **Called From:** `app/dashboard/page.tsx` (for POST during creation).
+*   ~~`app/api/projects/[slug]/configure/route.ts`~~ (Removed)
+    *   ~~**Responsibility:** Handles project-specific configuration updates (saving NDK nsec).~~
+    *   ~~**Called From:** Previously `app/project/[slug]/page.tsx` and `app/project/[slug]/components/ProjectSettings.tsx`.~~
+*   `app/api/projects/[slug]/open-editor/route.ts`
     *   **Responsibility:** Handles `POST` requests to trigger opening the project directory in the editor.
-    *   **Called From:** `app/project/[id]/page.tsx` (via `useConfig`).
-*   `app/api/projects/[id]/specs/route.ts`
+    *   **Called From:** `app/project/[slug]/page.tsx` (via `useConfig`).
+*   `app/api/projects/[slug]/specs/route.ts`
     *   **Responsibility:** Handles `GET` requests to retrieve project specification/rule files and `PUT` requests to update/create file content.
-    *   **Called From:** `app/project/[id]/components/ProjectSpecsTab.tsx` (via `useConfig`).
+    *   **Called From:** `app/project/[slug]/components/ProjectSpecsTab.tsx` (via `useConfig`).
 *   `app/api/run/route.ts`
     *   **Responsibility:** Executes external scripts (like `scripts/improve-project-spec`).
-    *   **Called From:** `app/project/[id]/components/ProjectSpecsTab.tsx` (via `useConfig`).
+    *   **Called From:** `app/project/[slug]/components/ProjectSpecsTab.tsx` (via `useConfig`).
 
 
 ## 9. Scripts (`scripts/`)
@@ -188,10 +194,10 @@ Components related to application-wide settings should be placed in `components/
 
 Components used only on a specific page should be placed in a `components` subdirectory within that page's route directory:
 
-* Example: `app/project/[id]/components/ProjectHeader.tsx`
-* Example: `app/project/[id]/components/ProjectOverviewTab.tsx`
-* Example: `app/project/[id]/components/ProjectTasksTab.tsx`
-* Example: `app/project/[id]/components/ProjectSpecsTab.tsx`
-* Example: `app/project/[id]/components/ProjectSettingsTab.tsx`
+* Example: `app/project/[slug]/components/ProjectHeader.tsx`
+* Example: `app/project/[slug]/components/ProjectOverviewTab.tsx`
+* Example: `app/project/[slug]/components/ProjectTasksTab.tsx`
+* Example: `app/project/[slug]/components/ProjectSpecsTab.tsx`
+* Example: `app/project/[slug]/components/ProjectSettingsTab.tsx`
 
 Following these guidelines ensures that components are organized logically and can be easily located and maintained.

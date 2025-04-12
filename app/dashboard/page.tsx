@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react"; // Added useCallback
-import { Plus, AlertTriangle, RefreshCw } from "lucide-react"; // Added AlertTriangle, RefreshCw
+import { useState, useEffect, useCallback } from "react"; // Removed useMemo as activeProjects comes from store now
+import { Plus, AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link"; // Added Link import
 import { useNDK, useNDKCurrentUser, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk-hooks"; // Removed useSubscribe, NDKSubscriptionCacheUsage
 import { NDKProject } from "@/lib/nostr/events/project";
@@ -9,6 +9,8 @@ import { NDKProject } from "@/lib/nostr/events/project";
 import { ProjectCard } from "@/components/events/project/card";
 import { useToast } from "@/hooks/use-toast";
 import { useConfig } from "@/hooks/useConfig"; // Import useConfig
+import { useProjectStore } from "@/lib/store/projects"; // Import the Zustand store
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,9 +49,11 @@ export default function DashboardPage() {
     const currentUser = useNDKCurrentUser(); // Still needed for creating projects and context
 
     // State for projects fetched from API
-    const [apiProjects, setApiProjects] = useState<ApiProject[]>([]);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(true);
-    const [projectsError, setProjectsError] = useState<string | null>(null);
+    // Replace local state with Zustand store state
+    const { projects, isLoading: isLoadingProjects, error: projectsError, setProjects, setLoading: setIsLoadingProjects, setError: setProjectsError } = useProjectStore();
+    // const [apiProjects, setApiProjects] = useState<ApiProject[]>([]); // Removed
+    // const [isLoadingProjects, setIsLoadingProjects] = useState(true); // Removed
+    // const [projectsError, setProjectsError] = useState<string | null>(null); // Removed
     const { toast } = useToast();
     // Use the hook, getting isReady and error state
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
@@ -64,36 +68,57 @@ export default function DashboardPage() {
     const [formError, setFormError] = useState<string | null>(null); // Error state for the create form
 
     // Function to fetch projects from the API
+    // Function to fetch projects from the API and populate the store
     const fetchProjects = useCallback(async () => {
+        if (!ndk) {
+            console.warn("NDK not available yet, skipping fetchProjects.");
+            // Optionally set an error or loading state specific to NDK readiness
+            // setProjectsError("Nostr connection not ready.");
+            return;
+        }
         setIsLoadingProjects(true);
         setProjectsError(null);
         try {
-            const response = await fetch('/api/projects');
+            // TODO: Use getApiUrl when fetching from the backend API
+            // const apiUrl = getApiUrl('/projects');
+            const response = await fetch('/api/projects'); // Using relative path for now
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: "Failed to fetch projects" }));
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             const data: ApiProject[] = await response.json();
-            // Filter out projects marked as deleted if the API doesn't do it
-            // Assuming .tenex.json might have a 'deleted' flag or similar
-            setApiProjects(data.filter(p => !p.deleted)); // Adjust 'deleted' property based on actual .tenex.json structure
-            console.log("Fetched projects from API:", data);
+
+            const slugs = data
+                .map((project) => project.eventId?.split(/:/)[2])
+                .filter(Boolean) as string[];
+
+            const ndkProjects = await ndk.fetchEvents([
+                { kinds: [NDKProject.kind], "#d": slugs },
+            ]);
+
+            setProjects(Array.from(ndkProjects).map(NDKProject.from));
+            console.log("Fetched and processed projects into store:", ndkProjects);
+
         } catch (error) {
             console.error("Failed to fetch projects:", error);
-            setProjectsError(error instanceof Error ? error.message : "An unknown error occurred");
-            setApiProjects([]); // Clear projects on error
+            const message = error instanceof Error ? error.message : "An unknown error occurred";
+            setProjectsError(message);
+            setProjects([]); // Clear projects in store on error
         } finally {
             setIsLoadingProjects(false);
         }
-    }, []); // No dependencies needed if it doesn't rely on component state/props
+    }, [ndk, setIsLoadingProjects, setProjectsError, setProjects]); // Add ndk and store setters as dependencies
 
     // Fetch projects on component mount
+    // Fetch projects when NDK is ready
     useEffect(() => {
-        fetchProjects();
-    }, [fetchProjects]); // fetchProjects is memoized by useCallback
+        if (ndk) {
+            fetchProjects();
+        }
+    }, [ndk, fetchProjects]); // Depend on ndk instance availability
 
-    // Memoize active projects from API data
-    const activeProjects = useMemo(() => apiProjects, [apiProjects]);
+    // No need to memoize activeProjects separately, use directly from store
+    // const activeProjects = useMemo(() => projects, [projects]);
 
     const handleCreateProject = async () => {
         setFormError(null); // Clear previous form errors
@@ -338,24 +363,22 @@ export default function DashboardPage() {
                             </AlertDescription>
                         </Alert>
                     </div>
-                ) : activeProjects.length > 0 ? (
-                    // Adapt ProjectCard or create a new component if needed.
-                    // The API returns plain objects, not NDKProject instances.
-                    // We need to pass the necessary props based on the ApiProject interface.
-                    // For now, assuming ProjectCard can handle a simplified object or needs adjustment.
-                    // We might need to map ApiProject fields to NDKProject-like props if ProjectCard expects them.
-                    activeProjects.map((project) => (
+                ) : projects.length > 0 ? (
+                    // Now mapping over NDKProject instances from the store
+                    projects.map((project) => (
                         <ProjectCard
-                            key={project.projectName} // Use projectName or another unique ID from the API data
+                            key={project.dTag || project.id} // Use dTag or event ID as key
+                            // Adapt the passed project object to match ProjectCardDisplayProps
                             project={{
-                                id: project.eventId || project.projectName, // Use eventId or projectName as key
-                                slug: project.projectName, // Use projectName for the link slug
-                                title: project.title || project.projectName, // Use title or fallback to name
-                                description: project.description || '', // Pass description
-                                hashtags: project.hashtags || [], // Pass hashtags array
-                                repo: project.repo, // Pass repo URL
-                                // Pass updatedAt if available in .tenex.json (assuming it might be added later)
-                                // updatedAt: project.updatedAtTimestamp, // Example if timestamp was available
+                                id: project.id,
+                                slug: project.dTag || project.id || 'unknown-slug', // Use dTag, fallback to id or placeholder
+                                title: project.title || project.dTag || 'Untitled Project', // Ensure title is always a string, fallback to dTag or placeholder
+                                description: project.content,
+                                hashtags: project.hashtags,
+                                repo: project.repo,
+                                // Add other props expected by ProjectCardDisplayProps if necessary
+                                // For example, if it needs a specific date format:
+                                // updatedAt: project.created_at ? new Date(project.created_at * 1000).toLocaleDateString() : 'N/A',
                             }}
                         />
                     ))
