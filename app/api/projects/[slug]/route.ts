@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs'; // Keep for access check if needed, but prefer promises
 import path from 'path';
-import { mkdir, readFile, writeFile, access } from 'fs/promises'; // Use promises
+import { readFile, access } from 'fs/promises'; // Use promises
 import { exec } from 'child_process'; // For cp command
 import { promisify } from 'util';
-import { getProjectPath, getProjectContextPath } from '@/lib/projectUtils'; // Keep utilities
+import { getProjectPath } from '@/lib/projectUtils'; // Keep utilities
 
 const execAsync = promisify(exec);
 
 // Define the path to the template directory relative to the project root
-const TEMPLATE_DIR = path.resolve(process.cwd(), 'project-template');
 const NSEC_PLACEHOLDER = '__NSEC_PLACEHOLDER__';
 
 // --- Helper to check MCP configuration status ---
@@ -26,8 +25,9 @@ async function checkMcpConfigStatus(projectPath: string): Promise<boolean> {
             return true; // Config exists and placeholder is replaced
         }
         return false; // Structure is wrong or placeholder is still present/empty
-    } catch (error: any) {
-        if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+        // Check if it's an error object with a 'code' property
+        if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
             return false; // File doesn't exist
         }
         console.error(`Error reading or parsing MCP config ${mcpConfigFile}:`, error);
@@ -36,30 +36,32 @@ async function checkMcpConfigStatus(projectPath: string): Promise<boolean> {
 }
 
 
-// --- GET Handler (Updated to use new checkMcpConfigStatus logic) ---
+// --- GET Handler (Updated to use slug) ---
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: { slug: string } } // Changed id to slug
 ) {
-    const projectId = params.id;
-    if (!projectId) {
-        return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    const projectSlug = params.slug; // Changed projectId to projectSlug
+    if (!projectSlug) {
+        return NextResponse.json({ error: 'Project slug is required' }, { status: 400 }); // Updated error message
     }
 
     let projectPath: string;
     try {
-        projectPath = getProjectPath(projectId);
-    } catch (error: any) {
+        projectPath = getProjectPath(projectSlug); // Use projectSlug
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Server configuration error';
         console.error("Error getting project path:", error);
-        return NextResponse.json({ error: error.message || 'Server configuration error' }, { status: 500 });
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 
     try {
         await access(projectPath, fs.constants.F_OK); // Use promises version
         const isConfigured = await checkMcpConfigStatus(projectPath);
         return NextResponse.json({ exists: true, configured: isConfigured }, { status: 200 });
-    } catch (error: any) {
-        if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+        // Check if it's an error object with a 'code' property
+        if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
             return NextResponse.json({ exists: false, configured: false }, { status: 404 });
         }
         console.error(`Error checking project directory ${projectPath}:`, error);
@@ -68,45 +70,66 @@ export async function GET(
 }
 
 
-// --- POST Handler (Refactored) ---
+// --- POST Handler (Updated to use slug) ---
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: { slug: string } } // Changed id to slug
 ) {
-    const projectId = params.id;
+    const projectSlug = params.slug; // Changed projectId to projectSlug
     let description: string = ''; // Default description
-    let nsec: string | undefined;
-    let gitRepoUrl: string | undefined; // Added for potential git repo cloning
+    let nsec: string; // *** CHANGED: No longer optional ***
+    let gitRepoUrl: string | undefined;
+    let eventId: string | undefined; // Added for the project event ID
+    let title: string; // Added for the project title
+    let hashtags: string | undefined; // Added for hashtags
 
-    // 1. Validate Project ID
-    if (!projectId) {
-        return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    // 1. Validate Project Slug
+    if (!projectSlug) {
+        return NextResponse.json({ error: 'Project slug is required' }, { status: 400 }); // Updated error message
     }
 
     // 2. Parse Request Body
     try {
         if (request.headers.get('content-type')?.includes('application/json')) {
             const body = await request.json();
-            // NSEC is optional
+            // Title is REQUIRED
+            if (body.title && typeof body.title === 'string' && body.title.trim() !== '') {
+                title = body.title;
+            } else {
+                return NextResponse.json({ error: 'title is required in the request body' }, { status: 400 });
+            }
+            // NSEC is REQUIRED
             if (body.nsec && typeof body.nsec === 'string' && body.nsec.trim() !== '') {
                 nsec = body.nsec;
-            }
+            } else { // *** ADDED: Error if nsec is missing/invalid ***
+                return NextResponse.json({ error: 'nsec is required in the request body' }, { status: 400 });             }
             // Description is optional
             if (typeof body.description === 'string' && body.description.trim() !== '') {
                 description = body.description;
             } else {
                  // Use a default description if not provided
-                 description = `Project specification for ${projectId}`;
+                 description = `Project specification for ${projectSlug}`; // Use projectSlug
             }
             // Git Repo URL is optional
             if (body.repo && typeof body.repo === 'string' && body.repo.trim() !== '') {
                 gitRepoUrl = body.repo;
             }
+            // Hashtags are optional (expecting comma-separated string)
+             if (body.hashtags && typeof body.hashtags === 'string' && body.hashtags.trim() !== '') {
+                hashtags = body.hashtags;
+            }
+            // Event ID is REQUIRED
+            if (body.eventId && typeof body.eventId === 'string' && body.eventId.trim() !== '') {
+                eventId = body.eventId;
+            } else {
+                // If eventId is missing or invalid, return an error immediately
+                return NextResponse.json({ error: 'eventId is required in the request body' }, { status: 400 });
+            }
 
         } else {
              return NextResponse.json({ error: 'Request body must be JSON' }, { status: 415 });
         }
-    } catch (e) {
+    } catch (e: unknown) {
          console.error("Error parsing request body:", e);
          return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
@@ -120,20 +143,25 @@ export async function POST(
         // Build command arguments safely
         const commandArgs = [
             safeScriptPath,
-            '--id', `"${projectId.replace(/"/g, '\\"')}"`, // Basic quoting for ID
-            '--desc', `"${description.replace(/"/g, '\\"')}"` // Basic quoting for description
+            '--slug', `"${projectSlug.replace(/"/g, '\\"')}"`, // *** CORRECTED: Use --slug ***
+            '--desc', `"${description.replace(/"/g, '\\"')}"`,
+            '--eventId', `"${eventId!.replace(/"/g, '\\"')}"`, // eventId is guaranteed by validation
+            '--title', `"${title.replace(/"/g, '\\"')}"` // Add title argument
         ];
 
-        if (nsec) {
-            commandArgs.push('--nsec', `"${nsec.replace(/"/g, '\\"')}"`); // Basic quoting
-        }
+        commandArgs.push('--nsec', `"${nsec.replace(/"/g, '\\"')}"`); // *** CHANGED: Always add nsec ***
         if (gitRepoUrl) {
-            commandArgs.push('--repo', `"${gitRepoUrl.replace(/"/g, '\\"')}"`); // Basic quoting
+            commandArgs.push('--repo', `"${gitRepoUrl.replace(/"/g, '\\"')}"`);
         }
+        if (hashtags) {
+            commandArgs.push('--hashtags', `"${hashtags.replace(/"/g, '\\"')}"`);
+        }
+
 
         const command = commandArgs.join(' ');
 
-        console.log(`Executing script: ${command}`);
+        // Removed debug logs from previous step
+        console.log(`Executing script: ${command}`); // Keep this log for confirmation
         // Execute using bun directly if preferred and available, otherwise rely on shebang
         // const commandToRun = `bun ${command}`; // Or just `command` if relying on shebang + PATH
         const { stdout, stderr } = await execAsync(command); // Use the command with args
@@ -152,29 +180,29 @@ export async function POST(
         }
 
         if (scriptResult && scriptResult.success) {
-            console.log(`Script executed successfully for project ${projectId}:`, scriptResult);
+            console.log(`Script executed successfully for project ${projectSlug}:`, scriptResult); // Use projectSlug
             return NextResponse.json({
                 message: scriptResult.message || 'Project created successfully via script.',
-                projectId: scriptResult.projectId,
+                projectSlug: scriptResult.projectSlug, // Changed projectId to projectSlug
                 path: scriptResult.path,
                 configured: scriptResult.configured
             }, { status: 201 });
         } else if (scriptResult && !scriptResult.success) {
             // Handle specific errors reported by the script (via JSON output)
-            console.error(`Script reported failure for project ${projectId}:`, scriptResult.error);
+            console.error(`Script reported failure for project ${projectSlug}:`, scriptResult.error); // Use projectSlug
             console.error("Full stdout:", stdout);
             console.error("Full stderr:", stderr);
             if (scriptResult.code === 'CONFLICT') {
                  // Check config status for existing project before returning conflict
                  let projectPathCheck: string;
                  try {
-                     projectPathCheck = getProjectPath(projectId);
+                     projectPathCheck = getProjectPath(projectSlug); // Use projectSlug
                      const isConfigured = await checkMcpConfigStatus(projectPathCheck);
                      return NextResponse.json({
                          message: scriptResult.error || 'Project directory already exists.',
                          configured: isConfigured
                      }, { status: 409 });
-                 } catch (pathError: any) {
+                 } catch (pathError: unknown) {
                       console.error("Error getting project path during conflict check:", pathError);
                       // Fallback to generic conflict if path fails
                       return NextResponse.json({ error: scriptResult.error || 'Project directory already exists.' }, { status: 409 });
@@ -190,11 +218,12 @@ export async function POST(
              throw new Error("Invalid output from project creation script.");
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         // Handle errors from execAsync itself (e.g., script not found, non-zero exit code without JSON output)
-        console.error(`Error executing create-project script for ${projectId}:`, error);
-        const stderr = error.stderr || '';
-        const stdout = error.stdout || ''; // Include stdout for context
+        console.error(`Error executing create-project script for ${projectSlug}:`, error); // Use projectSlug
+        // Try to access stderr/stdout if error is an object, otherwise default to empty strings
+        const stderr = (typeof error === 'object' && error !== null && 'stderr' in error) ? String(error.stderr) : '';
+        const stdout = (typeof error === 'object' && error !== null && 'stdout' in error) ? String(error.stdout) : ''; // Include stdout for context
 
         // Attempt to parse the last line of stderr for a JSON error message
         const errorLines = stderr.trim().split('\n');
@@ -212,13 +241,13 @@ export async function POST(
                  // Check config status for existing project before returning conflict
                  let projectPathCheck: string;
                  try {
-                     projectPathCheck = getProjectPath(projectId);
+                     projectPathCheck = getProjectPath(projectSlug); // Use projectSlug
                      const isConfigured = await checkMcpConfigStatus(projectPathCheck);
                      return NextResponse.json({
                          message: scriptErrorResult.error || 'Project directory already exists.',
                          configured: isConfigured
                      }, { status: 409 });
-                 } catch (pathError: any) {
+                 } catch (pathError: unknown) {
                       console.error("Error getting project path during conflict check:", pathError);
                       // Fallback to generic conflict if path fails
                       return NextResponse.json({ error: scriptErrorResult.error || 'Project directory already exists.' }, { status: 409 });
@@ -230,7 +259,7 @@ export async function POST(
 
         // Generic execution error (non-zero exit without specific JSON error)
         return NextResponse.json({
-             error: `Failed to execute project creation script: ${error.message}`,
+             error: `Failed to execute project creation script: ${error instanceof Error ? error.message : String(error)}`,
              stderr: stderr,
              stdout: stdout // Include stdout for debugging context
             }, { status: 500 });

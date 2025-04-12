@@ -20,13 +20,13 @@ interface FileData {
 // Props interface
 interface ProjectSpecsTabProps {
     project: NDKProject;
-    projectId: string;
+    projectSlug: string; // Changed from projectId
 }
 
 const DEFAULT_SPEC_FILENAME = "SPEC.md";
 const DEFAULT_SPEC_CONTENT = `# Project Specification\n\nAdd your project details here.`;
 
-export function ProjectSpecsTab({ project, projectId }: ProjectSpecsTabProps) {
+export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) { // Changed projectId to projectSlug
     const { toast } = useToast();
     // Use isReady and error directly from the hook
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
@@ -61,14 +61,14 @@ export function ProjectSpecsTab({ project, projectId }: ProjectSpecsTabProps) {
         setIsLoadingFiles(true);
         setFilesError(null);
 
-        const apiUrl = getApiUrl(`/projects/${projectId}/specs`);
+        const apiUrl = getApiUrl(`/projects/${projectSlug}/specs`); // Use projectSlug
         // getApiUrl now always returns a string
 
         try {
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 if (response.status === 404) {
-                    console.log(`Project specs/rules endpoint returned 404 for project ${projectId}. Assuming empty.`);
+                    console.log(`Project specs/rules endpoint returned 404 for project ${projectSlug}. Assuming empty.`); // Use projectSlug
                     setSpecFiles([]);
                     setRuleFiles([]);
                 } else {
@@ -113,7 +113,7 @@ export function ProjectSpecsTab({ project, projectId }: ProjectSpecsTabProps) {
         } finally {
             setIsLoadingFiles(false);
         }
-    }, [projectId, selectedFileName, selectedGroup, isConfigReady, getApiUrl]); // Added isConfigReady, getApiUrl
+    }, [projectSlug, selectedFileName, isConfigReady, getApiUrl]); // Removed selectedGroup dependency
 
     useEffect(() => {
         fetchFiles();
@@ -164,7 +164,7 @@ export function ProjectSpecsTab({ project, projectId }: ProjectSpecsTabProps) {
         }
         if (!selectedFileName || !selectedGroup) return;
 
-        const apiUrl = getApiUrl(`/projects/${projectId}/specs`);
+        const apiUrl = getApiUrl(`/projects/${projectSlug}/specs`); // Use projectSlug
 
         setIsSaving(true);
         setFilesError(null);
@@ -315,7 +315,7 @@ export function ProjectSpecsTab({ project, projectId }: ProjectSpecsTabProps) {
             return;
         }
 
-        const apiUrl = getApiUrl(`/projects/${projectId}/specs`);
+        const apiUrl = getApiUrl(`/projects/${projectSlug}/specs`); // Use projectSlug
 
         setIsSaving(true);
         setFilesError(null);

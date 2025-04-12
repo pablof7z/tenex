@@ -39,6 +39,14 @@ export class NDKProject extends NDKArticle {
         return this.content;
     }
 
+
+    /**
+     * The project slug, derived from the 'd' tag.
+     */
+    get slug(): string {
+        return this.dTag ?? "empty-dtag";
+    }
+
     public async getSigner(): Promise<NDKPrivateKeySigner> {
         if (this._signer) return this._signer;
 

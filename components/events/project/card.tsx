@@ -2,30 +2,30 @@
 
 import Link from "next/link";
 import { Clock, FileText, GitBranch, MessageSquare, Settings, Users } from "lucide-react";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { NDKProject } from "@/lib/nostr/events/project";
+// Removed NDKEvent and NDKProject imports as we'll use a simpler prop type
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface ProjectCardProps {
-    project: NDKEvent;
+// Define a simpler interface for the props needed by the card
+interface ProjectCardDisplayProps {
+    id: string; // Unique identifier for the key
+    slug: string; // The 'd' tag value or project name for the link
+    title: string;
+    description: string;
+    hashtags: string[];
+    repo?: string; // Optional repository URL string (e.g., "github.com/user/repo")
+    updatedAt?: number; // Optional timestamp (seconds)
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
-    // Convert NDKEvent to NDKProject to access helper methods
-    const projectObj = NDKProject.from(project);
+export function ProjectCard({ project }: { project: ProjectCardDisplayProps }) {
+    // Use props directly
+    const { id, slug, title, description, hashtags, repo, updatedAt: updatedAtTimestamp } = project;
 
-    // Extract data from the project
-    const id = project.id;
-    const name = projectObj.title || "?";
-    const description = projectObj.description || "No description";
-    const hashtags = projectObj.hashtags || [];
-    const gitRepo = projectObj.repo || "?";
-
-    // Calculate created/updated time
-    const createdAt = project.created_at ? new Date(project.created_at * 1000) : null;
-    const updatedAt = createdAt ? `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}` : "?";
+    // Format timestamp if available
+    const updatedAt = updatedAtTimestamp
+        ? new Date(updatedAtTimestamp * 1000).toLocaleDateString() + ' ' + new Date(updatedAtTimestamp * 1000).toLocaleTimeString()
+        : "?";
 
     const peopleTalking = "?";
     const pendingTasks = "?";
@@ -33,8 +33,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
     return (
         <Card className="card-hover overflow-hidden rounded-md border-border flex flex-col">
             <CardHeader className="pb-2">
-                <Link href={`/project/${project.dTag}`} className="hover:text-foreground/70 transition-colors">
-                    <CardTitle className="text-xl">{name}</CardTitle>
+                {/* Use slug for the link */}
+                <Link href={`/project/${slug}`} className="hover:text-foreground/70 transition-colors">
+                    <CardTitle className="text-xl">{title}</CardTitle>
                 </Link>
                 <CardDescription className="text-sm line-clamp-2">{description}</CardDescription>
             </CardHeader>
@@ -50,14 +51,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
                 <div className="flex items-center text-xs mb-4">
                     <GitBranch className="h-3.5 w-3.5 mr-1.5" />
-                    {gitRepo !== "?" ? (
+                    {/* Use repo directly */}
+                    {repo ? (
                         <a
-                            href={`https://${gitRepo}`}
+                            href={repo.startsWith('http') ? repo : `https://${repo}`}
                             className="text-foreground hover:underline truncate"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            {gitRepo}
+                            {/* Display the repo URL */}
+                            {repo}
                         </a>
                     ) : (
                         <span className="text-muted-foreground">No repository linked</span>
@@ -87,7 +90,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <CardFooter className="border-t pt-3 text-xs text-muted-foreground mt-auto flex items-center justify-between">
                 <div className="flex items-center">
                     <Clock className="mr-1 h-3 w-3" />
-                    <span>Updated {updatedAt}</span>
+                    {/* Display formatted updatedAt */}
+                    <span>{updatedAt !== "?" ? `Updated ${updatedAt}` : "Update time unknown"}</span>
                 </div>
                 <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-secondary">

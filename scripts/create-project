@@ -5,6 +5,7 @@ import path from 'path';
 import { mkdir, readFile, writeFile, access } from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk'; // Only need signer for pubkey derivation
 import { getProjectPath } from '../lib/projectUtils'; // Adjust path relative to script location
 
 const execAsync = promisify(exec);
@@ -16,23 +17,29 @@ const TEMPLATE_DIR = path.resolve(PROJECT_ROOT, 'project-template');
 const NSEC_PLACEHOLDER = '__NSEC_PLACEHOLDER__';
 
 // --- Argument Parsing ---
-// Simple argument parsing: expects --id <id> --desc <desc> [--nsec <nsec>] [--repo <repoUrl>]
+// Simple argument parsing: expects --slug <slug> --desc <desc> --title <title> --eventId <eventId> --nsec <nsec> [--repo <repoUrl>] [--hashtags <tags>]
 interface Args {
-    id?: string;
+    slug?: string;
     desc?: string;
-    nsec?: string;
+    title?: string; // Added title argument
+    nsec?: string; // Will be validated as required
     repo?: string;
+    hashtags?: string; // Added hashtags argument
+    eventId?: string; // Added eventId argument (REQUIRED)
 }
 
 const args: Args = {};
 const argv = process.argv.slice(2); // Skip node/bun executable and script path
 
 for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--id' && i + 1 < argv.length) {
-        args.id = argv[i + 1];
+    if (argv[i] === '--slug' && i + 1 < argv.length) {
+        args.slug = argv[i + 1];
         i++;
     } else if (argv[i] === '--desc' && i + 1 < argv.length) {
         args.desc = argv[i + 1];
+        i++;
+    } else if (argv[i] === '--title' && i + 1 < argv.length) {
+        args.title = argv[i + 1];
         i++;
     } else if (argv[i] === '--nsec' && i + 1 < argv.length) {
         args.nsec = argv[i + 1];
@@ -40,68 +47,111 @@ for (let i = 0; i < argv.length; i++) {
     } else if (argv[i] === '--repo' && i + 1 < argv.length) {
         args.repo = argv[i + 1];
         i++;
+    } else if (argv[i] === '--hashtags' && i + 1 < argv.length) {
+        args.hashtags = argv[i + 1]; // Comma-separated string
+        i++;
+    } else if (argv[i] === '--eventId' && i + 1 < argv.length) {
+        args.eventId = argv[i + 1];
+        i++;
     }
 }
 
 // --- Validation ---
-if (!args.id) {
-    console.error(JSON.stringify({ success: false, error: 'Project ID is required (--id)' }));
+if (!args.slug) {
+    console.error(JSON.stringify({ success: false, error: 'Project slug is required (--slug)' }));
     process.exit(1);
 }
+if (!args.eventId) {
+    console.error(JSON.stringify({ success: false, error: 'Event ID is required (--eventId)' }));
+    process.exit(1);
+}
+if (!args.title) { // Added validation for title
+    console.error(JSON.stringify({ success: false, error: 'Project title is required (--title)' }));
+    process.exit(1);
+}
+if (!args.nsec) { // *** ADDED: Validate NSEC is provided ***
+    console.error(JSON.stringify({ success: false, error: 'NSEC is required (--nsec)' }));
+    process.exit(1);
+}
+
 if (!args.desc) {
     // Default description if not provided
-    args.desc = `Project specification for ${args.id}`;
+    args.desc = `Project specification for ${args.slug}`;
     console.warn(`Description not provided (--desc), using default: "${args.desc}"`);
 }
 
-const projectId = args.id;
+const projectSlug = args.slug!; // Changed from projectId, non-null assertion ok due to validation
 const description = args.desc;
-const nsec = args.nsec;
+const title = args.title!; // Added title, non-null assertion ok due to validation
+const nsec = args.nsec!; // *** CHANGED: Non-null assertion ok due to validation ***
 const gitRepoUrl = args.repo;
+const hashtagsInput = args.hashtags; // Comma-separated string or undefined
+const eventId = args.eventId!; // Now required, non-null assertion ok
 
 // --- Main Logic ---
 async function createProject() {
-    let projectPath: string;
+    let projectPath: string | undefined; // Declare outside to be available in final catch
     try {
-        projectPath = getProjectPath(projectId);
-    } catch (error: any) {
-        console.error(JSON.stringify({ success: false, error: `Error getting project path: ${error.message || 'Server configuration error'}` }));
+        projectPath = getProjectPath(projectSlug); // Use slug
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Server configuration error';
+        console.error(JSON.stringify({ success: false, error: `Error getting project path: ${message}` }));
+        process.exit(1);
+    }
+
+    // Ensure projectPath was successfully determined before proceeding
+    if (!projectPath) {
+        // This should technically not be reachable due to process.exit above, but satisfies TS checks
+        console.error(JSON.stringify({ success: false, error: 'Failed to determine project path.' }));
         process.exit(1);
     }
 
     try {
         // 1. Check if project directory already exists
         try {
-            await access(projectPath);
+            await access(projectPath!); // Use non-null assertion as we checked above
             // Directory exists
             console.error(JSON.stringify({ success: false, error: 'Project directory already exists.', code: 'CONFLICT' }));
             process.exit(1);
-        } catch (accessError: any) {
-            if (accessError.code !== 'ENOENT') {
+        } catch (accessError: unknown) {
+            // Check if it's an error object with a 'code' property
+            if (typeof accessError === 'object' && accessError !== null && 'code' in accessError && accessError.code !== 'ENOENT') {
                 throw accessError; // Re-throw unexpected errors
+            } else if (!(typeof accessError === 'object' && accessError !== null && 'code' in accessError && accessError.code === 'ENOENT')) {
+                // If it's not an ENOENT error, re-throw it
+                throw accessError;
             }
-            // ENOENT: Directory doesn't exist, proceed
-        }
+            // ENOENT: Directory doesn't exist, proceed (do nothing here)
+        } // End of inner try-catch for access check
+        // ENOENT: Directory doesn't exist, proceed (handled by catch logic)
 
         // 2. Create project directory
-        console.log(`Creating project directory: ${projectPath}`);
-        await mkdir(projectPath, { recursive: true });
+        console.log(`Creating project directory: ${projectPath!}`); // Use non-null assertion
+        await mkdir(projectPath!, { recursive: true }); // Use non-null assertion
 
         // 3. Clone Git repo if provided
         if (gitRepoUrl) {
-            console.log(`Cloning repository from ${gitRepoUrl} into ${projectPath}...`);
+            console.log(`Cloning repository from ${gitRepoUrl} into ${projectPath!}...`); // Use non-null assertion
             try {
                 // Clone directly into the project path. Assumes the target dir is empty or non-existent before clone.
                 // We might need to adjust if the repo itself contains conflicting structure,
                 // or clone to a temp dir and merge. For now, direct clone.
-                await execAsync(`git clone --depth 1 "${gitRepoUrl}" "${projectPath}"`);
+                await execAsync(`git clone --depth 1 "${gitRepoUrl}" "${projectPath!}"`); // Use non-null assertion
                 console.log(`Repository cloned successfully.`);
                 // Optionally remove .git directory if we don't want to keep repo history
                 // await execAsync(`rm -rf "${path.join(projectPath, '.git')}"`);
-            } catch (cloneError: any) {
-                 console.error(`Failed to clone repository: ${cloneError.stderr || cloneError.message}`);
-                 // Decide if we should proceed with template copy or fail here. Let's fail.
-                 throw new Error(`Failed to clone repository: ${cloneError.message}`);
+            } catch (cloneError: unknown) {
+                let errorMessage = 'Unknown error during clone.';
+                if (typeof cloneError === 'object' && cloneError !== null) {
+                    errorMessage = ('stderr' in cloneError && cloneError.stderr) ? String(cloneError.stderr) :
+                                   ('message' in cloneError && cloneError.message) ? String(cloneError.message) :
+                                   JSON.stringify(cloneError);
+                } else if (cloneError instanceof Error) {
+                    errorMessage = cloneError.message;
+                }
+                console.error(`Failed to clone repository: ${errorMessage}`);
+                // Decide if we should proceed with template copy or fail here. Let's fail.
+                throw new Error(`Failed to clone repository: ${errorMessage}`);
             }
         }
 
@@ -111,129 +161,191 @@ async function createProject() {
         // Alternative: Always copy template, potentially overwriting cloned files (careful!).
         // Let's stick to: Clone OR Template Copy.
         if (!gitRepoUrl) {
-            console.log(`Copying template from ${TEMPLATE_DIR} to ${projectPath}...`);
+            console.log(`Copying template from ${TEMPLATE_DIR} to ${projectPath!}...`); // Use non-null assertion
             try {
                 await access(TEMPLATE_DIR);
-            } catch (templateAccessError: any) {
+            } catch (templateAccessError: unknown) {
                  console.error(`Template directory not found at ${TEMPLATE_DIR}:`, templateAccessError);
                  throw new Error(`Server configuration error: Template directory missing.`);
             }
             // Use cp -a to preserve permissions and ownership if possible
             // Copy contents of template dir into projectPath
-            await execAsync(`cp -a "${TEMPLATE_DIR}/." "${projectPath}/"`);
-            console.log(`Template copied successfully to ${projectPath}`);
+            await execAsync(`cp -a "${TEMPLATE_DIR}/." "${projectPath!}/"`); // Use non-null assertion
+            console.log(`Template copied successfully to ${projectPath!}`); // Use non-null assertion
         } else {
             console.log(`Skipping template copy because a git repository was cloned.`);
             // Ensure essential directories/files from template exist if missing in repo?
             // e.g., ensure context/SPEC.md exists, .roo/mcp.json exists
-            await mkdir(path.join(projectPath, 'context'), { recursive: true });
-            await mkdir(path.join(projectPath, '.roo'), { recursive: true });
+            await mkdir(path.join(projectPath!, 'context'), { recursive: true }); // Use non-null assertion
+            await mkdir(path.join(projectPath!, '.roo'), { recursive: true }); // Use non-null assertion
             // Maybe copy specific essential files if they don't exist after clone?
             // Example: Copy mcp.json if it wasn't in the repo
             const mcpTemplatePath = path.join(TEMPLATE_DIR, '.roo', 'mcp.json');
-            const mcpTargetPath = path.join(projectPath, '.roo', 'mcp.json');
+            const mcpTargetPath = path.join(projectPath!, '.roo', 'mcp.json'); // Use non-null assertion
             try {
                 await access(mcpTargetPath);
-            } catch (e: any) {
-                if (e.code === 'ENOENT') {
+            } catch (e: unknown) {
+                // Check if it's an error object with a 'code' property
+                if (typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT') {
                     console.log(`Copying missing mcp.json from template...`);
                     await execAsync(`cp "${mcpTemplatePath}" "${mcpTargetPath}"`);
+                } else if (!(typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT')) {
+                    // If it's not an ENOENT error, re-throw it
+                    throw e;
                 }
+                // ENOENT: File doesn't exist, copy it (handled above)
             }
              // Example: Create empty SPEC.md if it wasn't in the repo
             const specTemplatePath = path.join(TEMPLATE_DIR, 'context', 'SPEC.md'); // Not really template, just path
-            const specTargetPath = path.join(projectPath, 'context', 'SPEC.md');
+            const specTargetPath = path.join(projectPath!, 'context', 'SPEC.md'); // Use non-null assertion
              try {
                 await access(specTargetPath);
-            } catch (e: any) {
-                if (e.code === 'ENOENT') {
+            } catch (e: unknown) {
+                // Check if it's an error object with a 'code' property
+                if (typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT') {
                     console.log(`Creating missing SPEC.md...`);
-                    await writeFile(specTargetPath, `# Project Specification: ${projectId}\n\n${description}`);
+                    await writeFile(specTargetPath, `# Project Specification: ${projectSlug}\n\n${description}`);
+                } else if (!(typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT')) {
+                    // If it's not an ENOENT error, re-throw it
+                    throw e;
                 }
+                // ENOENT: File doesn't exist, create it (handled above)
             }
         }
 
 
         // 5. Update SPEC.md (or create if cloning didn't include it and we didn't create above)
-        const specFilePath = path.join(projectPath, 'context', 'SPEC.md');
+        const specFilePath = path.join(projectPath!, 'context', 'SPEC.md'); // Use non-null assertion
         try {
             // Read existing content if it exists (e.g., from cloned repo) and append/prepend, or just overwrite?
             // Let's overwrite for simplicity now, assuming the provided description is the source of truth.
             await writeFile(specFilePath, description);
             console.log(`SPEC.md updated/created successfully at ${specFilePath}`);
-        } catch (specWriteError: any) {
+        } catch (specWriteError: unknown) {
+             const message = specWriteError instanceof Error ? specWriteError.message : String(specWriteError);
              console.error(`Failed to write SPEC.md at ${specFilePath}:`, specWriteError);
-             throw new Error(`Failed to update project specification: ${specWriteError.message}`);
+             throw new Error(`Failed to update project specification: ${message}`);
         }
 
         // 6. Update mcp.json with NSEC (only if provided)
         let isConfigured = false;
-        const mcpConfigFile = path.join(projectPath, '.roo', 'mcp.json');
-        if (nsec) {
+        const mcpConfigFile = path.join(projectPath!, '.roo', 'mcp.json'); // Use non-null assertion
+        // *** REMOVED: Conditional check `if (nsec)` as it's now required ***
+        try {
+            // Ensure the file exists first (might not if template copy failed or repo didn't have it)
             try {
-                // Ensure the file exists first (might not if template copy failed or repo didn't have it)
-                 try {
-                    await access(mcpConfigFile);
-                } catch (e:any) {
-                     if (e.code === 'ENOENT') {
-                        console.warn(`mcp.json not found at ${mcpConfigFile}. Cannot apply NSEC.`);
-                        // Decide whether to throw or continue. Let's continue but report not configured.
-                     } else {
-                         throw e; // Other access error
-                     }
-                }
-
-                // Proceed only if file exists
-                let mcpConfigContent = await readFile(mcpConfigFile, 'utf-8');
-                if (mcpConfigContent.includes(NSEC_PLACEHOLDER)) {
-                    mcpConfigContent = mcpConfigContent.replace(NSEC_PLACEHOLDER, nsec);
-                    await writeFile(mcpConfigFile, mcpConfigContent);
-                    console.log(`mcp.json updated successfully with NSEC at ${mcpConfigFile}`);
-                    isConfigured = true;
-                } else {
-                    console.warn(`NSEC placeholder not found in ${mcpConfigFile}. NSEC not applied.`);
-                    // Check if it's already configured (no placeholder, but has a value)
-                    try {
-                        const config = JSON.parse(mcpConfigContent);
-                         if (config?.mcpServers?.tenex?.env?.NSEC && config.mcpServers.tenex.env.NSEC !== NSEC_PLACEHOLDER && config.mcpServers.tenex.env.NSEC.length > 0) {
-                             console.log("mcp.json seems to be already configured.");
-                             isConfigured = true; // Already configured
-                         }
-                    } catch (parseError) {
-                        console.error(`Error parsing existing mcp.json: ${parseError}`);
-                    }
-                }
-            } catch (mcpUpdateError: any) {
-                 console.error(`Failed to read/update mcp.json at ${mcpConfigFile}:`, mcpUpdateError);
-                 // Don't throw, but report configuration failed
-                 console.warn(`Configuration with NSEC failed.`);
+                await access(mcpConfigFile);
+            } catch (e: unknown) {
+                 // Check if it's an error object with a 'code' property
+                 if (typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT') {
+                    console.warn(`mcp.json not found at ${mcpConfigFile}. Cannot apply NSEC.`);
+                    // Decide whether to throw or continue. Let's continue but report not configured.
+                 } else if (!(typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT')) {
+                     // If it's not an ENOENT error, re-throw it
+                     throw e;
+                 }
+                 // ENOENT: File doesn't exist, cannot apply NSEC (handled above)
             }
-        } else {
-            console.log(`NSEC not provided during creation for ${projectId}. MCP configuration pending.`);
+
+            // Proceed only if file exists
+            let mcpConfigContent = await readFile(mcpConfigFile, 'utf-8');
+            if (mcpConfigContent.includes(NSEC_PLACEHOLDER)) {
+                mcpConfigContent = mcpConfigContent.replace(NSEC_PLACEHOLDER, nsec);
+                await writeFile(mcpConfigFile, mcpConfigContent);
+                console.log(`mcp.json updated successfully with NSEC at ${mcpConfigFile}`);
+                isConfigured = true;
+            } else {
+                console.warn(`NSEC placeholder not found in ${mcpConfigFile}. NSEC not applied.`);
+                // Check if it's already configured (no placeholder, but has a value)
+                try {
+                    const config = JSON.parse(mcpConfigContent);
+                     if (config?.mcpServers?.tenex?.env?.NSEC && config.mcpServers.tenex.env.NSEC !== NSEC_PLACEHOLDER && config.mcpServers.tenex.env.NSEC.length > 0) {
+                         console.log("mcp.json seems to be already configured.");
+                         isConfigured = true; // Already configured
+                     }
+                } catch (parseError) {
+                    console.error(`Error parsing existing mcp.json: ${parseError}`);
+                }
+            }
+        } catch (mcpUpdateError: unknown) {
+             console.error(`Failed to read/update mcp.json at ${mcpConfigFile}:`, mcpUpdateError);
+             // Don't throw, but report configuration failed
+             console.warn(`Configuration with NSEC failed.`);
         }
 
-        // 7. Output Success JSON
+        // 7. Prepare .tenex.json data
+        let pubkey: string | null = null;
+        // eventId is now a required argument passed in, no need to initialize here
+        const hashtags: string[] = hashtagsInput ? hashtagsInput.split(',').map(h => h.trim()).filter(h => h) : [];
+
+        // --- Derive Pubkey ---
+        // *** REMOVED: Conditional check `if (nsec)` as it's now required ***
+        try {
+            const signer = new NDKPrivateKeySigner(nsec);
+            // Wait for the signer to be ready (it might involve async operations)
+            await signer.user(); // This ensures the pubkey is available
+            pubkey = signer.pubkey; // Correctly get the pubkey
+            console.log(`Derived Pubkey: ${pubkey}`);
+        } catch (e: unknown) {
+            console.error("Failed to derive pubkey from provided NSEC:", e);
+            // If derivation fails even with required NSEC, it's a fatal error for the script's purpose
+            console.error(JSON.stringify({ success: false, error: `Failed to derive pubkey from NSEC: ${e instanceof Error ? e.message : String(e)}` }));
+            process.exit(1);
+            // pubkey = null; // Unreachable code after process.exit(1)
+        }
+        // --- End Derive Pubkey ---
+
+        // 8. Create .tenex.json
+        const tenexConfigPath = path.join(projectPath!, '.tenex.json'); // Use non-null assertion
+        const tenexConfig = {
+            pubkey: pubkey!, // *** CHANGED: Non-null assertion ok due to validation/derivation ***
+            title: title,    // Added title field
+            nsec: nsec,      // *** CHANGED: Always present ***
+            hashtags: hashtags,
+            repoUrl: gitRepoUrl || null,
+            eventId: eventId // Use non-null assertion as it's validated earlier
+        };
+
+        try {
+            await writeFile(tenexConfigPath, JSON.stringify(tenexConfig, null, 2));
+            console.log(`.tenex.json created successfully at ${tenexConfigPath}`);
+        } catch (tenexWriteError: unknown) {
+            console.error(`Failed to write .tenex.json at ${tenexConfigPath}:`, tenexWriteError);
+            // Decide if this is a fatal error. Let's make it non-fatal for now.
+            console.warn(`Proceeding without .tenex.json due to write error.`);
+        }
+
+        // 9. Output Success JSON
         console.log(JSON.stringify({
             success: true,
             message: 'Project created successfully.',
-            projectId: projectId,
-            path: projectPath,
-            configured: isConfigured
+            projectSlug: projectSlug, // Changed from projectId
+            path: projectPath!, // Use non-null assertion
+            configured: isConfigured, // Indicates if mcp.json was configured
+            tenexConfigPath: tenexConfigPath // Path to the new config file
         }));
         process.exit(0);
 
-    } catch (error: any) {
-        console.error(`Error during project creation for ${projectId}:`, error);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`Error during project creation for ${projectSlug}: ${message}`, error);
         // Attempt cleanup: remove the target dir if it exists
-        try {
-             await access(projectPath);
-             console.warn(`Creation failed, attempting to remove directory: ${projectPath}`);
-             await execAsync(`rm -rf "${projectPath}"`);
-        } catch (cleanupError: any) {
-             // Log cleanup error but don't mask original error
-             console.error(`Failed to cleanup directory ${projectPath}:`, cleanupError);
+        // Attempt cleanup only if projectPath was successfully determined
+        if (projectPath) {
+            try {
+                await access(projectPath); // Check if it exists before removing
+                console.warn(`Creation failed, attempting to remove directory: ${projectPath}`);
+                await execAsync(`rm -rf "${projectPath}"`);
+            } catch (cleanupError: unknown) {
+                // Log cleanup error but don't mask original error
+                console.error(`Failed to cleanup directory ${projectPath}:`, cleanupError);
+            }
+        } else {
+            console.warn("Creation failed before project path could be determined. No cleanup needed.");
         }
-        console.error(JSON.stringify({ success: false, error: `Failed to create project: ${error.message}` }));
+        // Cleanup logic is nested within the if(projectPath) block above
+        const finalErrorMessage = error instanceof Error ? error.message : String(error);
+        console.error(JSON.stringify({ success: false, error: `Failed to create project: ${finalErrorMessage}` }));
         process.exit(1);
     }
 }

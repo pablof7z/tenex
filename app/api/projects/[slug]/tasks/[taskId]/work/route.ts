@@ -22,13 +22,13 @@ interface RequestBody {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; taskId: string } }
+  { params }: { params: { slug: string; taskId: string } } // Changed id to slug
 ) {
-  const projectId = params.id;
+  const projectSlug = params.slug; // Changed projectId to projectSlug
   const taskId = params.taskId;
 
-  if (!projectId || !taskId) {
-    return NextResponse.json({ error: 'Project ID and Task ID are required' }, { status: 400 });
+  if (!projectSlug || !taskId) {
+    return NextResponse.json({ error: 'Project slug and Task ID are required' }, { status: 400 }); // Updated error message
   }
 
   let body: RequestBody;
@@ -42,16 +42,17 @@ export async function POST(
 
   let projectDirPath: string;
   try {
-    projectDirPath = getProjectPath(projectId);
-  } catch (error: any) {
-    console.error(`Error getting project path for ID ${projectId}: ${error.message}`);
-    if (error.message.includes("PROJECTS_PATH")) {
+    projectDirPath = getProjectPath(projectSlug); // Use projectSlug
+  } catch (error: unknown) { // Changed any to unknown
+    const message = error instanceof Error ? error.message : 'Unknown error getting project path';
+    console.error(`Error getting project path for slug ${projectSlug}: ${message}`); // Use projectSlug
+    if (message.includes("PROJECTS_PATH")) {
         return NextResponse.json({ error: 'Server configuration error: PROJECTS_PATH not set.' }, { status: 500 });
     }
-    return NextResponse.json({ error: `Failed to determine project path: ${error.message}` }, { status: 400 });
+    return NextResponse.json({ error: `Failed to determine project path: ${message}` }, { status: 400 });
   }
 
-  console.log(`Received request to start work on task ${taskId} for project ${projectId} at path: ${projectDirPath}`);
+  console.log(`Received request to start work on task ${taskId} for project ${projectSlug} at path: ${projectDirPath}`); // Use projectSlug
 
   // --- Security Check ---
   if (!PROJECTS_PATH) {
@@ -92,9 +93,10 @@ export async function POST(
     // Write the task file
     fs.writeFileSync(taskFilePath, fileContent);
     console.log(`Task file created: ${taskFilePath}`);
-  } catch (error: any) {
-    console.error(`Error creating task file ${taskFilePath}: ${error.message}`);
-    return NextResponse.json({ error: `Failed to create task file: ${error.message}` }, { status: 500 });
+  } catch (error: unknown) { // Changed any to unknown
+    const message = error instanceof Error ? error.message : 'Unknown error creating task file';
+    console.error(`Error creating task file ${taskFilePath}: ${message}`);
+    return NextResponse.json({ error: `Failed to create task file: ${message}` }, { status: 500 });
   }
   // --- End Prepare Task File ---
 
@@ -130,7 +132,7 @@ export async function POST(
 
   // Respond immediately
   return NextResponse.json({
-      message: `Request received to start work on task ${taskId} for project ${projectId}. Task file created at ${relativeTaskPath}.`,
+      message: `Request received to start work on task ${taskId} for project ${projectSlug}. Task file created at ${relativeTaskPath}.`, // Use projectSlug
       taskFilePath: relativeTaskPath // Send back the relative path
   }, { status: 202 }); // 202 Accepted
 }

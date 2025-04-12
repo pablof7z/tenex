@@ -59,15 +59,15 @@ async function readFilesFromDir(dirPath: string): Promise<SpecFile[]> {
 }
 
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-    const projectId = params.id;
-    if (!projectId) {
-        return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+export async function GET(request: Request, { params }: { params: { slug: string } }) { // Changed id to slug
+    const projectSlug = params.slug; // Changed projectId to projectSlug
+    if (!projectSlug) {
+        return NextResponse.json({ error: "Project slug is required" }, { status: 400 }); // Updated error message
     }
 
     try {
-        const projectContextDir = getProjectContextPath(projectId);
-        const projectRulesDir = getProjectRulesPath(projectId); // Get rules path
+        const projectContextDir = getProjectContextPath(projectSlug); // Use projectSlug
+        const projectRulesDir = getProjectRulesPath(projectSlug); // Use projectSlug
 
         // Read files from both directories concurrently
         const [specFiles, ruleFiles] = await Promise.all([
@@ -75,7 +75,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
             readFilesFromDir(projectRulesDir)
         ]);
 
-        console.log(`Fetched ${specFiles.length} spec files and ${ruleFiles.length} rule files for project ${projectId}.`);
+        console.log(`Fetched ${specFiles.length} spec files and ${ruleFiles.length} rule files for project ${projectSlug}.`); // Use projectSlug
 
         // Return grouped files
         return NextResponse.json({
@@ -84,16 +84,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
         });
 
     } catch (error: unknown) {
-        console.error(`Failed to get project files for ${projectId}:`, error);
+        console.error(`Failed to get project files for ${projectSlug}:`, error); // Use projectSlug
         const message = error instanceof Error ? error.message : "Failed to get project files";
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-    const projectId = params.id;
-    if (!projectId) {
-        return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+export async function PUT(request: Request, { params }: { params: { slug: string } }) { // Changed id to slug
+    const projectSlug = params.slug; // Changed projectId to projectSlug
+    if (!projectSlug) {
+        return NextResponse.json({ error: "Project slug is required" }, { status: 400 }); // Updated error message
     }
 
     let fileName: string | undefined;
@@ -120,8 +120,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
         // Determine the target directory based on the group
         const targetDirectory = group === 'specs'
-            ? getProjectContextPath(projectId)
-            : getProjectRulesPath(projectId);
+            ? getProjectContextPath(projectSlug) // Use projectSlug
+            : getProjectRulesPath(projectSlug); // Use projectSlug
 
         const targetFilePath = path.join(targetDirectory, fileName);
 
@@ -139,7 +139,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     } catch (error: unknown) {
         const errorContext = fileName ? `${group || 'unknown group'} file ${fileName}` : `${group || 'unknown group'} file`;
-        console.error(`Failed to update ${errorContext} for ${projectId}:`, error);
+        console.error(`Failed to update ${errorContext} for ${projectSlug}:`, error); // Use projectSlug
         if (error instanceof SyntaxError) {
             return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
         }

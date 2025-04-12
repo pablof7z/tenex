@@ -25,9 +25,9 @@ import { ProjectTasksTab } from "./components/ProjectTasksTab";
 import { ProjectSettingsTab } from "./components/ProjectSettingsTab";
 import { ProjectSpecsTab } from "./components/ProjectSpecsTab";
 
-export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
     const unwrappedParams = React.use(params);
-    const projectId = unwrappedParams.id;
+    const projectId = unwrappedParams.slug;
     const router = useRouter();
     const currentUser = useNDKCurrentUser();
     // Use the hook, getting isReady and error state

@@ -17,29 +17,30 @@ if (!PROJECTS_PATH) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { slug: string } } // Changed id to slug
 ) {
-  const projectId = params.id;
+  const projectSlug = params.slug; // Changed projectId to projectSlug
 
-  if (!projectId) {
-    return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+  if (!projectSlug) {
+    return NextResponse.json({ error: 'Project slug is required' }, { status: 400 }); // Updated error message
   }
 
   let projectDirPath: string;
   try {
-    // Use the utility function to get the project path
-    projectDirPath = getProjectPath(projectId);
-  } catch (error: any) {
-    console.error(`Error getting project path for ID ${projectId}: ${error.message}`);
+    // Use the utility function to get the project path using slug
+    projectDirPath = getProjectPath(projectSlug); // Use projectSlug
+  } catch (error: unknown) { // Changed any to unknown
+    const message = error instanceof Error ? error.message : 'Unknown error getting project path';
+    console.error(`Error getting project path for slug ${projectSlug}: ${message}`); // Use projectSlug
     // If PROJECTS_PATH wasn't set, this might be the error source
-    if (error.message.includes("PROJECTS_PATH")) {
+    if (message.includes("PROJECTS_PATH")) {
         return NextResponse.json({ error: 'Server configuration error: PROJECTS_PATH not set.' }, { status: 500 });
     }
-    // Handle other errors from getProjectPath (e.g., empty projectId, though checked above)
-    return NextResponse.json({ error: `Failed to determine project path: ${error.message}` }, { status: 400 });
+    // Handle other errors from getProjectPath (e.g., empty projectSlug, though checked above)
+    return NextResponse.json({ error: `Failed to determine project path: ${message}` }, { status: 400 });
   }
 
-  console.log(`Attempting to open editor for project ${projectId} at path: ${projectDirPath}`);
+  console.log(`Attempting to open editor for project ${projectSlug} at path: ${projectDirPath}`); // Use projectSlug
 
   // Security Check: Ensure the path is within the allowed base directory
   // Use the PROJECTS_PATH from environment variable for the check
@@ -93,5 +94,5 @@ export async function POST(
   });
 
   // Respond immediately to the client, the script runs asynchronously
-  return NextResponse.json({ message: `Request received to open editor for project: ${projectId}` }, { status: 202 }); // 202 Accepted
+  return NextResponse.json({ message: `Request received to open editor for project: ${projectSlug}` }, { status: 202 }); // 202 Accepted // Use projectSlug
 }

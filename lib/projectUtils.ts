@@ -10,36 +10,36 @@ if (!PROJECTS_PATH) {
 }
 
 /**
- * Gets the absolute path for a given project ID.
+ * Gets the absolute path for a given project slug.
  * Throws an error if the base PROJECTS_PATH environment variable is not set.
- * @param projectId - The ID of the project.
+ * @param projectSlug - The slug (d tag identifier) of the project.
  * @returns The absolute path to the project directory.
  */
-export function getProjectPath(projectId: string): string {
-    if (!projectId) {
-        throw new Error("Project ID cannot be empty.");
+export function getProjectPath(projectSlug: string): string {
+    if (!projectSlug) {
+        throw new Error("Project slug cannot be empty.");
     }
     // PROJECTS_PATH check is done at module load time.
-    return path.join(PROJECTS_PATH!, projectId); // Non-null assertion is safe due to the check above
+    return path.join(PROJECTS_PATH!, projectSlug); // Non-null assertion is safe due to the check above
 }
 
 /**
- * Gets the absolute path to the context directory within a given project ID.
- * @param projectId - The ID of the project.
+ * Gets the absolute path to the context directory within a given project slug.
+ * @param projectSlug - The slug (d tag identifier) of the project.
  * @returns The absolute path to the project's context directory.
  */
-export function getProjectContextPath(projectId: string): string {
-    const projectPath = getProjectPath(projectId);
+export function getProjectContextPath(projectSlug: string): string {
+    const projectPath = getProjectPath(projectSlug);
     return path.join(projectPath, 'context');
 }
 
 /**
- * Gets the absolute path to the rules directory within a given project ID.
- * @param projectId - The ID of the project.
+ * Gets the absolute path to the rules directory within a given project slug.
+ * @param projectSlug - The slug (d tag identifier) of the project.
  * @returns The absolute path to the project's rules directory.
  */
-export function getProjectRulesPath(projectId: string): string {
-    const projectPath = getProjectPath(projectId);
+export function getProjectRulesPath(projectSlug: string): string {
+    const projectPath = getProjectPath(projectSlug);
     // Use path.join to correctly handle the hidden directory '.roo'
     return path.join(projectPath, '.roo', 'rules');
 }

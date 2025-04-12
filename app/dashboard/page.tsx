@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { Plus, AlertTriangle } from "lucide-react"; // Added AlertTriangle
+import { useMemo, useState, useEffect, useCallback } from "react"; // Added useCallback
+import { Plus, AlertTriangle, RefreshCw } from "lucide-react"; // Added AlertTriangle, RefreshCw
 import Link from "next/link"; // Added Link import
-import { NDKSubscriptionCacheUsage, useNDK, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useNDK, useNDKCurrentUser, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk-hooks"; // Removed useSubscribe, NDKSubscriptionCacheUsage
 import { NDKProject } from "@/lib/nostr/events/project";
+// We might need a different card or adapt the existing one if it relies heavily on NDKEvent properties
 import { ProjectCard } from "@/components/events/project/card";
 import { useToast } from "@/hooks/use-toast";
 import { useConfig } from "@/hooks/useConfig"; // Import useConfig
@@ -25,35 +26,74 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AppLayout } from "@/components/app-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
+import type { NDKTag } from "@nostr-dev-kit/ndk"; // Import NDKTag type
+// Define the expected shape of the project data from the API
+interface ApiProject {
+    projectName: string;
+    title?: string; // Assuming title might be in .tenex.json
+    description?: string; // Assuming description might be in .tenex.json
+    hashtags?: string[]; // Assuming hashtags might be in .tenex.json
+    repo?: string; // Assuming repo might be in .tenex.json
+    // Add other relevant fields from .tenex.json
+    nsec: string;
+    pubkey: string;
+    eventId?: string; // If the event ID is stored
+    deleted?: boolean; // Added based on filter logic
+}
+
 
 export default function DashboardPage() {
-    const { ndk } = useNDK();
-    const currentUser = useNDKCurrentUser();
-    // Subscribe to projects created by the current user
-    const { events: projects, eose } = useSubscribe(
-        currentUser ? [{ kinds: [NDKProject.kind], authors: [currentUser?.pubkey] }] : false,
-    );
+    const { ndk } = useNDK(); // Still needed for creating projects
+    const currentUser = useNDKCurrentUser(); // Still needed for creating projects and context
+
+    // State for projects fetched from API
+    const [apiProjects, setApiProjects] = useState<ApiProject[]>([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+    const [projectsError, setProjectsError] = useState<string | null>(null);
     const { toast } = useToast();
     // Use the hook, getting isReady and error state
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
     const [isCreatingProject, setIsCreatingProject] = useState(false);
-    const [isCreating, setIsCreating] = useState(false);
+    const [isCreating, setIsCreating] = useState(false); // For the create dialog
     const [formData, setFormData] = useState({
         name: "",
-        tagline: "",
         description: "",
         hashtags: "",
         gitRepo: "",
     });
-    const [formError, setFormError] = useState<string | null>(null); // Renamed local error state
+    const [formError, setFormError] = useState<string | null>(null); // Error state for the create form
 
-    // Removed local useEffect for isConfigReady
+    // Function to fetch projects from the API
+    const fetchProjects = useCallback(async () => {
+        setIsLoadingProjects(true);
+        setProjectsError(null);
+        try {
+            const response = await fetch('/api/projects');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: "Failed to fetch projects" }));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            const data: ApiProject[] = await response.json();
+            // Filter out projects marked as deleted if the API doesn't do it
+            // Assuming .tenex.json might have a 'deleted' flag or similar
+            setApiProjects(data.filter(p => !p.deleted)); // Adjust 'deleted' property based on actual .tenex.json structure
+            console.log("Fetched projects from API:", data);
+        } catch (error) {
+            console.error("Failed to fetch projects:", error);
+            setProjectsError(error instanceof Error ? error.message : "An unknown error occurred");
+            setApiProjects([]); // Clear projects on error
+        } finally {
+            setIsLoadingProjects(false);
+        }
+    }, []); // No dependencies needed if it doesn't rely on component state/props
 
-    const activeProjects = useMemo(() => {
-        return projects.filter((project) => project.hasTag("deleted") === false);
-    }, [projects]);
+    // Fetch projects on component mount
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]); // fetchProjects is memoized by useCallback
 
-    console.log("Fetched projects:", activeProjects.map(p => p.inspect).join("\n\n"));
+    // Memoize active projects from API data
+    const activeProjects = useMemo(() => apiProjects, [apiProjects]);
 
     const handleCreateProject = async () => {
         setFormError(null); // Clear previous form errors
@@ -98,22 +138,31 @@ export default function DashboardPage() {
                 project.repo = formData.gitRepo;
             }
 
+            const projectSigner = await project.getSigner();
+
             // Publish the project event
-            await project.publish();
+            await project.sign();
             console.log("Project published successfully:", project);
 
             // Now, create the local project structure
             try {
                 // getApiUrl will now always return a string (relative or absolute)
-                const apiUrl = getApiUrl('/projects/create-local');
+                // Use the project ID (which is the 'd' tag) for the API endpoint
+                const apiUrl = getApiUrl(`/projects/${project.slug}`); // Use tagId for the route param
                 const localCreateResponse = await fetch(apiUrl, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        name: formData.name,
+                        title: formData.name, // <-- Add title here
+                        // Send necessary data to the backend script
                         description: formData.description,
+                        nsec: projectSigner.nsec,
+                        pubkey: projectSigner.pubkey,
+                        repo: formData.gitRepo || undefined,
+                        hashtags: formData.hashtags || undefined, // Send raw hashtags string
+                        eventId: project.tagId()
                     }),
                 });
 
@@ -121,19 +170,21 @@ export default function DashboardPage() {
                     const errorData = await localCreateResponse.json().catch(() => ({ error: "Failed to parse error response" }));
                     throw new Error(
                         errorData.error ||
-                            `Failed to create local project structure: ${localCreateResponse.statusText}`,
+                            `Failed to create project backend structure: ${localCreateResponse.statusText}`,
                     );
                 }
 
-                const localCreateData = await localCreateResponse.json();
-                console.log("Local project structure created:", localCreateData);
+                project.publish();
 
-            } catch (localError) {
-                console.error("Error creating local project structure:", localError);
+                const localCreateData = await localCreateResponse.json();
+                console.log("Project backend structure created:", localCreateData);
+
+            } catch (backendError) {
+                console.error("Error creating project backend structure:", backendError);
                 toast({
-                    title: "Local Files Error",
+                    title: "Backend Error",
                     description:
-                        localError instanceof Error ? localError.message : "Failed to create local project files.",
+                        backendError instanceof Error ? backendError.message : "Failed to create project backend files.",
                     variant: "default", // Keep as default/warning since Nostr event succeeded
                 });
             }
@@ -146,9 +197,11 @@ export default function DashboardPage() {
             });
 
             // Reset form and close dialog
-            setFormData({ name: "", tagline: "", description: "", hashtags: "", gitRepo: "" });
+            setFormData({ name: "", description: "", hashtags: "", gitRepo: "" });
             setIsCreatingProject(false);
-            console.log("Project created successfully:", project);
+            console.log("Project created successfully via Nostr:", project);
+            // Refetch projects from the API to update the list
+            fetchProjects();
 
         } catch (err) {
             console.error("Error creating project:", err);
@@ -212,16 +265,7 @@ export default function DashboardPage() {
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="tagline">Tagline</Label>
-                                <Input
-                                    id="tagline"
-                                    placeholder="A short description of your project"
-                                    className="rounded-md"
-                                    // Removed tagline input
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="spec">Initial product spec</Label>
+                                <Label htmlFor="spec">Description</Label>
                                 <Textarea
                                     id="spec"
                                     placeholder="Describe what you're building..."
@@ -261,7 +305,7 @@ export default function DashboardPage() {
                                 variant="outline"
                                 onClick={() => {
                                     setIsCreatingProject(false);
-                                    setFormData({ name: "", tagline: "", description: "", hashtags: "", gitRepo: "" });
+                                    setFormData({ name: "", description: "", hashtags: "", gitRepo: "" });
                                     setFormError(null); // Clear form error on cancel
                                 }}
                                 className="rounded-md"
@@ -278,19 +322,49 @@ export default function DashboardPage() {
                 </Dialog>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {!eose ? (
+                {isLoadingProjects ? (
                     <div className="col-span-3 text-center py-10 text-muted-foreground">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                         <p>Loading projects...</p>
                     </div>
-                ) : activeProjects && activeProjects.length > 0 ? (
-                    activeProjects
-                        .map((project) => <ProjectCard key={project.id} project={project} />)
+                ) : projectsError ? (
+                     <div className="col-span-3">
+                        <Alert variant="destructive">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle>Error Loading Projects</AlertTitle>
+                            <AlertDescription>
+                                {projectsError}
+                                <Button variant="outline" size="sm" onClick={fetchProjects} className="ml-4">Retry</Button>
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                ) : activeProjects.length > 0 ? (
+                    // Adapt ProjectCard or create a new component if needed.
+                    // The API returns plain objects, not NDKProject instances.
+                    // We need to pass the necessary props based on the ApiProject interface.
+                    // For now, assuming ProjectCard can handle a simplified object or needs adjustment.
+                    // We might need to map ApiProject fields to NDKProject-like props if ProjectCard expects them.
+                    activeProjects.map((project) => (
+                        <ProjectCard
+                            key={project.projectName} // Use projectName or another unique ID from the API data
+                            project={{
+                                id: project.eventId || project.projectName, // Use eventId or projectName as key
+                                slug: project.projectName, // Use projectName for the link slug
+                                title: project.title || project.projectName, // Use title or fallback to name
+                                description: project.description || '', // Pass description
+                                hashtags: project.hashtags || [], // Pass hashtags array
+                                repo: project.repo, // Pass repo URL
+                                // Pass updatedAt if available in .tenex.json (assuming it might be added later)
+                                // updatedAt: project.updatedAtTimestamp, // Example if timestamp was available
+                            }}
+                        />
+                    ))
                 ) : (
                     <div className="col-span-3 text-center py-10 text-muted-foreground">
                         {currentUser ? (
                             <p>No projects found. Create your first project to get started!</p>
                         ) : (
-                            <p>Please log in to view your projects.</p>
+                            <p>Please log in to view your projects.</p> // This might need adjustment if login isn't strictly required to *view* projects fetched via API
                         )}
                     </div>
                 )}
