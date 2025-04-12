@@ -25,8 +25,8 @@ Contains the core application routes, pages, and global styles.
 *   `app/page.tsx`: Defines `LandingPage`, the public-facing homepage.
 *   `app/globals.css`: Global styles applied to the application.
 *   `app/dashboard/page.tsx`: Defines `DashboardPage`, showing a list of projects and allowing creation of new ones. Uses `AppLayout`.
-*   `app/project/[id]/page.tsx`: Defines `ProjectPage`, a dynamic route displaying detailed information for a specific project (`id`). Includes tabs for Overview (activity feed, related tweets, zapping), Tasks, and Settings. Uses `AppLayout`, various UI components, and dialogs for actions like creating/quoting tweets.
-
+*   `app/project/[id]/page.tsx`: Defines `ProjectPage`, a dynamic route displaying detailed information for a specific project (`id`). Includes tabs for Overview, Tasks, Specs, and Settings. Uses `AppLayout`, various UI components, and dialogs.
+*   `app/project/[id]/[taskId]/page.tsx`: Defines `TaskDetailPage`, showing details for a specific task within a project. Uses `AppLayout`.
 ## 3. Reusable Components (`components/`)
 
 Contains shared React components used throughout the application, organized in a hierarchical structure.
@@ -56,7 +56,6 @@ Components related to user profiles and interactions:
 
 Components that provide context or services to the application:
 
-*   `components/providers/ndk.tsx`: Provides NDK (Nostr Development Kit) context and session management
 
 ### 3.5 UI Components (`components/ui/`)
 
@@ -73,8 +72,11 @@ Contains custom React hooks for reusable logic.
 
 Contains utility functions.
 
-*   `lib/utils.ts`: Defines a `cn` utility function for conditionally joining CSS class names (useful with Tailwind CSS).
-
+*   `lib/utils.ts`: Defines `cn` utility for conditional class names.
+*   `lib/projectUtils.ts`: Defines `getProjectPath` and `getProjectContextPath` for resolving project file paths based on `PROJECTS_PATH` env var.
+*   `lib/nostr/ndk.ts`: Initializes and configures the NDK instance.
+*   `lib/nostr/events/project.ts`: Defines `NDKProject` class extending `NDKArticle` for project-specific event handling (kind 30023).
+*   `lib/nostr/events/task.ts`: Defines `NDKTask` class extending `NDKEvent` for task-specific event handling (kind 1934).
 ## 6. Static Assets (`public/`)
 
 Contains static files like images and logos served directly.
@@ -92,79 +94,97 @@ Contains additional global styles.
 Contains backend API endpoints built with Next.js API Routes.
 
 *   `app/api/projects/create-local/route.ts`
-    *   **Responsibility:** Handles `POST` requests to create a new project directory structure on the local filesystem, including the initial `context/SPEC.md` file.
+    *   **Responsibility:** Handles `POST` requests to create a new project directory structure on the local filesystem (using `PROJECTS_PATH` env var), including the initial `context/SPEC.md` file.
     *   **Likely Called From:** `app/dashboard/page.tsx` (when creating a new project).
 *   `app/api/projects/[id]/route.ts`
-    *   **Responsibility:** Likely handles standard CRUD operations (`GET`, `PUT`, `DELETE`) for a specific project identified by `[id]`. (Exact implementation needs verification).
+    *   **Responsibility:** Handles standard CRUD operations (`GET`, `PUT`, `DELETE`) for a specific project identified by `[id]`. (Exact implementation needs verification).
     *   **Likely Called From:** `app/project/[id]/page.tsx` or related components for fetching/updating/deleting project details.
 *   `app/api/projects/[id]/configure/route.ts`
-    *   **Responsibility:** Handles project-specific configuration updates.
+    *   **Responsibility:** Handles project-specific configuration updates (e.g., saving NDK nsec).
     *   **Likely Called From:** `app/project/[id]/components/ProjectSettingsTab.tsx` or similar settings UI.
 *   `app/api/projects/[id]/open-editor/route.ts`
-    *   **Responsibility:** Handles `POST` requests to trigger opening the specified project's directory in the user's configured editor (via a script).
+    *   **Responsibility:** Handles `POST` requests to trigger opening the specified project's directory in the user's configured editor (via the `scripts/open-editor` script).
     *   **Likely Called From:** `app/project/[id]/page.tsx` or `app/dashboard/page.tsx` (e.g., an "Open in Editor" button).
 *   `app/api/projects/[id]/specs/route.ts`
     *   **Responsibility:** Handles `GET` requests to retrieve project specification files (e.g., `SPEC.md`) and `PUT` requests to update the `SPEC.md` file content.
     *   **Likely Called From:** `app/project/[id]/components/ProjectSpecsTab.tsx` (for displaying and editing the spec).
 *   `app/api/run/route.ts`
-    *   **Responsibility:** Purpose needs further investigation based on implementation. Could be for running project-related commands or processes.
-    *   **Likely Called From:** Potentially various parts of the application depending on its function.
+    *   **Responsibility:** Executes external scripts (like `scripts/improve-project-spec`) via `bun run`, passing stdin and returning stdout. Used for AI spec improvement.
+    *   **Likely Called From:** `app/project/[id]/components/ProjectSpecsTab.tsx` ("Improve with AI" button).
 
 
-## 9. Component Organization Guidelines
+## 9. Scripts (`scripts/`)
+
+Contains executable scripts for various development and operational tasks.
+
+*   `scripts/improve-project-spec`: A Bun script that takes project details (name, tagline, spec) via stdin (JSON), prompts an Ollama model (configurable via env vars `OLLAMA_API_URL`, `OLLAMA_MODEL`) to improve the spec, and outputs the improved spec text to stdout.
+*   `scripts/open-editor`: A Bash script that opens a specified project directory in VS Code (`code` command). If the project lacks a `src/` directory, it attempts to trigger a VS Code command URI (`vscode://ionutvmi.vscode-commands-executor/runCommands`) to start a new Cline task with the prompt "Follow instructions in context/SPEC.md". Also ensures a `.clinerules` file exists in the project.
+
+## 10. MCP Server (`mcp/`)
+
+Contains the implementation for the Model Context Protocol (MCP) server.
+
+*   `mcp/index.ts`: Likely the entry point for the MCP server, handling communication and command execution based on the MCP specification. (Details require inspecting the file).
+*   `mcp/config.ts`: Configuration for the MCP server.
+*   `mcp/commands/`: Directory likely containing handlers for specific MCP commands.
+*   `mcp/logic/`: Directory likely containing business logic related to MCP operations (e.g., `publish.ts`).
+
+## 11. Component Organization Guidelines
 
 When creating new components, follow these guidelines to maintain a consistent and logical structure:
 
-### 9.1 Event-specific Components
+### 11.1 Event-specific Components
 
 All components that render Nostr events should be placed in the appropriate subdirectory under `components/events/`:
 
 * **Notes/Tweets (kind 1)**: `components/events/note/`
   * Example: `components/events/note/card.tsx` - Renders a single note with interactions
-  * Example: `components/events/note/list.tsx` - Renders a list of notes
-
 * **Projects (kind 30023)**: `components/events/project/`
   * Example: `components/events/project/card.tsx` - Renders a project card
-  * Example: `components/events/project/detail.tsx` - Renders detailed project view
-
-* **Tasks**: `components/events/task/`
+* **Tasks (kind 1934)**: `components/events/task/`
   * Example: `components/events/task/card.tsx` - Renders a task card
-  * Example: `components/events/task/list.tsx` - Renders a list of tasks
 
-### 9.2 User-related Components
+### 11.2 User-related Components
 
 Components related to user profiles and interactions should be placed in `components/user/`:
 
 * Example: `components/user/avatar.tsx` - Renders a user avatar
-* Example: `components/user/profile.tsx` - Renders a user profile
-* Example: `components/user/login.tsx` - Handles user login
 
-### 9.3 Provider Components
+### 11.3 Provider Components
 
 Components that provide context or services to the application should be placed in `components/providers/`:
 
-* Example: `components/providers/ndk.tsx` - Provides NDK context and session management
-* Example: `components/providers/theme.tsx` - Provides theme context
+* Example: `components/providers/theme.tsx` - Provides theme context (via `ThemeProvider`)
 
-### 9.4 Layout Components
+### 11.4 Layout Components
 
 Components that define the overall layout of the application should be placed directly in the `components/` directory:
 
-* Example: `components/app-layout.tsx` - Main application layout
-* Example: `components/sidebar.tsx` - Sidebar navigation
+* Example: `components/app-layout.tsx` - Main authenticated application layout
+* Example: `components/theme-provider.tsx` - Manages theme state
+* Example: `components/theme-toggle.tsx` - Button to switch themes
 
-### 9.5 UI Components
+### 11.5 UI Components
 
-Generic UI components that are not specific to Nostr should be placed in `components/ui/`:
+Generic UI components (often from shadcn/ui) should be placed in `components/ui/`:
 
 * Example: `components/ui/button.tsx` - Button component
 * Example: `components/ui/card.tsx` - Card component
 
-### 9.6 Page-specific Components
+### 11.6 Page-specific Components
 
-Components that are only used on a specific page and not shared across the application should be placed in the corresponding page directory:
+Components used only on a specific page should be placed in a `components` subdirectory within that page's route directory:
 
-* Example: `app/dashboard/components/stats.tsx` - Dashboard-specific stats component
-* Example: `app/project/[id]/components/header.tsx` - Project page header
+* Example: `app/project/[id]/components/ProjectHeader.tsx` - Header for the project page
+* Example: `app/project/[id]/components/ProjectOverviewTab.tsx` - Content for the Overview tab
+* Example: `app/project/[id]/components/ProjectTasksTab.tsx` - Content for the Tasks tab
+* Example: `app/project/[id]/components/ProjectSpecsTab.tsx` - Content for the Specs tab
+* Example: `app/project/[id]/components/ProjectSettingsTab.tsx` - Content for the Settings tab
+* Example: `app/project/[id]/components/ActivityFeed.tsx` - Displays recent activity
+* Example: `app/project/[id]/components/RelatedTweets.tsx` - Displays related tweets
+* Example: `app/project/[id]/components/TasksList.tsx` - List of tasks within the Tasks tab
+* Example: `app/project/[id]/components/CreateTaskDialog.tsx` - Dialog to create a new task
+* Example: `app/project/[id]/components/CreateIssueDialog.tsx` - Dialog to create a new issue (potentially related to tasks/projects)
+* Example: `app/project/[id]/components/TaskDetailDialog.tsx` - Dialog to show task details
 
 Following these guidelines ensures that components are organized logically and can be easily located and maintained.

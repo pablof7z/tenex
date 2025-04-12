@@ -76,7 +76,9 @@ export async function POST(
   // Use exec because we want to run an external command.
   // Ensure proper escaping/quoting if projectDirPath could contain special characters,
   // though path.resolve should handle basic cases. Using an array avoids shell interpretation issues.
-  exec(`"${scriptPath}" "${projectDirPath}"`, (error, stdout, stderr) => {
+  // Define the default prompt for this general open action
+  const defaultPrompt = "Follow instructions in context/SPEC.md";
+  exec(`"${scriptPath}" "${projectDirPath}" "${defaultPrompt}"`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error executing open-editor script for ${projectDirPath}: ${error.message}`);
       console.error(`stderr: ${stderr}`);

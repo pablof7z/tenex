@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/ui/use-toast"; // Import useToast
 import { useParams } from "next/navigation";
 import { NDKEvent, NDKKind, NDKTag, NDKFilter } from "@nostr-dev-kit/ndk";
 import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
@@ -21,7 +22,9 @@ export default function TaskDetailPage() {
     const [referencedEvents, setReferencedEvents] = useState<NDKEvent[]>([]);
     const [loadingTask, setLoadingTask] = useState(true);
     const [loadingRefs, setLoadingRefs] = useState(true);
+    const [isStartingWork, setIsStartingWork] = useState(false);
 
+    const { toast } = useToast(); // Initialize toast
     useEffect(() => {
         if (!ndk || !taskId) return;
 
@@ -56,6 +59,59 @@ export default function TaskDetailPage() {
     const taskTitle = task?.tags.find((tag) => tag[0] === "title")?.[1] ?? "Loading Task...";
     const taskDescription = task?.content ?? "";
 
+    const handleStartWork = async () => {
+        if (!projectId || !taskId || !task) {
+            toast({
+                title: "Error",
+                description: "Task data not loaded yet.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsStartingWork(true);
+        try {
+            const apiUrl = `/api/projects/${projectId}/tasks/${taskId}/work`;
+            // Extract referenced event IDs to pass as context
+            const context = referencedEvents.map(event => `Referenced Event ID: ${event.id}`);
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: taskTitle,
+                    description: taskDescription,
+                    context: context,
+                    // Optionally add a specific clinePrompt here if needed
+                    // clinePrompt: "Custom prompt for this specific task start..."
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && response.status === 202) {
+                toast({
+                    title: "Success",
+                    description: `Agent work initiated for task ${taskId}. ${result.message || ''}`,
+                });
+                // Optionally, you might want to navigate away or update UI state
+            } else {
+                throw new Error(result.error || `Failed to start agent work (status ${response.status})`);
+            }
+        } catch (error: any) {
+            console.error("Failed to start agent work:", error);
+            toast({
+                title: "Error Starting Work",
+                description: error.message || "An unexpected error occurred.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsStartingWork(false);
+        }
+    };
+
     return (
         <AppLayout>
             <div className="flex flex-col h-screen p-4 md:p-6 lg:p-8">
@@ -64,7 +120,9 @@ export default function TaskDetailPage() {
                     <h1 className="text-2xl font-bold">
                         {loadingTask ? <Skeleton className="h-8 w-64" /> : taskTitle}
                     </h1>
-                    <Button>Start Agent Work</Button>
+                    <Button onClick={handleStartWork} disabled={loadingTask || isStartingWork}>
+                        {isStartingWork ? "Starting..." : "Start Agent Work"}
+                    </Button>
                 </div>
 
                 {/* Main Content Area */}

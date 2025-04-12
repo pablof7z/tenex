@@ -32,3 +32,14 @@ export function getProjectContextPath(projectId: string): string {
     const projectPath = getProjectPath(projectId);
     return path.join(projectPath, 'context');
 }
+
+/**
+ * Gets the absolute path to the rules directory within a given project ID.
+ * @param projectId - The ID of the project.
+ * @returns The absolute path to the project's rules directory.
+ */
+export function getProjectRulesPath(projectId: string): string {
+    const projectPath = getProjectPath(projectId);
+    // Use path.join to correctly handle the hidden directory '.roo'
+    return path.join(projectPath, '.roo', 'rules');
+}

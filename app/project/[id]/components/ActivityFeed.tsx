@@ -64,25 +64,25 @@ export function ActivityFeed({ project, signer, onReply, onRepost, onQuote, onZa
         setReplyContent("");
         setReplyingTo(null);
     };
-// Handler to open the Create Issue dialog
-const handleCreateIssueClick = (content: string) => {
-    setIssueInitialContent(content);
-    setIsCreateIssueDialogOpen(true);
-};
+    // Handler to open the Create Issue dialog
+    const handleCreateIssueClick = (content: string) => {
+        setIssueInitialContent(content);
+        setIsCreateIssueDialogOpen(true);
+    };
 
-// Handler for submitting the new issue
-const handleCreateIssueSubmit = (description: string) => {
-    console.log("Creating issue with description:", description);
-    // TODO: Implement actual issue creation logic here
-    // - Create a Nostr event (e.g., kind 30023 for long-form, or a custom kind)
-    // - Tag the project, the original event, etc.
-    // - Sign and publish
-    toast({ title: "Issue Creation Requested", description: "Issue creation logic not yet implemented." });
-    // Close dialog is handled internally by CreateIssueDialog on submit
-};
+    // Handler for submitting the new issue
+    const handleCreateIssueSubmit = (description: string) => {
+        console.log("Creating issue with description:", description);
+        // TODO: Implement actual issue creation logic here
+        // - Create a Nostr event (e.g., kind 30023 for long-form, or a custom kind)
+        // - Tag the project, the original event, etc.
+        // - Sign and publish
+        toast({ title: "Issue Creation Requested", description: "Issue creation logic not yet implemented." });
+        // Close dialog is handled internally by CreateIssueDialog on submit
+    };
 
-return (
-    <Card className="rounded-md border-border">
+    return (
+        <Card className="rounded-md border-border">
             <CardHeader className="pb-3">
                  <div className="flex items-center justify-between">
                      <CardTitle className="text-xl">Activity Feed</CardTitle>
@@ -99,6 +99,7 @@ return (
                  <CardDescription>Updates from the project agent</CardDescription>
             </CardHeader>
             <CardContent>
+                {projectPubkey}
                 <div className="space-y-4">
                     {(() => {
                         const sortedEvents = [...events].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
@@ -107,15 +108,8 @@ return (
                                 <NoteCard
                                     key={event.id}
                                     event={event}
-                                    isReplying={replyingTo === event.id}
-                                    replyContent={replyContent}
-                                    onReplyContentChange={setReplyContent}
-                                    onShowReply={setReplyingTo}
-                                    onCancelReply={() => setReplyingTo(null)}
-                                    onSendReply={handleSendReply}
                                     onRepost={onRepost}
                                     onQuote={onQuote}
-                                    onZap={onZap}
                                     onCreateIssue={handleCreateIssueClick} // Pass the handler
                                 />
                             ))

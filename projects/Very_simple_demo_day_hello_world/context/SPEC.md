@@ -1,0 +1,1 @@
+Bun cli that just says hello world
