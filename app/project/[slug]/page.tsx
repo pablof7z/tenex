@@ -5,13 +5,13 @@ import { NDKPrivateKeySigner, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks
 import { useRouter } from "next/navigation";
 import Link from "next/link"; // Added Link import
 import { AppLayout } from "@/components/app-layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
 import { useProjectStore } from "@/lib/store/projects"; // Import the project store
 import { QuoteData } from "@/components/events/note/card";
+// Removed Alert components as status checks are removed
+import { Toolbar } from "@/components/ui/Toolbar"; // Import the new Toolbar
 // Removed Alert components as status checks are removed
 // import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 // import { AlertTriangle } from "lucide-react";
@@ -26,6 +26,9 @@ import { ProjectOverviewTab } from "./components/ProjectOverviewTab";
 import { ProjectTasksTab } from "./components/ProjectTasksTab";
 import { ProjectSettingsTab } from "./components/ProjectSettingsTab";
 import { ProjectSpecsTab } from "./components/ProjectSpecsTab";
+
+// Define static tab labels outside the component
+const TAB_LABELS = ["Overview", "Tasks", "Specs", "Settings"];
 
 export default function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
     const unwrappedParams = React.use(params);
@@ -51,6 +54,20 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     const [activeTab, setActiveTab] = useState("overview");
     const [isQuoting, setIsQuoting] = useState<QuoteData | null>(null);
     const [projectSigner, setProjectSigner] = useState<NDKPrivateKeySigner | null>(null);
+
+    // Memoize toolbarTabs creation based on static labels and setActiveTab
+    const toolbarTabs = useMemo<[string, () => void][]>(() => [
+        [TAB_LABELS[0], () => setActiveTab(TAB_LABELS[0].toLowerCase())],
+        [TAB_LABELS[1], () => setActiveTab(TAB_LABELS[1].toLowerCase())],
+        [TAB_LABELS[2], () => setActiveTab(TAB_LABELS[2].toLowerCase())],
+        [TAB_LABELS[3], () => setActiveTab(TAB_LABELS[3].toLowerCase())],
+    ], []); // No dependencies needed as setActiveTab is stable
+
+    // Calculate initialActiveIndex for Toolbar based on current activeTab (Moved to top level)
+    const initialActiveIndex = useMemo(() => {
+        const index = toolbarTabs.findIndex(([label]) => label.toLowerCase() === activeTab);
+        return index >= 0 ? index : 0; // Default to 0 if not found
+    }, [activeTab, toolbarTabs]);
 
     // Removed local useEffect for isConfigReady/configError - Handled by useConfig hook directly
     // --- Event Handlers ---
@@ -158,6 +175,8 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     // Determine if main content actions should be disabled (only config error now)
     const actionsDisabled = !isConfigReady;
 
+    // toolbarTabs and initialActiveIndex calculation moved above the conditional returns
+
     return (
         <AppLayout>
             {/* Display Configuration or Status Fetch Error Alert if present */}
@@ -189,70 +208,48 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
             <ProjectStatCards project={project} />
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-6">
-                <TabsList className="grid w-full grid-cols-3 md:w-auto md:grid-cols-4 rounded-md p-1 bg-muted">
-                    {/* Disable tabs if actions are disabled */}
-                    <TabsTrigger
-                        value="overview"
-                        className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
-                        disabled={actionsDisabled}
-                    >
-                        Overview
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="tasks"
-                        className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
-                        disabled={actionsDisabled}
-                    >
-                        Tasks
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="specs"
-                        className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
-                        disabled={actionsDisabled}
-                    >
-                        Specs
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="settings"
-                        className="hidden md:block rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-950"
-                        disabled={actionsDisabled}
-                    >
-                        Settings
-                    </TabsTrigger>
-                </TabsList>
+            {/* Replace TabsList with Toolbar */}
+            <div className="w-full mt-6 flex justify-center"> {/* Center the toolbar */}
+                 <Toolbar tabs={toolbarTabs} initialActiveIndex={initialActiveIndex} />
+            </div>
 
-                {/* Conditionally render tab content based on readiness */}
-                <TabsContent value="overview" className="mt-6">
-                    {/* Render tab content directly, disabling handled by TabsTrigger */}
-                    {/* Removed duplicate TabsContent tag */}
-                    <ProjectOverviewTab
-                        project={project}
-                        projectSigner={projectSigner}
-                        onReply={handleReply}
-                        onRepost={handleRepost}
-                        onQuote={handleQuote}
-                        onZap={handleZap}
-                    />
-                </TabsContent>
+                {/* Conditionally render tab content based on activeTab */}
+                {activeTab === 'overview' && (
+                    <div className="mt-6">
+                        <ProjectOverviewTab
+                            project={project}
+                            projectSigner={projectSigner}
+                            onReply={handleReply}
+                            onRepost={handleRepost}
+                            onQuote={handleQuote}
+                            onZap={handleZap}
+                        />
+                    </div>
+                )}
 
-                <TabsContent value="tasks" className="mt-6">
-                    <ProjectTasksTab
-                        project={project}
-                        onTaskSelect={handleNavigateToTask}
-                        onDeleteTask={handleDeleteTask}
-                        onTasksUpdate={() => console.log("Tasks updated, refetch needed")}
-                    />
-                </TabsContent>
+                {activeTab === 'tasks' && (
+                     <div className="mt-6">
+                        <ProjectTasksTab
+                            project={project}
+                            onTaskSelect={handleNavigateToTask}
+                            onDeleteTask={handleDeleteTask}
+                            onTasksUpdate={() => console.log("Tasks updated, refetch needed")}
+                        />
+                    </div>
+                )}
 
-                <TabsContent value="specs" className="mt-6">
-                    <ProjectSpecsTab project={project} projectSlug={projectSlug} />
-                </TabsContent>
+                {activeTab === 'specs' && (
+                    <div className="mt-6">
+                        <ProjectSpecsTab project={project} projectSlug={projectSlug} />
+                    </div>
+                )}
 
-                <TabsContent value="settings" className="mt-6">
-                    <ProjectSettingsTab project={project} projectSlug={projectSlug} />
-                </TabsContent>
-            </Tabs>
+                {activeTab === 'settings' && (
+                     <div className="mt-6">
+                        <ProjectSettingsTab project={project} projectSlug={projectSlug} />
+                    </div>
+                )}
+            {/* Removed closing </Tabs> tag */}
 
             {/* Dialogs */}
             <QuotePostDialog quoting={isQuoting} onClose={() => setIsQuoting(null)} onQuote={handleQuoteSubmit} />
