@@ -5,14 +5,14 @@ import { NDKTask } from "@/lib/nostr/events/task";
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import { nip19 } from "nostr-tools";
+import router from "next/router";
 
 interface TaskCardProps {
     task: NDKTask;
-    onTaskSelect: (task: NDKTask) => void;
-    onDeleteTask?: (taskId: string) => void;
+    projectSlug: string;
 }
 
-export function TaskCard({ task, onTaskSelect, onDeleteTask }: TaskCardProps) {
+export function TaskCard({ task, projectSlug }: TaskCardProps) {
     // TODO: Fetch profile metadata for creatorName
     // TODO: Fetch related events for references/comments count
     const creatorName =
@@ -22,6 +22,14 @@ export function TaskCard({ task, onTaskSelect, onDeleteTask }: TaskCardProps) {
     const createdAt = task.created_at ? new Date(task.created_at * 1000).toLocaleString() : "Unknown date";
     const references = 0; // Placeholder
     const comments = []; // Placeholder
+
+    const handleClick = () => {
+        router.push(`/project/${projectSlug}/${task.id}`);
+    }
+
+    const handleDelete = () => {
+        task.delete();
+    }
 
     return (
         <div
@@ -63,21 +71,19 @@ export function TaskCard({ task, onTaskSelect, onDeleteTask }: TaskCardProps) {
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onTaskSelect(task)} // Pass NDKTask
+                    onClick={handleClick}
                     className="rounded-md"
                 >
                     View
                 </Button>
-                {onDeleteTask && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive rounded-md"
-                        onClick={() => onDeleteTask(task.id)} // Use task.id
-                    >
-                        Delete
-                    </Button>
-                )}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive rounded-md"
+                    onClick={handleDelete}
+                >
+                    Delete
+                </Button>
             </div>
         </div>
     );

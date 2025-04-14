@@ -14,7 +14,6 @@ export function ProjectSettingsTab({ project, projectSlug }: ProjectSettingsTabP
         <ProjectSettings
             project={project}
             projectSlug={projectSlug}
-            // Pass other necessary props if any
         />
     );
 }

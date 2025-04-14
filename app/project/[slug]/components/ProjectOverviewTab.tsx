@@ -10,41 +10,28 @@ import { QuoteData } from "@/components/events/note/card";
 interface ProjectOverviewTabProps {
     project: NDKProject;
     projectSigner: NDKPrivateKeySigner | null;
-    // Event Handlers from parent
-    // onCreatePost removed as ActivityFeed handles it internally
-    onReply: (itemId: string, content: string) => void;
-    onRepost: (itemId: string) => void;
-    onQuote: (quoteData: QuoteData) => void;
-    onZap: (itemId: string) => void;
+    // onReply, onRepost, onQuote, onZap removed - handled by child components (NoteCard)
 }
 
 export function ProjectOverviewTab({
     project,
     projectSigner,
-    // onCreatePost removed from destructuring
-    onReply,
-    onRepost,
-    onQuote,
-    onZap,
+    // onReply, onRepost, onQuote, onZap removed from destructuring
 }: ProjectOverviewTabProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {" "}
             {/* Adjusted grid to 2 cols */}
             {projectSigner && (
                 <ActivityFeed
                     project={project}
                     signer={projectSigner}
-                    // onCreatePost prop removed from here
-                    onReply={onReply}
-                    onRepost={onRepost}
-                    onQuote={onQuote}
-                    onZap={onZap}
+                    // onReply, onRepost, onZap removed - handled by NoteCard internally
                 />
             )}
-            {/* If no signer, maybe show a placeholder or adjust grid? */}
             {!projectSigner && <div className="text-muted-foreground">Activity feed requires project signer.</div>}
-            <RelatedTweets project={project} onReply={onReply} onRepost={onRepost} onQuote={onQuote} onZap={onZap} />
+            {/* Keep onReply for now as RelatedTweets has its own reply UI */}
+            {/* If NoteCard's internal reply is sufficient, remove onReply here too */}
+            <RelatedTweets project={project} onReply={() => { /* Placeholder if needed, or remove if NoteCard handles all replies */ }} />
         </div>
     );
 }

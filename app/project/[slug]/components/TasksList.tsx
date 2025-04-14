@@ -5,16 +5,17 @@ import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { NDKProject } from "@/lib/nostr/events/project";
+import { CreateTaskDialog } from "./CreateTaskDialog";
+import { useState } from "react";
 
 interface TasksListProps {
     project: NDKProject;
-    onTaskSelect: (task: NDKTask) => void; // Expect NDKTask
-    onAddTaskClick?: () => void; // Renamed prop
-    onDeleteTask?: (taskId: string) => void;
+    projectSlug: string;
 }
 
-export function TasksList({ project, onTaskSelect, onAddTaskClick, onDeleteTask }: TasksListProps) {
+export function TasksList({ project, projectSlug }: TasksListProps) {
     const { events } = useSubscribe([{ kinds: [NDKTask.kind], ...project.filter() }]);
+    const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
 
     return (
         <Card className="rounded-md border-border">
@@ -24,7 +25,7 @@ export function TasksList({ project, onTaskSelect, onAddTaskClick, onDeleteTask 
                         <CardTitle className="text-xl">Tasks</CardTitle>
                         <CardDescription>Manage project tasks and track progress</CardDescription>
                     </div>
-                    <Button size="sm" className="rounded-md" onClick={onAddTaskClick}>
+                    <Button size="sm" className="rounded-md" onClick={() => setIsCreateTaskOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Task
                     </Button>
@@ -39,8 +40,7 @@ export function TasksList({ project, onTaskSelect, onAddTaskClick, onDeleteTask 
                                 <TaskCard
                                     key={task.id}
                                     task={task}
-                                    onTaskSelect={onTaskSelect}
-                                    onDeleteTask={onDeleteTask}
+                                    projectSlug={projectSlug}
                                 />
                             );
                         })
@@ -51,6 +51,12 @@ export function TasksList({ project, onTaskSelect, onAddTaskClick, onDeleteTask 
                     )}
                 </div>
             </CardContent>
+
+            <CreateTaskDialog
+                project={project}
+                open={isCreateTaskOpen}
+                onOpenChange={setIsCreateTaskOpen}
+            />
         </Card>
     );
 }

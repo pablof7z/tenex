@@ -30,13 +30,6 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
     const [isSaving, setIsSaving] = useState(false);
     const { ndk } = useNDK();
 
-    // Update state if project prop changes externally (e.g., after main settings save)
-    useEffect(() => {
-        setName(profile?.name || "");
-        setDisplayName(profile?.displayName || "");
-        setBio(profile?.about || "");
-        setImage(profile?.image || "");
-    }, [project.tagId()]);
 
     const handleSaveProfile = async () => {
         if (!ndk) return;
@@ -61,7 +54,6 @@ export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAge
             kind: 0,
             content: serializeProfile(updatedProfile),
         });
-        console.log("Profile Event:", profileEvent.content);
         await profileEvent.sign(signer);
         profileEvent.publish();
         toast({

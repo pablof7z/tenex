@@ -1,31 +1,28 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { NDKPrivateKeySigner, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks"; // Removed useSubscribe
+import { NDKPrivateKeySigner, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; // Added Link import
+import Link from "next/link";
 import { AppLayout } from "@/components/app-layout";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
 import { useProjectStore } from "@/lib/store/projects"; // Import the project store
-import { QuoteData } from "@/components/events/note/card";
-// Removed Alert components as status checks are removed
-import { Toolbar } from "@/components/ui/Toolbar"; // Import the new Toolbar
-// Removed Alert components as status checks are removed
-// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-// import { AlertTriangle } from "lucide-react";
+// QuoteData import removed as quoting is handled in NoteCard
+import { Toolbar } from "@/components/ui/Toolbar";
 
 // Import common components
 import { ProjectHeader } from "./components/ProjectHeader";
 import { ProjectStatCards } from "./components/ProjectStatCards";
-import { QuotePostDialog } from "./components/QuotePostDialog";
+// QuotePostDialog import removed
 
 // Import the new Tab components
 import { ProjectOverviewTab } from "./components/ProjectOverviewTab";
 import { ProjectTasksTab } from "./components/ProjectTasksTab";
 import { ProjectSettingsTab } from "./components/ProjectSettingsTab";
 import { ProjectSpecsTab } from "./components/ProjectSpecsTab";
+import { TasksList } from "./components/TasksList";
 
 // Define static tab labels outside the component
 const TAB_LABELS = ["Overview", "Tasks", "Specs", "Settings"];
@@ -43,16 +40,9 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     const isLoadingStoreProjects = useProjectStore((state) => state.isLoading); // Check if store is loading
     const storeError = useProjectStore((state) => state.error); // Check for store errors
 
-    // Remove useSubscribe hook
-    // const { events: projects } = useSubscribe(...);
-    // const projectEvent = useMemo(() => projects[0], [projects]);
-    // const project = useMemo(() => (projectEvent ? NDKProject.from(projectEvent) : null), [projectEvent]);
-
-    console.log("project loaded", project?.inspect);
-
     // State management for UI interactions
     const [activeTab, setActiveTab] = useState("overview");
-    const [isQuoting, setIsQuoting] = useState<QuoteData | null>(null);
+    // isQuoting state removed
     const [projectSigner, setProjectSigner] = useState<NDKPrivateKeySigner | null>(null);
 
     // Memoize toolbarTabs creation based on static labels and setActiveTab
@@ -69,11 +59,9 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
         return index >= 0 ? index : 0; // Default to 0 if not found
     }, [activeTab, toolbarTabs]);
 
-    // Removed local useEffect for isConfigReady/configError - Handled by useConfig hook directly
     // --- Event Handlers ---
     const handleSettingsClick = () => setActiveTab("settings");
     const handleEditorLaunch = async () => {
-        // setFetchStatusError(null); // Clear previous errors - State removed
         // Config readiness check remains important for API calls
         if (!isConfigReady) {
             toast({
@@ -106,21 +94,8 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
             toast({ title: "Editor Launch Failed", description: message, variant: "destructive" });
         }
     };
-    const handleReply = (itemId: string, content: string) =>
-        console.log("Replying to:", itemId, "with content:", content);
-    const handleRepost = (itemId: string) => console.log("Reposting:", itemId);
-    const handleQuote = (quoteData: QuoteData) => setIsQuoting(quoteData);
-    const handleQuoteSubmit = (quoteData: QuoteData, comment: string) => {
-        console.log("Quoting:", quoteData, "with comment:", comment);
-        setIsQuoting(null);
-    };
-    const handleZap = (itemId: string) => console.log("Zapping:", itemId);
-    const handleDeleteTask = (taskId: string) => console.log("Deleting task:", taskId);
-    const handleNavigateToTask = (task: NDKTask) => {
-        if (task && projectSlug) {
-            router.push(`/project/${projectSlug}/${task.id}`);
-        }
-    };
+    // handleReply, handleRepost, handleQuote, handleQuoteSubmit, handleZap removed
+    const handleDeleteTask = (taskId: string) => { /* Placeholder: Implement actual task deletion */ };
     // --- End Event Handlers ---
 
     // Get project signer
@@ -179,8 +154,6 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
     return (
         <AppLayout>
-            {/* Display Configuration or Status Fetch Error Alert if present */}
-            {/* Display Configuration Error Alert if present */}
             {configError && (
                 <div className="mb-4 p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
                     <h3 className="font-semibold">Configuration Error</h3>
@@ -198,9 +171,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 onSettingsClick={handleSettingsClick}
                 onEditorLaunch={handleEditorLaunch}
                 // Provide dummy props for removed functionality to satisfy types
-                onProjectCreate={() => {
-                    console.warn("Project creation called from header, but functionality removed.");
-                }}
+                onProjectCreate={() => { /* No-op: Creation handled elsewhere */ }}
                 projectExists={true} // Assume exists if on this page
                 isCreatingProject={false} // Creation state removed
                 isConfigReady={isConfigReady}
@@ -208,51 +179,35 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
             <ProjectStatCards project={project} />
 
-            {/* Replace TabsList with Toolbar */}
             <div className="w-full mt-6 flex justify-center"> {/* Center the toolbar */}
-                 <Toolbar tabs={toolbarTabs} initialActiveIndex={initialActiveIndex} />
+                <Toolbar tabs={toolbarTabs} initialActiveIndex={initialActiveIndex} />
             </div>
 
-                {/* Conditionally render tab content based on activeTab */}
+            {/* Tab Content Area */}
+            <div className="mt-6">
                 {activeTab === 'overview' && (
-                    <div className="mt-6">
-                        <ProjectOverviewTab
-                            project={project}
-                            projectSigner={projectSigner}
-                            onReply={handleReply}
-                            onRepost={handleRepost}
-                            onQuote={handleQuote}
-                            onZap={handleZap}
-                        />
-                    </div>
+                    <ProjectOverviewTab
+                        project={project}
+                        projectSigner={projectSigner}
+                        // onReply, onRepost, onQuote, onZap removed
+                    />
                 )}
 
                 {activeTab === 'tasks' && (
-                     <div className="mt-6">
-                        <ProjectTasksTab
-                            project={project}
-                            onTaskSelect={handleNavigateToTask}
-                            onDeleteTask={handleDeleteTask}
-                            onTasksUpdate={() => console.log("Tasks updated, refetch needed")}
-                        />
-                    </div>
+                    <TasksList
+                        project={project}
+                        projectSlug={projectSlug}
+                    />
                 )}
 
                 {activeTab === 'specs' && (
-                    <div className="mt-6">
-                        <ProjectSpecsTab project={project} projectSlug={projectSlug} />
-                    </div>
+                    <ProjectSpecsTab project={project} projectSlug={projectSlug} />
                 )}
 
                 {activeTab === 'settings' && (
-                     <div className="mt-6">
-                        <ProjectSettingsTab project={project} projectSlug={projectSlug} />
-                    </div>
+                    <ProjectSettingsTab project={project} projectSlug={projectSlug} />
                 )}
-            {/* Removed closing </Tabs> tag */}
-
-            {/* Dialogs */}
-            <QuotePostDialog quoting={isQuoting} onClose={() => setIsQuoting(null)} onQuote={handleQuoteSubmit} />
+            </div>
         </AppLayout>
     );
 }

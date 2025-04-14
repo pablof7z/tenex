@@ -1,4 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+bun.lock
+.clinerules
 
 # dependencies
 /node_modules
@@ -30,3 +32,6 @@ next-env.d.ts
 .roomodes
 .roo
 bun.lock
+
+.repomix*
+

@@ -14,14 +14,11 @@ interface ActivityFeedProps {
     project: NDKProject;
     signer: NDKPrivateKeySigner;
     // onCreatePost removed
-    onReply: (activityId: string, content: string) => void;
-    onRepost: (activityId: string) => void;
-    // onQuote: (quoteData: QuoteData) => void; // Removed, handled by NoteCard
-    onZap: (activityId: string) => void;
+    // onReply, onRepost, onZap removed - handled by NoteCard internally
     // We don't need onCreateIssue prop here, we handle it internally
 }
 
-export function ActivityFeed({ project, signer, onReply, onRepost, /* onQuote removed */ onZap }: ActivityFeedProps) {
+export function ActivityFeed({ project, signer }: ActivityFeedProps) { // Removed onReply, onRepost, onZap
     const { ndk } = useNDK();
     const projectPubkey = signer.pubkey;
     const { events } = useSubscribe([{ kinds: [1], authors: [projectPubkey], limit: 50 }], {}, [projectPubkey]);

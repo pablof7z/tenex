@@ -8,14 +8,14 @@ import { toast } from "@/components/ui/use-toast"; // Import toast
 
 interface RelatedTweetsProps {
     project: NDKProject;
+    // onRepost, onQuote, onZap removed - handled by NoteCard internally
+    // onReply is kept as RelatedTweets has its own reply implementation distinct from NoteCard's internal one for now.
+    // If NoteCard's internal reply is sufficient, these could be removed too.
     onReply: (tweetId: string, content: string) => void;
-    onRepost: (tweetId: string) => void;
-    onQuote: (quoteData: QuoteData) => void;
-    onZap: (tweetId: string) => void;
     // No need for onCreateIssue prop here, handled internally
 }
 
-export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: RelatedTweetsProps) {
+export function RelatedTweets({ project, onReply }: RelatedTweetsProps) { // Removed onRepost, onQuote, onZap
     // Ensure project.hashtags is an array before using it in the filter
     const tagsToSubscribe =
         Array.isArray(project.hashtags) && project.hashtags.length > 0 ? project.hashtags : undefined;
@@ -92,15 +92,9 @@ export function RelatedTweets({ project, onReply, onRepost, onQuote, onZap }: Re
                         <NoteCard
                             key={event.id}
                             event={event}
-                            isReplying={replyingTo === event.id}
-                            replyContent={replyingTo === event.id ? replyContent : ""} // Only pass content if replying to this tweet
-                            onReplyContentChange={setReplyContent}
-                            onShowReply={setReplyingTo}
-                            onCancelReply={() => setReplyingTo(null)}
-                            onSendReply={handleSendReply}
-                            onRepost={onRepost}
-                            onQuote={onQuote}
-                            onZap={onZap}
+                            // Reply props removed - NoteCard handles its own internal reply state/UI
+                            // The reply state/handlers in RelatedTweets are for its *own* reply feature, if different.
+                            // onRepost, onQuote, onZap removed - handled by NoteCard
                             onCreateIssue={handleCreateIssueClick} // Pass the handler
                         />
                     ))}

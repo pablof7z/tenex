@@ -23,14 +23,12 @@ import { toast } from "@/components/ui/use-toast";
 import UserAvatar from "../user/avatar";
 
 export function UserDropdown() {
-    const [isLoading, setIsLoading] = useState(false);
     const currentUser = useNDKCurrentUser();
     const profile = useProfile(currentUser?.pubkey);
     const ndkLogin = useNDKSessionLogin();
     const logout = useNDKSessionLogout();
 
     const handleLogin = async () => {
-        setIsLoading(true);
         console.log("Login button clicked (UserDropdown)");
         try {
             const signer = new NDKNip07Signer();
@@ -69,8 +67,6 @@ export function UserDropdown() {
                 description: description,
                 variant: "destructive",
             });
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -82,14 +78,6 @@ export function UserDropdown() {
             description: "You have been successfully logged out.",
         });
     };
-
-    if (isLoading) {
-        return (
-            <Button variant="outline" size="sm" disabled>
-                Loading...
-            </Button>
-        );
-    }
 
     return currentUser ? (
         <DropdownMenu>

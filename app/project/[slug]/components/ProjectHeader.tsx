@@ -1,17 +1,18 @@
 import Link from "next/link";
-import { ArrowLeft, Code, GitBranch, Settings, Loader2, FolderPlus } from "lucide-react"; // Added Loader2, FolderPlus
+import { ArrowLeft, Code, GitBranch, Settings, Loader2, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NDKProject } from "@/lib/nostr/events/project";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConfigAwareButton } from "./ConfigAwareButton"; // Import the new component
 
 interface ProjectHeaderProps {
     project: NDKProject;
     onSettingsClick: () => void;
     onEditorLaunch: () => void;
-    onProjectCreate: () => void; // Changed from Promise<void> to void for simplicity here, parent handles async
+    onProjectCreate: () => void;
     projectExists: boolean | null; // null = loading, true = exists, false = doesn't exist
     isCreatingProject: boolean; // To disable button while creating
-    isConfigReady: boolean; // Added prop to indicate if backend config is ready
+    isConfigReady: boolean;
 }
 
 export function ProjectHeader({
@@ -21,7 +22,7 @@ export function ProjectHeader({
     onProjectCreate,
     projectExists,
     isCreatingProject,
-    isConfigReady, // Destructure the new prop
+    isConfigReady,
 }: ProjectHeaderProps) {
     const configNotReadyTooltip = "Configure Backend URL in Application Settings first";
 
@@ -36,19 +37,18 @@ export function ProjectHeader({
             <div>
                 <h1 className="text-3xl font-medium">{project.title || "Untitled Project"}</h1>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
-                    {/* Tagline removed */}
                     {project.repo && (
                         <>
                             <span className="text-muted-foreground hidden md:inline">•</span>
                             <p className="text-muted-foreground flex items-center">
                                 <GitBranch className="h-3.5 w-3.5 mr-1.5" />
                                 <a
-                                    href={`https://${project.repo}`} // Use project.repo
+                                    href={`https://${project.repo}`}
                                     className="hover:underline"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
-                                    {project.repo} {/* Use project.repo */}
+                                    {project.repo}
                                 </a>
                             </p>
                         </>
@@ -56,26 +56,18 @@ export function ProjectHeader({
                 </div>
             </div>
             <div className="ml-auto flex items-center gap-2 mt-2 md:mt-0">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            {/* Disable Settings button if config not ready */}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-md"
-                                onClick={onSettingsClick}
-                                disabled={!isConfigReady}
-                            >
-                                <Settings className="mr-2 h-4 w-4" />
-                                Settings
-                            </Button>
-                        </TooltipTrigger>
-                        {!isConfigReady && <TooltipContent>{configNotReadyTooltip}</TooltipContent>}
-                    </Tooltip>
-                </TooltipProvider>
+                <ConfigAwareButton
+                    variant="outline"
+                    size="sm"
+                    className="rounded-md"
+                    onClick={onSettingsClick}
+                    isConfigReady={isConfigReady}
+                    configNotReadyTooltip={configNotReadyTooltip}
+                >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                </ConfigAwareButton>
 
-                {/* Conditional rendering for Launch/Create button */}
                 {projectExists === null && (
                     <Button size="sm" className="rounded-md w-[140px]" disabled>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -83,46 +75,33 @@ export function ProjectHeader({
                     </Button>
                 )}
                 {projectExists === true && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                {/* Disable Launch Editor button if config not ready */}
-                                <Button
-                                    size="sm"
-                                    className="rounded-md w-[140px]"
-                                    onClick={onEditorLaunch}
-                                    disabled={!isConfigReady}
-                                >
-                                    <Code className="mr-2 h-4 w-4" />
-                                    Launch Editor
-                                </Button>
-                            </TooltipTrigger>
-                            {!isConfigReady && <TooltipContent>{configNotReadyTooltip}</TooltipContent>}
-                        </Tooltip>
-                    </TooltipProvider>
+                    <ConfigAwareButton
+                        size="sm"
+                        className="rounded-md w-[140px]"
+                        onClick={onEditorLaunch}
+                        isConfigReady={isConfigReady}
+                        configNotReadyTooltip={configNotReadyTooltip}
+                    >
+                        <Code className="mr-2 h-4 w-4" />
+                        Launch Editor
+                    </ConfigAwareButton>
                 )}
                 {projectExists === false && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                {/* Disable Create Project button if config not ready or already creating */}
-                                <Button
-                                    size="sm"
-                                    className="rounded-md w-[140px]"
-                                    onClick={onProjectCreate}
-                                    disabled={isCreatingProject || !isConfigReady}
-                                >
-                                    {isCreatingProject ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <FolderPlus className="mr-2 h-4 w-4" />
-                                    )}
-                                    {isCreatingProject ? "Creating..." : "Create Project"}
-                                </Button>
-                            </TooltipTrigger>
-                            {!isConfigReady && <TooltipContent>{configNotReadyTooltip}</TooltipContent>}
-                        </Tooltip>
-                    </TooltipProvider>
+                    <ConfigAwareButton
+                        size="sm"
+                        className="rounded-md w-[140px]"
+                        onClick={onProjectCreate}
+                        disabled={isCreatingProject} // Config readiness handled by ConfigAwareButton
+                        isConfigReady={isConfigReady}
+                        configNotReadyTooltip={configNotReadyTooltip}
+                    >
+                        {isCreatingProject ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <FolderPlus className="mr-2 h-4 w-4" />
+                        )}
+                        {isCreatingProject ? "Creating..." : "Create Project"}
+                    </ConfigAwareButton>
                 )}
             </div>
         </div>
