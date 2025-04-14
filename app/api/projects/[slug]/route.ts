@@ -78,7 +78,7 @@ export async function POST(
     const projectSlug = params.slug; // Changed projectId to projectSlug
     let description: string = ""; // Default description
     let nsec: string; // *** CHANGED: No longer optional ***
-    let gitRepoUrl: string | undefined;
+    let repoUrl: string | undefined;
     let eventId: string | undefined; // Added for the project event ID
     let title: string; // Added for the project title
     let hashtags: string | undefined; // Added for hashtags
@@ -114,7 +114,7 @@ export async function POST(
             }
             // Git Repo URL is optional
             if (body.repo && typeof body.repo === "string" && body.repo.trim() !== "") {
-                gitRepoUrl = body.repo;
+                repoUrl = body.repo;
             }
             // Hashtags are optional (expecting comma-separated string)
             if (body.hashtags && typeof body.hashtags === "string" && body.hashtags.trim() !== "") {
@@ -155,8 +155,8 @@ export async function POST(
         ];
 
         commandArgs.push("--nsec", `"${nsec.replace(/"/g, '\\"')}"`); // *** CHANGED: Always add nsec ***
-        if (gitRepoUrl) {
-            commandArgs.push("--repo", `"${gitRepoUrl.replace(/"/g, '\\"')}"`);
+        if (repoUrl) {
+            commandArgs.push("--repo", `"${repoUrl.replace(/"/g, '\\"')}"`);
         }
         if (hashtags) {
             commandArgs.push("--hashtags", `"${hashtags.replace(/"/g, '\\"')}"`);

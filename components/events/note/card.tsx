@@ -29,7 +29,7 @@ interface NoteCardProps {
     onCreateIssue?: (content: string) => void; // Keep optional prop
 
     // whehter to skip the tagged task label
-    skipTaggedTask: boolean;
+    skipTaggedTask?: boolean;
 }
 
 // Function to format timestamp

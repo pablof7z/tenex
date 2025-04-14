@@ -32,7 +32,7 @@ interface ProjectSettingsProps {
 export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) {
     const [name, setName] = useState(project.title || "");
     const [hashtags, setHashtags] = useState(project.hashtags?.join(", ") || "");
-    const [gitRepo, setGitRepo] = useState(project.repo || "");
+    const [repoUrl, setRepoUrl] = useState(project.repo || "");
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const router = useRouter();
@@ -44,7 +44,7 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
     const handleSave = async () => {
         setIsSaving(true);
         project.title = name;
-        project.repo = gitRepo;
+        project.repo = repoUrl;
         project.hashtags = hashtags
             .split(",")
             .map((tag) => tag.trim())
@@ -149,8 +149,8 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
                         <Label htmlFor="project-repo">Git Repository</Label>
                         <Input
                             id="project-repo"
-                            value={gitRepo}
-                            onChange={(e) => setGitRepo(e.target.value)}
+                            value={repoUrl}
+                            onChange={(e) => setRepoUrl(e.target.value)}
                             className="rounded-md"
                             placeholder="github.com/username/repo"
                             disabled={saveDisabled}

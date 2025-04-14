@@ -52,8 +52,6 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
     // State management for UI interactions
     const [activeTab, setActiveTab] = useState("overview");
-    // isQuoting state removed
-    const [projectSigner, setProjectSigner] = useState<NDKPrivateKeySigner | null>(null);
 
     // Memoize toolbarTabs creation based on static labels and setActiveTab
     const toolbarTabs = useMemo<[string, () => void][]>(() => [
@@ -104,23 +102,6 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
             toast({ title: "Editor Launch Failed", description: message, variant: "destructive" });
         }
     };
-    // handleReply, handleRepost, handleQuote, handleQuoteSubmit, handleZap removed
-    const handleDeleteTask = (taskId: string) => { /* Placeholder: Implement actual task deletion */ };
-    // --- End Event Handlers ---
-
-    // Get project signer
-    useEffect(() => {
-        if (!projectSigner && project) {
-            project
-                .getSigner()
-                .then(setProjectSigner)
-                .catch((error) => {
-                    console.error("Error getting project signer:", error);
-                });
-        }
-    }, [project, projectSigner]);
-
-    // --- Render Logic ---
 
     // Combined loading state check
     if (isConfigLoading || isLoadingProjectsSWR) {
@@ -208,7 +189,6 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 {activeTab === 'overview' && (
                     <ProjectOverviewTab
                         project={project}
-                        projectSigner={projectSigner}
                         // onReply, onRepost, onQuote, onZap removed
                     />
                 )}

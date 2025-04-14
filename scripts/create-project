@@ -84,7 +84,7 @@ const projectSlug = args.slug!; // Changed from projectId, non-null assertion ok
 const description = args.desc;
 const title = args.title!; // Added title, non-null assertion ok due to validation
 const nsec = args.nsec!; // *** CHANGED: Non-null assertion ok due to validation ***
-const gitRepoUrl = args.repo;
+const repoUrl = args.repo;
 const hashtagsInput = args.hashtags; // Comma-separated string or undefined
 const eventId = args.eventId!; // Now required, non-null assertion ok
 
@@ -130,13 +130,13 @@ async function createProject() {
         await mkdir(projectPath!, { recursive: true }); // Use non-null assertion
 
         // 3. Clone Git repo if provided
-        if (gitRepoUrl) {
-            console.log(`Cloning repository from ${gitRepoUrl} into ${projectPath!}...`); // Use non-null assertion
+        if (repoUrl) {
+            console.log(`Cloning repository from ${repoUrl} into ${projectPath!}...`); // Use non-null assertion
             try {
                 // Clone directly into the project path. Assumes the target dir is empty or non-existent before clone.
                 // We might need to adjust if the repo itself contains conflicting structure,
                 // or clone to a temp dir and merge. For now, direct clone.
-                await execAsync(`git clone --depth 1 "${gitRepoUrl}" "${projectPath!}"`); // Use non-null assertion
+                await execAsync(`git clone --depth 1 "${repoUrl}" "${projectPath!}"`); // Use non-null assertion
                 console.log(`Repository cloned successfully.`);
                 // Optionally remove .git directory if we don't want to keep repo history
                 // await execAsync(`rm -rf "${path.join(projectPath, '.git')}"`);
@@ -160,7 +160,7 @@ async function createProject() {
         // If not cloning, we copy the template.
         // Alternative: Always copy template, potentially overwriting cloned files (careful!).
         // Let's stick to: Clone OR Template Copy.
-        if (!gitRepoUrl) {
+        if (!repoUrl) {
             console.log(`Copying template from ${TEMPLATE_DIR} to ${projectPath!}...`); // Use non-null assertion
             try {
                 await access(TEMPLATE_DIR);
@@ -302,7 +302,7 @@ async function createProject() {
             title: title,    // Added title field
             nsec: nsec,      // *** CHANGED: Always present ***
             hashtags: hashtags,
-            repoUrl: gitRepoUrl || null,
+            repoUrl: repoUrl || null,
             eventId: eventId // Use non-null assertion as it's validated earlier
         };
 

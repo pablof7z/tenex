@@ -3,15 +3,18 @@ import fs from "fs/promises";
 import path from "path";
 import ndk from "@/lib/nostr/ndk"; // Import the singleton NDK instance
 import { NDKProject } from "@/lib/nostr/events/project";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+
 // Read the environment variable directly
 const PROJECTS_DIR = process.env.PROJECTS_PATH;
 const TENEX_CONFIG_FILE = ".tenex.json";
 
-interface ProjectConfig {
-    // Define the expected structure of .tenex.json if known
-    // For now, allow any structure
-    [key: string]: unknown; // Use unknown instead of any for better type safety
+export interface ProjectConfig {
+    pubkey: string;
+    nsec: string;
+    hashtags?: string[];
+    repoUrl?: string;
+    eventId?: string;
+    slug?: string;
 }
 
 export async function GET() {
@@ -24,6 +27,7 @@ export async function GET() {
             return NextResponse.json({ message: "Server configuration error: PROJECTS_PATH not set" }, { status: 500 });
         }
         const projectDirs = await fs.readdir(PROJECTS_DIR, { withFileTypes: true });
+        const projectConfigs: ProjectConfig[] = [];
         const projectNames: string[] = [];
 
         for (const dirent of projectDirs) {
@@ -35,6 +39,14 @@ export async function GET() {
                 try {
                     const configFileContent = await fs.readFile(configPath, "utf-8");
                     const configJson = JSON.parse(configFileContent) as ProjectConfig;
+                    const eventId = configJson.eventId;
+                    const slug = eventId ? eventId.split(/:/)[2] : dirent.name;
+
+                    projectConfigs.push({
+                        ...configJson,
+                        slug,
+                    });
+                    
                     // Store the project name (directory name) which acts as the dTag
                     projectNames.push(dirent.name);
                 } catch (error: unknown) {
@@ -57,27 +69,22 @@ export async function GET() {
             }
         }
 
-        // Ensure NDK is connected before fetching
-        await ndk.connect(); // Connect the singleton instance
-
         if (projectNames.length === 0) {
             return NextResponse.json([]); // Return empty if no projects found locally
         }
+
+        return NextResponse.json(projectConfigs);
 
         // Fetch NDKProject events using the project names as dTags
         const projectEvents = await ndk.fetchEvents([
             {
                 kinds: [NDKProject.kind],
                 "#d": projectNames,
-                // Potentially add authors filter if needed/possible
             },
         ]);
 
         // Convert Set<NDKEvent> to NDKEvent[] for JSON serialization
         const eventsArray = Array.from(projectEvents).map(e => e.rawEvent())
-
-        // Disconnect NDK if necessary (optional, depends on singleton management)
-        // ndk.disconnect();
 
         return NextResponse.json(eventsArray);
     } catch (error: unknown) {

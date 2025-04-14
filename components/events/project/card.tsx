@@ -2,32 +2,14 @@
 
 import Link from "next/link";
 import { Clock, FileText, GitBranch, MessageSquare, Settings, Users } from "lucide-react";
-// Removed NDKEvent and NDKProject imports as we'll use a simpler prop type
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadedProject } from "@/hooks/useProjects";
 
-// Define a simpler interface for the props needed by the card
-interface ProjectCardDisplayProps {
-    id: string; // Unique identifier for the key
-    slug: string; // The 'd' tag value or project name for the link
-    title: string;
-    description: string;
-    hashtags: string[];
-    repo?: string; // Optional repository URL string (e.g., "github.com/user/repo")
-    updatedAt?: number; // Optional timestamp (seconds)
-}
-
-export function ProjectCard({ project }: { project: ProjectCardDisplayProps }) {
+export function ProjectCard({ project }: { project: LoadedProject }) {
     // Use props directly
-    const { id, slug, title, description, hashtags, repo, updatedAt: updatedAtTimestamp } = project;
-
-    // Format timestamp if available
-    const updatedAt = updatedAtTimestamp
-        ? new Date(updatedAtTimestamp * 1000).toLocaleDateString() +
-          " " +
-          new Date(updatedAtTimestamp * 1000).toLocaleTimeString()
-        : "?";
+    const { slug, title, description, hashtags, repoUrl } = project;
 
     const peopleTalking = "?";
     const pendingTasks = "?";
@@ -53,16 +35,16 @@ export function ProjectCard({ project }: { project: ProjectCardDisplayProps }) {
 
                 <div className="flex items-center text-xs mb-4">
                     <GitBranch className="h-3.5 w-3.5 mr-1.5" />
-                    {/* Use repo directly */}
-                    {repo ? (
+                    {/* Use repoUrl directly */}
+                    {repoUrl ? (
                         <a
-                            href={repo.startsWith("http") ? repo : `https://${repo}`}
+                            href={repoUrl.startsWith("http") ? repoUrl : `https://${repoUrl}`}
                             className="text-foreground hover:underline truncate"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            {/* Display the repo URL */}
-                            {repo}
+                            {/* Display the repoUrl URL */}
+                            {repoUrl}
                         </a>
                     ) : (
                         <span className="text-muted-foreground">No repository linked</span>
@@ -91,9 +73,6 @@ export function ProjectCard({ project }: { project: ProjectCardDisplayProps }) {
 
             <CardFooter className="border-t pt-3 text-xs text-muted-foreground mt-auto flex items-center justify-between">
                 <div className="flex items-center">
-                    <Clock className="mr-1 h-3 w-3" />
-                    {/* Display formatted updatedAt */}
-                    <span>{updatedAt !== "?" ? `Updated ${updatedAt}` : "Update time unknown"}</span>
                 </div>
                 <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-secondary">

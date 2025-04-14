@@ -1,211 +1,25 @@
 "use client";
 
-import { useState } from "react"; // Removed useEffect, useCallback
-import { Plus, AlertTriangle, RefreshCw } from "lucide-react";
+import { NewProjectButton } from "@/components/projects/buttons/new";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link"; // Added Link import
-import { useNDK, useNDKCurrentUser, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk-hooks"; // Removed useSubscribe, NDKSubscriptionCacheUsage
-import { NDKProject } from "@/lib/nostr/events/project";
+import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks"; // Removed useSubscribe, NDKSubscriptionCacheUsage
 // We might need a different card or adapt the existing one if it relies heavily on NDKEvent properties
 import { ProjectCard } from "@/components/events/project/card";
-import { useToast } from "@/hooks/use-toast";
 import { useConfig } from "@/hooks/useConfig"; // Import useConfig
-// Removed useProjectStore import for project list fetching
-import { useProjectStore } from "@/lib/store/projects"; // Keep for loadProjectDetails if needed elsewhere or refactored later
 import { useProjects } from "@/hooks/useProjects"; // Import the SWR hook
+import { ActivityFeed } from "@/components/ActivityFeed";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { AppLayout } from "@/components/app-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
-import type { NDKTag } from "@nostr-dev-kit/ndk"; // Import NDKTag type
-// Define the expected shape of the project data from the API
-interface ApiProject {
-    projectName: string;
-    title?: string; // Assuming title might be in .tenex.json
-    description?: string; // Assuming description might be in .tenex.json
-    hashtags?: string[]; // Assuming hashtags might be in .tenex.json
-    repo?: string; // Assuming repo might be in .tenex.json
-    // Add other relevant fields from .tenex.json
-    nsec: string;
-    pubkey: string;
-    eventId?: string; // If the event ID is stored
-    deleted?: boolean; // Added based on filter logic
-}
 
 export default function DashboardPage() {
     const { ndk } = useNDK(); // Still needed for creating projects
     const currentUser = useNDKCurrentUser(); // Still needed for creating projects and context
 
-    // Use the SWR hook to fetch projects
     const { projects, isLoading: isLoadingProjects, isError: projectsError, mutateProjects } = useProjects();
-    // Keep loadProjectDetails from store if needed for other purposes (e.g., creating/updating)
-    // If not needed here, it can be removed. For now, keep it but don't use it for the list display.
-    const { loadProjectDetails } = useProjectStore();
-    const { toast } = useToast();
-    // Use the hook, getting isReady and error state
-    const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
-    const [isCreatingProject, setIsCreatingProject] = useState(false);
-    const [isCreating, setIsCreating] = useState(false); // For the create dialog
-    const [formData, setFormData] = useState({
-        name: "",
-        description: "",
-        hashtags: "",
-        gitRepo: "",
-    });
-    const [formError, setFormError] = useState<string | null>(null); // Error state for the create form
-
-    // Removed manual fetchProjects function and useEffect. SWR handles fetching.
-
-    // No need to memoize activeProjects separately, use directly from store
-    // const activeProjects = useMemo(() => projects, [projects]);
-
-    const handleCreateProject = async () => {
-        setFormError(null); // Clear previous form errors
-        if (!formData.name || !formData.description) {
-            setFormError("Project name and description are required.");
-            return;
-        }
-
-        if (!ndk || !currentUser) {
-            setFormError("You must be logged in to create a project.");
-            return;
-        }
-        // Check if config is ready and has no errors
-        if (!isConfigReady) {
-            // Error is already displayed via configError state, just prevent action
-            toast({
-                title: "Configuration Error",
-                description: configError || "Configuration is not ready.",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        try {
-            setIsCreating(true);
-
-            // Create a new NDK Project with the NDK instance
-            const project = new NDKProject(ndk);
-            project.ndk = ndk;
-            project.content = formData.description;
-
-            // Set project properties
-            project.title = formData.name;
-
-            // Process hashtags
-            if (formData.hashtags) {
-                const hashtagArray = formData.hashtags
-                    .split(",")
-                    .map((tag) => tag.trim())
-                    .filter((tag) => tag.length > 0);
-                project.hashtags = hashtagArray;
-            }
-
-            // Set git repository
-            if (formData.gitRepo) {
-                project.repo = formData.gitRepo;
-            }
-
-            const projectSigner = await project.getSigner();
-
-            // Publish the project event
-            await project.sign();
-            console.log("Project published successfully:", project);
-
-            // Now, create the local project structure
-            try {
-                // getApiUrl will now always return a string (relative or absolute)
-                // Use the project ID (which is the 'd' tag) for the API endpoint
-                const apiUrl = getApiUrl(`/projects/${project.slug}`); // Use tagId for the route param
-                const localCreateResponse = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        title: formData.name, // <-- Add title here
-                        // Send necessary data to the backend script
-                        description: formData.description,
-                        nsec: projectSigner.nsec,
-                        pubkey: projectSigner.pubkey,
-                        repo: formData.gitRepo || undefined,
-                        hashtags: formData.hashtags || undefined, // Send raw hashtags string
-                        eventId: project.tagId(),
-                    }),
-                });
-
-                if (!localCreateResponse.ok) {
-                    const errorData = await localCreateResponse
-                        .json()
-                        .catch(() => ({ error: "Failed to parse error response" }));
-                    throw new Error(
-                        errorData.error ||
-                            `Failed to create project backend structure: ${localCreateResponse.statusText}`,
-                    );
-                }
-
-                project.publish();
-
-                const localCreateData = await localCreateResponse.json();
-                console.log("Project backend structure created:", localCreateData);
-            } catch (backendError) {
-                console.error("Error creating project backend structure:", backendError);
-                toast({
-                    title: "Backend Error",
-                    description:
-                        backendError instanceof Error
-                            ? backendError.message
-                            : "Failed to create project backend files.",
-                    variant: "default", // Keep as default/warning since Nostr event succeeded
-                });
-            }
-
-            // Show success toast
-            toast({
-                title: "Project created",
-                description: `${formData.name} has been created successfully.`,
-                variant: "default",
-            });
-
-            // Reset form and close dialog
-            setFormData({ name: "", description: "", hashtags: "", gitRepo: "" });
-            setIsCreatingProject(false);
-            console.log("Project created successfully via Nostr:", project);
-            // Refetch projects from the API to update the list
-            mutateProjects(); // Trigger SWR revalidation
-        } catch (err) {
-            console.error("Error creating project:", err);
-            const errorMessage = err instanceof Error ? err.message : "Failed to create project";
-            setFormError(errorMessage); // Set form-specific error
-            toast({
-                title: "Error",
-                description: errorMessage,
-                variant: "destructive",
-            });
-        } finally {
-            setIsCreating(false);
-        }
-    };
-
-    // Determine if actions requiring API calls should be disabled
-    const actionsDisabled = !isConfigReady || isConfigLoading;
-    const configErrorTooltip = configError
-        ? `Configuration Error: ${configError}`
-        : !isConfigReady
-          ? "Loading configuration..."
-          : "";
+    const { isLoading: isConfigLoading, error: configError } = useConfig();
 
     return (
         <AppLayout>
@@ -226,143 +40,54 @@ export default function DashboardPage() {
 
             <div className="flex items-center justify-between mb-8">
                 <h1 className="text-3xl font-medium tracking-tight">Projects</h1>
-                <Dialog open={isCreatingProject} onOpenChange={setIsCreatingProject}>
-                    <DialogTrigger asChild disabled={actionsDisabled}>
-                        {/* Add tooltip for disabled state */}
-                        <Button className="rounded-md" disabled={actionsDisabled} title={configErrorTooltip}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            New Project {isConfigLoading ? "(Loading Config...)" : ""}
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[525px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl">Create new project</DialogTitle>
-                            <DialogDescription>
-                                Add the details for your new project. You can edit these later.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            {/* Form fields remain the same */}
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Project name</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="My Awesome Project"
-                                    className="rounded-md"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="spec">Description</Label>
-                                <Textarea
-                                    id="spec"
-                                    placeholder="Describe what you're building..."
-                                    className="rounded-md min-h-[100px]"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="hashtags">Related hashtags</Label>
-                                <Input
-                                    id="hashtags"
-                                    placeholder="nostr, bitcoin, development (comma separated)"
-                                    className="rounded-md"
-                                    value={formData.hashtags}
-                                    onChange={(e) => setFormData({ ...formData, hashtags: e.target.value })}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="gitRepo">Git Repository</Label>
-                                <Input
-                                    id="gitRepo"
-                                    placeholder="github.com/username/repository"
-                                    className="rounded-md"
-                                    value={formData.gitRepo}
-                                    onChange={(e) => setFormData({ ...formData, gitRepo: e.target.value })}
-                                />
-                            </div>
-                            {/* Display form-specific error */}
-                            {formError && <div className="text-red-500 text-sm mt-2">{formError}</div>}
-                            {/* Display config error as well if relevant */}
-                            {configError && <div className="text-orange-600 text-sm mt-2">Note: {configError}</div>}
-                        </div>
-                        <DialogFooter>
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    setIsCreatingProject(false);
-                                    setFormData({ name: "", description: "", hashtags: "", gitRepo: "" });
-                                    setFormError(null); // Clear form error on cancel
-                                }}
-                                className="rounded-md"
-                                disabled={isCreating}
-                            >
-                                Cancel
-                            </Button>
-                            {/* Disable create button if config not ready/error or already creating */}
-                            <Button
-                                onClick={handleCreateProject}
-                                className="rounded-md"
-                                disabled={isCreating || actionsDisabled}
-                                title={configErrorTooltip}
-                            >
-                                {isCreating ? "Creating..." : "Create project"}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <NewProjectButton onProjectCreated={mutateProjects} />
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {isLoadingProjects ? (
-                    <div className="col-span-3 text-center py-10 text-muted-foreground">
-                        <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
-                        <p>Loading projects...</p>
+            <div className="flex gap-6 w-full">
+                <div className="w-2/3">
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {isLoadingProjects ? (
+                            <div className="col-span-3 text-center py-10 text-muted-foreground">
+                                <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                <p>Loading projects...</p>
+                            </div>
+                        ) : projectsError ? (
+                            <div className="col-span-3">
+                                <Alert variant="destructive">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertTitle>Error Loading Projects</AlertTitle>
+                                    <AlertDescription>
+                                        {projectsError instanceof Error ? projectsError.message : String(projectsError)}
+                                        <Button variant="outline" size="sm" onClick={() => mutateProjects()} className="ml-4">
+                                            Retry
+                                        </Button>
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
+                        ) : projects && projects.length > 0 ? (
+                            // Now mapping over NDKProject instances from the SWR hook
+                            projects.map((project) => (
+                                <ProjectCard
+                                    key={project.slug} // Use dTag or event ID as key
+                                    // Adapt the passed project object to match ProjectCardDisplayProps
+                                    project={project}
+                                />
+                            )) // Add null check for projects before mapping
+                        ) : !isLoadingProjects ? ( // Only show "No projects" if not loading
+                            <div className="col-span-3 text-center py-10 text-muted-foreground">
+                                {currentUser ? (
+                                    <p>No projects found. Create your first project to get started!</p>
+                                ) : (
+                                    <p>Please log in to view your projects.</p>
+                                )}
+                            </div>
+                        ) : null /* Don't show anything while loading initially */}
                     </div>
-                ) : projectsError ? (
-                    <div className="col-span-3">
-                        <Alert variant="destructive">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertTitle>Error Loading Projects</AlertTitle>
-                            <AlertDescription>
-                                {projectsError instanceof Error ? projectsError.message : String(projectsError)}
-                                <Button variant="outline" size="sm" onClick={() => mutateProjects()} className="ml-4">
-                                    Retry
-                                </Button>
-                            </AlertDescription>
-                        </Alert>
-                    </div>
-                ) : projects && projects.length > 0 ? (
-                    // Now mapping over NDKProject instances from the SWR hook
-                    projects.map((project) => (
-                        <ProjectCard
-                            key={project.dTag || project.id} // Use dTag or event ID as key
-                            // Adapt the passed project object to match ProjectCardDisplayProps
-                            project={{
-                                id: project.id,
-                                slug: project.dTag || project.id || "unknown-slug", // Use dTag, fallback to id or placeholder
-                                title: project.title || project.dTag || "Untitled Project", // Ensure title is always a string, fallback to dTag or placeholder
-                                description: project.content,
-                                hashtags: project.hashtags,
-                                repo: project.repo,
-                                // Add other props expected by ProjectCardDisplayProps if necessary
-                                // For example, if it needs a specific date format:
-                                // updatedAt: project.created_at ? new Date(project.created_at * 1000).toLocaleDateString() : 'N/A',
-                            }}
-                        />
-                    )) // Add null check for projects before mapping
-                ) : !isLoadingProjects ? ( // Only show "No projects" if not loading
-                    <div className="col-span-3 text-center py-10 text-muted-foreground">
-                        {currentUser ? (
-                            <p>No projects found. Create your first project to get started!</p>
-                        ) : (
-                            <p>Please log in to view your projects.</p>
-                        )}
-                    </div>
-                ) : null /* Don't show anything while loading initially */}
+                </div>
+                <div className="w-1/3">
+                    <ActivityFeed
+                        pubkeys={projects && projects.length > 0 ? projects.map((p) => p.pubkey) : []}
+                    />
+                </div>
             </div>
         </AppLayout>
     );

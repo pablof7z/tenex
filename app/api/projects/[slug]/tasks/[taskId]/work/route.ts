@@ -115,16 +115,15 @@ export async function POST(
         );
     }
 
-    // Construct the Cline prompt
+    // Prepare the relative path for response
     const relativeTaskPath = path.relative(projectDirPath, taskFilePath); // Get path relative to project root
-    const finalClinePrompt = customClinePrompt || `Follow instructions in ${relativeTaskPath}.`;
 
-    // Execute the script asynchronously
-    exec(`"${scriptPath}" "${projectDirPath}" "${finalClinePrompt}"`, (error, stdout, stderr) => {
+    // Execute the script asynchronously, passing only the task file path
+    exec(`"${scriptPath}" "${taskFilePath}"`, (error, stdout, stderr) => {
         if (error) {
             // Log errors, but don't block the response as the main action (file creation) succeeded.
             console.error(
-                `Error executing open-editor script for ${projectDirPath} with prompt "${finalClinePrompt}": ${error.message}`,
+                `Error executing open-editor script for task file "${taskFilePath}": ${error.message}`,
             );
             console.error(`stderr: ${stderr}`);
         }

@@ -6,19 +6,18 @@ import { NDKProject } from "@/lib/nostr/events/project";
 import { NoteCard, QuoteData } from "@/components/events/note/card"; // Using NoteCard
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Removed NDKEvent
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { CreatePostDialog } from "./CreatePostDialog";
-import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
+import { CreatePostDialog } from "@/app/project/[slug]/components/CreatePostDialog";
+import { CreateIssueDialog } from "@/app/project/[slug]/components/CreateIssueDialog";
 import { toast } from "@/components/ui/use-toast"; // Keep toast for issue creation feedback
 
 interface ActivityFeedProps {
-    project: NDKProject;
-    signer: NDKPrivateKeySigner;
+    pubkeys: string[];
+    signer?: NDKPrivateKeySigner;
 }
 
-export function ActivityFeed({ project, signer }: ActivityFeedProps) {
+export function ActivityFeed({ pubkeys, signer }: ActivityFeedProps) {
     const { ndk } = useNDK();
-    const projectPubkey = signer.pubkey;
-    const { events } = useSubscribe([{ kinds: [1], authors: [projectPubkey], limit: 50 }], {}, [projectPubkey]);
+    const { events } = useSubscribe([{ kinds: [1], authors: pubkeys, limit: 50 }], {}, [pubkeys.join(",")]);
     const [isCreatingPost, setIsCreatingPost] = useState(false);
 
     // State for Create Issue Dialog
@@ -59,7 +58,7 @@ export function ActivityFeed({ project, signer }: ActivityFeedProps) {
                         <span className="sr-only">Create post</span>
                     </Button>
                 </div>
-                <CardDescription>Updates from the project agent</CardDescription>
+                <CardDescription>Updates from agents</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
@@ -82,14 +81,13 @@ export function ActivityFeed({ project, signer }: ActivityFeedProps) {
                 </div>
             </CardContent>
             {/* Render the Create Post dialog */}
-            <CreatePostDialog
-                open={isCreatingPost}
-                onClose={() => setIsCreatingPost(false)}
-                // ndk={ndk} // Removed, CreatePostDialog uses useNDK() hook
-                signer={signer} // Pass signer
-                // onPost removed
-                // isPosting removed
-            />
+            {signer && (
+                <CreatePostDialog
+                    open={isCreatingPost}
+                    onClose={() => setIsCreatingPost(false)}
+                    signer={signer}
+                />
+            )}
             {/* Render the Create Issue dialog */}
             <CreateIssueDialog
                 isOpen={isCreateIssueDialogOpen}

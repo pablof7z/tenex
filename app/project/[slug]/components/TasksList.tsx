@@ -4,17 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKTask } from "@/lib/nostr/events/task";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { CreateTaskDialog } from "./CreateTaskDialog";
 import { useState } from "react";
+import { LoadedProject } from "@/hooks/useProjects";
 
 interface TasksListProps {
-    project: NDKProject;
-    projectSlug: string;
+    project: LoadedProject;
 }
 
-export function TasksList({ project, projectSlug }: TasksListProps) {
-    const { events } = useSubscribe([{ kinds: [NDKTask.kind], ...project.filter() }]);
+export function TasksList({ project }: TasksListProps) {
+    const { events } = useSubscribe(project.event ? [
+        { kinds: [NDKTask.kind], ...project.event.filter() }
+    ] : false);
     const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
 
     return (
@@ -40,7 +41,7 @@ export function TasksList({ project, projectSlug }: TasksListProps) {
                                 <TaskCard
                                     key={task.id}
                                     task={task}
-                                    projectSlug={projectSlug}
+                                    projectSlug={project.slug}
                                 />
                             );
                         })

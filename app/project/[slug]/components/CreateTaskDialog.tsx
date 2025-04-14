@@ -18,15 +18,18 @@ import { useToast } from "@/components/ui/use-toast";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this exists
 import { Loader2 } from "lucide-react";
+import { LoadedProject } from "@/hooks/useProjects";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 
 interface CreateTaskDialogProps {
-    project: NDKProject;
+    project: LoadedProject;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onTaskCreated?: () => void; // Optional callback after task creation
 }
 
 export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }: CreateTaskDialogProps) {
+    const { ndk } = useNDK();
     const [taskTitle, setTaskTitle] = useState(""); // Added title state
     const [taskContent, setTaskContent] = useState("");
     const [isPublishing, setIsPublishing] = useState(false);
@@ -52,18 +55,16 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
 
         setIsPublishing(true);
         try {
-            if (!project.ndk) {
-                throw new Error("NDK instance is not available on the project.");
-            }
+            if (!ndk) throw new Error("NDK instance is not available on the project.");
 
             console.log("Creating NDKTask with title:", taskTitle, "and content:", taskContent);
-            const task = new NDKTask(project.ndk);
+            const task = new NDKTask(ndk);
             task.title = taskTitle.trim(); // Set the title
             task.content = taskContent.trim();
-            task.project = project; // Use the setter to add the 'a' tag
+            if (project.event) task.project = project.event; // Use the setter to add the 'a' tag
 
             console.log("Getting project signer...");
-            const projectSigner = await project.getSigner(); // Get project's signer
+            const projectSigner = await project.signer;
             task.pubkey = projectSigner.pubkey; // Task is published by the project key
             console.log("Task pubkey set to:", task.pubkey);
 

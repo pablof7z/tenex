@@ -5,27 +5,20 @@ import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NoteCard, QuoteData } from "@/components/events/note/card";
 import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
 import { toast } from "@/components/ui/use-toast"; // Import toast
+import { LoadedProject } from "@/hooks/useProjects";
 
 interface RelatedTweetsProps {
-    project: NDKProject;
-    // onRepost, onQuote, onZap removed - handled by NoteCard internally
-    // onReply is kept as RelatedTweets has its own reply implementation distinct from NoteCard's internal one for now.
-    // If NoteCard's internal reply is sufficient, these could be removed too.
-    onReply: (tweetId: string, content: string) => void;
-    // No need for onCreateIssue prop here, handled internally
+    project: LoadedProject;
 }
 
-export function RelatedTweets({ project, onReply }: RelatedTweetsProps) { // Removed onRepost, onQuote, onZap
-    // Ensure project.hashtags is an array before using it in the filter
+export function RelatedTweets({ project }: RelatedTweetsProps) {
     const tagsToSubscribe =
         Array.isArray(project.hashtags) && project.hashtags.length > 0 ? project.hashtags : undefined;
 
     const { events } = useSubscribe(tagsToSubscribe ? [{ kinds: [1], "#t": tagsToSubscribe, limit: 50 }] : false, {}, [
-        project.id,
+        project.slug,
         tagsToSubscribe,
     ]);
-    const [replyingTo, setReplyingTo] = useState<string | null>(null);
-    const [replyContent, setReplyContent] = useState("");
 
     // State for Create Issue Dialog
     const [isCreateIssueDialogOpen, setIsCreateIssueDialogOpen] = useState(false);
@@ -41,17 +34,6 @@ export function RelatedTweets({ project, onReply }: RelatedTweetsProps) { // Rem
             })
             .slice(0, 50);
     }, [events]);
-
-    const handleSendReply = (tweetId: string) => {
-        // ... (existing reply logic)
-        const trimmedContent = replyContent.trim();
-        if (trimmedContent) {
-            onReply(tweetId, trimmedContent);
-            setReplyContent("");
-            setReplyingTo(null);
-        }
-        setReplyingTo(null);
-    };
 
     // Handler to open the Create Issue dialog
     const handleCreateIssueClick = useCallback((content: string) => {
