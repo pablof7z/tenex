@@ -1,13 +1,16 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import NDK, { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK default
 import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
-import { MessageSquare, Repeat, Send, Zap, Plus, Loader2 } from "lucide-react"; // Import Plus, Loader2
+import { MessageSquare, Repeat, Send, Zap, Plus, Loader2, MoreHorizontal, Copy, Eye } from "lucide-react"; // Import necessary icons
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import UserAvatar from "../../user/avatar";
 import { toast } from "@/components/ui/use-toast";
 import { QuotePostDialog } from "@/app/project/[slug]/components/QuotePostDialog"; // Import QuotePostDialog
+import TaggedTask from "../TaggedTask";
 
 // Define QuoteData interface here to avoid circular dependencies
 export interface QuoteData {
@@ -24,6 +27,9 @@ interface NoteCardProps {
     // onRepost prop removed, handled internally
     // onQuote: (quoteData: QuoteData) => void; // Removed
     onCreateIssue?: (content: string) => void; // Keep optional prop
+
+    // whehter to skip the tagged task label
+    skipTaggedTask: boolean;
 }
 
 // Function to format timestamp
@@ -42,14 +48,13 @@ const getUserDisplayName = (profile: NDKUserProfile | undefined, user: NDKUser):
 const getUserHandle = (profile: NDKUserProfile | undefined, user: NDKUser): string => {
     // Add semicolon
     // Prefer npub for simplicity here, adjust if nprofile is needed
-    return profile?.nip05 ?? user.npub;
+    return profile?.nip05 ?? profile?.name ?? user.npub;
 };
 
 export function NoteCard({
     event,
-    // onRepost prop removed
-    // onQuote, // Removed
     onCreateIssue,
+    skipTaggedTask,
 }: NoteCardProps) {
     const { ndk } = useNDK(); // Get NDK instance
     // Signer is obtained from ndk instance (ndk.signer) implicitly during event.sign()
@@ -60,6 +65,7 @@ export function NoteCard({
     const [quoteDataForDialog, setQuoteDataForDialog] = useState<QuoteData | null>(null); // State for Quote Dialog
     const [isQuoting, setIsQuoting] = useState(false); // Loading state for quoting
 
+    const [showRawEventDialog, setShowRawEventDialog] = useState(false);
     // Note: Repost count and Zap amount require fetching related events (kind 6 for reposts, kind 9735 for zaps)
     // This basic component doesn't include that logic yet.
     const repostCount = 0; // Placeholder
@@ -230,16 +236,23 @@ export function NoteCard({
         setIsZapping(true);
         console.log("Attempting to zap event:", event.id, "by author:", event.pubkey);
         toast({ title: "Zap", description: "Zap functionality not fully implemented yet." });
-        // TODO: Implement NIP-57 Zap logic here
-        // 1. Fetch user profile for lud16/lud06
-        // 2. Construct zap request event (kind 9734)
-        // 3. Sign zap request
-        // 4. Make request to LNURL endpoint
-        // 5. Handle payment (WebLN?)
-        // 6. Publish zap receipt (kind 9735) - optional but good practice
         await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate async operation
         setIsZapping(false);
     }, [event]);
+    const handleCopyId = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(event.encode());
+            toast({ title: "Success", description: "Event ID (nevent) copied to clipboard!" });
+        } catch (err) {
+            console.error("Failed to copy event ID:", err);
+            toast({ title: "Error", description: "Could not copy event ID.", variant: "destructive" });
+        }
+    }, [event]);
+
+    const handleShowRawEvent = useCallback(() => {
+        setShowRawEventDialog(true);
+    }, []);
+
     // --- End Internal Handlers ---
 
     return (
@@ -254,6 +267,9 @@ export function NoteCard({
                             <span className="font-medium text-sm">{UserDisplayName}</span>
                             <span className="text-xs text-muted-foreground">@{UserHandle.substring(0, 8)}...</span>
                         </div>
+
+                        {!skipTaggedTask && <TaggedTask event={event} />}
+                        
                         <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                             <span>{formatTimestamp(event.created_at)}</span>
@@ -361,17 +377,42 @@ export function NoteCard({
                                         </Button>
                                     </div>
 
-                                    {/* Right-aligned button */}
-                                    {onCreateIssue && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="rounded-md hover:bg-secondary h-8 px-2"
-                                            onClick={() => onCreateIssue(event.content)}
-                                        >
-                                            <Plus className="h-3.5 w-3.5" />
-                                        </Button>
-                                    )}
+                                    {/* Right-aligned buttons */}
+                                    <div className="flex items-center gap-1">
+                                        {onCreateIssue && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="rounded-md hover:bg-secondary h-8 px-2"
+                                                onClick={() => onCreateIssue(event.content)}
+                                                title="Create Issue from Note"
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="rounded-md hover:bg-secondary h-8 w-8"
+                                                >
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">More options</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={handleCopyId}>
+                                                    <Copy className="mr-2 h-4 w-4" />
+                                                    <span>Copy Event ID</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={handleShowRawEvent}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    <span>Show Raw Event</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -386,6 +427,20 @@ export function NoteCard({
                 // Pass isQuoting state if QuotePostDialog is updated to show loading
                 // isPosting={isQuoting}
             />
+
+            {/* Raw Event Dialog */}
+            <Dialog open={showRawEventDialog} onOpenChange={setShowRawEventDialog}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Raw Nostr Event</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4 max-h-[60vh] overflow-auto rounded-md bg-muted p-4">
+                        <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+                            {JSON.stringify(event.rawEvent(), null, 2)}
+                        </pre>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

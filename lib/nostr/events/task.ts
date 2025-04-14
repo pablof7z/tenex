@@ -29,4 +29,9 @@ export class NDKTask extends NDKEvent {
         this.removeTag("a");
         this.tags.push(project.tagReference()); // we use this to only get the 'a' tag, no need for e or p tags
     }
+
+    get projectSlug(): string | undefined {
+        const tag = this.getMatchingTags("a")[0];
+        return tag ? tag[1].split(/:/)?.[2] : undefined;
+    }
 }

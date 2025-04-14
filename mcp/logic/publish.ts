@@ -53,7 +53,7 @@ export async function publishNote(
         // Create the event
         // Prepare tags
         const tags: NDKTag[] = [];
-        if (taskId) tags.push(["e", taskId]);
+        if (taskId) tags.push(["e", taskId, "", "task"]);
 
         if (previousEventId) {
             // Tag the previous event in the sequence for this task

@@ -8,7 +8,8 @@ import { AppLayout } from "@/components/app-layout";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
-import { useProjectStore } from "@/lib/store/projects"; // Import the project store
+import { useProjectStore } from "@/lib/store/projects"; // Keep for potential future use (e.g., updates), but not for initial load
+import { useProjects } from "@/hooks/useProjects"; // Import the SWR hook
 // QuoteData import removed as quoting is handled in NoteCard
 import { Toolbar } from "@/components/ui/Toolbar";
 
@@ -19,7 +20,7 @@ import { ProjectStatCards } from "./components/ProjectStatCards";
 
 // Import the new Tab components
 import { ProjectOverviewTab } from "./components/ProjectOverviewTab";
-import { ProjectTasksTab } from "./components/ProjectTasksTab";
+// Removed incorrect import for ProjectTasksTab
 import { ProjectSettingsTab } from "./components/ProjectSettingsTab";
 import { ProjectSpecsTab } from "./components/ProjectSpecsTab";
 import { TasksList } from "./components/TasksList";
@@ -34,11 +35,20 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     // Use the config hook primarily for API URL construction now
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
 
-    // Get project from the Zustand store
-    const findProjectById = useProjectStore((state) => state.findProjectById);
-    const project = useMemo(() => findProjectById(projectSlug), [findProjectById, projectSlug]);
-    const isLoadingStoreProjects = useProjectStore((state) => state.isLoading); // Check if store is loading
-    const storeError = useProjectStore((state) => state.error); // Check for store errors
+    // Use the SWR hook to ensure projects are loaded/cached
+    const { projects: allProjects, isLoading: isLoadingProjectsSWR, isError: projectsErrorSWR } = useProjects();
+
+    // Find the specific project from the SWR data
+    const project = useMemo(() => {
+        if (!allProjects) return undefined;
+        // Assuming project.slug matches the route slug (dTag)
+        return allProjects.find(p => p.slug === projectSlug);
+    }, [allProjects, projectSlug]);
+
+    // Keep store access for potential updates if needed later, but remove direct loading/error checks from it
+    // const findProjectById = useProjectStore((state) => state.findProjectById); // No longer needed for lookup here
+    // const isLoadingStoreProjects = useProjectStore((state) => state.isLoading); // Use SWR loading state
+    // const storeError = useProjectStore((state) => state.error); // Use SWR error state
 
     // State management for UI interactions
     const [activeTab, setActiveTab] = useState("overview");
@@ -112,36 +122,46 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
     // --- Render Logic ---
 
-    if (isConfigLoading) {
+    // Combined loading state check
+    if (isConfigLoading || isLoadingProjectsSWR) {
         return (
             <AppLayout>
-                <div className="p-4">Loading configuration...</div>
-            </AppLayout>
-        );
-    }
-    if (isLoadingStoreProjects) {
-        return (
-            <AppLayout>
-                <div className="p-4">Loading projects from store...</div>
+                <div className="p-4">Loading...</div>
             </AppLayout>
         );
     }
 
     // Error state checks
-    if (storeError) {
+    // Combined error state check (Config error is handled separately below)
+    if (projectsErrorSWR) {
         return (
             <AppLayout>
-                <div className="p-4 text-red-600">Error loading projects from store: {storeError}</div>
+                {/* Display config error first if it exists */}
+                {configError && (
+                    <div className="mb-4 p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
+                        <h3 className="font-semibold">Configuration Error</h3>
+                        <p>{configError} <Link href="/settings" className="underline ml-1">Check Settings</Link></p>
+                    </div>
+                )}
+                <div className="p-4 text-red-600">Error loading projects: {projectsErrorSWR.message || 'Unknown error'}</div>
             </AppLayout>
         );
     }
 
     // If project not found in store after loading
+    // Check if project exists after loading and without errors
     if (!project) {
         return (
             <AppLayout>
+                 {/* Display config error first if it exists */}
+                 {configError && (
+                    <div className="mb-4 p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
+                        <h3 className="font-semibold">Configuration Error</h3>
+                        <p>{configError} <Link href="/settings" className="underline ml-1">Check Settings</Link></p>
+                    </div>
+                )}
                 <div className="p-4 text-red-600">
-                    Error: Project with ID '{projectSlug}' not found in the store. Did you visit the dashboard first?
+                    Error: Project with slug '{projectSlug}' not found.
                 </div>
             </AppLayout>
         );
@@ -194,7 +214,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 )}
 
                 {activeTab === 'tasks' && (
-                    <TasksList
+                    <TasksList // Use TasksList directly
                         project={project}
                         projectSlug={projectSlug}
                     />

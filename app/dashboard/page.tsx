@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"; // Removed useMemo as activeProjects comes from store now
+import { useState } from "react"; // Removed useEffect, useCallback
 import { Plus, AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link"; // Added Link import
 import { useNDK, useNDKCurrentUser, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk-hooks"; // Removed useSubscribe, NDKSubscriptionCacheUsage
@@ -9,7 +9,9 @@ import { NDKProject } from "@/lib/nostr/events/project";
 import { ProjectCard } from "@/components/events/project/card";
 import { useToast } from "@/hooks/use-toast";
 import { useConfig } from "@/hooks/useConfig"; // Import useConfig
-import { useProjectStore } from "@/lib/store/projects"; // Import the Zustand store
+// Removed useProjectStore import for project list fetching
+import { useProjectStore } from "@/lib/store/projects"; // Keep for loadProjectDetails if needed elsewhere or refactored later
+import { useProjects } from "@/hooks/useProjects"; // Import the SWR hook
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,16 +48,11 @@ export default function DashboardPage() {
     const { ndk } = useNDK(); // Still needed for creating projects
     const currentUser = useNDKCurrentUser(); // Still needed for creating projects and context
 
-    // State for projects fetched from API
-    const {
-        projects,
-        isLoading: isLoadingProjects,
-        error: projectsError,
-        setProjects,
-        setLoading: setIsLoadingProjects,
-        setError: setProjectsError,
-        loadProjectDetails,
-    } = useProjectStore();
+    // Use the SWR hook to fetch projects
+    const { projects, isLoading: isLoadingProjects, isError: projectsError, mutateProjects } = useProjects();
+    // Keep loadProjectDetails from store if needed for other purposes (e.g., creating/updating)
+    // If not needed here, it can be removed. For now, keep it but don't use it for the list display.
+    const { loadProjectDetails } = useProjectStore();
     const { toast } = useToast();
     // Use the hook, getting isReady and error state
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
@@ -69,58 +66,7 @@ export default function DashboardPage() {
     });
     const [formError, setFormError] = useState<string | null>(null); // Error state for the create form
 
-    // Function to fetch projects from the API
-    // Function to fetch projects from the API and populate the store
-    const fetchProjects = useCallback(async () => {
-        if (!ndk) {
-            console.warn("NDK not available yet, skipping fetchProjects.");
-            return;
-        }
-        setIsLoadingProjects(true);
-        setProjectsError(null);
-        try {
-            const apiUrl = getApiUrl("/projects");
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: "Failed to fetch projects" }));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            const data: ApiProject[] = await response.json();
-
-            // Load signer and pubkey details into the store from the API data
-            data.forEach((apiProject) => {
-                if (apiProject.projectName && apiProject.nsec && apiProject.pubkey) {
-                    loadProjectDetails(apiProject.projectName, apiProject.nsec, apiProject.pubkey);
-                } else {
-                    console.warn("Missing data for loading project details:", apiProject);
-                }
-            });
-
-            // Fetch NDK events based on event IDs from API data (if available)
-            const slugs = data.map((p) => p.projectName).filter(Boolean) as string[]; // Use projectName as slug
-
-            // Fetch based on slugs (#d tag) as primary identifier if eventId is missing
-            const ndkProjects = await ndk.fetchEvents([{ kinds: [NDKProject.kind], "#d": slugs }]);
-
-            setProjects(Array.from(ndkProjects).map(NDKProject.from));
-            console.log("Fetched NDK events and set projects in store:", ndkProjects);
-        } catch (error) {
-            console.error("Failed to fetch projects:", error);
-            const message = error instanceof Error ? error.message : "An unknown error occurred";
-            setProjectsError(message);
-            setProjects([]); // Clear projects in store on error
-        } finally {
-            setIsLoadingProjects(false);
-        }
-    }, [ndk, setIsLoadingProjects, setProjectsError, setProjects, loadProjectDetails, getApiUrl]); // Add loadProjectDetails and getApiUrl
-
-    // Fetch projects on component mount
-    // Fetch projects when NDK is ready
-    useEffect(() => {
-        if (ndk) {
-            fetchProjects();
-        }
-    }, [ndk, fetchProjects]); // Depend on ndk instance availability
+    // Removed manual fetchProjects function and useEffect. SWR handles fetching.
 
     // No need to memoize activeProjects separately, use directly from store
     // const activeProjects = useMemo(() => projects, [projects]);
@@ -238,7 +184,7 @@ export default function DashboardPage() {
             setIsCreatingProject(false);
             console.log("Project created successfully via Nostr:", project);
             // Refetch projects from the API to update the list
-            fetchProjects();
+            mutateProjects(); // Trigger SWR revalidation
         } catch (err) {
             console.error("Error creating project:", err);
             const errorMessage = err instanceof Error ? err.message : "Failed to create project";
@@ -382,15 +328,15 @@ export default function DashboardPage() {
                             <AlertTriangle className="h-4 w-4" />
                             <AlertTitle>Error Loading Projects</AlertTitle>
                             <AlertDescription>
-                                {projectsError}
-                                <Button variant="outline" size="sm" onClick={fetchProjects} className="ml-4">
+                                {projectsError instanceof Error ? projectsError.message : String(projectsError)}
+                                <Button variant="outline" size="sm" onClick={() => mutateProjects()} className="ml-4">
                                     Retry
                                 </Button>
                             </AlertDescription>
                         </Alert>
                     </div>
-                ) : projects.length > 0 ? (
-                    // Now mapping over NDKProject instances from the store
+                ) : projects && projects.length > 0 ? (
+                    // Now mapping over NDKProject instances from the SWR hook
                     projects.map((project) => (
                         <ProjectCard
                             key={project.dTag || project.id} // Use dTag or event ID as key
@@ -407,16 +353,16 @@ export default function DashboardPage() {
                                 // updatedAt: project.created_at ? new Date(project.created_at * 1000).toLocaleDateString() : 'N/A',
                             }}
                         />
-                    ))
-                ) : (
+                    )) // Add null check for projects before mapping
+                ) : !isLoadingProjects ? ( // Only show "No projects" if not loading
                     <div className="col-span-3 text-center py-10 text-muted-foreground">
                         {currentUser ? (
                             <p>No projects found. Create your first project to get started!</p>
                         ) : (
-                            <p>Please log in to view your projects.</p> // This might need adjustment if login isn't strictly required to *view* projects fetched via API
+                            <p>Please log in to view your projects.</p>
                         )}
                     </div>
-                )}
+                ) : null /* Don't show anything while loading initially */}
             </div>
         </AppLayout>
     );

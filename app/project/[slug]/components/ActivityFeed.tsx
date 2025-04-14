@@ -13,17 +13,13 @@ import { toast } from "@/components/ui/use-toast"; // Keep toast for issue creat
 interface ActivityFeedProps {
     project: NDKProject;
     signer: NDKPrivateKeySigner;
-    // onCreatePost removed
-    // onReply, onRepost, onZap removed - handled by NoteCard internally
-    // We don't need onCreateIssue prop here, we handle it internally
 }
 
-export function ActivityFeed({ project, signer }: ActivityFeedProps) { // Removed onReply, onRepost, onZap
+export function ActivityFeed({ project, signer }: ActivityFeedProps) {
     const { ndk } = useNDK();
     const projectPubkey = signer.pubkey;
     const { events } = useSubscribe([{ kinds: [1], authors: [projectPubkey], limit: 50 }], {}, [projectPubkey]);
     const [isCreatingPost, setIsCreatingPost] = useState(false);
-    // const [isPublishing, setIsPublishing] = useState(false); // Removed, handled in CreatePostDialog
 
     // State for Create Issue Dialog
     const [isCreateIssueDialogOpen, setIsCreateIssueDialogOpen] = useState(false);
@@ -74,9 +70,7 @@ export function ActivityFeed({ project, signer }: ActivityFeedProps) { // Remove
                                 <NoteCard
                                     key={event.id}
                                     event={event}
-                                    // onRepost={onRepost} // Removed, handled internally by NoteCard
-                                    // onQuote={onQuote} // Removed, handled by NoteCard
-                                    onCreateIssue={handleCreateIssueClick} // Pass the handler
+                                    onCreateIssue={handleCreateIssueClick}
                                 />
                             ))
                         ) : (

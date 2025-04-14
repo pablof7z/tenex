@@ -4,8 +4,7 @@ import React from "react";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
-import { nip19 } from "nostr-tools";
-import router from "next/router";
+import { useRouter } from "next/navigation";
 
 interface TaskCardProps {
     task: NDKTask;
@@ -13,12 +12,12 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, projectSlug }: TaskCardProps) {
-    // TODO: Fetch profile metadata for creatorName
-    // TODO: Fetch related events for references/comments count
+    const router = useRouter();
+    const author = task.author;
     const creatorName =
-        task.author.profile?.displayName ||
-        task.author.profile?.name ||
-        nip19.npubEncode(task.author.pubkey).substring(0, 12) + "...";
+        author.profile?.displayName ||
+        author.profile?.name ||
+        author.npub.substring(0, 12) + "...";
     const createdAt = task.created_at ? new Date(task.created_at * 1000).toLocaleString() : "Unknown date";
     const references = 0; // Placeholder
     const comments = []; // Placeholder

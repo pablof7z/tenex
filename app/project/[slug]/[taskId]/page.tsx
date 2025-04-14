@@ -168,8 +168,6 @@ export default function TaskDetailPage() {
                 <div className="flex flex-1 gap-6 overflow-hidden">
                     {/* Left Column (Agent Updates) */}
                     <div className="w-1/3 border rounded-lg p-4 overflow-hidden">
-                        {" "}
-                        {/* Changed overflow-y-auto to overflow-hidden */}
                         <TaskUpdates taskId={taskId} projectSlug={projectId} />
                     </div>
 
