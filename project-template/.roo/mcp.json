@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+        "tenex": {
+            "command": "npx",
+            "args": ["tenex-mcp"],
+            "alwaysAllow": ["publish"],
+            "env": {
+                "NSEC": "__NSEC_PLACEHOLDER__"
+            }
+        }
+    }
+}
+
