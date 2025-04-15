@@ -8,14 +8,16 @@ VSCODE_URI_DELAY=2
 
 # --- Main Script ---
 
-# Check if a file path is provided
-if [ -z "$1" ]; then
-  echo "Usage: $0 <task_file_path>"
+# Check if both arguments are provided
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Usage: $0 <project_dir_path> <task_file_path>"
   exit 1
 fi
 
-TASK_FILE_PATH="$1"
+PROJECT_DIR_PATH="$1"
+TASK_FILE_PATH="$2"
 
+echo "Project directory path: $PROJECT_DIR_PATH"
 echo "Task file path: $TASK_FILE_PATH"
 
 # Check if the file exists
@@ -24,12 +26,13 @@ if [ ! -f "$TASK_FILE_PATH" ]; then
   exit 1
 fi
 
-# Get the containing directory
+# Get the task file's containing directory (for reference)
 TASK_DIR_PATH="$(dirname "$TASK_FILE_PATH")"
-echo "Opening directory: $TASK_DIR_PATH"
+echo "Project directory: $PROJECT_DIR_PATH"
+echo "Task directory: $TASK_DIR_PATH"
 
 # Open the directory in VS Code
-code "$TASK_DIR_PATH"
+code "$PROJECT_DIR_PATH"
 
 if [ $? -ne 0 ]; then
   echo "Error: Failed to open directory with 'code' command."
@@ -38,16 +41,6 @@ if [ $? -ne 0 ]; then
 fi
 echo "VS Code launched for directory."
 
-# --- Add .clinerules check ---
-CLINE_RULES_PATH="$DIRECTORY_PATH/.clinerules"
-if [ ! -f "$CLINE_RULES_PATH" ]; then
-  echo "Creating '$CLINE_RULES_PATH'..."
-  echo "Whenever you are about to do something, publish an update on nostr, and whenever you make some porgress also publish to nostr" > "$CLINE_RULES_PATH"
-  if [ $? -ne 0 ]; then
-    echo "Warning: Failed to create '$CLINE_RULES_PATH'."
-    # Continue execution even if file creation fails, as opening the editor is the primary goal
-  fi
-fi
 # Wait for VS Code to potentially initialize
 echo "Waiting ${VSCODE_URI_DELAY}s before triggering VS Code extension URI..."
 sleep "$VSCODE_URI_DELAY"

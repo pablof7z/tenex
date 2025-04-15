@@ -31,7 +31,6 @@ const TAB_LABELS = ["Overview", "Tasks", "Specs", "Settings"];
 export default function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
     const unwrappedParams = React.use(params);
     const projectSlug = unwrappedParams.slug;
-    const router = useRouter();
     // Use the config hook primarily for API URL construction now
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
 

@@ -23,34 +23,38 @@ import { NsecManager } from "./NsecManager"; // Import the new component
 import { Copy, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProjectAgentProfileSettings } from "./ProjectAgentProfileSettings";
+import { LoadedProject } from "@/hooks/useProjects";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 
 interface ProjectSettingsProps {
-    project: NDKProject;
+    project: LoadedProject;
     projectSlug: string;
 }
 
 export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) {
     const [name, setName] = useState(project.title || "");
-    const [hashtags, setHashtags] = useState(project.hashtags?.join(", ") || "");
+    const [hashtags, setHashtags] = useState(project.event!.hashtags?.join(", ") || "");
     const [repoUrl, setRepoUrl] = useState(project.repo || "");
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const router = useRouter();
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
+    const { ndk } = useNDK();
 
 
 
 
     const handleSave = async () => {
         setIsSaving(true);
-        project.title = name;
-        project.repo = repoUrl;
-        project.hashtags = hashtags
+        project.event ??= new NDKProject(ndk!);
+        project.event.title = name;
+        project.event.repo = repoUrl;
+        project.event.hashtags = hashtags
             .split(",")
             .map((tag) => tag.trim())
             .filter((t) => t);
         try {
-            await project.publishReplaceable();
+            await project.event.publishReplaceable();
             toast({
                 title: "Project Saved",
                 description: "Your project settings have been updated.",

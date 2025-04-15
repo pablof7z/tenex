@@ -1,17 +1,19 @@
 {
-    "name": "tenex",
-    "version": "0.2.0",
+    "name": "tenex-mcp",
+    "version": "0.2.2",
     "module": "index.ts",
     "type": "module",
     "bin": {
-        "tenex": "./index.ts"
+        "tenex-mcp": "./index.ts"
     },
     "scripts": {
-        "build": "bun build --compile --outfile tenex index.ts ",
+        "build": "bun build --compile --outfile tenex-mcp index.ts",
         "lint": "biome lint .",
         "format": "biome format . --write",
         "check": "biome check --write .",
-        "setup": "bun run index.ts setup"
+        "setup": "bun run index.ts setup",
+        "prepublish": "bun run build",
+        "publish": "npm publish"
     },
     "devDependencies": {
         "@biomejs/biome": "^1.9.4",

@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
 import { SpecsSidebar } from "./SpecsSidebar"; // Import Sidebar
 import { SpecsEditor } from "./SpecsEditor"; // Import Editor
+import { LoadedProject } from "@/hooks/useProjects";
 
 interface FileData {
     name: string;
@@ -13,7 +14,7 @@ interface FileData {
 }
 
 interface ProjectSpecsTabProps {
-    project: NDKProject;
+    project: LoadedProject;
     projectSlug: string;
 }
 

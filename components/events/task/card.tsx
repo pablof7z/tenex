@@ -5,25 +5,26 @@ import { NDKTask } from "@/lib/nostr/events/task";
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { TaskReactButton } from "./TaskReactButton";
+import { LoadedProject } from "@/hooks/useProjects";
+import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import ReactMarkdown from "react-markdown";
 
 interface TaskCardProps {
     task: NDKTask;
-    projectSlug: string;
+    project: LoadedProject;
 }
 
-export function TaskCard({ task, projectSlug }: TaskCardProps) {
+export function TaskCard({ task, project }: TaskCardProps) {
     const router = useRouter();
-    const author = task.author;
-    const creatorName =
-        author.profile?.displayName ||
-        author.profile?.name ||
-        author.npub.substring(0, 12) + "...";
-    const createdAt = task.created_at ? new Date(task.created_at * 1000).toLocaleString() : "Unknown date";
+    const createdAt = new Date(task.created_at * 1000).toLocaleString();
     const references = 0; // Placeholder
     const comments = []; // Placeholder
 
+    const profile = useProfile(task.pubkey);
+
     const handleClick = () => {
-        router.push(`/project/${projectSlug}/${task.id}`);
+        router.push(`/project/${project.slug}/${task.id}`);
     }
 
     const handleDelete = () => {
@@ -38,10 +39,15 @@ export function TaskCard({ task, projectSlug }: TaskCardProps) {
             <div className="flex items-start gap-3">
                 <div>
                     <p className="font-medium text-lg">{task.title || "Untitled Task"}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{task.content}</p> {/* Display content */}
+                    <div className="text-sm text-muted-foreground mt-1 prose dark:prose-invert max-w-none prose-sm">
+                        <ReactMarkdown>
+                            {task.content?.split('\n').slice(0, 2).join('\n') +
+                             (task.content?.split('\n').length > 2 ? '...' : '')}
+                        </ReactMarkdown>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
                         <span className="flex items-center">
-                            <span className="font-medium">@{creatorName}</span>
+                            <span className="font-medium">@{profile?.name}</span>
                         </span>
                         <span>•</span>
                         <span>{createdAt}</span>
@@ -75,6 +81,7 @@ export function TaskCard({ task, projectSlug }: TaskCardProps) {
                 >
                     View
                 </Button>
+                <TaskReactButton taskEvent={task} />
                 <Button
                     variant="ghost"
                     size="sm"

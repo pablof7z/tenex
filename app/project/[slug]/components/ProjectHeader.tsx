@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfigAwareButton } from "./ConfigAwareButton"; // Import the new component
+import { LoadedProject } from "@/hooks/useProjects";
 
 interface ProjectHeaderProps {
-    project: NDKProject;
+    project: LoadedProject;
     onSettingsClick: () => void;
     onEditorLaunch: () => void;
     onProjectCreate: () => void;

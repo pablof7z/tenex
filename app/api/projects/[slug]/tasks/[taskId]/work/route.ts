@@ -77,7 +77,7 @@ export async function POST(
     fileContent += `Task ID: ${taskId}\n`;
     fileContent += `Title: ${title}\n\n`;
     fileContent += `${description}\n\n`;
-    fileContent += `As you work on this, publish updates to nostr including the task ID you are working on.\n`;
+    fileContent += `When you start working, and as you make any progress,, publish updates to nostr.\n`;
 
     if (context.length > 0) {
         fileContent += `\n---------\n\n`;
@@ -119,7 +119,7 @@ export async function POST(
     const relativeTaskPath = path.relative(projectDirPath, taskFilePath); // Get path relative to project root
 
     // Execute the script asynchronously, passing only the task file path
-    exec(`"${scriptPath}" "${taskFilePath}"`, (error, stdout, stderr) => {
+    exec(`"${scriptPath}" "${projectDirPath}" "${taskFilePath}"`, (error, stdout, stderr) => {
         if (error) {
             // Log errors, but don't block the response as the main action (file creation) succeeded.
             console.error(

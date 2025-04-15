@@ -41,7 +41,7 @@ export function TasksList({ project }: TasksListProps) {
                                 <TaskCard
                                     key={task.id}
                                     task={task}
-                                    projectSlug={project.slug}
+                                    project={project}
                                 />
                             );
                         })

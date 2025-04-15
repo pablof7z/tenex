@@ -3,7 +3,6 @@
 import { useEffect, ReactNode } from "react";
 import { useNDKInit, useNDKSessions, useNDKSessionSwitch } from "@nostr-dev-kit/ndk-hooks";
 import ndk, { serializeSigner, deserializeSigner } from "@/lib/nostr/ndk"; // Use alias for cleaner import
-import { NDKSigner } from "@nostr-dev-kit/ndk";
 
 const SIGNERS_STORAGE_KEY = "nostr-signers";
 const ACTIVE_PUBKEY_STORAGE_KEY = "nostr-active-pubkey";

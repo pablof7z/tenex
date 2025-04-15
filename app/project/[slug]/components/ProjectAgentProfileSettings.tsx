@@ -9,20 +9,17 @@ import { Textarea } from "@/components/ui/textarea"; // For Bio
 import { toast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
 import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { useProjectStore } from "@/lib/store/projects";
+import { LoadedProject } from "@/hooks/useProjects";
 
 interface ProjectAgentProfileSettingsProps {
-    project: NDKProject;
-    projectSlug: string;
+    project: LoadedProject;
 }
 
-export function ProjectAgentProfileSettings({ project, projectSlug }: ProjectAgentProfileSettingsProps) {
+export function ProjectAgentProfileSettings({ project }: ProjectAgentProfileSettingsProps) {
     // get the pubkey
-    const getPubkeyBySlug = useProjectStore((state) => state.getPubkeyBySlug);
-    const getSignerBySlug = useProjectStore((state) => state.getSignerBySlug);
-    const pubkey = getPubkeyBySlug(projectSlug);
+    const pubkey = project.pubkey;
     const profile = useProfile(pubkey, true); // Fetch the profile using the pubkey
-    const signer = getSignerBySlug(projectSlug);
+    const signer = project.signer;
     const [name, setName] = useState(profile?.name || "");
     const [displayName, setDisplayName] = useState(profile?.displayName || "");
     const [bio, setBio] = useState(profile?.about || ""); // NDKUserProfile uses 'about' for bio

@@ -3,9 +3,10 @@
 import React from "react";
 import { ProjectSettings } from "./ProjectSettings";
 import { NDKProject } from "@/lib/nostr/events/project";
+import { LoadedProject } from "@/hooks/useProjects";
 
 interface ProjectSettingsTabProps {
-    project: NDKProject;
+    project: LoadedProject;
     projectSlug: string;
 }
 

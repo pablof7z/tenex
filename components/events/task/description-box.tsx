@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// Skeleton import removed
+import ReactMarkdown from "react-markdown";
 import { NDKEvent } from "@nostr-dev-kit/ndk"; // Import NDKEvent
 import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
@@ -28,6 +28,8 @@ export function DescriptionBox({
     const [isPublishingReply, setIsPublishingReply] = useState(false);
     const { toast } = useToast();
     const { events: replies } = useSubscribe(task ? [{ kinds: [1111], "#E": [task.id] }] : false);
+
+    console.log('description box', task?.id)
 
     const handlePublishClick = async () => {
         if (!task || !replyContent.trim()) {
@@ -71,14 +73,22 @@ export function DescriptionBox({
                 <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-                <p>{taskDescription || "No description provided."}</p>
+                <div className="prose dark:prose-invert max-w-none">
+                    <ReactMarkdown>
+                        {taskDescription || "No description provided."}
+                    </ReactMarkdown>
+                </div>
 
                 {replies.map(
                     (
                         reply: NDKEvent, // Add type annotation
                     ) => (
                         <div key={reply.id} className="mt-4 pt-4 border-t">
-                            <p className="text-sm">{reply.content}</p>
+                            <div className="prose dark:prose-invert max-w-none text-sm">
+                                <ReactMarkdown>
+                                    {reply.content}
+                                </ReactMarkdown>
+                            </div>
                         </div>
                     ),
                 )}
