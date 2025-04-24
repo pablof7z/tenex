@@ -3,7 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { NDKProvider } from "@/components/providers/ndk"; // Corrected import path
+import NDKHeadless from "@/components/ndk";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -32,7 +32,8 @@ export default function RootLayout({
         <html lang="en" className={`${inter.variable} ${mono.variable}`} suppressHydrationWarning>
             <body className="min-h-screen bg-background font-sans antialiased">
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-                    <NDKProvider>{children}</NDKProvider>
+                    <NDKHeadless />
+                    {children}
                 </ThemeProvider>
             </body>
         </html>
@@ -40,3 +41,4 @@ export default function RootLayout({
 }
 
 import "./globals.css";
+

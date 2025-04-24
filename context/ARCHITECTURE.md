@@ -88,6 +88,8 @@ Contains utility functions and client-side state management.
 
 ### 5.2 Nostr Helpers
 *   `lib/nostr/ndk.ts`: Initializes and configures the NDK instance.
+    - As of 2025-04-21, all custom signer serialization/deserialization logic has been removed.
+    - Signer persistence and restoration now uses the NDK's built-in `signer.toPayload()` and `ndkSignerFromPayload` methods exclusively.
 *   `lib/nostr/events/project.ts`: Defines `NDKProject` class extending `NDKArticle` for project-specific event handling (kind 30023).
 *   `lib/nostr/events/task.ts`: Defines `NDKTask` class extending `NDKEvent` for task-specific event handling (kind 1934).
 

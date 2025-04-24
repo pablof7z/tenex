@@ -4,10 +4,9 @@ import React, { useState } from "react";
 import { LogIn, LogOut } from "lucide-react";
 import {
     useNDKCurrentUser,
-    useProfile,
     useNDKSessionLogin,
     useNDKSessionLogout,
-    NDKNip07Signer,
+    useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 
 import { Button } from "@/components/ui/button";
@@ -21,10 +20,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/use-toast";
 import UserAvatar from "../user/avatar";
+import { NDKNip07Signer } from "@nostr-dev-kit/ndk";
 
 export function UserDropdown() {
     const currentUser = useNDKCurrentUser();
-    const profile = useProfile(currentUser?.pubkey);
+    const profile = useProfileValue(currentUser?.pubkey);
     const ndkLogin = useNDKSessionLogin();
     const logout = useNDKSessionLogout();
 
@@ -46,7 +46,7 @@ export function UserDropdown() {
                 }
             }
 
-            await ndkLogin(signer);
+            await ndkLogin(signer, true);
 
             toast({
                 title: "Login Successful",

@@ -2,7 +2,7 @@
 
 import React from "react"; // Removed useEffect, useState
 
-import { Boxes, Home, LogOut, Settings, Users } from "lucide-react"; // Removed LogIn
+import { Boxes, Home, LogOut, Settings } from "lucide-react"; // Removed LogIn
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,21 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useNDKSessions, useNDKSessionLogout, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks"; // Removed useNDKSessionLogin, NDKNip07Signer, useProfile
+import { useNDKSessionLogout, useNDKCurrentPubkey } from "@nostr-dev-kit/ndk-hooks"; // Removed useNDKSessionLogin, NDKNip07Signer, useProfile
 
 import { toast } from "@/components/ui/use-toast"; // Keep for sidebar logout toast
-// Removed Avatar imports
-// Removed DropdownMenu imports
-import { UserDropdown } from "./navigation/user-dropdown"; // Import the new component
 import { SidebarProvider } from "@/components/ui/sidebar"; // Import SidebarProvider
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const sessions = useNDKSessions();
+    const currentPubkey = useNDKCurrentPubkey();
     const logout = useNDKSessionLogout(); // Keep for sidebar logout
-    const currentUser = useNDKCurrentUser(); // Keep for potential conditional rendering or checks
-
-    // Removed handleLogin - now handled by UserDropdown
 
     // Simplified handleLogout for the sidebar button
     const handleSidebarLogout = () => {
@@ -102,7 +96,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     size="icon"
                                     className="h-12 w-12 rounded-md sidebar-icon"
                                     onClick={handleSidebarLogout} // Use the sidebar-specific handler
-                                    disabled={!sessions.activePubkey}
+                                    disabled={!currentPubkey}
                                 >
                                     <LogOut className="h-5 w-5" />
                                     <span className="sr-only">Logout</span>

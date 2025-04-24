@@ -1,8 +1,7 @@
 import useSWR from 'swr';
 import { NDKProject } from '@/lib/nostr/events/project';
-import { NDKEvent, NDKFilter, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
+import { NDKFilter, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import ndk from '@/lib/nostr/ndk'; // Import the singleton NDK instance
-import { ProjectConfig } from '@/app/api/projects/route';
 
 export type LoadedProject = {
     slug: string;
