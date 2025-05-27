@@ -166,7 +166,7 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                     New Project {isConfigLoading ? "(Loading Config...)" : ""}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[525px]">
+            <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle className="text-xl">Create new project</DialogTitle>
                     <DialogDescription>

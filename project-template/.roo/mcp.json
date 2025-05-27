@@ -3,7 +3,10 @@
         "tenex": {
             "command": "npx",
             "args": ["tenex-mcp"],
-            "alwaysAllow": ["publish"],
+            "alwaysAllow": [
+                 "publish",
+                 "publish_task_status_update"
+            ],
             "env": {
                 "NSEC": "__NSEC_PLACEHOLDER__"
             }

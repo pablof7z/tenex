@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKTask } from "@/lib/nostr/events/task";
-import { CreateTaskDialog } from "./CreateTaskDialog";
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { useState } from "react";
 import { LoadedProject } from "@/hooks/useProjects";
 

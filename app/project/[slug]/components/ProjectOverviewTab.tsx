@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk-hooks";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { RelatedTweets } from "./RelatedTweets";
 import { LoadedProject } from "@/hooks/useProjects";

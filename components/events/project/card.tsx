@@ -5,14 +5,26 @@ import { Clock, FileText, GitBranch, MessageSquare, Settings, Users } from "luci
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
 import { LoadedProject } from "@/hooks/useProjects";
+import React from "react"; // Import React for Label
 
-export function ProjectCard({ project }: { project: LoadedProject }) {
-    // Use props directly
-    const { slug, title, description, hashtags, repoUrl } = project;
+// Define props for ProjectCard
+interface ProjectCardProps {
+    project: LoadedProject;
+    isSelected: boolean;
+    onSelectProject: (projectSlug: string, isSelected: boolean) => void;
+}
+
+export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCardProps) {
+    const { slug, title, repoUrl } = project; // Removed description, hashtags
+    // Attempt to get description from event, then split hashtags
+    const description = project.event?.content || project.event?.summary || "No description available.";
+    console.log('proejct hashtags', project.hashtags);
 
     const peopleTalking = "?";
     const pendingTasks = "?";
+    const checkboxId = `select-project-${slug}`; // Unique ID for checkbox and label
 
     return (
         <Card className="card-hover overflow-hidden rounded-md border-border flex flex-col">
@@ -26,7 +38,7 @@ export function ProjectCard({ project }: { project: LoadedProject }) {
 
             <CardContent className="pb-0 flex-grow">
                 <div className="flex flex-wrap gap-1.5 mb-3">
-                    {hashtags.map((tag) => (
+                    {project.hashtags.map((tag: string) => ( // Use project.hashtags and type tag
                         <span key={tag} className="hashtag">
                             #{tag}
                         </span>
@@ -72,7 +84,20 @@ export function ProjectCard({ project }: { project: LoadedProject }) {
             </CardContent>
 
             <CardFooter className="border-t pt-3 text-xs text-muted-foreground mt-auto flex items-center justify-between">
-                <div className="flex items-center">
+                <div className="flex items-center space-x-2"> {/* Added space-x-2 for spacing */}
+                    <Checkbox
+                        id={checkboxId}
+                        checked={isSelected}
+                        onCheckedChange={(checked) => {
+                            onSelectProject(slug, !!checked); // Ensure checked is boolean
+                        }}
+                    />
+                    <label
+                        htmlFor={checkboxId}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                        Select
+                    </label>
                 </div>
                 <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-secondary">

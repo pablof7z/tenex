@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { NDKPrivateKeySigner, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
-import { useRouter } from "next/navigation";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { AppLayout } from "@/components/app-layout";
-import { NDKTask } from "@/lib/nostr/events/task";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
-import { useProjectStore } from "@/lib/store/projects"; // Keep for potential future use (e.g., updates), but not for initial load
 import { useProjects } from "@/hooks/useProjects"; // Import the SWR hook
 // QuoteData import removed as quoting is handled in NoteCard
 import { Toolbar } from "@/components/ui/Toolbar";

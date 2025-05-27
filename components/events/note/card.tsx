@@ -273,6 +273,13 @@ export function NoteCard({
                         <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                             <span>{formatTimestamp(event.created_at)}</span>
+                            {/* Display confidence level if available */}
+                            {event.tagValue('confidence') && (
+                                <div className="flex items-center gap-1 ml-2">
+                                    <span className="font-medium">Confidence:</span>
+                                    <span className="bg-secondary px-1.5 py-0.5 rounded-md">{event.tagValue('confidence')}/10</span>
+                                </div>
+                            )}
                             {/* Add other metadata like relays if needed */}
                         </div>
                         <div className="flex items-center justify-between gap-3 mt-2">
