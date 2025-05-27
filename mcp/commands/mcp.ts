@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { addPublishCommand, addPublishTaskStatusUpdateCommand } from "../logic/publish.js";
+import {
+    addPublishCommand,
+    addPublishTaskStatusUpdateCommand,
+} from "../logic/publish.js";
 import { log } from "../utils/log.js";
 
 // Define the MCP server instance
