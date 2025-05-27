@@ -273,6 +273,14 @@ export function NoteCard({
                         <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                             <span>{formatTimestamp(event.created_at)}</span>
+                            {/* Display commit hash prefix if available */}
+                            {event.tagValue('commit') && (
+                                <div className="flex items-center gap-1 ml-2" title={`Commit: ${event.tagValue('commit')}`}>
+                                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
+                                        {event.tagValue('commit')?.substring(0, 7)}
+                                    </span>
+                                </div>
+                            )}
                             {/* Display confidence level if available */}
                             {event.tagValue('confidence') && (
                                 <div className="flex items-center gap-1 ml-2">

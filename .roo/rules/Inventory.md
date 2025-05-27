@@ -21,4 +21,10 @@ hooks/
 ├── useTranscription.ts  # React hook for handling audio transcription with retry logic, error handling, and user feedback
 types/
 ├── audio.ts  # TypeScript type definitions for audio recording, transcription responses, and related interfaces
+mcp/logic/
+├── publish.ts  # Enhanced MCP publishing logic with git integration, automatic commits, and commit hash tagging in nostr events
+mcp/lib/
+├── git.ts  # Git utility functions for checking uncommitted changes, creating commits, and retrieving commit hashes
+mcp/commands/
+├── mcp.ts  # MCP server command registration with enhanced publish_task_status_update including title parameter
 ```
