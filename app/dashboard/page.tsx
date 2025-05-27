@@ -9,7 +9,6 @@ import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { ProjectCard } from "@/components/events/project/card"; // This will be modified later
 import { useConfig } from "@/hooks/useConfig";
 import { useProjects } from "@/hooks/useProjects";
-import { ActivityFeed } from "@/components/ActivityFeed";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/app-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -72,8 +71,8 @@ export default function DashboardPage() {
                     <NewProjectButton onProjectCreated={mutateProjects} />
                 </div>
             </div>
-            <div className="flex gap-6 w-full">
-                <div className="w-2/3">
+            <div className="w-full">
+                <div className="w-full">
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {isLoadingProjects ? (
                             <div className="col-span-3 text-center py-10 text-muted-foreground">
@@ -114,11 +113,6 @@ export default function DashboardPage() {
                             </div>
                         ) : null /* Don't show anything while loading initially */}
                     </div>
-                </div>
-                <div className="w-1/3">
-                    <ActivityFeed
-                        pubkeys={projects && projects.length > 0 ? projects.map((p) => p.pubkey) : []}
-                    />
                 </div>
             </div>
         </AppLayout>
