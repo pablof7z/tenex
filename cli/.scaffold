@@ -1,0 +1,19 @@
+bin/
+  tenex.ts
+src/
+  commands/
+    init.ts
+    agent/
+      publish.ts
+      find.ts
+      install.ts
+  config/
+    wizard.ts
+    manager.ts
+  nostr/
+    ndkClient.ts
+    keyManager.ts
+  utils/
+    logger.ts
+    file.ts
+  types.ts

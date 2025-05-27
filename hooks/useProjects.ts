@@ -7,7 +7,7 @@ export type LoadedProject = {
     slug: string;
     title: string;
     nsec: string;
-    hashtags: string;
+    hashtags: string[];
     pubkey: string;
     repoUrl: string;
     signer: NDKPrivateKeySigner;

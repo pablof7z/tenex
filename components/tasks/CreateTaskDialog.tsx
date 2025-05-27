@@ -12,14 +12,18 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input"; // Added Input
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { NDKProject } from "@/lib/nostr/events/project";
-import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this exists
-import { Loader2 } from "lucide-react";
+import { NDKTask } from "@/lib/nostr/events/task";
+import { Loader2, Mic } from "lucide-react";
 import { LoadedProject } from "@/hooks/useProjects";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { AudioRecorder } from "@/components/ui/audio-recorder";
+import { useTranscription } from "@/hooks/useTranscription";
+import { parseTranscription } from "@/lib/parse-transcription";
+import { applyTextCorrections } from "@/lib/text-corrections";
 
 interface CreateTaskDialogProps {
     project: LoadedProject;
@@ -30,10 +34,54 @@ interface CreateTaskDialogProps {
 
 export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }: CreateTaskDialogProps) {
     const { ndk } = useNDK();
-    const [taskTitle, setTaskTitle] = useState(""); // Added title state
+    const [taskTitle, setTaskTitle] = useState("");
     const [taskContent, setTaskContent] = useState("");
     const [isPublishing, setIsPublishing] = useState(false);
+    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
     const { toast } = useToast();
+
+    // Voice transcription functionality
+    const { transcribe, isTranscribing, error: transcriptionError, clearError } = useTranscription({
+        onSuccess: (result) => {
+            if (result.success && result.transcription) {
+                // Apply text corrections
+                const correctedText = applyTextCorrections(result.transcription);
+                
+                // Parse into title and description
+                const parsed = parseTranscription(correctedText);
+                
+                if (parsed.title) {
+                    setTaskTitle(parsed.title);
+                }
+                if (parsed.description) {
+                    setTaskContent(parsed.description);
+                }
+                
+                toast({
+                    title: "Voice Transcription Complete",
+                    description: "Your voice has been converted to text and populated in the form.",
+                });
+                
+                setShowVoiceRecorder(false);
+            }
+        },
+        onError: (error) => {
+            toast({
+                title: "Transcription Failed",
+                description: error,
+                variant: "destructive",
+            });
+        }
+    });
+
+    const handleVoiceRecording = async (audioBlob: Blob, duration: number) => {
+        try {
+            await transcribe(audioBlob);
+        } catch (error) {
+            // Error handling is done in the transcription hook
+            console.error('Voice transcription failed:', error);
+        }
+    };
 
     const handlePublish = async () => {
         if (!taskTitle.trim()) {
@@ -81,6 +129,8 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
 
             setTaskTitle(""); // Clear title input
             setTaskContent(""); // Clear textarea
+            setShowVoiceRecorder(false); // Hide voice recorder
+            clearError(); // Clear any transcription errors
             onOpenChange(false); // Close dialog
             onTaskCreated?.(); // Call callback if provided
         } catch (error: unknown) {
@@ -116,7 +166,20 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                         />
                     </div>
                     <div className="grid w-full gap-1.5">
-                        <Label htmlFor="task-content">Task Description</Label>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="task-content">Task Description</Label>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
+                                disabled={isPublishing || isTranscribing}
+                                className="flex items-center gap-2"
+                            >
+                                <Mic className="h-4 w-4" />
+                                {showVoiceRecorder ? 'Hide Voice' : 'Use Voice'}
+                            </Button>
+                        </div>
                         <Textarea
                             id="task-content"
                             placeholder="Enter task details here..."
@@ -125,6 +188,47 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                             rows={5}
                             disabled={isPublishing}
                         />
+                        
+                        {/* Voice Recording Section */}
+                        {showVoiceRecorder && (
+                            <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Mic className="h-4 w-4" />
+                                        <span className="text-sm font-medium">Voice Recording</span>
+                                        {isTranscribing && (
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                Transcribing...
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <p className="text-xs text-muted-foreground">
+                                        Record your task description and it will be automatically transcribed and parsed into title and description fields.
+                                    </p>
+                                    
+                                    <AudioRecorder
+                                        onRecordingComplete={handleVoiceRecording}
+                                        onError={(error) => {
+                                            toast({
+                                                title: "Recording Error",
+                                                description: error,
+                                                variant: "destructive",
+                                            });
+                                        }}
+                                        maxDuration={120} // 2 minutes max for task descriptions
+                                        className="w-full"
+                                    />
+                                    
+                                    {transcriptionError && (
+                                        <div className="text-sm text-destructive">
+                                            {transcriptionError}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <DialogFooter>

@@ -1,10 +1,10 @@
 {
     "name": "tenex-mcp",
-    "version": "0.2.2",
+    "version": "0.3.4",
     "module": "index.ts",
     "type": "module",
     "bin": {
-        "tenex-mcp": "./index.ts"
+        "tenex-mcp": "./tenex-mcp"
     },
     "scripts": {
         "build": "bun build --compile --outfile tenex-mcp index.ts",
@@ -25,8 +25,8 @@
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.7.0",
-        "@nostr-dev-kit/ndk": "2.13.1-rc7",
-        "@nostr-dev-kit/ndk-wallet": "0.5.3-1",
+        "@nostr-dev-kit/ndk": "^2.14.15",
+        "@nostr-dev-kit/ndk-wallet": "latest",
         "commander": "^13.1.0",
         "inquirer": "^12.5.0",
         "yaml": "^2.7.0"

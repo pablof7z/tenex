@@ -45,42 +45,8 @@ echo "VS Code launched for directory."
 echo "Waiting ${VSCODE_URI_DELAY}s before triggering VS Code extension URI..."
 sleep "$VSCODE_URI_DELAY"
 
-# Determine the OS-specific command to open URIs
-OS_COMMAND=""
-OS_NAME=$(uname -s)
-case "$OS_NAME" in
-  Darwin)
-    OS_COMMAND="open"
-    ;;
-  Linux)
-    OS_COMMAND="xdg-open"
-    ;;
-  CYGWIN*|MINGW*|MSYS*)
-    OS_COMMAND="start"
-    ;;
-  *)
-    echo "Warning: Unsupported OS '$OS_NAME'. Cannot automatically trigger VS Code command URI."
-    echo "Directory opened, but please manually open the file: '$TASK_FILE_PATH'"
-    exit 0 # Exit gracefully after opening the directory
-    ;;
-esac
-echo "Using '$OS_COMMAND' to trigger URI."
-
-# Construct the VS Code command URI for roo-executor
-VSCODE_URI="vscode://pablof7z.roo-executor/runRoo?file=${TASK_FILE_PATH}"
-
-# Execute the command URI
-echo "Triggering VS Code command URI: $VSCODE_URI"
-"$OS_COMMAND" "$VSCODE_URI"
-
-if [ $? -ne 0 ]; then
-  echo "Error: Failed to trigger VS Code command URI using '$OS_COMMAND'."
-  echo "Please ensure the 'roo-executor' extension is installed."
-  echo "You might need to manually open the file in VS Code: '$TASK_FILE_PATH'"
-  # Don't exit with error, as the directory was opened successfully
-else
-  echo "VS Code command URI triggered successfully."
-fi
+# Move it from $TASK_FIELE_PATH to $PROJECT_DIR_PATH/.roo-trigger
+mv $TASK_FILE_PATH $PROJECT_DIR_PATH/.roo-trigger
 
 echo "Script finished."
 exit 0

@@ -14,9 +14,39 @@ import { log } from "../lib/utils/log.js"; // Use the correct log import
  */
 export async function publishNote(
     content: string,
-    taskId: string | undefined,
+    taskId?: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
-    log(`INFO: Publishing note: "${content.substring(0, 50)}..."`);
+    return await publishToNostr(content, taskId);
+}
+
+/**
+ * Publish a task status update to Nostr with confidence level.
+ * @param content The content of the note to publish
+ * @param taskId The task ID to tag
+ * @param confidenceLevel Confidence level (1-10) where 10 is very confident and 1 is very confused
+ * @returns Publication results
+ */
+export async function publishTaskStatusUpdate(
+    content: string,
+    taskId: string,
+    confidenceLevel: number,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+    return await publishToNostr(content, taskId, confidenceLevel);
+}
+
+/**
+ * Common function to publish notes to Nostr with optional confidence level.
+ * @param content The content of the note to publish
+ * @param taskId The task ID to tag (optional)
+ * @param confidenceLevel Confidence level (optional)
+ * @returns Publication results
+ */
+async function publishToNostr(
+    content: string,
+    taskId?: string,
+    confidenceLevel?: number,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+    log(`INFO: Publishing note with content type: ${typeof content}, value: "${content ? content.substring(0, 50) : 'undefined'}..."`);
 
     const taskFilePath = taskId ? path.join(os.homedir(), ".tenex", "tasks", taskId) : undefined;
     let previousEventId: string | undefined = undefined;
@@ -59,6 +89,14 @@ export async function publishNote(
             // Tag the previous event in the sequence for this task
             tags.push(["e", previousEventId]);
             log(`INFO: Tagging previous event ${previousEventId}`);
+        }
+
+        // Add confidence level tag if provided
+        if (confidenceLevel !== undefined) {
+            // Ensure confidence level is within valid range
+            const normalizedConfidence = Math.max(1, Math.min(10, confidenceLevel));
+            tags.push(["confidence", normalizedConfidence.toString()]);
+            log(`INFO: Adding confidence level tag: ${normalizedConfidence}`);
         }
 
         // Create the event
@@ -116,15 +154,18 @@ export async function publishNote(
     }
 }
 
+/**
+ * Register the publish command with the MCP server
+ * @param server The MCP server instance
+ */
 export function addPublishCommand(server: McpServer) {
     // Add publish tool - simplified schema
     server.tool(
         "publish",
-        "Publish a note to Nostr",
+        "Publish a note to Nostr not related to a task",
         {
             // Only content is needed
             content: z.string().describe("The content of the note you want to publish"),
-            taskId: z.string().optional().describe("Task ID for tracking"),
         },
         // Handler uses only content
         async (
@@ -132,6 +173,32 @@ export function addPublishCommand(server: McpServer) {
             _extra: unknown, // Use unknown since it's unused
         ) => {
             return await publishNote(content, taskId);
+        },
+    );
+}
+
+/**
+ * Register the publish_task_status_update command with the MCP server
+ * @param server The MCP server instance
+ */
+export function addPublishTaskStatusUpdateCommand(server: McpServer) {
+    // Add publish_task_status_update tool
+    server.tool(
+        "publish_task_status_update",
+        "Publish a task status update to Nostr",
+        {
+            update: z.string().describe("The updat to publish (do not include the task ID here)"),
+            taskId: z.string().describe("Task ID being worked on"),
+            confidence_level: z.number()
+                .min(1)
+                .max(10)
+                .describe("Confidence level of how you, the LLM working, feel about the work being done. (1-10) where 10 is very confident and 1 is very confused"),
+        },
+        async (
+            { update, taskId, confidence_level }: { update: string; taskId: string; confidence_level: number },
+            _extra: unknown,
+        ) => {
+            return await publishTaskStatusUpdate(update, taskId, confidence_level);
         },
     );
 }
