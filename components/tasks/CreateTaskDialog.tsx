@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { Loader2, Mic } from "lucide-react";
 import { LoadedProject } from "@/hooks/useProjects";
