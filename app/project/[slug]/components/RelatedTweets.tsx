@@ -1,11 +1,14 @@
 import { useMemo, useState, useCallback } from "react"; // Add useState, useCallback
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NoteCard, QuoteData } from "@/components/events/note/card";
 import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
 import { toast } from "@/components/ui/use-toast"; // Import toast
 import { LoadedProject } from "@/hooks/useProjects";
+import { useTweetSelection } from "@/hooks/useTweetSelection";
+import { X, Plus } from "lucide-react";
 
 interface RelatedTweetsProps {
     project: LoadedProject;
@@ -19,6 +22,9 @@ export function RelatedTweets({ project }: RelatedTweetsProps) {
         project.slug,
         tagsToSubscribe,
     ]);
+
+    // Tweet selection functionality
+    const { selectedTweetIds, selectedCount, toggleTweet, clearSelection, getSelectedTweets } = useTweetSelection(events);
 
     // State for Create Issue Dialog
     const [isCreateIssueDialogOpen, setIsCreateIssueDialogOpen] = useState(false);
@@ -66,6 +72,39 @@ export function RelatedTweets({ project }: RelatedTweetsProps) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {/* Create task button - appears when tweets are selected */}
+                {selectedCount > 0 && (
+                    <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <Plus className="h-4 w-4 text-primary" />
+                                    <span className="font-medium text-primary">
+                                        {selectedCount} tweet{selectedCount > 1 ? 's' : ''} selected
+                                    </span>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    className="bg-primary hover:bg-primary/90"
+                                    aria-label={`Create task from ${selectedCount} selected tweets`}
+                                >
+                                    Create task from {selectedCount} tweet{selectedCount > 1 ? 's' : ''}
+                                </Button>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={clearSelection}
+                                className="text-muted-foreground hover:text-foreground"
+                                aria-label="Clear selection"
+                            >
+                                <X className="h-4 w-4" />
+                                Clear
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-4">
                     {events.length === 0 && (
                         <p className="text-sm text-muted-foreground">No related tweets found yet.</p>
@@ -78,6 +117,10 @@ export function RelatedTweets({ project }: RelatedTweetsProps) {
                             // The reply state/handlers in RelatedTweets are for its *own* reply feature, if different.
                             // onRepost, onQuote, onZap removed - handled by NoteCard
                             onCreateIssue={handleCreateIssueClick} // Pass the handler
+                            // Tweet selection props
+                            showCheckbox={true}
+                            isSelected={selectedTweetIds.has(event.id)}
+                            onToggleSelection={toggleTweet}
                         />
                     ))}
                 </div>
