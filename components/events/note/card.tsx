@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import NDK, { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK default
 import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
-import { MessageSquare, Repeat, Send, Zap, Plus, Loader2, MoreHorizontal, Copy, Eye } from "lucide-react"; // Import necessary icons
+import { MessageSquare, Repeat, Send, Zap, Plus, Loader2, MoreHorizontal, Copy, Eye, Check } from "lucide-react"; // Import necessary icons
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -30,6 +30,11 @@ interface NoteCardProps {
 
     // whehter to skip the tagged task label
     skipTaggedTask?: boolean;
+
+    // Checkbox selection props
+    showCheckbox?: boolean;
+    isSelected?: boolean;
+    onToggleSelection?: (eventId: string) => void;
 }
 
 // Function to format timestamp
@@ -55,6 +60,9 @@ export function NoteCard({
     event,
     onCreateIssue,
     skipTaggedTask,
+    showCheckbox = false,
+    isSelected = false,
+    onToggleSelection,
 }: NoteCardProps) {
     const { ndk } = useNDK(); // Get NDK instance
     // Signer is obtained from ndk instance (ndk.signer) implicitly during event.sign()
@@ -253,6 +261,13 @@ export function NoteCard({
         setShowRawEventDialog(true);
     }, []);
 
+    const handleCheckboxToggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent event bubbling to card click handlers
+        if (onToggleSelection) {
+            onToggleSelection(event.id);
+        }
+    }, [onToggleSelection, event.id]);
+
     // --- End Internal Handlers ---
 
     return (
@@ -260,7 +275,24 @@ export function NoteCard({
             {" "}
             {/* Wrap in Fragment */}
             <div className="border-b border-border pb-3 last:border-0">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 relative">
+                    {/* Checkbox in top-right corner */}
+                    {showCheckbox && (
+                        <div className="absolute top-0 right-0 z-10">
+                            <button
+                                type="button"
+                                onClick={handleCheckboxToggle}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                    isSelected
+                                        ? 'bg-primary border-primary text-primary-foreground'
+                                        : 'border-muted-foreground hover:border-primary'
+                                }`}
+                                aria-label={isSelected ? 'Deselect tweet' : 'Select tweet'}
+                            >
+                                {isSelected && <Check className="w-3 h-3" />}
+                            </button>
+                        </div>
+                    )}
                     <UserAvatar pubkey={event.pubkey} size="lg" />
                     <div className="flex-1">
                         <div className="flex items-center gap-1">
