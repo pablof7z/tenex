@@ -22,13 +22,15 @@ interface AudioRecorderProps {
     onError?: (error: string) => void;
     maxDuration?: number; // in seconds, default 300 (5 minutes)
     className?: string;
+    autoStart?: boolean; // Auto-start recording when component mounts
 }
 
-export function AudioRecorder({ 
-    onRecordingComplete, 
-    onError, 
+export function AudioRecorder({
+    onRecordingComplete,
+    onError,
     maxDuration = 300,
-    className 
+    className,
+    autoStart = false
 }: AudioRecorderProps) {
     const [recordingState, setRecordingState] = useState<RecordingState>('idle');
     const [duration, setDuration] = useState(0);
@@ -251,6 +253,13 @@ export function AudioRecorder({
             }
         };
     }, [audioUrl]);
+
+    // Auto-start recording when autoStart is true
+    useEffect(() => {
+        if (autoStart && recordingState === 'idle') {
+            startRecording();
+        }
+    }, [autoStart, recordingState, startRecording]);
 
     if (!isSupported) {
         return (

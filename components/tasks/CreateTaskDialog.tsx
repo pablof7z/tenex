@@ -37,6 +37,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
     const [taskContent, setTaskContent] = useState("");
     const [isPublishing, setIsPublishing] = useState(false);
     const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+    const [autoStartRecording, setAutoStartRecording] = useState(false);
     const { toast } = useToast();
 
     // Voice transcription functionality
@@ -62,6 +63,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                 });
                 
                 setShowVoiceRecorder(false);
+                setAutoStartRecording(false);
             }
         },
         onError: (error) => {
@@ -79,6 +81,18 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
         } catch (error) {
             // Error handling is done in the transcription hook
             console.error('Voice transcription failed:', error);
+        }
+    };
+
+    const handleUseVoiceClick = () => {
+        if (showVoiceRecorder) {
+            // If already showing, hide it
+            setShowVoiceRecorder(false);
+            setAutoStartRecording(false);
+        } else {
+            // Show recorder and start recording immediately
+            setShowVoiceRecorder(true);
+            setAutoStartRecording(true);
         }
     };
 
@@ -129,6 +143,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
             setTaskTitle(""); // Clear title input
             setTaskContent(""); // Clear textarea
             setShowVoiceRecorder(false); // Hide voice recorder
+            setAutoStartRecording(false); // Reset auto-start flag
             clearError(); // Clear any transcription errors
             onOpenChange(false); // Close dialog
             onTaskCreated?.(); // Call callback if provided
@@ -171,7 +186,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
+                                onClick={handleUseVoiceClick}
                                 disabled={isPublishing || isTranscribing}
                                 className="flex items-center gap-2"
                             >
@@ -204,7 +219,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                                     </div>
                                     
                                     <p className="text-xs text-muted-foreground">
-                                        Record your task description and it will be automatically transcribed and parsed into title and description fields.
+                                        Recording started automatically. Speak your task description and it will be transcribed and parsed into title and description fields.
                                     </p>
                                     
                                     <AudioRecorder
@@ -218,6 +233,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                                         }}
                                         maxDuration={120} // 2 minutes max for task descriptions
                                         className="w-full"
+                                        autoStart={autoStartRecording}
                                     />
                                     
                                     {transcriptionError && (

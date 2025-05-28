@@ -16,6 +16,7 @@ TENEX revolutionizes software development by putting context at the center of th
 - **🎙️ Voice-to-Code**: Transform your ideas into actionable tasks using advanced speech-to-text transcription with intelligent parsing
 - **🤖 AI-Powered Orchestration**: Leverage multiple specialized AI modes (Code, Debug, Architect, Orchestrator) that work together seamlessly
 - **📝 Intelligent Task Management**: Automatically parse voice input into structured tasks with titles and descriptions
+- **Keys** Each project gets its worn nsec to communicate (and preserve context).
 - **🔄 Real-time Collaboration**: Built on Nostr protocol for decentralized, real-time collaboration and updates
 - **🎨 Multi-Column Interface**: Organize your work across multiple views for enhanced productivity
 - **🔧 Extensible Architecture**: Plugin-based system that adapts to your workflow needs
@@ -27,16 +28,21 @@ Whether you're architecting complex systems, debugging intricate issues, or rapi
 
 TENEX is designed to run locally on your development machine and integrates deeply with your existing workflow.
 
+```
+git clone https://github.com/pablof7z/tenex
+cd tenex
+bun install
+bun run dev
+```
+
 ### Prerequisites
 
-1. **Roocode**: TENEX depends on Roocode being installed on your system. Make sure you have Roocode properly configured before proceeding.
+1. **Roocode**: TENEX depends on [Roocode](https://roocode.com) being installed on your system. Make sure you have Roocode properly configured before proceeding.
 
 2. **VS Code Extension**: Install the Roo Executor extension from the VS Code marketplace:
    - [Roo Executor Extension](https://marketplace.visualstudio.com/items?itemName=pablof7z.roo-executor)
 
-### Running the Application
-
-Once you have the prerequisites installed, you can run TENEX locally. The application is designed to work seamlessly with your local development environment and the VS Code extension.
+![screenshot](./images/screenshot.png)
 
 ### Author
 
