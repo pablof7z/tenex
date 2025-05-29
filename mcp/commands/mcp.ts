@@ -4,6 +4,11 @@ import {
     addPublishCommand,
     addPublishTaskStatusUpdateCommand,
 } from "../logic/publish.js";
+import {
+    addGitResetToCommitCommand,
+    addGitCommitDetailsCommand,
+    addGitValidateCommitCommand,
+} from "../logic/git-reset.js";
 import { log } from "../utils/log.js";
 
 // Define the MCP server instance
@@ -21,6 +26,11 @@ export async function startMcpServer(): Promise<void> {
         // Register publish commands
         addPublishCommand(mcpServer);
         addPublishTaskStatusUpdateCommand(mcpServer);
+
+        // Register git reset commands
+        addGitResetToCommitCommand(mcpServer);
+        addGitCommitDetailsCommand(mcpServer);
+        addGitValidateCommitCommand(mcpServer);
 
         // Connect the server to the transport
         log("Starting tenex MCP server...");
