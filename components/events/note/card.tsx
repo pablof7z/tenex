@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import NDK, { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK default
+import { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK types
 import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
 import { MessageSquare, Repeat, Send, Zap, Plus, Loader2, MoreHorizontal, Copy, Eye, Check } from "lucide-react"; // Import necessary icons
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import { QuotePostDialog } from "@/app/project/[slug]/components/QuotePostDialog"; // Import QuotePostDialog
 import TaggedTask from "../TaggedTask";
 import { CommitLabel } from "@/components/ui/commit-label";
+import { useGitOperations } from "@/hooks/useGitOperations";
 
 // Define QuoteData interface here to avoid circular dependencies
 export interface QuoteData {
@@ -75,6 +76,9 @@ export function NoteCard({
     const [isQuoting, setIsQuoting] = useState(false); // Loading state for quoting
 
     const [showRawEventDialog, setShowRawEventDialog] = useState(false);
+    
+    // Git operations hook
+    const { resetToCommit } = useGitOperations();
     // Note: Repost count and Zap amount require fetching related events (kind 6 for reposts, kind 9735 for zaps)
     // This basic component doesn't include that logic yet.
     const repostCount = 0; // Placeholder
@@ -269,6 +273,19 @@ export function NoteCard({
         }
     }, [onToggleSelection, event.id]);
 
+    // Git reset handler for commit labels
+    const handleCommitReset = useCallback(async (commitHash: string) => {
+        try {
+            const result = await resetToCommit(commitHash, { resetType: 'mixed' });
+            if (!result.success) {
+                throw new Error(result.message || 'Reset failed');
+            }
+        } catch (error) {
+            // Error handling is done in the CommitLabel component
+            throw error;
+        }
+    }, [resetToCommit]);
+
     // --- End Internal Handlers ---
 
     return (
@@ -311,7 +328,8 @@ export function NoteCard({
                                 <div className="flex items-center gap-1 ml-2">
                                     <CommitLabel
                                         commitHash={event.tagValue('commit')!}
-                                        showDropdown={false}
+                                        showDropdown={true}
+                                        onReset={handleCommitReset}
                                         size="md"
                                     />
                                 </div>

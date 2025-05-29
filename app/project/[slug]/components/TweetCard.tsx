@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
 import { MessageSquare, Repeat, Send, Zap, Plus } from "lucide-react"; // Import Plus
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { QuoteData } from "@/components/events/note/card";
 import UserAvatar from "@/components/user/avatar";
+import { CommitLabel } from "@/components/ui/commit-label";
+import { useGitOperations } from "@/hooks/useGitOperations";
 
 interface TweetCardProps {
     event: NDKEvent;
@@ -59,6 +61,9 @@ export function TweetCard({
 
     const authorDisplayName = getAuthorDisplayName(event.author);
     const authorHandle = getAuthorHandle(event.author);
+    
+    // Git operations hook
+    const { resetToCommit } = useGitOperations();
 
     const handleQuote = () => {
         onQuote({
@@ -69,6 +74,19 @@ export function TweetCard({
             nevent: event.encode(), // Pass nevent for better referencing
         });
     };
+
+    // Git reset handler for commit labels
+    const handleCommitReset = useCallback(async (commitHash: string) => {
+        try {
+            const result = await resetToCommit(commitHash, { resetType: 'mixed' });
+            if (!result.success) {
+                throw new Error(result.message || 'Reset failed');
+            }
+        } catch (error) {
+            // Error handling is done in the CommitLabel component
+            throw error;
+        }
+    }, [resetToCommit]);
 
     return (
         <div className="border-b border-border pb-3 last:border-0">
@@ -82,6 +100,24 @@ export function TweetCard({
                     <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <span>{formatTimestamp(event.created_at)}</span>
+                        {/* Display commit hash prefix if available */}
+                        {event.tagValue('commit') && (
+                            <div className="flex items-center gap-1 ml-2">
+                                <CommitLabel
+                                    commitHash={event.tagValue('commit')!}
+                                    showDropdown={true}
+                                    onReset={handleCommitReset}
+                                    size="md"
+                                />
+                            </div>
+                        )}
+                        {/* Display confidence level if available */}
+                        {event.tagValue('confidence') && (
+                            <div className="flex items-center gap-1 ml-2">
+                                <span className="font-medium">Confidence:</span>
+                                <span className="bg-secondary px-1.5 py-0.5 rounded-md">{event.tagValue('confidence')}/10</span>
+                            </div>
+                        )}
                         {/* Add other metadata like relays if needed */}
                     </div>
                     <div className="flex items-center gap-3 mt-2">
