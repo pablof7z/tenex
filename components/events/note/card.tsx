@@ -11,6 +11,7 @@ import UserAvatar from "../../user/avatar";
 import { toast } from "@/components/ui/use-toast";
 import { QuotePostDialog } from "@/app/project/[slug]/components/QuotePostDialog"; // Import QuotePostDialog
 import TaggedTask from "../TaggedTask";
+import { CommitLabel } from "@/components/ui/commit-label";
 
 // Define QuoteData interface here to avoid circular dependencies
 export interface QuoteData {
@@ -307,10 +308,12 @@ export function NoteCard({
                             <span>{formatTimestamp(event.created_at)}</span>
                             {/* Display commit hash prefix if available */}
                             {event.tagValue('commit') && (
-                                <div className="flex items-center gap-1 ml-2" title={`Commit: ${event.tagValue('commit')}`}>
-                                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
-                                        {event.tagValue('commit')?.substring(0, 7)}
-                                    </span>
+                                <div className="flex items-center gap-1 ml-2">
+                                    <CommitLabel
+                                        commitHash={event.tagValue('commit')!}
+                                        showDropdown={false}
+                                        size="md"
+                                    />
                                 </div>
                             )}
                             {/* Display confidence level if available */}
