@@ -1,4 +1,5 @@
 import { type SimpleGit, simpleGit } from "simple-git";
+import type { CommitDetails, GitResetType } from "../../types/git.js";
 
 /**
  * Git utility module for handling git operations
@@ -106,5 +107,140 @@ export async function getLatestCommitHash(): Promise<string | null> {
         const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to get latest commit hash: ${errorMessage}`);
+    }
+}
+
+/**
+ * Validate if a commit hash exists in the repository
+ * @param commitHash - The commit hash to validate (can be full or short hash)
+ * @returns Promise<boolean> - true if commit exists, false otherwise
+ */
+export async function validateCommitExists(commitHash: string): Promise<boolean> {
+    try {
+        const gitInstance = initGit();
+
+        // Check if we're in a git repository
+        const isRepo = await gitInstance.checkIsRepo();
+        if (!isRepo) {
+            throw new Error("Not a git repository");
+        }
+
+        // Validate commit hash format (basic check)
+        if (!commitHash || commitHash.trim().length === 0) {
+            return false;
+        }
+
+        // Try to get commit details - if it fails, commit doesn't exist
+        try {
+            await gitInstance.show([commitHash, "--format=%H", "--no-patch"]);
+            return true;
+        } catch {
+            return false;
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to validate commit: ${errorMessage}`);
+    }
+}
+
+/**
+ * Get detailed information about a specific commit
+ * @param commitHash - The commit hash to get details for (can be full or short hash)
+ * @returns Promise<CommitDetails> - Detailed commit information
+ */
+export async function getCommitDetails(commitHash: string): Promise<CommitDetails> {
+    try {
+        const gitInstance = initGit();
+
+        // Check if we're in a git repository
+        const isRepo = await gitInstance.checkIsRepo();
+        if (!isRepo) {
+            throw new Error("Not a git repository");
+        }
+
+        // Validate commit exists first
+        const exists = await validateCommitExists(commitHash);
+        if (!exists) {
+            throw new Error(`Commit ${commitHash} does not exist`);
+        }
+
+        // Get commit details using git show with custom format
+        const result = await gitInstance.show([
+            commitHash,
+            "--format=%H|%h|%s|%an <%ae>|%aI",
+            "--no-patch"
+        ]);
+
+        const lines = result.split('\n').filter(line => line.trim().length > 0);
+        if (lines.length === 0) {
+            throw new Error(`No commit details found for ${commitHash}`);
+        }
+
+        const firstLine = lines[0];
+        if (!firstLine) {
+            throw new Error(`No commit details found for ${commitHash}`);
+        }
+
+        const parts = firstLine.split('|');
+        if (parts.length !== 5) {
+            throw new Error(`Invalid commit format for ${commitHash}`);
+        }
+
+        const [hash, shortHash, message, author, date] = parts;
+
+        if (!hash || !shortHash || !message || !author || !date) {
+            throw new Error(`Incomplete commit details for ${commitHash}`);
+        }
+
+        return {
+            hash: hash.trim(),
+            shortHash: shortHash.trim(),
+            message: message.trim(),
+            author: author.trim(),
+            date: date.trim()
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to get commit details: ${errorMessage}`);
+    }
+}
+
+/**
+ * Reset the repository to a specific commit
+ * @param commitHash - The commit hash to reset to (can be full or short hash)
+ * @param resetType - Type of reset: 'soft', 'mixed', or 'hard' (default: 'mixed')
+ * @returns Promise<void>
+ */
+export async function resetToCommit(
+    commitHash: string,
+    resetType: GitResetType = 'mixed'
+): Promise<void> {
+    try {
+        const gitInstance = initGit();
+
+        // Check if we're in a git repository
+        const isRepo = await gitInstance.checkIsRepo();
+        if (!isRepo) {
+            throw new Error("Not a git repository");
+        }
+
+        // Validate commit exists
+        const exists = await validateCommitExists(commitHash);
+        if (!exists) {
+            throw new Error(`Commit ${commitHash} does not exist`);
+        }
+
+        // Validate reset type
+        const validResetTypes: GitResetType[] = ['soft', 'mixed', 'hard'];
+        if (!validResetTypes.includes(resetType)) {
+            throw new Error(`Invalid reset type: ${resetType}. Must be one of: ${validResetTypes.join(', ')}`);
+        }
+
+        // Perform the reset
+        await gitInstance.reset([`--${resetType}`, commitHash]);
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to reset to commit ${commitHash}: ${errorMessage}`);
     }
 }
