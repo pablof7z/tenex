@@ -1,4 +1,4 @@
-import NDK, { NDKEvent, NDKRawEvent } from "@nostr-dev-kit/ndk";
+import NDK, { NDKEvent, NDKRawEvent } from "@nostr-dev-kit/ndk-hooks";
 import { NDKProject } from "./project";
 
 /**

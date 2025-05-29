@@ -258,7 +258,7 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
             update: z
                 .string()
                 .describe(
-                    "The updat to publish (do not include the task ID here)"
+                    "The update to publish (do not include the task ID here)"
                 ),
             taskId: z.string().describe("Task ID being worked on"),
             confidence_level: z
