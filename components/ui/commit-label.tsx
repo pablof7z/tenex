@@ -22,6 +22,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { useGitOperations } from '@/hooks/useGitOperations';
+import { CommitDetailsModal } from '@/components/ui/commit-details-modal';
+import { CommitDetails } from '@/types/git';
 
 interface CommitLabelProps {
   commitHash: string;
@@ -47,7 +50,16 @@ export function CommitLabel({
   size = 'md',
 }: CommitLabelProps) {
   const [showResetDialog, setShowResetDialog] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
+  const [showCommitDetails, setShowCommitDetails] = useState(false);
+  const [commitDetails, setCommitDetails] = useState<CommitDetails | null>(null);
+  
+  const {
+    isLoading,
+    error,
+    resetToCommit,
+    getCommitDetails,
+    clearError
+  } = useGitOperations();
 
   const truncatedHash = commitHash.substring(0, 7);
 
@@ -61,34 +73,60 @@ export function CommitLabel({
   };
 
   const handleReset = async () => {
-    if (!onReset) return;
+    clearError();
     
-    setIsResetting(true);
     try {
-      await onReset(commitHash);
-      toast({
-        title: "Reset successful",
-        description: `Successfully reset to commit ${truncatedHash}`,
-      });
-    } catch (error) {
+      let result: { success: boolean; message?: string };
+      if (onReset) {
+        // Use custom onReset if provided
+        await onReset(commitHash);
+        result = { success: true };
+      } else {
+        // Use MCP git operations
+        result = await resetToCommit(commitHash, { resetType: 'mixed' });
+      }
+      
+      if (result.success) {
+        toast({
+          title: "Reset successful",
+          description: `Successfully reset to commit ${truncatedHash}`,
+        });
+        setShowResetDialog(false);
+      } else {
+        throw new Error(result.message || 'Reset failed');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       toast({
         title: "Reset failed",
-        description: `Failed to reset to commit ${truncatedHash}`,
+        description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsResetting(false);
-      setShowResetDialog(false);
     }
   };
 
-  const handleViewCommit = () => {
-    // This would typically open the commit in a git viewer or external tool
-    // For now, we'll just show a toast
-    toast({
-      title: "View commit",
-      description: `Viewing commit ${truncatedHash}`,
-    });
+  const handleViewCommit = async () => {
+    clearError();
+    
+    try {
+      const details = await getCommitDetails(commitHash);
+      if (details) {
+        setCommitDetails(details);
+        setShowCommitDetails(true);
+      } else {
+        toast({
+          title: "Failed to load commit details",
+          description: error || "Could not retrieve commit information",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error loading commit details",
+        description: "Failed to fetch commit information",
+        variant: "destructive",
+      });
+    }
   };
 
   const commitLabel = (
@@ -157,14 +195,27 @@ export function CommitLabel({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleReset}
-              disabled={isResetting}
+              disabled={isLoading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isResetting ? "Resetting..." : "Reset"}
+              {isLoading ? "Resetting..." : "Reset"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CommitDetailsModal
+        isOpen={showCommitDetails}
+        onOpenChange={setShowCommitDetails}
+        commitDetails={commitDetails}
+        onReset={onReset || (async (hash) => {
+          const result = await resetToCommit(hash, { resetType: 'mixed' });
+          if (!result.success) {
+            throw new Error(result.message || 'Reset failed');
+          }
+        })}
+        isResetting={isLoading}
+      />
     </>
   );
 }
