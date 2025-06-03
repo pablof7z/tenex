@@ -74,19 +74,6 @@ export async function GET() {
         }
 
         return NextResponse.json(projectConfigs);
-
-        // Fetch NDKProject events using the project names as dTags
-        const projectEvents = await ndk.fetchEvents([
-            {
-                kinds: [NDKProject.kind],
-                "#d": projectNames,
-            },
-        ]);
-
-        // Convert Set<NDKEvent> to NDKEvent[] for JSON serialization
-        const eventsArray = Array.from(projectEvents).map(e => e.rawEvent())
-
-        return NextResponse.json(eventsArray);
     } catch (error: unknown) {
         console.error("Failed to list projects:", error);
         // Handle case where PROJECTS_DIR itself doesn't exist or other fs errors

@@ -24,23 +24,25 @@ const DEFAULT_DB_PATH = join(homedir(), ".tenex.db");
 const DEFAULT_PROJECTS_DIR = join(process.cwd(), "mcp", "projects");
 
 /**
- * Initialize configuration by loading the private key from environment
+ * Initialize configuration by loading the private key from CLI parameter or environment
  * and setting defaults for other values.
+ * @param nsecFromCli - Optional nsec key from command line parameter
  * @returns The config data
- * @throws Error if NSEC environment variable is not set.
+ * @throws Error if neither CLI parameter nor NSEC environment variable is set.
  */
-export function initConfig(): ConfigData {
-    const privateKey = process.env.NSEC;
+export function initConfig(nsecFromCli?: string): ConfigData {
+    // Prefer CLI parameter over environment variable
+    const privateKey = nsecFromCli || process.env.NSEC;
 
     if (!privateKey) {
-        log("ERROR: FATAL: NSEC environment variable is not set.");
-        throw new Error("NSEC environment variable is not set.");
+        log("ERROR: FATAL: NSEC not provided via --nsec parameter or NSEC environment variable.");
+        throw new Error("NSEC not provided via --nsec parameter or NSEC environment variable.");
     }
 
     // Basic validation for nsec format (optional but recommended)
     if (!privateKey.startsWith("nsec")) {
         log(
-            "WARN: NSEC environment variable does not look like a valid nsec key."
+            "WARN: NSEC does not look like a valid nsec key."
         );
         // Decide if you want to throw an error here or just warn
     }
