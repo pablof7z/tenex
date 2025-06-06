@@ -17,7 +17,7 @@ const TEMPLATE_DIR = path.resolve(PROJECT_ROOT, 'project-templates/roo');
 const NSEC_PLACEHOLDER = '__NSEC_PLACEHOLDER__';
 
 // --- Argument Parsing ---
-// Simple argument parsing: expects --slug <slug> --desc <desc> --title <title> --eventId <eventId> --nsec <nsec> [--repo <repoUrl>] [--hashtags <tags>]
+// Simple argument parsing: expects --slug <slug> --desc <desc> --title <title> --eventId <eventId> --nsec <nsec> [--repo <repoUrl>] [--hashtags <tags>] [--templateName <name>] [--templateId <id>]
 interface Args {
     slug?: string;
     desc?: string;
@@ -26,6 +26,8 @@ interface Args {
     repo?: string;
     hashtags?: string; // Added hashtags argument
     eventId?: string; // Added eventId argument (REQUIRED)
+    templateName?: string; // Added template name for tracking
+    templateId?: string; // Added template ID for tracking
 }
 
 const args: Args = {};
@@ -52,6 +54,12 @@ for (let i = 0; i < argv.length; i++) {
         i++;
     } else if (argv[i] === '--eventId' && i + 1 < argv.length) {
         args.eventId = argv[i + 1];
+        i++;
+    } else if (argv[i] === '--templateName' && i + 1 < argv.length) {
+        args.templateName = argv[i + 1];
+        i++;
+    } else if (argv[i] === '--templateId' && i + 1 < argv.length) {
+        args.templateId = argv[i + 1];
         i++;
     }
 }
@@ -87,6 +95,8 @@ const nsec = args.nsec!; // *** CHANGED: Non-null assertion ok due to validation
 const repoUrl = args.repo;
 const hashtagsInput = args.hashtags; // Comma-separated string or undefined
 const eventId = args.eventId!; // Now required, non-null assertion ok
+const templateName = args.templateName; // Optional template name
+const templateId = args.templateId; // Optional template ID
 
 // --- Main Logic ---
 async function createProject() {

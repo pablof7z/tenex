@@ -83,6 +83,8 @@ export async function POST(
     let title: string; // Added for the project title
     let hashtags: string | undefined; // Added for hashtags
     let backendType: string = "roo"; // Default to Roo backend for backward compatibility
+    let templateName: string | undefined; // Added for template tracking
+    let templateId: string | undefined; // Added for template tracking
 
     // 1. Validate Project Slug
     if (!projectSlug) {
@@ -138,6 +140,13 @@ export async function POST(
                     return NextResponse.json({ error: `Invalid backendType. Must be one of: ${validBackends.join(", ")}` }, { status: 400 });
                 }
             }
+            // Template metadata is optional (for analytics/tracking)
+            if (body.templateName && typeof body.templateName === "string" && body.templateName.trim() !== "") {
+                templateName = body.templateName;
+            }
+            if (body.templateId && typeof body.templateId === "string" && body.templateId.trim() !== "") {
+                templateId = body.templateId;
+            }
         } else {
             return NextResponse.json({ error: "Request body must be JSON" }, { status: 415 });
         }
@@ -174,6 +183,12 @@ export async function POST(
         }
         if (hashtags) {
             commandArgs.push("--hashtags", `"${hashtags.replace(/"/g, '\\"')}"`);
+        }
+        if (templateName) {
+            commandArgs.push("--templateName", `"${templateName.replace(/"/g, '\\"')}"`);
+        }
+        if (templateId) {
+            commandArgs.push("--templateId", `"${templateId.replace(/"/g, '\\"')}"`);
         }
 
         const command = commandArgs.join(" ");
