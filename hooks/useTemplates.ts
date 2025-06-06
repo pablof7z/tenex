@@ -1,7 +1,26 @@
 import { useMemo } from 'react';
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks';
-import { NDKEvent, NDKFilter } from '@nostr-dev-kit/ndk';
 import { NostrTemplate, TemplateFilters, TEMPLATE_KIND } from '@/types/template';
+
+// Define the filter interface to avoid type conflicts
+interface NostrFilter {
+    kinds?: number[];
+    authors?: string[];
+    limit?: number;
+    '#t'?: string[];
+    [key: string]: unknown;
+}
+
+// Define the event interface to avoid type conflicts
+interface NostrEvent {
+    id?: string;
+    pubkey: string;
+    created_at?: number;
+    content?: string;
+    tags: string[][];
+    tagValue(tagName: string): string | undefined;
+    getMatchingTags(tagName: string): string[][];
+}
 
 /**
  * Hook for fetching and parsing nostr template events (kind 30717)
@@ -11,9 +30,9 @@ import { NostrTemplate, TemplateFilters, TEMPLATE_KIND } from '@/types/template'
  */
 export function useTemplates(filters?: TemplateFilters) {
     // Build NDK filters based on provided filters
-    const ndkFilters = useMemo((): NDKFilter[] | false => {
-        const baseFilter: NDKFilter = {
-            kinds: [TEMPLATE_KIND],
+    const ndkFilters = useMemo(() => {
+        const baseFilter: NostrFilter = {
+            kinds: [TEMPLATE_KIND as number],
             limit: 100, // Reasonable limit for templates
         };
 
@@ -34,7 +53,7 @@ export function useTemplates(filters?: TemplateFilters) {
 
     // Subscribe to template events using NDK
     const { events, eose } = useSubscribe(
-        ndkFilters,
+        ndkFilters as unknown as Parameters<typeof useSubscribe>[0],
         {}, // No special subscription options needed
         [filters?.author, filters?.tags] // Dependencies for re-subscription
     );
@@ -46,7 +65,7 @@ export function useTemplates(filters?: TemplateFilters) {
         }
 
         const parsedTemplates = events
-            .map(parseEventToTemplate)
+            .map((event: NostrEvent) => parseEventToTemplate(event))
             .filter((template): template is NostrTemplate => template !== null);
 
         // Apply search filter if specified
@@ -74,7 +93,7 @@ export function useTemplates(filters?: TemplateFilters) {
  * @param event NDK event to parse
  * @returns Parsed NostrTemplate or null if parsing fails
  */
-function parseEventToTemplate(event: NDKEvent): NostrTemplate | null {
+function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
     try {
         // Extract required fields from tags
         const dTag = event.tagValue('d');
@@ -96,7 +115,7 @@ function parseEventToTemplate(event: NDKEvent): NostrTemplate | null {
         const imageTag = event.tagValue('image');
         
         // Extract all 't' tags for template tags
-        const templateTags = event.getMatchingTags('t').map(tag => tag[1]).filter(Boolean);
+        const templateTags = event.getMatchingTags('t').map((tag: string[]) => tag[1]).filter(Boolean);
 
         // Extract git repository URL from content
         const repoUrl = event.content?.trim() || '';
@@ -120,7 +139,7 @@ function parseEventToTemplate(event: NDKEvent): NostrTemplate | null {
             repoUrl,
             authorPubkey: event.pubkey,
             createdAt: event.created_at || 0,
-            event
+            event: event as unknown as NostrTemplate['event']
         };
 
         return template;
