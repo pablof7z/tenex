@@ -13,7 +13,7 @@ const execAsync = promisify(exec);
 // --- Configuration ---
 // Define the path to the template directory relative to the project root
 const PROJECT_ROOT = path.resolve(__dirname, '..'); // Assumes script is in PROJECT_ROOT/scripts
-const TEMPLATE_DIR = path.resolve(PROJECT_ROOT, 'project-template');
+const TEMPLATE_DIR = path.resolve(PROJECT_ROOT, 'project-templates/roo');
 const NSEC_PLACEHOLDER = '__NSEC_PLACEHOLDER__';
 
 // --- Argument Parsing ---

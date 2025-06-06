@@ -77,11 +77,12 @@ export async function POST(
 ) {
     const projectSlug = params.slug; // Changed projectId to projectSlug
     let description: string = ""; // Default description
-    let nsec: string; // *** CHANGED: No longer optional ***
+    let nsec: string | undefined; // Optional for Claude Code backend
     let repoUrl: string | undefined;
     let eventId: string | undefined; // Added for the project event ID
     let title: string; // Added for the project title
     let hashtags: string | undefined; // Added for hashtags
+    let backendType: string = "roo"; // Default to Roo backend for backward compatibility
 
     // 1. Validate Project Slug
     if (!projectSlug) {
@@ -98,13 +99,14 @@ export async function POST(
             } else {
                 return NextResponse.json({ error: "title is required in the request body" }, { status: 400 });
             }
-            // NSEC is REQUIRED
+            // NSEC is REQUIRED for Roo backend, optional for Claude Code
             if (body.nsec && typeof body.nsec === "string" && body.nsec.trim() !== "") {
                 nsec = body.nsec;
-            } else {
-                // *** ADDED: Error if nsec is missing/invalid ***
-                return NextResponse.json({ error: "nsec is required in the request body" }, { status: 400 });
+            } else if (backendType === "roo") {
+                // NSEC is required for Roo backend
+                return NextResponse.json({ error: "nsec is required for Roo backend" }, { status: 400 });
             }
+            // For Claude Code backend, nsec is optional
             // Description is optional
             if (typeof body.description === "string" && body.description.trim() !== "") {
                 description = body.description;
@@ -127,6 +129,15 @@ export async function POST(
                 // If eventId is missing or invalid, return an error immediately
                 return NextResponse.json({ error: "eventId is required in the request body" }, { status: 400 });
             }
+            // Backend Type is optional (defaults to "roo")
+            if (body.backendType && typeof body.backendType === "string" && body.backendType.trim() !== "") {
+                const validBackends = ["roo", "claude-code"];
+                if (validBackends.includes(body.backendType.toLowerCase())) {
+                    backendType = body.backendType.toLowerCase();
+                } else {
+                    return NextResponse.json({ error: `Invalid backendType. Must be one of: ${validBackends.join(", ")}` }, { status: 400 });
+                }
+            }
         } else {
             return NextResponse.json({ error: "Request body must be JSON" }, { status: 415 });
         }
@@ -137,7 +148,7 @@ export async function POST(
 
     // --- Execute the create-project script ---
     try {
-        const scriptPath = path.resolve(process.cwd(), "scripts", "create-project");
+        const scriptPath = path.resolve(process.cwd(), "scripts", "create-project", backendType);
         // Ensure script path is correctly quoted if it contains spaces, though unlikely here
         const safeScriptPath = `"${scriptPath}"`;
 
@@ -154,7 +165,10 @@ export async function POST(
             `"${title.replace(/"/g, '\\"')}"`, // Add title argument
         ];
 
-        commandArgs.push("--nsec", `"${nsec.replace(/"/g, '\\"')}"`); // *** CHANGED: Always add nsec ***
+        // Add NSEC only for Roo backend (Claude Code doesn't use it)
+        if (backendType === "roo" && nsec) {
+            commandArgs.push("--nsec", `"${nsec.replace(/"/g, '\\"')}"`);
+        }
         if (repoUrl) {
             commandArgs.push("--repo", `"${repoUrl.replace(/"/g, '\\"')}"`);
         }
