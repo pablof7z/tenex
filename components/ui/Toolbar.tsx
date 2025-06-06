@@ -112,7 +112,7 @@ export function Toolbar({ tabs, initialActiveIndex = 0 }: ToolbarProps) {
               onClick={() => handleTabClick(index, onClick)}
               // onKeyDown removed as native button handles Enter/Space
             >
-              <span className="text-sm font-[var(--www-mattmannucci-me-geist-regular-font-family)] leading-5 whitespace-nowrap"> {/* Changed inner div to span */}
+              <span className="text-sm leading-5 whitespace-nowrap"> {/* Changed inner div to span */}
                 {label}
               </span>
             </button>

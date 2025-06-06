@@ -20,7 +20,6 @@ const config = {
         },
         extend: {
             fontFamily: {
-                serif: ["var(--font-inter)", "inter", "system-ui", "sans-serif"],
                 sans: ["var(--font-inter)", "inter", "system-ui", "sans-serif"],
                 mono: ["var(--font-mono)", "monospace"],
             },
@@ -81,12 +80,7 @@ const config = {
             boxShadow: {
                 subtle: "0 1px 3px rgba(0,0,0,0.05)",
             },
-        },
-    },
-    plugins: [
-        require("tailwindcss-animate"),
-        require("@tailwindcss/typography")({
-            theme: {
+            typography: {
                 DEFAULT: {
                     css: {
                         fontFamily: 'var(--font-inter), system-ui, sans-serif',
@@ -109,7 +103,11 @@ const config = {
                     },
                 },
             },
-        })
+        },
+    },
+    plugins: [
+        require("tailwindcss-animate"),
+        require("@tailwindcss/typography")
     ],
 } satisfies Config;
 
