@@ -313,7 +313,10 @@ async function createProject() {
             nsec: nsec,      // *** CHANGED: Always present ***
             hashtags: hashtags,
             repoUrl: repoUrl || null,
-            eventId: eventId // Use non-null assertion as it's validated earlier
+            eventId: eventId, // Use non-null assertion as it's validated earlier
+            // Template tracking metadata (if provided)
+            ...(templateName && { templateName }),
+            ...(templateId && { templateId })
         };
 
         try {

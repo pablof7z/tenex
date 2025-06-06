@@ -193,6 +193,11 @@ export async function POST(
 
         const command = commandArgs.join(" ");
 
+        // Log template usage for analytics
+        if (templateName && templateId) {
+            console.log(`Project creation using template: ${templateName} (${templateId})`);
+        }
+        
         // Removed debug logs from previous step
         console.log(`Executing script: ${command}`); // Keep this log for confirmation
         // Execute using bun directly if preferred and available, otherwise rely on shebang

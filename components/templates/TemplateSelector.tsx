@@ -33,6 +33,14 @@ export function TemplateSelector({ onTemplateSelect, selectedTemplate }: Templat
 
   // Fetch templates using the hook
   const { templates, eose } = useTemplates(filters);
+  
+  // Debug log
+  React.useEffect(() => {
+    console.log(`[TemplateSelector] Received ${templates.length} templates, eose: ${eose}`);
+    if (templates.length > 0) {
+      console.log('[TemplateSelector] Template names:', templates.map(t => t.name));
+    }
+  }, [templates, eose]);
 
   // Extract all unique tags from templates for filtering
   const allTags = useMemo(() => {

@@ -64,21 +64,51 @@ export function useTemplates(filters?: TemplateFilters) {
             return [];
         }
 
+        console.log(`[useTemplates] Processing ${events.length} template events`);
+
         const parsedTemplates = events
-            .map((event: NostrEvent) => parseEventToTemplate(event))
+            .map((event: NostrEvent) => {
+                const template = parseEventToTemplate(event);
+                if (!template) {
+                    console.log(`[useTemplates] Failed to parse template event:`, event.id);
+                }
+                return template;
+            })
             .filter((template): template is NostrTemplate => template !== null);
+
+        console.log(`[useTemplates] Successfully parsed ${parsedTemplates.length} templates`);
+        
+        // Log template IDs to check for duplicates
+        const templateIds = parsedTemplates.map(t => t.id);
+        const uniqueIds = new Set(templateIds);
+        if (templateIds.length !== uniqueIds.size) {
+            console.log(`[useTemplates] Found duplicate template IDs. Total: ${templateIds.length}, Unique: ${uniqueIds.size}`);
+            console.log(`[useTemplates] Template IDs:`, templateIds);
+        }
+        
+        // Deduplicate templates by ID (keep the most recent one)
+        const deduplicatedTemplates = parsedTemplates.reduce((acc, template) => {
+            const existing = acc.find(t => t.id === template.id);
+            if (!existing || template.createdAt > existing.createdAt) {
+                // Remove old one if exists and add new one
+                return [...acc.filter(t => t.id !== template.id), template];
+            }
+            return acc;
+        }, [] as NostrTemplate[]);
+        
+        console.log(`[useTemplates] After deduplication: ${deduplicatedTemplates.length} unique templates`);
 
         // Apply search filter if specified
         if (filters?.search) {
             const searchTerm = filters.search.toLowerCase();
-            return parsedTemplates.filter(template => 
+            return deduplicatedTemplates.filter(template => 
                 template.name.toLowerCase().includes(searchTerm) ||
                 template.description.toLowerCase().includes(searchTerm) ||
                 template.tags.some(tag => tag.toLowerCase().includes(searchTerm))
             );
         }
 
-        return parsedTemplates;
+        return deduplicatedTemplates;
     }, [events, filters?.search]);
 
     return {
@@ -106,7 +136,8 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
                 id: event.id,
                 dTag,
                 nameTag,
-                descriptionTag
+                descriptionTag,
+                allTags: event.tags
             });
             return null;
         }
@@ -120,13 +151,14 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
         // Extract git repository URL from content
         const repoUrl = event.content?.trim() || '';
 
-        // Validate repo URL format (should be git+https://...)
+        // Log but don't reject templates with invalid repo URLs
         if (!repoUrl || !repoUrl.startsWith('git+https://')) {
             console.warn('Template event has invalid or missing repo URL:', {
                 id: event.id,
-                repoUrl
+                repoUrl,
+                content: event.content
             });
-            return null;
+            // Don't return null - allow templates with missing/invalid repos
         }
 
         // Create NostrTemplate object

@@ -146,6 +146,9 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                         repo: repoUrl || undefined,
                         hashtags: formData.hashtags || undefined,
                         eventId: project.tagId(),
+                        // Include template metadata if a template was selected
+                        templateName: formData.selectedTemplate?.name || undefined,
+                        templateId: formData.selectedTemplate?.id || undefined,
                     }),
                 });
 
