@@ -1,7 +1,7 @@
 "use client";
 
 import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { Button } from "@/components/ui/button";
@@ -303,7 +303,14 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                                     placeholder="github.com/username/repository"
                                     className="rounded-md"
                                     value={formData.repoUrl}
-                                    onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
+                                    onChange={(e) => {
+                                        const newRepoUrl = e.target.value;
+                                        setFormData({ 
+                                            ...formData, 
+                                            repoUrl: newRepoUrl,
+                                            selectedTemplate: newRepoUrl ? null : formData.selectedTemplate
+                                        });
+                                    }}
                                 />
                                 {!formData.repoUrl && (
                                     <p className="text-sm text-muted-foreground">
@@ -312,11 +319,20 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                                 )}
                             </div>
                             {formData.selectedTemplate && (
-                                <div className="bg-muted p-3 rounded-md">
-                                    <p className="text-sm font-medium">
-                                        Template selected: {formData.selectedTemplate.name}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">{formData.selectedTemplate.repoUrl}</p>
+                                <div className="bg-muted p-3 rounded-md flex justify-between items-center">
+                                    <div>
+                                        <p className="text-sm font-medium">
+                                            Template selected: {formData.selectedTemplate.name}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">{formData.selectedTemplate.repoUrl}</p>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setFormData({ ...formData, selectedTemplate: null })}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             )}
                         </>
@@ -378,7 +394,13 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                             {currentStep > 1 && (
                                 <Button
                                     variant="outline"
-                                    onClick={prevStep}
+                                    onClick={() => {
+                                        if (currentStep === 3 && formData.repoUrl && !formData.selectedTemplate) {
+                                            setCurrentStep(1); // Go directly to step 1 if we skipped step 2
+                                        } else {
+                                            prevStep();
+                                        }
+                                    }}
                                     className="rounded-md"
                                     disabled={isCreating}
                                 >
