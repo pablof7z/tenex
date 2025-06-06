@@ -6,15 +6,26 @@ import { mkdir, readFile, writeFile, access } from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk'; // Only need signer for pubkey derivation
-import { getProjectPath } from '../lib/projectUtils'; // Adjust path relative to script location
+// Project path logic implemented inline - creates projects in ../projects directory
 
 const execAsync = promisify(exec);
 
 // --- Configuration ---
 // Define the path to the template directory relative to the project root
-const PROJECT_ROOT = path.resolve(__dirname, '..'); // Assumes script is in PROJECT_ROOT/scripts
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..'); // Go up two levels from scripts/create-project to project root
 const TEMPLATE_DIR = path.resolve(PROJECT_ROOT, 'project-templates/roo');
+const PROJECTS_DIR = path.resolve(PROJECT_ROOT, '..', 'projects'); // Projects created in sibling directory
 const NSEC_PLACEHOLDER = '__NSEC_PLACEHOLDER__';
+
+// --- Project Path Utility ---
+function getProjectPath(projectSlug) {
+    if (!projectSlug || typeof projectSlug !== 'string') {
+        throw new Error('Project slug must be a non-empty string');
+    }
+    // Sanitize slug to ensure it's safe for filesystem
+    const sanitizedSlug = projectSlug.replace(/[^a-zA-Z0-9-_]/g, '-');
+    return path.resolve(PROJECTS_DIR, sanitizedSlug);
+}
 
 // --- Argument Parsing ---
 // Simple argument parsing: expects --slug <slug> --desc <desc> --title <title> --eventId <eventId> --nsec <nsec> [--repo <repoUrl>] [--hashtags <tags>] [--templateName <name>] [--templateId <id>]
