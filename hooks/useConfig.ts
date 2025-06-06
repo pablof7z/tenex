@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const LOCAL_STORAGE_KEY = "backendUrl";
 // Default to relative path for same-origin deployment

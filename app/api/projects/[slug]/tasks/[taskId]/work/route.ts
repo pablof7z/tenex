@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
-import path from "path";
 import fs from "fs";
+import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 import { getProjectPath } from "@/lib/projectUtils"; // Assuming this utility exists and works
 
 // Get the base path from environment variable for security check
@@ -122,9 +122,7 @@ export async function POST(
     exec(`"${scriptPath}" "${projectDirPath}" "${taskFilePath}"`, (error, stdout, stderr) => {
         if (error) {
             // Log errors, but don't block the response as the main action (file creation) succeeded.
-            console.error(
-                `Error executing open-editor script for task file "${taskFilePath}": ${error.message}`,
-            );
+            console.error(`Error executing open-editor script for task file "${taskFilePath}": ${error.message}`);
             console.error(`stderr: ${stderr}`);
         }
         if (stdout) console.log(`open-editor stdout: ${stdout}`);

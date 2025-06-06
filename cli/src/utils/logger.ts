@@ -1,7 +1,7 @@
 // TENEX CLI: Logger Utility
 export function logInfo(message: string) {
-  console.log("[INFO]", message);
+    console.log("[INFO]", message);
 }
 export function logError(message: string) {
-  console.error("[ERROR]", message);
+    console.error("[ERROR]", message);
 }

@@ -1,21 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { AlertCircle, Mic, MicOff, Pause, Play, Square, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { 
-    Mic, 
-    MicOff, 
-    Play, 
-    Pause, 
-    Square, 
-    Trash2, 
-    Upload,
-    AlertCircle 
-} from "lucide-react";
 
-export type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped' | 'processing' | 'error';
+export type RecordingState = "idle" | "recording" | "paused" | "stopped" | "processing" | "error";
 
 interface AudioRecorderProps {
     onRecordingComplete?: (audioBlob: Blob, duration: number) => void;
@@ -30,9 +21,9 @@ export function AudioRecorder({
     onError,
     maxDuration = 300,
     className,
-    autoStart = false
+    autoStart = false,
 }: AudioRecorderProps) {
-    const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+    const [recordingState, setRecordingState] = useState<RecordingState>("idle");
     const [duration, setDuration] = useState(0);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -48,46 +39,50 @@ export function AudioRecorder({
     const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Check browser compatibility
-    const isSupported = typeof window !== 'undefined' &&
+    const isSupported =
+        typeof window !== "undefined" &&
         navigator.mediaDevices &&
-        typeof navigator.mediaDevices.getUserMedia === 'function' &&
-        typeof window.MediaRecorder === 'function';
+        typeof navigator.mediaDevices.getUserMedia === "function" &&
+        typeof window.MediaRecorder === "function";
 
     const clearError = useCallback(() => {
         setError(null);
     }, []);
 
-    const handleError = useCallback((errorMessage: string) => {
-        setError(errorMessage);
-        setRecordingState('error');
-        onError?.(errorMessage);
-    }, [onError]);
+    const handleError = useCallback(
+        (errorMessage: string) => {
+            setError(errorMessage);
+            setRecordingState("error");
+            onError?.(errorMessage);
+        },
+        [onError],
+    );
 
     const startRecording = useCallback(async () => {
         if (!isSupported) {
-            handleError('Audio recording is not supported in this browser');
+            handleError("Audio recording is not supported in this browser");
             return;
         }
 
         try {
             clearError();
-            setRecordingState('processing');
+            setRecordingState("processing");
 
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     sampleRate: 16000, // Optimal for Whisper
                     channelCount: 1,
                     echoCancellation: true,
                     noiseSuppression: true,
-                    autoGainControl: true
-                } 
+                    autoGainControl: true,
+                },
             });
 
             streamRef.current = stream;
             chunksRef.current = [];
 
             const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm;codecs=opus'
+                mimeType: "audio/webm;codecs=opus",
             });
 
             mediaRecorderRef.current = mediaRecorder;
@@ -99,28 +94,28 @@ export function AudioRecorder({
             };
 
             mediaRecorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+                const blob = new Blob(chunksRef.current, { type: "audio/webm;codecs=opus" });
                 setAudioBlob(blob);
-                
+
                 // Create URL for playback
                 const url = URL.createObjectURL(blob);
                 setAudioUrl(url);
-                
-                setRecordingState('stopped');
+
+                setRecordingState("stopped");
                 onRecordingComplete?.(blob, duration);
             };
 
             mediaRecorder.onerror = (event) => {
-                handleError(`Recording error: ${event.error?.message || 'Unknown error'}`);
+                handleError(`Recording error: ${event.error?.message || "Unknown error"}`);
             };
 
             mediaRecorder.start(1000); // Collect data every second
-            setRecordingState('recording');
+            setRecordingState("recording");
             setDuration(0);
 
             // Start duration timer
             intervalRef.current = setInterval(() => {
-                setDuration(prev => {
+                setDuration((prev) => {
                     const newDuration = prev + 1;
                     if (newDuration >= maxDuration) {
                         stopRecording();
@@ -129,20 +124,19 @@ export function AudioRecorder({
                     return newDuration;
                 });
             }, 1000);
-
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to start recording';
+            const errorMessage = err instanceof Error ? err.message : "Failed to start recording";
             handleError(errorMessage);
         }
     }, [isSupported, maxDuration, duration, onRecordingComplete, handleError, clearError]);
 
     const stopRecording = useCallback(() => {
-        if (mediaRecorderRef.current && recordingState === 'recording') {
+        if (mediaRecorderRef.current && recordingState === "recording") {
             mediaRecorderRef.current.stop();
         }
 
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
         }
 
@@ -154,7 +148,7 @@ export function AudioRecorder({
 
     const cancelRecording = useCallback(() => {
         stopRecording();
-        
+
         // Clean up
         setAudioBlob(null);
         if (audioUrl) {
@@ -164,7 +158,7 @@ export function AudioRecorder({
         setDuration(0);
         setPlaybackTime(0);
         setIsPlaying(false);
-        setRecordingState('idle');
+        setRecordingState("idle");
         chunksRef.current = [];
     }, [stopRecording, audioUrl]);
 
@@ -181,7 +175,7 @@ export function AudioRecorder({
         } else {
             audioRef.current.play();
             setIsPlaying(true);
-            
+
             // Update playback time
             playbackIntervalRef.current = setInterval(() => {
                 if (audioRef.current) {
@@ -202,7 +196,7 @@ export function AudioRecorder({
     const formatTime = useCallback((seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
     }, []);
 
     // Cleanup on unmount
@@ -212,7 +206,7 @@ export function AudioRecorder({
             if (intervalRef.current) clearInterval(intervalRef.current);
             if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
             if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current.getTracks().forEach((track) => track.stop());
             }
             if (currentAudioUrl) {
                 URL.revokeObjectURL(currentAudioUrl);
@@ -224,7 +218,7 @@ export function AudioRecorder({
     useEffect(() => {
         if (audioRef.current && audioUrl) {
             const audio = audioRef.current;
-            
+
             const handleEnded = () => {
                 setIsPlaying(false);
                 setPlaybackTime(0);
@@ -234,8 +228,8 @@ export function AudioRecorder({
                 }
             };
 
-            audio.addEventListener('ended', handleEnded);
-            return () => audio.removeEventListener('ended', handleEnded);
+            audio.addEventListener("ended", handleEnded);
+            return () => audio.removeEventListener("ended", handleEnded);
         }
     }, [audioUrl]);
 
@@ -246,7 +240,7 @@ export function AudioRecorder({
             if (intervalRef.current) clearInterval(intervalRef.current);
             if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
             if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current.getTracks().forEach((track) => track.stop());
             }
             if (currentAudioUrl) {
                 URL.revokeObjectURL(currentAudioUrl);
@@ -256,7 +250,7 @@ export function AudioRecorder({
 
     // Auto-start recording when autoStart is true
     useEffect(() => {
-        if (autoStart && recordingState === 'idle') {
+        if (autoStart && recordingState === "idle") {
             startRecording();
         }
     }, [autoStart, recordingState, startRecording]);
@@ -286,7 +280,7 @@ export function AudioRecorder({
 
             {/* Recording Controls */}
             <div className="flex items-center gap-2">
-                {recordingState === 'idle' && (
+                {recordingState === "idle" && (
                     <Button
                         onClick={startRecording}
                         variant="default"
@@ -298,57 +292,37 @@ export function AudioRecorder({
                     </Button>
                 )}
 
-                {recordingState === 'recording' && (
+                {recordingState === "recording" && (
                     <>
-                        <Button
-                            onClick={stopRecording}
-                            variant="outline"
-                            size="sm"
-                        >
+                        <Button onClick={stopRecording} variant="outline" size="sm">
                             <Square className="h-4 w-4" />
                             Stop
                         </Button>
-                        <Button
-                            onClick={cancelRecording}
-                            variant="ghost"
-                            size="sm"
-                        >
+                        <Button onClick={cancelRecording} variant="ghost" size="sm">
                             <Trash2 className="h-4 w-4" />
                             Cancel
                         </Button>
                     </>
                 )}
 
-                {recordingState === 'stopped' && (
+                {recordingState === "stopped" && (
                     <>
-                        <Button
-                            onClick={playPause}
-                            variant="outline"
-                            size="sm"
-                        >
+                        <Button onClick={playPause} variant="outline" size="sm">
                             {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                            {isPlaying ? 'Pause' : 'Play'}
+                            {isPlaying ? "Pause" : "Play"}
                         </Button>
-                        <Button
-                            onClick={resetPlayback}
-                            variant="ghost"
-                            size="sm"
-                        >
+                        <Button onClick={resetPlayback} variant="ghost" size="sm">
                             <Square className="h-4 w-4" />
                             Reset
                         </Button>
-                        <Button
-                            onClick={cancelRecording}
-                            variant="ghost"
-                            size="sm"
-                        >
+                        <Button onClick={cancelRecording} variant="ghost" size="sm">
                             <Trash2 className="h-4 w-4" />
                             Delete
                         </Button>
                     </>
                 )}
 
-                {recordingState === 'processing' && (
+                {recordingState === "processing" && (
                     <Button disabled variant="outline" size="sm">
                         <Upload className="h-4 w-4 animate-spin" />
                         Processing...
@@ -357,34 +331,26 @@ export function AudioRecorder({
             </div>
 
             {/* Recording Status */}
-            {recordingState === 'recording' && (
+            {recordingState === "recording" && (
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 bg-red-600 rounded-full animate-pulse" />
                         <span className="text-sm font-medium">Recording: {formatTime(duration)}</span>
-                        <span className="text-xs text-muted-foreground">
-                            / {formatTime(maxDuration)}
-                        </span>
+                        <span className="text-xs text-muted-foreground">/ {formatTime(maxDuration)}</span>
                     </div>
-                    <Progress 
-                        value={(duration / maxDuration) * 100} 
-                        className="h-1"
-                    />
+                    <Progress value={(duration / maxDuration) * 100} className="h-1" />
                 </div>
             )}
 
             {/* Playback Status */}
-            {recordingState === 'stopped' && audioUrl && (
+            {recordingState === "stopped" && audioUrl && (
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <span className="text-sm">
                             {formatTime(playbackTime)} / {formatTime(duration)}
                         </span>
                     </div>
-                    <Progress 
-                        value={duration > 0 ? (playbackTime / duration) * 100 : 0} 
-                        className="h-1"
-                    />
+                    <Progress value={duration > 0 ? (playbackTime / duration) * 100 : 0} className="h-1" />
                 </div>
             )}
 
@@ -394,7 +360,7 @@ export function AudioRecorder({
                     ref={audioRef}
                     src={audioUrl}
                     preload="metadata"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                     aria-label="Audio playback"
                 >
                     <track kind="captions" srcLang="en" label="Audio recording" />

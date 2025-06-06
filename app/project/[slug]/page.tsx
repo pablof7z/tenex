@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import React, { useMemo, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
+// QuoteData import removed as quoting is handled in NoteCard
+import { Toolbar } from "@/components/ui/Toolbar";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
 import { useProjects } from "@/hooks/useProjects"; // Import the SWR hook
-// QuoteData import removed as quoting is handled in NoteCard
-import { Toolbar } from "@/components/ui/Toolbar";
 
 // Import common components
 import { ProjectHeader } from "./components/ProjectHeader";
@@ -37,7 +37,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     const project = useMemo(() => {
         if (!allProjects) return undefined;
         // Assuming project.slug matches the route slug (dTag)
-        return allProjects.find(p => p.slug === projectSlug);
+        return allProjects.find((p) => p.slug === projectSlug);
     }, [allProjects, projectSlug]);
 
     // Keep store access for potential updates if needed later, but remove direct loading/error checks from it
@@ -49,12 +49,15 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     const [activeTab, setActiveTab] = useState("overview");
 
     // Memoize toolbarTabs creation based on static labels and setActiveTab
-    const toolbarTabs = useMemo<[string, () => void][]>(() => [
-        [TAB_LABELS[0], () => setActiveTab(TAB_LABELS[0].toLowerCase())],
-        [TAB_LABELS[1], () => setActiveTab(TAB_LABELS[1].toLowerCase())],
-        [TAB_LABELS[2], () => setActiveTab(TAB_LABELS[2].toLowerCase())],
-        [TAB_LABELS[3], () => setActiveTab(TAB_LABELS[3].toLowerCase())],
-    ], []); // No dependencies needed as setActiveTab is stable
+    const toolbarTabs = useMemo<[string, () => void][]>(
+        () => [
+            [TAB_LABELS[0], () => setActiveTab(TAB_LABELS[0].toLowerCase())],
+            [TAB_LABELS[1], () => setActiveTab(TAB_LABELS[1].toLowerCase())],
+            [TAB_LABELS[2], () => setActiveTab(TAB_LABELS[2].toLowerCase())],
+            [TAB_LABELS[3], () => setActiveTab(TAB_LABELS[3].toLowerCase())],
+        ],
+        [],
+    ); // No dependencies needed as setActiveTab is stable
 
     // Calculate initialActiveIndex for Toolbar based on current activeTab (Moved to top level)
     const initialActiveIndex = useMemo(() => {
@@ -116,10 +119,17 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 {configError && (
                     <div className="mb-4 p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
                         <h3 className="font-semibold">Configuration Error</h3>
-                        <p>{configError} <Link href="/settings" className="underline ml-1">Check Settings</Link></p>
+                        <p>
+                            {configError}{" "}
+                            <Link href="/settings" className="underline ml-1">
+                                Check Settings
+                            </Link>
+                        </p>
                     </div>
                 )}
-                <div className="p-4 text-red-600">Error loading projects: {projectsErrorSWR.message || 'Unknown error'}</div>
+                <div className="p-4 text-red-600">
+                    Error loading projects: {projectsErrorSWR.message || "Unknown error"}
+                </div>
             </AppLayout>
         );
     }
@@ -129,16 +139,19 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
     if (!project) {
         return (
             <AppLayout>
-                 {/* Display config error first if it exists */}
-                 {configError && (
+                {/* Display config error first if it exists */}
+                {configError && (
                     <div className="mb-4 p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
                         <h3 className="font-semibold">Configuration Error</h3>
-                        <p>{configError} <Link href="/settings" className="underline ml-1">Check Settings</Link></p>
+                        <p>
+                            {configError}{" "}
+                            <Link href="/settings" className="underline ml-1">
+                                Check Settings
+                            </Link>
+                        </p>
                     </div>
                 )}
-                <div className="p-4 text-red-600">
-                    Error: Project with slug '{projectSlug}' not found.
-                </div>
+                <div className="p-4 text-red-600">Error: Project with slug '{projectSlug}' not found.</div>
             </AppLayout>
         );
     }
@@ -167,7 +180,9 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 onSettingsClick={handleSettingsClick}
                 onEditorLaunch={handleEditorLaunch}
                 // Provide dummy props for removed functionality to satisfy types
-                onProjectCreate={() => { /* No-op: Creation handled elsewhere */ }}
+                onProjectCreate={() => {
+                    /* No-op: Creation handled elsewhere */
+                }}
                 projectExists={true} // Assume exists if on this page
                 isCreatingProject={false} // Creation state removed
                 isConfigReady={isConfigReady}
@@ -175,33 +190,31 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
             <ProjectStatCards project={project} />
 
-            <div className="w-full mt-6 flex justify-center"> {/* Center the toolbar */}
+            <div className="w-full mt-6 flex justify-center">
+                {" "}
+                {/* Center the toolbar */}
                 <Toolbar tabs={toolbarTabs} initialActiveIndex={initialActiveIndex} />
             </div>
 
             {/* Tab Content Area */}
             <div className="mt-6">
-                {activeTab === 'overview' && (
+                {activeTab === "overview" && (
                     <ProjectOverviewTab
                         project={project}
                         // onReply, onRepost, onQuote, onZap removed
                     />
                 )}
 
-                {activeTab === 'tasks' && (
+                {activeTab === "tasks" && (
                     <TasksList // Use TasksList directly
                         project={project}
                         projectSlug={projectSlug}
                     />
                 )}
 
-                {activeTab === 'specs' && (
-                    <ProjectSpecsTab project={project} projectSlug={projectSlug} />
-                )}
+                {activeTab === "specs" && <ProjectSpecsTab project={project} projectSlug={projectSlug} />}
 
-                {activeTab === 'settings' && (
-                    <ProjectSettingsTab project={project} projectSlug={projectSlug} />
-                )}
+                {activeTab === "settings" && <ProjectSettingsTab project={project} projectSlug={projectSlug} />}
             </div>
         </AppLayout>
     );

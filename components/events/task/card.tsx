@@ -1,14 +1,14 @@
 "use client";
 
-import React from "react";
-import { NDKTask } from "@/lib/nostr/events/task";
-import { Button } from "@/components/ui/button";
+import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { TaskReactButton } from "./TaskReactButton";
-import { LoadedProject } from "@/hooks/useProjects";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import React from "react";
 import ReactMarkdown from "react-markdown";
+import { Button } from "@/components/ui/button";
+import { LoadedProject } from "@/hooks/useProjects";
+import { NDKTask } from "@/lib/nostr/events/task";
+import { TaskReactButton } from "./TaskReactButton";
 
 interface TaskCardProps {
     task: NDKTask;
@@ -25,11 +25,11 @@ export function TaskCard({ task, project }: TaskCardProps) {
 
     const handleClick = () => {
         router.push(`/project/${project.slug}/${task.id}`);
-    }
+    };
 
     const handleDelete = () => {
         task.delete();
-    }
+    };
 
     return (
         <div
@@ -41,8 +41,8 @@ export function TaskCard({ task, project }: TaskCardProps) {
                     <p className="font-medium text-lg">{task.title || "Untitled Task"}</p>
                     <div className="text-sm text-muted-foreground mt-1 prose dark:prose-invert max-w-none prose-sm">
                         <ReactMarkdown>
-                            {task.content?.split('\n').slice(0, 2).join('\n') +
-                             (task.content?.split('\n').length > 2 ? '...' : '')}
+                            {task.content?.split("\n").slice(0, 2).join("\n") +
+                                (task.content?.split("\n").length > 2 ? "..." : "")}
                         </ReactMarkdown>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
@@ -73,21 +73,11 @@ export function TaskCard({ task, project }: TaskCardProps) {
                 </div>
             </div>
             <div className="flex items-center gap-2 ml-7 sm:ml-0">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClick}
-                    className="rounded-md"
-                >
+                <Button variant="outline" size="sm" onClick={handleClick} className="rounded-md">
                     View
                 </Button>
                 <TaskReactButton taskEvent={task} />
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive rounded-md"
-                    onClick={handleDelete}
-                >
+                <Button variant="ghost" size="sm" className="text-destructive rounded-md" onClick={handleDelete}>
                     Delete
                 </Button>
             </div>

@@ -10,10 +10,7 @@ const timeZero = Date.now();
  * @param message Message to log
  * @param logFilePath Optional custom log file path
  */
-export function log(
-    message: string,
-    logFilePath: string = path.join(os.homedir(), ".tenex.log")
-): void {
+export function log(message: string, logFilePath: string = path.join(os.homedir(), ".tenex.log")): void {
     // Ensure the directory exists
     const logDir = path.dirname(logFilePath);
     fs.mkdirSync(logDir, { recursive: true });

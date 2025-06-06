@@ -1,18 +1,23 @@
-import React, { useState, useCallback, useEffect } from "react";
 import { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK types
 import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
-import { MessageSquare, Repeat, Send, Zap, Plus, Loader2, MoreHorizontal, Copy, Eye, Check } from "lucide-react"; // Import necessary icons
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import UserAvatar from "../../user/avatar";
-import { toast } from "@/components/ui/use-toast";
+import { Check, Copy, Eye, Loader2, MessageSquare, MoreHorizontal, Plus, Repeat, Send, Zap } from "lucide-react"; // Import necessary icons
+import React, { useCallback, useEffect, useState } from "react";
 import { QuotePostDialog } from "@/app/project/[slug]/components/QuotePostDialog"; // Import QuotePostDialog
-import TaggedTask from "../TaggedTask";
+import { Button } from "@/components/ui/button";
 import { CommitLabel } from "@/components/ui/commit-label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/use-toast";
 import { useGitOperations } from "@/hooks/useGitOperations";
+import UserAvatar from "../../user/avatar";
+import TaggedTask from "../TaggedTask";
 
 // Define QuoteData interface here to avoid circular dependencies
 export interface QuoteData {
@@ -76,7 +81,7 @@ export function NoteCard({
     const [isQuoting, setIsQuoting] = useState(false); // Loading state for quoting
 
     const [showRawEventDialog, setShowRawEventDialog] = useState(false);
-    
+
     // Git operations hook
     const { resetToCommit } = useGitOperations();
     // Note: Repost count and Zap amount require fetching related events (kind 6 for reposts, kind 9735 for zaps)
@@ -266,25 +271,31 @@ export function NoteCard({
         setShowRawEventDialog(true);
     }, []);
 
-    const handleCheckboxToggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent event bubbling to card click handlers
-        if (onToggleSelection) {
-            onToggleSelection(event.id);
-        }
-    }, [onToggleSelection, event.id]);
+    const handleCheckboxToggle = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation(); // Prevent event bubbling to card click handlers
+            if (onToggleSelection) {
+                onToggleSelection(event.id);
+            }
+        },
+        [onToggleSelection, event.id],
+    );
 
     // Git reset handler for commit labels
-    const handleCommitReset = useCallback(async (commitHash: string) => {
-        try {
-            const result = await resetToCommit(commitHash, { resetType: 'mixed' });
-            if (!result.success) {
-                throw new Error(result.message || 'Reset failed');
+    const handleCommitReset = useCallback(
+        async (commitHash: string) => {
+            try {
+                const result = await resetToCommit(commitHash, { resetType: "mixed" });
+                if (!result.success) {
+                    throw new Error(result.message || "Reset failed");
+                }
+            } catch (error) {
+                // Error handling is done in the CommitLabel component
+                throw error;
             }
-        } catch (error) {
-            // Error handling is done in the CommitLabel component
-            throw error;
-        }
-    }, [resetToCommit]);
+        },
+        [resetToCommit],
+    );
 
     // --- End Internal Handlers ---
 
@@ -302,10 +313,10 @@ export function NoteCard({
                                 onClick={handleCheckboxToggle}
                                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                                     isSelected
-                                        ? 'bg-primary border-primary text-primary-foreground'
-                                        : 'border-muted-foreground hover:border-primary'
+                                        ? "bg-primary border-primary text-primary-foreground"
+                                        : "border-muted-foreground hover:border-primary"
                                 }`}
-                                aria-label={isSelected ? 'Deselect tweet' : 'Select tweet'}
+                                aria-label={isSelected ? "Deselect tweet" : "Select tweet"}
                             >
                                 {isSelected && <Check className="w-3 h-3" />}
                             </button>
@@ -319,15 +330,15 @@ export function NoteCard({
                         </div>
 
                         {!skipTaggedTask && <TaggedTask event={event} />}
-                        
+
                         <p className="text-sm mt-1 whitespace-pre-wrap">{event.content}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                             <span>{formatTimestamp(event.created_at)}</span>
                             {/* Display commit hash prefix if available */}
-                            {event.tagValue('commit') && (
+                            {event.tagValue("commit") && (
                                 <div className="flex items-center gap-1 ml-2">
                                     <CommitLabel
-                                        commitHash={event.tagValue('commit')!}
+                                        commitHash={event.tagValue("commit")!}
                                         showDropdown={true}
                                         onReset={handleCommitReset}
                                         size="md"
@@ -335,10 +346,12 @@ export function NoteCard({
                                 </div>
                             )}
                             {/* Display confidence level if available */}
-                            {event.tagValue('confidence') && (
+                            {event.tagValue("confidence") && (
                                 <div className="flex items-center gap-1 ml-2">
                                     <span className="font-medium">Confidence:</span>
-                                    <span className="bg-secondary px-1.5 py-0.5 rounded-md">{event.tagValue('confidence')}/10</span>
+                                    <span className="bg-secondary px-1.5 py-0.5 rounded-md">
+                                        {event.tagValue("confidence")}/10
+                                    </span>
                                 </div>
                             )}
                             {/* Add other metadata like relays if needed */}
@@ -495,7 +508,6 @@ export function NoteCard({
                 // Pass isQuoting state if QuotePostDialog is updated to show loading
                 // isPosting={isQuoting}
             />
-
             {/* Raw Event Dialog */}
             <Dialog open={showRawEventDialog} onOpenChange={setShowRawEventDialog}>
                 <DialogContent className="sm:max-w-[600px]">

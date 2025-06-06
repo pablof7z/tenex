@@ -308,10 +308,10 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                                     value={formData.repoUrl}
                                     onChange={(e) => {
                                         const newRepoUrl = e.target.value;
-                                        setFormData({ 
-                                            ...formData, 
+                                        setFormData({
+                                            ...formData,
                                             repoUrl: newRepoUrl,
-                                            selectedTemplate: newRepoUrl ? null : formData.selectedTemplate
+                                            selectedTemplate: newRepoUrl ? null : formData.selectedTemplate,
                                         });
                                     }}
                                 />
@@ -327,7 +327,9 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                                         <p className="text-sm font-medium">
                                             Template selected: {formData.selectedTemplate.name}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">{formData.selectedTemplate.repoUrl}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {formData.selectedTemplate.repoUrl}
+                                        </p>
                                     </div>
                                     <Button
                                         variant="ghost"

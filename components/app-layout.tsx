@@ -1,19 +1,17 @@
 "use client";
 
-import React from "react"; // Removed useEffect, useState
+import { useNDKCurrentPubkey, useNDKSessionLogout } from "@nostr-dev-kit/ndk-hooks"; // Removed useNDKSessionLogin, NDKNip07Signer, useProfile
 
 import { Boxes, Home, LogOut, Settings } from "lucide-react"; // Removed LogIn
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import React from "react"; // Removed useEffect, useState
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { useNDKSessionLogout, useNDKCurrentPubkey } from "@nostr-dev-kit/ndk-hooks"; // Removed useNDKSessionLogin, NDKNip07Signer, useProfile
-
-import { toast } from "@/components/ui/use-toast"; // Keep for sidebar logout toast
 import { SidebarProvider } from "@/components/ui/sidebar"; // Import SidebarProvider
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "@/components/ui/use-toast"; // Keep for sidebar logout toast
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();

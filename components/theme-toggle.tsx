@@ -1,5 +1,5 @@
 "use client";
-import { Moon, Sun, Laptop } from "lucide-react";
+import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";

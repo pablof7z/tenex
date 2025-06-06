@@ -11,12 +11,7 @@ export interface ConfigData {
 }
 
 // Default relays - adjust as needed
-const DEFAULT_RELAYS = [
-    "wss://relay.nostr.band",
-    "wss://relay.damus.io",
-    "wss://relay.primal.net",
-    "wss://nos.lol",
-];
+const DEFAULT_RELAYS = ["wss://relay.nostr.band", "wss://relay.damus.io", "wss://relay.primal.net", "wss://nos.lol"];
 
 // Default DB path
 const DEFAULT_DB_PATH = join(homedir(), ".tenex.db");
@@ -42,9 +37,7 @@ export function initConfig(nsecFromCli?: string): ConfigData {
 
     // Basic validation for nsec format (optional but recommended)
     if (!privateKey.startsWith("nsec")) {
-        log(
-            "WARN: NSEC does not look like a valid nsec key."
-        );
+        log("WARN: NSEC does not look like a valid nsec key.");
         // Decide if you want to throw an error here or just warn
     }
 

@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { ProjectSettings } from "./ProjectSettings";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { LoadedProject } from "@/hooks/useProjects";
+import { NDKProject } from "@/lib/nostr/events/project";
+import { ProjectSettings } from "./ProjectSettings";
 
 interface ProjectSettingsTabProps {
     project: LoadedProject;
@@ -11,10 +11,5 @@ interface ProjectSettingsTabProps {
 }
 
 export function ProjectSettingsTab({ project, projectSlug }: ProjectSettingsTabProps) {
-    return (
-        <ProjectSettings
-            project={project}
-            projectSlug={projectSlug}
-        />
-    );
+    return <ProjectSettings project={project} projectSlug={projectSlug} />;
 }

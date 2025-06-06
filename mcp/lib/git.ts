@@ -38,8 +38,7 @@ export async function hasUncommittedChanges(): Promise<boolean> {
         // If there are any files in the status, there are uncommitted changes
         return status.files.length > 0;
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to check git status: ${errorMessage}`);
     }
 }
@@ -74,8 +73,7 @@ export async function createCommit(message: string): Promise<string | null> {
         // Return the short commit hash
         return result.commit.substring(0, 8);
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to create commit: ${errorMessage}`);
     }
 }
@@ -104,8 +102,7 @@ export async function getLatestCommitHash(): Promise<string | null> {
         // Return the short commit hash (first 8 characters)
         return log.latest?.hash.substring(0, 8) || null;
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to get latest commit hash: ${errorMessage}`);
     }
 }
@@ -165,13 +162,9 @@ export async function getCommitDetails(commitHash: string): Promise<CommitDetail
         }
 
         // Get commit details using git show with custom format
-        const result = await gitInstance.show([
-            commitHash,
-            "--format=%H|%h|%s|%an <%ae>|%aI",
-            "--no-patch"
-        ]);
+        const result = await gitInstance.show([commitHash, "--format=%H|%h|%s|%an <%ae>|%aI", "--no-patch"]);
 
-        const lines = result.split('\n').filter(line => line.trim().length > 0);
+        const lines = result.split("\n").filter((line) => line.trim().length > 0);
         if (lines.length === 0) {
             throw new Error(`No commit details found for ${commitHash}`);
         }
@@ -181,7 +174,7 @@ export async function getCommitDetails(commitHash: string): Promise<CommitDetail
             throw new Error(`No commit details found for ${commitHash}`);
         }
 
-        const parts = firstLine.split('|');
+        const parts = firstLine.split("|");
         if (parts.length !== 5) {
             throw new Error(`Invalid commit format for ${commitHash}`);
         }
@@ -197,7 +190,7 @@ export async function getCommitDetails(commitHash: string): Promise<CommitDetail
             shortHash: shortHash.trim(),
             message: message.trim(),
             author: author.trim(),
-            date: date.trim()
+            date: date.trim(),
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -211,10 +204,7 @@ export async function getCommitDetails(commitHash: string): Promise<CommitDetail
  * @param resetType - Type of reset: 'soft', 'mixed', or 'hard' (default: 'mixed')
  * @returns Promise<void>
  */
-export async function resetToCommit(
-    commitHash: string,
-    resetType: GitResetType = 'mixed'
-): Promise<void> {
+export async function resetToCommit(commitHash: string, resetType: GitResetType = "mixed"): Promise<void> {
     try {
         const gitInstance = initGit();
 
@@ -231,14 +221,13 @@ export async function resetToCommit(
         }
 
         // Validate reset type
-        const validResetTypes: GitResetType[] = ['soft', 'mixed', 'hard'];
+        const validResetTypes: GitResetType[] = ["soft", "mixed", "hard"];
         if (!validResetTypes.includes(resetType)) {
-            throw new Error(`Invalid reset type: ${resetType}. Must be one of: ${validResetTypes.join(', ')}`);
+            throw new Error(`Invalid reset type: ${resetType}. Must be one of: ${validResetTypes.join(", ")}`);
         }
 
         // Perform the reset
         await gitInstance.reset([`--${resetType}`, commitHash]);
-
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to reset to commit ${commitHash}: ${errorMessage}`);

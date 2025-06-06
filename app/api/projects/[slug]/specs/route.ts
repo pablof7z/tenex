@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import fs from "fs/promises";
+import { NextResponse } from "next/server";
 import path from "path";
 import { getProjectContextPath, getProjectRulesPath } from "@/lib/projectUtils"; // Import both utility functions
 

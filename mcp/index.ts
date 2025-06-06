@@ -1,7 +1,7 @@
+import { Command } from "commander";
 import { startMcpServer } from "./commands/mcp.js";
 import { initConfig } from "./config.js";
 import { initNDK } from "./ndk.js";
-import { Command } from "commander";
 
 // Create the CLI program
 const program = new Command();

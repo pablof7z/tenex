@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Clock, FileText, GitBranch, MessageSquare, Settings, Users } from "lucide-react";
-
+import Link from "next/link";
+import React from "react"; // Import React for Label
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
 import { LoadedProject } from "@/hooks/useProjects";
-import React from "react"; // Import React for Label
 
 // Define props for ProjectCard
 interface ProjectCardProps {
@@ -20,7 +19,7 @@ export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCar
     const { slug, title, repoUrl } = project; // Removed description, hashtags
     // Attempt to get description from event, then split hashtags
     const description = project.event?.content || project.event?.summary || "No description available.";
-    console.log('proejct hashtags', project.hashtags);
+    console.log("proejct hashtags", project.hashtags);
 
     const peopleTalking = "?";
     const pendingTasks = "?";
@@ -38,11 +37,15 @@ export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCar
 
             <CardContent className="pb-0 flex-grow">
                 <div className="flex flex-wrap gap-1.5 mb-3">
-                    {project.hashtags.map((tag: string) => ( // Use project.hashtags and type tag
-                        <span key={tag} className="hashtag">
-                            #{tag}
-                        </span>
-                    ))}
+                    {project.hashtags.map(
+                        (
+                            tag: string, // Use project.hashtags and type tag
+                        ) => (
+                            <span key={tag} className="hashtag">
+                                #{tag}
+                            </span>
+                        ),
+                    )}
                 </div>
 
                 <div className="flex items-center text-xs mb-4">
@@ -84,7 +87,9 @@ export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCar
             </CardContent>
 
             <CardFooter className="border-t pt-3 text-xs text-muted-foreground mt-auto flex items-center justify-between">
-                <div className="flex items-center space-x-2"> {/* Added space-x-2 for spacing */}
+                <div className="flex items-center space-x-2">
+                    {" "}
+                    {/* Added space-x-2 for spacing */}
                     <Checkbox
                         id={checkboxId}
                         checked={isSelected}

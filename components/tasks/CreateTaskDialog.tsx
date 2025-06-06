@@ -1,6 +1,9 @@
 "use client";
 
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { Loader2, Mic } from "lucide-react";
 import { useState } from "react";
+import { AudioRecorder } from "@/components/ui/audio-recorder";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -11,16 +14,13 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { NDKTask } from "@/lib/nostr/events/task";
-import { Loader2, Mic } from "lucide-react";
 import { LoadedProject } from "@/hooks/useProjects";
-import { useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { AudioRecorder } from "@/components/ui/audio-recorder";
 import { useTranscription } from "@/hooks/useTranscription";
+import { NDKTask } from "@/lib/nostr/events/task";
 import { parseTranscription } from "@/lib/parse-transcription";
 import { applyTextCorrections } from "@/lib/text-corrections";
 
@@ -41,27 +41,32 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
     const { toast } = useToast();
 
     // Voice transcription functionality
-    const { transcribe, isTranscribing, error: transcriptionError, clearError } = useTranscription({
+    const {
+        transcribe,
+        isTranscribing,
+        error: transcriptionError,
+        clearError,
+    } = useTranscription({
         onSuccess: (result) => {
             if (result.success && result.transcription) {
                 // Apply text corrections
                 const correctedText = applyTextCorrections(result.transcription);
-                
+
                 // Parse into title and description
                 const parsed = parseTranscription(correctedText);
-                
+
                 if (parsed.title) {
                     setTaskTitle(parsed.title);
                 }
                 if (parsed.description) {
                     setTaskContent(parsed.description);
                 }
-                
+
                 toast({
                     title: "Voice Transcription Complete",
                     description: "Your voice has been converted to text and populated in the form.",
                 });
-                
+
                 setShowVoiceRecorder(false);
                 setAutoStartRecording(false);
             }
@@ -72,7 +77,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                 description: error,
                 variant: "destructive",
             });
-        }
+        },
     });
 
     const handleVoiceRecording = async (audioBlob: Blob, duration: number) => {
@@ -80,7 +85,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
             await transcribe(audioBlob);
         } catch (error) {
             // Error handling is done in the transcription hook
-            console.error('Voice transcription failed:', error);
+            console.error("Voice transcription failed:", error);
         }
     };
 
@@ -191,7 +196,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                                 className="flex items-center gap-2"
                             >
                                 <Mic className="h-4 w-4" />
-                                {showVoiceRecorder ? 'Hide Voice' : 'Use Voice'}
+                                {showVoiceRecorder ? "Hide Voice" : "Use Voice"}
                             </Button>
                         </div>
                         <Textarea
@@ -202,7 +207,7 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                             rows={5}
                             disabled={isPublishing}
                         />
-                        
+
                         {/* Voice Recording Section */}
                         {showVoiceRecorder && (
                             <div className="mt-4 p-4 border rounded-lg bg-muted/50">
@@ -217,11 +222,12 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     <p className="text-xs text-muted-foreground">
-                                        Recording started automatically. Speak your task description and it will be transcribed and parsed into title and description fields.
+                                        Recording started automatically. Speak your task description and it will be
+                                        transcribed and parsed into title and description fields.
                                     </p>
-                                    
+
                                     <AudioRecorder
                                         onRecordingComplete={handleVoiceRecording}
                                         onError={(error) => {
@@ -235,11 +241,9 @@ export function CreateTaskDialog({ project, open, onOpenChange, onTaskCreated }:
                                         className="w-full"
                                         autoStart={autoStartRecording}
                                     />
-                                    
+
                                     {transcriptionError && (
-                                        <div className="text-sm text-destructive">
-                                            {transcriptionError}
-                                        </div>
+                                        <div className="text-sm text-destructive">{transcriptionError}</div>
                                     )}
                                 </div>
                             </div>

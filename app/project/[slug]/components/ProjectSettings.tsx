@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { AlertTriangle, Copy, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -14,17 +15,16 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
-import { NsecManager } from "./NsecManager"; // Import the new component
-import { Copy, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ProjectAgentProfileSettings } from "./ProjectAgentProfileSettings";
 import { LoadedProject } from "@/hooks/useProjects";
-import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { NDKProject } from "@/lib/nostr/events/project";
+import { NsecManager } from "./NsecManager"; // Import the new component
+import { ProjectAgentProfileSettings } from "./ProjectAgentProfileSettings";
 
 interface ProjectSettingsProps {
     project: LoadedProject;
@@ -40,9 +40,6 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
     const router = useRouter();
     const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
     const { ndk } = useNDK();
-
-
-
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -70,8 +67,6 @@ export function ProjectSettings({ project, projectSlug }: ProjectSettingsProps) 
             setIsSaving(false);
         }
     };
-
-
 
     const handleDelete = async () => {
         setIsDeleting(true);

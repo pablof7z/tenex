@@ -1,14 +1,14 @@
-import { useState, useCallback } from "react";
-import { Plus } from "lucide-react"; // Removed unused icons: MessageSquare, Repeat, Send, Sparkles, Zap
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { NDKProject } from "@/lib/nostr/events/project";
-import { NoteCard, QuoteData } from "@/components/events/note/card"; // Using NoteCard
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Removed NDKEvent
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { CreatePostDialog } from "@/app/project/[slug]/components/CreatePostDialog";
+import { Plus } from "lucide-react"; // Removed unused icons: MessageSquare, Repeat, Send, Sparkles, Zap
+import { useCallback, useState } from "react";
 import { CreateIssueDialog } from "@/app/project/[slug]/components/CreateIssueDialog";
+import { CreatePostDialog } from "@/app/project/[slug]/components/CreatePostDialog";
+import { NoteCard, QuoteData } from "@/components/events/note/card"; // Using NoteCard
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast"; // Keep toast for issue creation feedback
+import { NDKProject } from "@/lib/nostr/events/project";
 
 interface ActivityFeedProps {
     pubkeys: string[];
@@ -66,11 +66,7 @@ export function ActivityFeed({ pubkeys, signer }: ActivityFeedProps) {
                         const sortedEvents = [...events].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
                         return sortedEvents.length > 0 ? (
                             sortedEvents.map((event) => (
-                                <NoteCard
-                                    key={event.id}
-                                    event={event}
-                                    onCreateIssue={handleCreateIssueClick}
-                                />
+                                <NoteCard key={event.id} event={event} onCreateIssue={handleCreateIssueClick} />
                             ))
                         ) : (
                             <div className="text-center py-6 text-muted-foreground">
@@ -82,11 +78,7 @@ export function ActivityFeed({ pubkeys, signer }: ActivityFeedProps) {
             </CardContent>
             {/* Render the Create Post dialog */}
             {signer && (
-                <CreatePostDialog
-                    open={isCreatingPost}
-                    onClose={() => setIsCreatingPost(false)}
-                    signer={signer}
-                />
+                <CreatePostDialog open={isCreatingPost} onClose={() => setIsCreatingPost(false)} signer={signer} />
             )}
             {/* Render the Create Issue dialog */}
             <CreateIssueDialog

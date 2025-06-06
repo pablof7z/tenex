@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { NDKEvent } from "@nostr-dev-kit/ndk"; // Added NDKEvent
 import { Code, MessageSquare, Send } from "lucide-react"; // Added MessageSquare
 import { nip19 } from "nostr-tools";
-import { NDKEvent } from "@nostr-dev-kit/ndk"; // Added NDKEvent
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,

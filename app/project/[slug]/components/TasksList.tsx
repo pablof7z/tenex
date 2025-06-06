@@ -1,21 +1,19 @@
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Plus } from "lucide-react"; // Removed MessageSquare as it's now in TaskCard
+import { useState } from "react";
+import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { NDKTask } from "@/lib/nostr/events/task";
-import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
-import { useState } from "react";
 import { LoadedProject } from "@/hooks/useProjects";
+import { NDKTask } from "@/lib/nostr/events/task";
 
 interface TasksListProps {
     project: LoadedProject;
 }
 
 export function TasksList({ project }: TasksListProps) {
-    const { events } = useSubscribe(project.event ? [
-        { kinds: [NDKTask.kind], ...project.event.filter() }
-    ] : false);
+    const { events } = useSubscribe(project.event ? [{ kinds: [NDKTask.kind], ...project.event.filter() }] : false);
     const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
 
     return (
@@ -37,13 +35,7 @@ export function TasksList({ project }: TasksListProps) {
                     {events.length > 0 ? (
                         events.map((event) => {
                             const task = NDKTask.from(event); // Convert NDKEvent to NDKTask
-                            return (
-                                <TaskCard
-                                    key={task.id}
-                                    task={task}
-                                    project={project}
-                                />
-                            );
+                            return <TaskCard key={task.id} task={task} project={project} />;
                         })
                     ) : (
                         <div className="text-center py-6 text-muted-foreground">
@@ -53,11 +45,7 @@ export function TasksList({ project }: TasksListProps) {
                 </div>
             </CardContent>
 
-            <CreateTaskDialog
-                project={project}
-                open={isCreateTaskOpen}
-                onOpenChange={setIsCreateTaskOpen}
-            />
+            <CreateTaskDialog project={project} open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen} />
         </Card>
     );
 }

@@ -1,12 +1,12 @@
-import { useState, useCallback } from "react";
 import { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
-import { MessageSquare, Repeat, Send, Zap, Plus } from "lucide-react"; // Import Plus
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MessageSquare, Plus, Repeat, Send, Zap } from "lucide-react"; // Import Plus
+import { useCallback, useState } from "react";
 import { QuoteData } from "@/components/events/note/card";
-import UserAvatar from "@/components/user/avatar";
+import { Button } from "@/components/ui/button";
 import { CommitLabel } from "@/components/ui/commit-label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import UserAvatar from "@/components/user/avatar";
 import { useGitOperations } from "@/hooks/useGitOperations";
 
 interface TweetCardProps {
@@ -61,7 +61,7 @@ export function TweetCard({
 
     const authorDisplayName = getAuthorDisplayName(event.author);
     const authorHandle = getAuthorHandle(event.author);
-    
+
     // Git operations hook
     const { resetToCommit } = useGitOperations();
 
@@ -76,17 +76,20 @@ export function TweetCard({
     };
 
     // Git reset handler for commit labels
-    const handleCommitReset = useCallback(async (commitHash: string) => {
-        try {
-            const result = await resetToCommit(commitHash, { resetType: 'mixed' });
-            if (!result.success) {
-                throw new Error(result.message || 'Reset failed');
+    const handleCommitReset = useCallback(
+        async (commitHash: string) => {
+            try {
+                const result = await resetToCommit(commitHash, { resetType: "mixed" });
+                if (!result.success) {
+                    throw new Error(result.message || "Reset failed");
+                }
+            } catch (error) {
+                // Error handling is done in the CommitLabel component
+                throw error;
             }
-        } catch (error) {
-            // Error handling is done in the CommitLabel component
-            throw error;
-        }
-    }, [resetToCommit]);
+        },
+        [resetToCommit],
+    );
 
     return (
         <div className="border-b border-border pb-3 last:border-0">
@@ -101,10 +104,10 @@ export function TweetCard({
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <span>{formatTimestamp(event.created_at)}</span>
                         {/* Display commit hash prefix if available */}
-                        {event.tagValue('commit') && (
+                        {event.tagValue("commit") && (
                             <div className="flex items-center gap-1 ml-2">
                                 <CommitLabel
-                                    commitHash={event.tagValue('commit')!}
+                                    commitHash={event.tagValue("commit")!}
                                     showDropdown={true}
                                     onReset={handleCommitReset}
                                     size="md"
@@ -112,10 +115,12 @@ export function TweetCard({
                             </div>
                         )}
                         {/* Display confidence level if available */}
-                        {event.tagValue('confidence') && (
+                        {event.tagValue("confidence") && (
                             <div className="flex items-center gap-1 ml-2">
                                 <span className="font-medium">Confidence:</span>
-                                <span className="bg-secondary px-1.5 py-0.5 rounded-md">{event.tagValue('confidence')}/10</span>
+                                <span className="bg-secondary px-1.5 py-0.5 rounded-md">
+                                    {event.tagValue("confidence")}/10
+                                </span>
                             </div>
                         )}
                         {/* Add other metadata like relays if needed */}

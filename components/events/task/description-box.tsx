@@ -1,14 +1,14 @@
 "use client";
 
+import { NDKEvent } from "@nostr-dev-kit/ndk"; // Import NDKEvent
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { Textarea } from "@/components/ui/textarea";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ReactMarkdown from "react-markdown";
-import { NDKEvent } from "@nostr-dev-kit/ndk"; // Import NDKEvent
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
 import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 
 interface DescriptionBoxProps {
     task: NDKTask | null;
@@ -29,7 +29,7 @@ export function DescriptionBox({
     const { toast } = useToast();
     const { events: replies } = useSubscribe(task ? [{ kinds: [1111], "#E": [task.id] }] : false);
 
-    console.log('description box', task?.id)
+    console.log("description box", task?.id);
 
     const handlePublishClick = async () => {
         if (!task || !replyContent.trim()) {
@@ -74,9 +74,7 @@ export function DescriptionBox({
             </CardHeader>
             <CardContent>
                 <div className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown>
-                        {taskDescription || "No description provided."}
-                    </ReactMarkdown>
+                    <ReactMarkdown>{taskDescription || "No description provided."}</ReactMarkdown>
                 </div>
 
                 {replies.map(
@@ -85,9 +83,7 @@ export function DescriptionBox({
                     ) => (
                         <div key={reply.id} className="mt-4 pt-4 border-t">
                             <div className="prose dark:prose-invert max-w-none text-sm">
-                                <ReactMarkdown>
-                                    {reply.content}
-                                </ReactMarkdown>
+                                <ReactMarkdown>{reply.content}</ReactMarkdown>
                             </div>
                         </div>
                     ),

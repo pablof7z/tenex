@@ -1,13 +1,13 @@
-import { useMemo } from 'react';
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks';
-import { NostrTemplate, TemplateFilters, TEMPLATE_KIND } from '@/types/template';
+import { NDKFilter, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useMemo } from "react";
+import { NostrTemplate, TEMPLATE_KIND, TemplateFilters } from "@/types/template";
 
 // Define the filter interface to avoid type conflicts
 interface NostrFilter {
     kinds?: number[];
     authors?: string[];
     limit?: number;
-    '#t'?: string[];
+    "#t"?: string[];
     [key: string]: unknown;
 }
 
@@ -24,13 +24,13 @@ interface NostrEvent {
 
 /**
  * Hook for fetching and parsing nostr template events (kind 30717)
- * 
+ *
  * @param filters Optional filters to apply to template search
  * @returns Object containing templates array and eose flag
  */
 export function useTemplates(filters?: TemplateFilters) {
     // Build NDK filters based on provided filters
-    const ndkFilters = useMemo(() => {
+    const ndkFilters = useMemo<NDKFilter[]>(() => {
         const baseFilter: NostrFilter = {
             kinds: [TEMPLATE_KIND as number],
             limit: 100, // Reasonable limit for templates
@@ -45,7 +45,7 @@ export function useTemplates(filters?: TemplateFilters) {
         if (filters?.tags && filters.tags.length > 0) {
             // For each tag, we want templates that have that tag
             // NDK will handle the OR logic for multiple tags
-            baseFilter['#t'] = filters.tags;
+            baseFilter["#t"] = filters.tags;
         }
 
         return [baseFilter];
@@ -53,9 +53,9 @@ export function useTemplates(filters?: TemplateFilters) {
 
     // Subscribe to template events using NDK
     const { events, eose } = useSubscribe(
-        ndkFilters as unknown as Parameters<typeof useSubscribe>[0],
+        ndkFilters,
         {}, // No special subscription options needed
-        [filters?.author, filters?.tags] // Dependencies for re-subscription
+        [filters?.author, filters?.tags], // Dependencies for re-subscription
     );
 
     // Parse events into NostrTemplate objects and apply search filter
@@ -77,34 +77,37 @@ export function useTemplates(filters?: TemplateFilters) {
             .filter((template): template is NostrTemplate => template !== null);
 
         console.log(`[useTemplates] Successfully parsed ${parsedTemplates.length} templates`);
-        
+
         // Log template IDs to check for duplicates
-        const templateIds = parsedTemplates.map(t => t.id);
+        const templateIds = parsedTemplates.map((t) => t.id);
         const uniqueIds = new Set(templateIds);
         if (templateIds.length !== uniqueIds.size) {
-            console.log(`[useTemplates] Found duplicate template IDs. Total: ${templateIds.length}, Unique: ${uniqueIds.size}`);
+            console.log(
+                `[useTemplates] Found duplicate template IDs. Total: ${templateIds.length}, Unique: ${uniqueIds.size}`,
+            );
             console.log(`[useTemplates] Template IDs:`, templateIds);
         }
-        
+
         // Deduplicate templates by ID (keep the most recent one)
         const deduplicatedTemplates = parsedTemplates.reduce((acc, template) => {
-            const existing = acc.find(t => t.id === template.id);
+            const existing = acc.find((t) => t.id === template.id);
             if (!existing || template.createdAt > existing.createdAt) {
                 // Remove old one if exists and add new one
-                return [...acc.filter(t => t.id !== template.id), template];
+                return [...acc.filter((t) => t.id !== template.id), template];
             }
             return acc;
         }, [] as NostrTemplate[]);
-        
+
         console.log(`[useTemplates] After deduplication: ${deduplicatedTemplates.length} unique templates`);
 
         // Apply search filter if specified
         if (filters?.search) {
             const searchTerm = filters.search.toLowerCase();
-            return deduplicatedTemplates.filter(template => 
-                template.name.toLowerCase().includes(searchTerm) ||
-                template.description.toLowerCase().includes(searchTerm) ||
-                template.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+            return deduplicatedTemplates.filter(
+                (template) =>
+                    template.name.toLowerCase().includes(searchTerm) ||
+                    template.description.toLowerCase().includes(searchTerm) ||
+                    template.tags.some((tag) => tag.toLowerCase().includes(searchTerm)),
             );
         }
 
@@ -113,50 +116,53 @@ export function useTemplates(filters?: TemplateFilters) {
 
     return {
         templates,
-        eose
+        eose,
     };
 }
 
 /**
  * Parse an NDK event into a NostrTemplate object
- * 
+ *
  * @param event NDK event to parse
  * @returns Parsed NostrTemplate or null if parsing fails
  */
 function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
     try {
         // Extract required fields from tags
-        const dTag = event.tagValue('d');
-        const nameTag = event.tagValue('name');
-        const descriptionTag = event.tagValue('description');
+        const dTag = event.tagValue("d");
+        const nameTag = event.tagValue("name") ?? event.tagValue("title");
+        const descriptionTag = event.tagValue("description");
 
         // Validate required fields
         if (!dTag || !nameTag || !descriptionTag) {
-            console.warn('Template event missing required tags:', {
+            console.warn("Template event missing required tags:", {
                 id: event.id,
                 dTag,
                 nameTag,
                 descriptionTag,
-                allTags: event.tags
+                allTags: event.tags,
             });
             return null;
         }
 
         // Extract optional fields
-        const imageTag = event.tagValue('image');
-        
+        const imageTag = event.tagValue("image");
+
         // Extract all 't' tags for template tags
-        const templateTags = event.getMatchingTags('t').map((tag: string[]) => tag[1]).filter(Boolean);
+        const templateTags = event
+            .getMatchingTags("t")
+            .map((tag: string[]) => tag[1])
+            .filter(Boolean);
 
         // Extract git repository URL from content
-        const repoUrl = event.content?.trim() || '';
+        const repoUrl = event.content?.trim() || "";
 
         // Log but don't reject templates with invalid repo URLs
-        if (!repoUrl || !repoUrl.startsWith('git+https://')) {
-            console.warn('Template event has invalid or missing repo URL:', {
+        if (!repoUrl || !repoUrl.startsWith("git+https://")) {
+            console.warn("Template event has invalid or missing repo URL:", {
                 id: event.id,
                 repoUrl,
-                content: event.content
+                content: event.content,
             });
             // Don't return null - allow templates with missing/invalid repos
         }
@@ -171,26 +177,26 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
             repoUrl,
             authorPubkey: event.pubkey,
             createdAt: event.created_at || 0,
-            event: event as unknown as NostrTemplate['event']
+            event: event as unknown as NostrTemplate["event"],
         };
 
         return template;
     } catch (error) {
-        console.error('Error parsing template event:', error, event);
+        console.error("Error parsing template event:", error, event);
         return null;
     }
 }
 
 /**
  * Hook for fetching a single template by ID
- * 
+ *
  * @param templateId Template ID to fetch
  * @returns Single template or null if not found
  */
 export function useTemplate(templateId: string): NostrTemplate | null {
     const { templates } = useTemplates();
-    
+
     return useMemo(() => {
-        return templates.find(template => template.id === templateId) || null;
+        return templates.find((template) => template.id === templateId) || null;
     }, [templates, templateId]);
 }

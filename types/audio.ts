@@ -1,7 +1,7 @@
 // Audio recording types and interfaces
 
 export interface AudioRecorderState {
-    state: 'idle' | 'recording' | 'paused' | 'stopped' | 'processing' | 'error';
+    state: "idle" | "recording" | "paused" | "stopped" | "processing" | "error";
     duration: number;
     audioBlob: Blob | null;
     audioUrl: string | null;
@@ -78,7 +78,7 @@ export interface BrowserSupport {
 // Voice command types for future expansion
 export interface VoiceCommand {
     command: string;
-    action: 'start' | 'stop' | 'pause' | 'resume' | 'cancel';
+    action: "start" | "stop" | "pause" | "resume" | "cancel";
     confidence: number;
 }
 
@@ -98,7 +98,7 @@ export interface AudioProcessingOptions {
 
 // Transcription service configuration
 export interface TranscriptionConfig {
-    provider: 'openai' | 'google' | 'azure' | 'aws';
+    provider: "openai" | "google" | "azure" | "aws";
     model: string;
     language: string;
     temperature?: number;
@@ -107,16 +107,16 @@ export interface TranscriptionConfig {
 }
 
 // Error types for better error handling
-export type AudioError = 
-    | 'PERMISSION_DENIED'
-    | 'DEVICE_NOT_FOUND'
-    | 'RECORDING_FAILED'
-    | 'TRANSCRIPTION_FAILED'
-    | 'NETWORK_ERROR'
-    | 'QUOTA_EXCEEDED'
-    | 'INVALID_AUDIO_FORMAT'
-    | 'FILE_TOO_LARGE'
-    | 'BROWSER_NOT_SUPPORTED';
+export type AudioError =
+    | "PERMISSION_DENIED"
+    | "DEVICE_NOT_FOUND"
+    | "RECORDING_FAILED"
+    | "TRANSCRIPTION_FAILED"
+    | "NETWORK_ERROR"
+    | "QUOTA_EXCEEDED"
+    | "INVALID_AUDIO_FORMAT"
+    | "FILE_TOO_LARGE"
+    | "BROWSER_NOT_SUPPORTED";
 
 export interface AudioErrorDetails {
     type: AudioError;
@@ -168,7 +168,7 @@ export interface AudioRecorderConfig {
 export const DEFAULT_AUDIO_CONFIG: AudioRecorderConfig = {
     maxDuration: 300, // 5 minutes
     maxFileSize: 25 * 1024 * 1024, // 25MB
-    allowedFormats: ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav'],
+    allowedFormats: ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav"],
     sampleRate: 16000, // Optimal for Whisper
     channelCount: 1, // Mono
     enablePlayback: true,
@@ -178,9 +178,9 @@ export const DEFAULT_AUDIO_CONFIG: AudioRecorderConfig = {
 };
 
 export const DEFAULT_TRANSCRIPTION_CONFIG: TranscriptionConfig = {
-    provider: 'openai',
-    model: 'whisper-1',
-    language: 'en',
+    provider: "openai",
+    model: "whisper-1",
+    language: "en",
     temperature: 0.2,
     maxRetries: 3,
     timeout: 30000, // 30 seconds

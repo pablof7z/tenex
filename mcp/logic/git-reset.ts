@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { log } from "../lib/utils/log.js";
-import { resetToCommit, getCommitDetails, validateCommitExists } from "../lib/git.js";
 import type { GitResetType } from "../../types/git.js";
+import { getCommitDetails, resetToCommit, validateCommitExists } from "../lib/git.js";
+import { log } from "../lib/utils/log.js";
 
 /**
  * Reset repository to a specific commit
@@ -12,7 +12,7 @@ import type { GitResetType } from "../../types/git.js";
  */
 export async function gitResetToCommit(
     commitHash: string,
-    resetType: GitResetType = 'mixed'
+    resetType: GitResetType = "mixed",
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
     try {
         log(`INFO: Starting git reset to commit ${commitHash} with type ${resetType}`);
@@ -25,7 +25,9 @@ export async function gitResetToCommit(
 
         // Get commit details for logging
         const commitDetails = await getCommitDetails(commitHash);
-        log(`INFO: Resetting to commit: ${commitDetails.shortHash} - "${commitDetails.message}" by ${commitDetails.author}`);
+        log(
+            `INFO: Resetting to commit: ${commitDetails.shortHash} - "${commitDetails.message}" by ${commitDetails.author}`,
+        );
 
         // Perform the reset
         await resetToCommit(commitHash, resetType);
@@ -53,7 +55,7 @@ export async function gitResetToCommit(
  * @returns Commit details
  */
 export async function getGitCommitDetails(
-    commitHash: string
+    commitHash: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
     try {
         log(`INFO: Getting details for commit ${commitHash}`);
@@ -73,8 +75,8 @@ export async function getGitCommitDetails(
             `Short Hash: ${details.shortHash}`,
             `Message: ${details.message}`,
             `Author: ${details.author}`,
-            `Date: ${details.date}`
-        ].join('\n');
+            `Date: ${details.date}`,
+        ].join("\n");
 
         log(`INFO: Retrieved commit details for ${commitHash}`);
 
@@ -99,14 +101,14 @@ export async function getGitCommitDetails(
  * @returns Validation result
  */
 export async function validateGitCommit(
-    commitHash: string
+    commitHash: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
     try {
         log(`INFO: Validating commit ${commitHash}`);
 
         const exists = await validateCommitExists(commitHash);
 
-        const resultText = exists 
+        const resultText = exists
             ? `Commit ${commitHash} exists in the repository.`
             : `Commit ${commitHash} does not exist in the repository.`;
 
@@ -136,21 +138,18 @@ export function addGitResetToCommitCommand(server: McpServer) {
         "git_reset_to_commit",
         "Reset the git repository to a specific commit",
         {
-            commitHash: z
-                .string()
-                .describe("The commit hash to reset to (can be full or short hash)"),
+            commitHash: z.string().describe("The commit hash to reset to (can be full or short hash)"),
             resetType: z
                 .enum(["soft", "mixed", "hard"])
                 .optional()
                 .default("mixed")
-                .describe("Type of reset: 'soft' (keep changes staged), 'mixed' (unstage changes), or 'hard' (discard all changes)"),
+                .describe(
+                    "Type of reset: 'soft' (keep changes staged), 'mixed' (unstage changes), or 'hard' (discard all changes)",
+                ),
         },
-        async (
-            { commitHash, resetType }: { commitHash: string; resetType?: GitResetType },
-            _extra: unknown
-        ) => {
-            return await gitResetToCommit(commitHash, resetType || 'mixed');
-        }
+        async ({ commitHash, resetType }: { commitHash: string; resetType?: GitResetType }, _extra: unknown) => {
+            return await gitResetToCommit(commitHash, resetType || "mixed");
+        },
     );
 }
 
@@ -163,16 +162,11 @@ export function addGitCommitDetailsCommand(server: McpServer) {
         "git_commit_details",
         "Get detailed information about a specific commit",
         {
-            commitHash: z
-                .string()
-                .describe("The commit hash to get details for (can be full or short hash)"),
+            commitHash: z.string().describe("The commit hash to get details for (can be full or short hash)"),
         },
-        async (
-            { commitHash }: { commitHash: string },
-            _extra: unknown
-        ) => {
+        async ({ commitHash }: { commitHash: string }, _extra: unknown) => {
             return await getGitCommitDetails(commitHash);
-        }
+        },
     );
 }
 
@@ -185,15 +179,10 @@ export function addGitValidateCommitCommand(server: McpServer) {
         "git_validate_commit",
         "Validate if a commit exists in the repository",
         {
-            commitHash: z
-                .string()
-                .describe("The commit hash to validate (can be full or short hash)"),
+            commitHash: z.string().describe("The commit hash to validate (can be full or short hash)"),
         },
-        async (
-            { commitHash }: { commitHash: string },
-            _extra: unknown
-        ) => {
+        async ({ commitHash }: { commitHash: string }, _extra: unknown) => {
             return await validateGitCommit(commitHash);
-        }
+        },
     );
 }

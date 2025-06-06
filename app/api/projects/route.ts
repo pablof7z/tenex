@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import fs from "fs/promises";
+import { NextResponse } from "next/server";
 import path from "path";
-import ndk from "@/lib/nostr/ndk"; // Import the singleton NDK instance
 import { NDKProject } from "@/lib/nostr/events/project";
+import ndk from "@/lib/nostr/ndk"; // Import the singleton NDK instance
 
 // Read the environment variable directly
 const PROJECTS_DIR = process.env.PROJECTS_PATH;
@@ -46,7 +46,7 @@ export async function GET() {
                         ...configJson,
                         slug,
                     });
-                    
+
                     // Store the project name (directory name) which acts as the dTag
                     projectNames.push(dirent.name);
                 } catch (error: unknown) {

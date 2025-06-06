@@ -1,10 +1,10 @@
+import { ArrowLeft, Code, FolderPlus, GitBranch, Loader2, Settings } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, Code, GitBranch, Settings, Loader2, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ConfigAwareButton } from "./ConfigAwareButton"; // Import the new component
 import { LoadedProject } from "@/hooks/useProjects";
+import { NDKProject } from "@/lib/nostr/events/project";
+import { ConfigAwareButton } from "./ConfigAwareButton"; // Import the new component
 
 interface ProjectHeaderProps {
     project: LoadedProject;

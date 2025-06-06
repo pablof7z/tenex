@@ -1,7 +1,7 @@
+import { Loader2, Save, Undo2, Wand2 } from "lucide-react";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Undo2, Wand2 } from "lucide-react";
 
 interface SpecsEditorProps {
     editorContent: string;
@@ -54,29 +54,15 @@ export function SpecsEditor({
         <div className="space-y-4 h-full flex flex-col">
             <div className="flex justify-end space-x-2 flex-shrink-0">
                 {/* Save Button */}
-                <Button
-                    onClick={onSave}
-                    disabled={actionsDisabled}
-                    size="sm"
-                    title={configErrorTooltip || ""}
-                >
-                    {isSaving ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                    )}
+                <Button onClick={onSave} disabled={actionsDisabled} size="sm" title={configErrorTooltip || ""}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {saveButtonText}
                 </Button>
                 {/* AI Buttons (Only for SPEC.md) */}
                 {isSpecMd && (
                     <>
                         {isAiContent && !isEditorLoading && previousEditorContent !== null && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={onUndoImprovement}
-                                disabled={actionsDisabled}
-                            >
+                            <Button variant="outline" size="sm" onClick={onUndoImprovement} disabled={actionsDisabled}>
                                 <Undo2 className="mr-2 h-4 w-4" />
                                 Undo AI
                             </Button>

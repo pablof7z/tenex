@@ -7,10 +7,10 @@ import { runConfigWizard } from "../config/wizard";
 import { logInfo } from "../utils/logger";
 
 export async function runInit() {
-  const config = ConfigManager.loadConfig();
-  if (config) {
-    logInfo("TENEX is already initialized. Config found at ~/.tenex/config");
-    return;
-  }
-  await runConfigWizard();
+    const config = ConfigManager.loadConfig();
+    if (config) {
+        logInfo("TENEX is already initialized. Config found at ~/.tenex/config");
+        return;
+    }
+    await runConfigWizard();
 }

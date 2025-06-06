@@ -1,6 +1,6 @@
+import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Import NDKPrivateKeySigner
 import { create } from "zustand";
 import { NDKProject } from "@/lib/nostr/events/project";
-import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Import NDKPrivateKeySigner
 
 // Define the structure for storing signer and pubkey together
 interface ProjectDetails {

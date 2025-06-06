@@ -1,15 +1,15 @@
-import { useState, useEffect, use } from "react";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { NDKEvent, NDKUserProfile, serializeProfile } from "@nostr-dev-kit/ndk"; // Assuming profile structure might align
+import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { Loader2 } from "lucide-react";
+import { use, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"; // For Bio
 import { toast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
-import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { LoadedProject } from "@/hooks/useProjects";
+import { NDKProject } from "@/lib/nostr/events/project";
 
 interface ProjectAgentProfileSettingsProps {
     project: LoadedProject;
@@ -26,7 +26,6 @@ export function ProjectAgentProfileSettings({ project }: ProjectAgentProfileSett
     const [image, setImage] = useState(profile?.image || "");
     const [isSaving, setIsSaving] = useState(false);
     const { ndk } = useNDK();
-
 
     const handleSaveProfile = async () => {
         if (!ndk) return;

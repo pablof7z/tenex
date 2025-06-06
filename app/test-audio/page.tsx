@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from 'react';
-import { AudioRecorder } from '@/components/ui/audio-recorder';
-import { useTranscription } from '@/hooks/useTranscription';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { AudioRecorder } from "@/components/ui/audio-recorder";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { useTranscription } from "@/hooks/useTranscription";
 
 export default function TestAudioPage() {
     const [transcriptionResult, setTranscriptionResult] = useState<{
@@ -30,22 +30,22 @@ export default function TestAudioPage() {
             });
         },
         onError: (error) => {
-            console.error('Transcription error:', error);
-        }
+            console.error("Transcription error:", error);
+        },
     });
 
     const handleRecordingComplete = async (audioBlob: Blob, duration: number) => {
-        console.log('Recording completed:', { size: audioBlob.size, duration, type: audioBlob.type });
-        
+        console.log("Recording completed:", { size: audioBlob.size, duration, type: audioBlob.type });
+
         try {
             await transcribe(audioBlob);
         } catch (err) {
-            console.error('Failed to transcribe:', err);
+            console.error("Failed to transcribe:", err);
         }
     };
 
     const handleRecordingError = (error: string) => {
-        console.error('Recording error:', error);
+        console.error("Recording error:", error);
     };
 
     const clearResults = () => {
@@ -67,9 +67,7 @@ export default function TestAudioPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Audio Recorder</CardTitle>
-                        <CardDescription>
-                            Record your voice to test the audio recording functionality
-                        </CardDescription>
+                        <CardDescription>Record your voice to test the audio recording functionality</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <AudioRecorder
@@ -91,7 +89,7 @@ export default function TestAudioPage() {
                                     <span>Transcribing audio...</span>
                                 </div>
                             )}
-                            
+
                             {error && (
                                 <div className="flex items-start gap-2 text-red-600">
                                     <AlertCircle className="h-4 w-4 mt-0.5" />
@@ -155,7 +153,9 @@ export default function TestAudioPage() {
                                 <div className="space-y-2">
                                     <Label>
                                         Original Transcription
-                                        <Badge variant="secondary" className="ml-2">Raw</Badge>
+                                        <Badge variant="secondary" className="ml-2">
+                                            Raw
+                                        </Badge>
                                     </Label>
                                     <Textarea
                                         value={transcriptionResult.originalText}
@@ -168,7 +168,9 @@ export default function TestAudioPage() {
                                 <div className="space-y-2">
                                     <Label>
                                         Corrected Text
-                                        <Badge variant="default" className="ml-2">Processed</Badge>
+                                        <Badge variant="default" className="ml-2">
+                                            Processed
+                                        </Badge>
                                     </Label>
                                     <Textarea
                                         value={transcriptionResult.correctedText}
@@ -191,15 +193,19 @@ export default function TestAudioPage() {
                         <ol className="list-decimal list-inside space-y-1 text-sm">
                             <li>Click "Start Recording" to begin recording your voice</li>
                             <li>Speak clearly about a task you want to create</li>
-                            <li>Try saying something like: "Create a login page. We need to implement user authentication with email and password validation."</li>
+                            <li>
+                                Try saying something like: "Create a login page. We need to implement user
+                                authentication with email and password validation."
+                            </li>
                             <li>Click "Stop" when you're done recording</li>
                             <li>The audio will be automatically transcribed and parsed into title and description</li>
                             <li>Review the results to see how well the parsing worked</li>
                         </ol>
-                        
+
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                             <p className="text-sm text-blue-800">
-                                <strong>Note:</strong> Make sure you have set up your OpenAI API key in the environment variables for transcription to work.
+                                <strong>Note:</strong> Make sure you have set up your OpenAI API key in the environment
+                                variables for transcription to work.
                             </p>
                         </div>
                     </CardContent>

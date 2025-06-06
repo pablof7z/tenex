@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
-import { NDKEvent } from '@nostr-dev-kit/ndk';
+import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { useCallback, useMemo, useState } from "react";
 
 interface UseTweetSelectionReturn {
     selectedTweetIds: Set<string>;
@@ -21,7 +21,7 @@ export function useTweetSelection(tweets: NDKEvent[]): UseTweetSelectionReturn {
 
     // Memoized function to toggle tweet selection
     const toggleTweet = useCallback((eventId: string) => {
-        setSelectedTweetIds(prevSelected => {
+        setSelectedTweetIds((prevSelected) => {
             const newSelected = new Set(prevSelected);
             if (newSelected.has(eventId)) {
                 newSelected.delete(eventId);
@@ -39,7 +39,7 @@ export function useTweetSelection(tweets: NDKEvent[]): UseTweetSelectionReturn {
 
     // Memoized function to get selected tweet objects
     const getSelectedTweets = useCallback((): NDKEvent[] => {
-        return tweets.filter(tweet => selectedTweetIds.has(tweet.id));
+        return tweets.filter((tweet) => selectedTweetIds.has(tweet.id));
     }, [tweets, selectedTweetIds]);
 
     return {

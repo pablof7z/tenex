@@ -1,14 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import { NDKNip07Signer } from "@nostr-dev-kit/ndk";
+import { useNDKCurrentUser, useNDKSessionLogin, useNDKSessionLogout, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { LogIn, LogOut } from "lucide-react";
-import {
-    useNDKCurrentUser,
-    useNDKSessionLogin,
-    useNDKSessionLogout,
-    useProfileValue,
-} from "@nostr-dev-kit/ndk-hooks";
-
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -20,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/use-toast";
 import UserAvatar from "../user/avatar";
-import { NDKNip07Signer } from "@nostr-dev-kit/ndk";
 
 export function UserDropdown() {
     const currentUser = useNDKCurrentUser();

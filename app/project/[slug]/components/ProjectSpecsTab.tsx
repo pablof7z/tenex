@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { NDKProject } from "@/lib/nostr/events/project";
+import React, { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
-import { SpecsSidebar } from "./SpecsSidebar"; // Import Sidebar
-import { SpecsEditor } from "./SpecsEditor"; // Import Editor
 import { LoadedProject } from "@/hooks/useProjects";
+import { NDKProject } from "@/lib/nostr/events/project";
+import { SpecsEditor } from "./SpecsEditor"; // Import Editor
+import { SpecsSidebar } from "./SpecsSidebar"; // Import Sidebar
 
 interface FileData {
     name: string;
@@ -61,7 +61,9 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 if (response.status === 404) {
-                    console.log(`Project specs/rules endpoint returned 404 for project ${projectSlug}. Assuming empty.`);
+                    console.log(
+                        `Project specs/rules endpoint returned 404 for project ${projectSlug}. Assuming empty.`,
+                    );
                     setSpecFiles([]);
                     setRuleFiles([]);
                 } else {
@@ -174,7 +176,11 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
 
     const handleSaveFile = async () => {
         if (!isConfigReady || !selectedFileName || !selectedGroup) {
-            toast({ title: "Cannot Save", description: configError || "Configuration or selection missing.", variant: "destructive" });
+            toast({
+                title: "Cannot Save",
+                description: configError || "Configuration or selection missing.",
+                variant: "destructive",
+            });
             return;
         }
         const apiUrl = getApiUrl(`/projects/${projectSlug}/specs`);
@@ -194,7 +200,9 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: "Failed to parse error response" }));
-                throw new Error(errorData.error || `Failed to save ${selectedFileName}: ${response.status} ${response.statusText}`);
+                throw new Error(
+                    errorData.error || `Failed to save ${selectedFileName}: ${response.status} ${response.statusText}`,
+                );
             }
 
             toast({ title: "Success", description: `${selectedFileName} saved.` });
@@ -205,7 +213,9 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
                 setSpecFiles((prev) => {
                     const index = prev.findIndex((f) => f.name === selectedFileName);
                     if (index > -1) {
-                        const updated = [...prev]; updated[index] = updatedFile; return updated;
+                        const updated = [...prev];
+                        updated[index] = updatedFile;
+                        return updated;
                     }
                     return [...prev, updatedFile].sort((a, b) => a.name.localeCompare(b.name));
                 });
@@ -213,7 +223,9 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
                 setRuleFiles((prev) => {
                     const index = prev.findIndex((f) => f.name === selectedFileName);
                     if (index > -1) {
-                        const updated = [...prev]; updated[index] = updatedFile; return updated;
+                        const updated = [...prev];
+                        updated[index] = updatedFile;
+                        return updated;
                     }
                     return [...prev, updatedFile].sort((a, b) => a.name.localeCompare(b.name));
                 });
@@ -235,7 +247,11 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
 
     const handleImproveSpec = async () => {
         if (!isConfigReady || !(selectedGroup === "specs" && selectedFileName === DEFAULT_SPEC_FILENAME)) {
-            toast({ title: "Cannot Improve", description: configError || "Can only improve SPEC.md.", variant: "destructive" });
+            toast({
+                title: "Cannot Improve",
+                description: configError || "Can only improve SPEC.md.",
+                variant: "destructive",
+            });
             return;
         }
         const apiUrl = getApiUrl("/run?cmd=improve-project-spec");
@@ -287,7 +303,11 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
 
     const handleAddNewFile = async (group: "specs" | "rules") => {
         if (!isConfigReady) {
-            toast({ title: "Configuration Error", description: configError || "Configuration not ready.", variant: "destructive" });
+            toast({
+                title: "Configuration Error",
+                description: configError || "Configuration not ready.",
+                variant: "destructive",
+            });
             return;
         }
         const fileName = prompt(`Enter the name for the new ${group} file (e.g., FILENAME.md):`);
@@ -295,15 +315,29 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
 
         const trimmedName = fileName.trim();
         if (!trimmedName.endsWith(".md")) {
-            toast({ variant: "destructive", title: "Invalid Name", description: "File name must end with .md" }); return;
+            toast({ variant: "destructive", title: "Invalid Name", description: "File name must end with .md" });
+            return;
         }
         if (trimmedName.includes("/") || trimmedName.includes("..")) {
-            toast({ variant: "destructive", title: "Invalid Name", description: "File name cannot contain '/' or '..'" }); return;
+            toast({
+                variant: "destructive",
+                title: "Invalid Name",
+                description: "File name cannot contain '/' or '..'",
+            });
+            return;
         }
 
-        const fileExists = group === "specs" ? specFiles.some((f) => f.name === trimmedName) : ruleFiles.some((f) => f.name === trimmedName);
+        const fileExists =
+            group === "specs"
+                ? specFiles.some((f) => f.name === trimmedName)
+                : ruleFiles.some((f) => f.name === trimmedName);
         if (fileExists) {
-            toast({ variant: "destructive", title: "File Exists", description: `A file named "${trimmedName}" already exists.` }); return;
+            toast({
+                variant: "destructive",
+                title: "File Exists",
+                description: `A file named "${trimmedName}" already exists.`,
+            });
+            return;
         }
 
         const apiUrl = getApiUrl(`/projects/${projectSlug}/specs`);
@@ -319,7 +353,9 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
             });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: "Failed to parse error response" }));
-                throw new Error(errorData.error || `Failed to create ${trimmedName}: ${response.status} ${response.statusText}`);
+                throw new Error(
+                    errorData.error || `Failed to create ${trimmedName}: ${response.status} ${response.statusText}`,
+                );
             }
 
             // Optimistically update local state and select the new file

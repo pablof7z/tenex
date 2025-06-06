@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-// Textarea import removed as it's now in DescriptionBox
-import { useToast } from "@/components/ui/use-toast"; // Import useToast
+import { NDKEvent, NDKFilter, NDKKind, NDKTag } from "@nostr-dev-kit/ndk";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useParams } from "next/navigation";
-import { NDKEvent, NDKKind, NDKTag, NDKFilter } from "@nostr-dev-kit/ndk";
-import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
-import ndk from "@/lib/nostr/ndk";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NoteCard } from "@/components/events/note/card";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
+import { NoteCard } from "@/components/events/note/card";
 import { DescriptionBox } from "@/components/events/task/description-box";
 import { TaskUpdates } from "@/components/events/task/TaskUpdates"; // Import TaskUpdates
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { ConfirmWorkModal } from "@/components/modals/ConfirmWorkModal"; // Import the modal
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Textarea import removed as it's now in DescriptionBox
+import { useToast } from "@/components/ui/use-toast"; // Import useToast
+import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
+import ndk from "@/lib/nostr/ndk";
 
 export default function TaskDetailPage() {
     const params = useParams();

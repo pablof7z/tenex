@@ -1,12 +1,12 @@
-import { corrections, regexCorrections, contextCorrections } from '@/config/corrections.js';
+import { contextCorrections, corrections, regexCorrections } from "@/config/corrections.js";
 
 /**
  * Apply text corrections to transcribed text
  * This function handles common speech-to-text errors and improves readability
  */
 export function applyTextCorrections(text: string): string {
-    if (!text || typeof text !== 'string') {
-        return '';
+    if (!text || typeof text !== "string") {
+        return "";
     }
 
     let correctedText = text.trim();
@@ -34,13 +34,13 @@ function applyWordCorrections(text: string): string {
 
     // Apply corrections case-insensitively but preserve original case when possible
     Object.entries(corrections).forEach(([wrong, correct]) => {
-        if (correct === '') {
+        if (correct === "") {
             // Remove filler words
-            const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, 'gi');
-            result = result.replace(regex, '');
+            const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, "gi");
+            result = result.replace(regex, "");
         } else {
             // Replace with correct word, preserving case
-            const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, 'gi');
+            const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, "gi");
             result = result.replace(regex, (match) => {
                 // Preserve case pattern
                 if (match === match.toUpperCase()) {
@@ -82,21 +82,21 @@ function applyContextCorrections(text: string): string {
 
     // Detect context
     const contexts: string[] = [];
-    
+
     if (containsDevelopmentTerms(lowerText)) {
-        contexts.push('development');
+        contexts.push("development");
     }
-    
+
     if (containsProjectTerms(lowerText)) {
-        contexts.push('project');
+        contexts.push("project");
     }
 
     // Apply context-specific corrections
-    contexts.forEach(context => {
+    contexts.forEach((context) => {
         const contextDict = contextCorrections[context as keyof typeof contextCorrections];
         if (contextDict) {
             Object.entries(contextDict).forEach(([wrong, correct]) => {
-                const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, 'gi');
+                const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, "gi");
                 result = result.replace(regex, correct);
             });
         }
@@ -110,12 +110,27 @@ function applyContextCorrections(text: string): string {
  */
 function containsDevelopmentTerms(text: string): boolean {
     const devTerms = [
-        'code', 'coding', 'program', 'programming', 'develop', 'development',
-        'javascript', 'typescript', 'react', 'node', 'api', 'database',
-        'frontend', 'backend', 'server', 'client', 'website', 'app'
+        "code",
+        "coding",
+        "program",
+        "programming",
+        "develop",
+        "development",
+        "javascript",
+        "typescript",
+        "react",
+        "node",
+        "api",
+        "database",
+        "frontend",
+        "backend",
+        "server",
+        "client",
+        "website",
+        "app",
     ];
-    
-    return devTerms.some(term => text.includes(term));
+
+    return devTerms.some((term) => text.includes(term));
 }
 
 /**
@@ -123,11 +138,22 @@ function containsDevelopmentTerms(text: string): boolean {
  */
 function containsProjectTerms(text: string): boolean {
     const projectTerms = [
-        'task', 'project', 'milestone', 'deadline', 'priority', 'urgent',
-        'complete', 'finish', 'start', 'todo', 'issue', 'bug', 'feature'
+        "task",
+        "project",
+        "milestone",
+        "deadline",
+        "priority",
+        "urgent",
+        "complete",
+        "finish",
+        "start",
+        "todo",
+        "issue",
+        "bug",
+        "feature",
     ];
-    
-    return projectTerms.some(term => text.includes(term));
+
+    return projectTerms.some((term) => text.includes(term));
 }
 
 /**
@@ -137,7 +163,7 @@ function finalCleanup(text: string): string {
     let result = text;
 
     // Remove multiple spaces
-    result = result.replace(/\s+/g, ' ');
+    result = result.replace(/\s+/g, " ");
 
     // Remove spaces at the beginning and end
     result = result.trim();
@@ -150,8 +176,11 @@ function finalCleanup(text: string): string {
     // Ensure the text ends with proper punctuation if it doesn't already
     if (result.length > 0 && !/[.!?]$/.test(result)) {
         // Only add a period if the text seems like a complete sentence
-        if (result.length > 10 && /\b(is|are|was|were|have|has|had|will|would|could|should|can|may|might)\b/i.test(result)) {
-            result += '.';
+        if (
+            result.length > 10 &&
+            /\b(is|are|was|were|have|has|had|will|would|could|should|can|may|might)\b/i.test(result)
+        ) {
+            result += ".";
         }
     }
 
@@ -162,16 +191,22 @@ function finalCleanup(text: string): string {
  * Escape special regex characters
  */
 function escapeRegex(string: string): string {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
  * Get correction statistics for debugging
  */
 export function getCorrectionStats(originalText: string, correctedText: string) {
-    const originalWords = originalText.toLowerCase().split(/\s+/).filter(word => word.length > 0);
-    const correctedWords = correctedText.toLowerCase().split(/\s+/).filter(word => word.length > 0);
-    
+    const originalWords = originalText
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+    const correctedWords = correctedText
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+
     const corrections = [];
     let correctionCount = 0;
 
@@ -181,7 +216,7 @@ export function getCorrectionStats(originalText: string, correctedText: string) 
             corrections.push({
                 original: originalWords[i],
                 corrected: correctedWords[i],
-                position: i
+                position: i,
             });
             correctionCount++;
         }
@@ -192,6 +227,6 @@ export function getCorrectionStats(originalText: string, correctedText: string) 
         correctedWordCount: correctedWords.length,
         correctionCount,
         corrections,
-        correctionRate: originalWords.length > 0 ? correctionCount / originalWords.length : 0
+        correctionRate: originalWords.length > 0 ? correctionCount / originalWords.length : 0,
     };
 }

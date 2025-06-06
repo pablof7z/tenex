@@ -1,9 +1,9 @@
+import { AlertTriangle, Plus } from "lucide-react";
+import Link from "next/link";
 import React from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Link from "next/link";
 
 interface FileData {
     name: string;
@@ -57,7 +57,8 @@ export function SpecsSidebar({
                 variant={selectedFileName === file.name && selectedGroup === group ? "secondary" : "ghost"}
                 className="w-full justify-start text-left h-8 px-2 rounded-md"
                 onClick={() => {
-                    if (!isLoading) { // Prevent selection change while loading initial files
+                    if (!isLoading) {
+                        // Prevent selection change while loading initial files
                         onFileSelect(file.name, group);
                     }
                 }}
@@ -113,7 +114,7 @@ export function SpecsSidebar({
 
             {/* Rules Section */}
             <div className="flex-shrink-0 pt-4">
-                 {/* Added sticky positioning and background for Rules header */}
+                {/* Added sticky positioning and background for Rules header */}
                 <div className="flex justify-between items-center mb-2 sticky top-[calc(2rem+1.5rem)] bg-background pb-2 z-10">
                     <h3 className="text-sm font-semibold text-muted-foreground">Rules</h3>
                     <Button
@@ -134,8 +135,8 @@ export function SpecsSidebar({
                     ) : (
                         renderSidebarList(combinedFiles().rules, "rules")
                     )}
-                     {/* Add a placeholder if no rules and not loading */}
-                     {!isLoading && ruleFiles.length === 0 && (
+                    {/* Add a placeholder if no rules and not loading */}
+                    {!isLoading && ruleFiles.length === 0 && (
                         <p className="text-xs text-muted-foreground px-2 py-1">No rules defined yet.</p>
                     )}
                 </div>

@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import ndk from "@/lib/nostr/ndk";
 import { NDKSessionLocalStorage, useNDKInit, useNDKSessionMonitor } from "@nostr-dev-kit/ndk-hooks";
 import { useEffect } from "react";
+import ndk from "@/lib/nostr/ndk";
 
 const sessionStorage = new NDKSessionLocalStorage();
 
 /**
  * Use an NDKHeadless component to initialize NDK to prevent application-rerenders
  * when there are changes to the NDK or session state.
- * 
+ *
  * Include this headless component in your app layout to initialize NDK correctly.
- * @returns 
+ * @returns
  */
 export default function NDKHeadless() {
     const initNDK = useNDKInit();
@@ -23,9 +23,9 @@ export default function NDKHeadless() {
 
     useEffect(() => {
         if (!ndk) return;
-        
+
         initNDK(ndk);
-    }, [initNDK])
+    }, [initNDK]);
 
     return null;
-}   
+}

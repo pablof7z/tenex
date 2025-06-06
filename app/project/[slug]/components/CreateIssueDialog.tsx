@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
+    DialogClose, // Import DialogClose for the Cancel button
     DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogDescription,
     DialogFooter,
-    DialogClose, // Import DialogClose for the Cancel button
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label"; // Import Label
+import { Textarea } from "@/components/ui/textarea";
 
 interface CreateIssueDialogProps {
     isOpen: boolean;

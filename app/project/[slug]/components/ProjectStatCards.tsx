@@ -1,6 +1,6 @@
 import { MessageSquare, Users } from "lucide-react";
-import { NDKProject } from "@/lib/nostr/events/project";
 import { LoadedProject } from "@/hooks/useProjects";
+import { NDKProject } from "@/lib/nostr/events/project";
 
 interface ProjectStatCardsProps {
     project: LoadedProject;

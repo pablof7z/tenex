@@ -1,17 +1,18 @@
 "use client";
 
+import { ArrowRight, Boxes, Code, GitBranch, Hash, LogOut, MessageSquare, Zap } from "lucide-react"; // Removed LogIn
 // Removed useState, useEffect
 import Link from "next/link";
-import { ArrowRight, Boxes, Code, GitBranch, Hash, LogOut, MessageSquare, Zap } from "lucide-react"; // Removed LogIn
+
 // Removed NDK hooks related to login/logout/session state here
 // Removed NDKUser type import
 
-import { toast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 // Removed Avatar imports
 // Removed DropdownMenu imports
 import { UserDropdown } from "@/components/navigation/user-dropdown"; // Import the new component
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 export default function LandingPage() {
     // Removed session hooks, login/logout hooks, isLoading state, activeUser state

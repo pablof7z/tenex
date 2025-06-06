@@ -2,7 +2,12 @@ import NDK from "@nostr-dev-kit/ndk";
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie";
 
 // Define explicit relays or use defaults
-const explicitRelayUrls = ["wss://relay.damus.io", "wss://relay.primal.net", "wss://relay.nostr.band", "wss://purplepag.es"];
+const explicitRelayUrls = [
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://relay.nostr.band",
+    "wss://purplepag.es",
+];
 
 // Setup Dexie cache adapter (Client-side only)
 let cacheAdapter: NDKCacheAdapterDexie | undefined;

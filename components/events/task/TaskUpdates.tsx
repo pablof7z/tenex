@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useProjectStore } from "@/lib/store/projects";
-import { NoteCard } from "@/components/events/note/card";
 import { Loader2 } from "lucide-react";
+import React, { useMemo } from "react";
+import { NoteCard } from "@/components/events/note/card";
+import { useProjectStore } from "@/lib/store/projects";
 
 interface TaskUpdatesProps {
     taskId: string;
@@ -14,9 +14,7 @@ export function TaskUpdates({ taskId, projectSlug }: TaskUpdatesProps) {
     const getPubkeyBySlug = useProjectStore((state) => state.getPubkeyBySlug);
     const agentPubkey = getPubkeyBySlug(projectSlug);
 
-    const { events } = useSubscribe(taskId ? [
-        { kinds: [1], "#e": [taskId] },
-    ] : false, {}, [taskId, agentPubkey]);
+    const { events } = useSubscribe(taskId ? [{ kinds: [1], "#e": [taskId] }] : false, {}, [taskId, agentPubkey]);
 
     const sortedEvents = useMemo(() => {
         if (!events) return [];

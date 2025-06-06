@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react"; // Added useCallback
-import { Send, Loader2 } from "lucide-react";
+import NDK, { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Corrected NDK import
+import { useNDK } from "@nostr-dev-kit/ndk-hooks"; // Import useNDK
+import { Loader2, Send } from "lucide-react";
+import { useCallback, useState } from "react"; // Added useCallback
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -10,8 +12,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useNDK } from "@nostr-dev-kit/ndk-hooks"; // Import useNDK
-import NDK, { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Corrected NDK import
 import { toast } from "@/components/ui/use-toast"; // Added toast
 
 interface CreatePostDialogProps {

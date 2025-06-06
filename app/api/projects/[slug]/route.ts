@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import fs from "fs"; // Keep for access check if needed, but prefer promises
-import path from "path";
-import { readFile, access } from "fs/promises"; // Use promises
 import { exec } from "child_process"; // For cp command
+import fs from "fs"; // Keep for access check if needed, but prefer promises
+import { access, readFile } from "fs/promises"; // Use promises
+import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 import { promisify } from "util";
 import { getProjectPath } from "@/lib/projectUtils"; // Keep utilities
 
@@ -137,7 +137,10 @@ export async function POST(
                 if (validBackends.includes(body.backendType.toLowerCase())) {
                     backendType = body.backendType.toLowerCase();
                 } else {
-                    return NextResponse.json({ error: `Invalid backendType. Must be one of: ${validBackends.join(", ")}` }, { status: 400 });
+                    return NextResponse.json(
+                        { error: `Invalid backendType. Must be one of: ${validBackends.join(", ")}` },
+                        { status: 400 },
+                    );
                 }
             }
             // Template metadata is optional (for analytics/tracking)
@@ -197,7 +200,7 @@ export async function POST(
         if (templateName && templateId) {
             console.log(`Project creation using template: ${templateName} (${templateId})`);
         }
-        
+
         // Removed debug logs from previous step
         console.log(`Executing script: ${command}`); // Keep this log for confirmation
         // Execute using bun directly if preferred and available, otherwise rely on shebang
