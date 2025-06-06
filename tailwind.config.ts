@@ -20,7 +20,8 @@ const config = {
         },
         extend: {
             fontFamily: {
-                sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+                serif: ["var(--font-inter)", "inter", "system-ui", "sans-serif"],
+                sans: ["var(--font-inter)", "inter", "system-ui", "sans-serif"],
                 mono: ["var(--font-mono)", "monospace"],
             },
             colors: {
@@ -82,7 +83,34 @@ const config = {
             },
         },
     },
-    plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+    plugins: [
+        require("tailwindcss-animate"),
+        require("@tailwindcss/typography")({
+            theme: {
+                DEFAULT: {
+                    css: {
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        '--tw-prose-body': 'var(--foreground)',
+                        '--tw-prose-headings': 'var(--foreground)',
+                        '--tw-prose-lead': 'var(--muted-foreground)',
+                        '--tw-prose-links': 'var(--primary)',
+                        '--tw-prose-bold': 'var(--foreground)',
+                        '--tw-prose-counters': 'var(--muted-foreground)',
+                        '--tw-prose-bullets': 'var(--muted-foreground)',
+                        '--tw-prose-hr': 'var(--border)',
+                        '--tw-prose-quotes': 'var(--foreground)',
+                        '--tw-prose-quote-borders': 'var(--border)',
+                        '--tw-prose-captions': 'var(--muted-foreground)',
+                        '--tw-prose-code': 'var(--foreground)',
+                        '--tw-prose-pre-code': 'var(--muted-foreground)',
+                        '--tw-prose-pre-bg': 'var(--muted)',
+                        '--tw-prose-th-borders': 'var(--border)',
+                        '--tw-prose-td-borders': 'var(--border)',
+                    },
+                },
+            },
+        })
+    ],
 } satisfies Config;
 
 export default config;
