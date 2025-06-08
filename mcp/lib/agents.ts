@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { dirname } from "node:path";
 import { NDKPrivateKeySigner, NDKEvent } from "@nostr-dev-kit/ndk";
+import { nip19 } from "nostr-tools";
 import { ndk } from "../ndk.js";
 import { log } from "./utils/log.js";
 import type { AgentConfig } from "../config.js";
@@ -62,7 +63,10 @@ export async function getOrCreateAgentNsec(
     
     // Generate new nsec
     const signer = NDKPrivateKeySigner.generate();
-    const nsec = signer.privateKey;
+    // Convert hex private key to nsec format
+    const hexPrivateKey = signer.privateKey!;
+    const hexBytes = hexPrivateKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16));
+    const nsec = nip19.nsecEncode(new Uint8Array(hexBytes));
     
     // Publish kind:0 event for the new agent
     try {
