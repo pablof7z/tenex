@@ -1,9 +1,9 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NoteCard } from "@/components/events/note/card";
+import { useProjectStore } from "@/lib/store/projects";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Loader2 } from "lucide-react";
 import React, { useMemo } from "react";
-import { NoteCard } from "@/components/events/note/card";
-import { useProjectStore } from "@/lib/store/projects";
 
 interface TaskUpdatesProps {
     taskId: string;

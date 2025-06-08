@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { NDKProject } from "@/lib/nostr/events/project";
+import React from "react";
 import { ProjectSettings } from "./ProjectSettings";
 
 interface ProjectSettingsTabProps {

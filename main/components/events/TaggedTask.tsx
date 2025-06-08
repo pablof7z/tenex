@@ -1,7 +1,7 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKTask } from "@/lib/nostr/events/task";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useEffect, useState } from "react";
-import { NDKTask } from "@/lib/nostr/events/task";
 
 export default function TaggedTask({ event }: { event: NDKEvent }) {
     const { ndk } = useNDK();

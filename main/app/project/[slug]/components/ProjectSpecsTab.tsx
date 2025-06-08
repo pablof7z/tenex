@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
-import { LoadedProject } from "@/hooks/useProjects";
-import { NDKProject } from "@/lib/nostr/events/project";
+import type { LoadedProject } from "@/hooks/useProjects";
+import React, { useCallback, useEffect, useState } from "react";
 import { SpecsEditor } from "./SpecsEditor"; // Import Editor
 import { SpecsSidebar } from "./SpecsSidebar"; // Import Sidebar
+import { RuleSelectionDialog } from "./RuleSelectionDialog";
+import { NDKLLMRule } from "@/lib/nostr/events/rule";
 
 interface FileData {
     name: string;
@@ -23,7 +24,7 @@ const DEFAULT_SPEC_CONTENT = `# Project Specification\n\nAdd your project detail
 
 export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) {
     const { toast } = useToast();
-    const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
+    const { getApiUrl, isReady: isConfigReady, error: configError } = useConfig();
 
     // --- State Management ---
     // File lists and loading state
@@ -379,6 +380,64 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
         }
     };
 
+    const handleAddRulesFromNostr = async (rules: NDKLLMRule[]) => {
+        if (!isConfigReady) {
+            toast({
+                title: "Configuration Error",
+                description: configError || "Configuration not ready.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const apiUrl = getApiUrl(`/projects/${projectSlug}/specs`);
+        setIsSaving(true);
+        setFilesError(null);
+
+        try {
+            // Create rule files for each selected rule
+            for (const rule of rules) {
+                const fileName = `${rule.title.replace(/[^a-zA-Z0-9-_]/g, "_")}.md`;
+                const content = `# ${rule.title}\n\n${rule.description ? `**Description:** ${rule.description}\n\n` : ""}${rule.hashtags.length > 0 ? `**Tags:** ${rule.hashtags.map((tag) => `#${tag}`).join(", ")}\n\n` : ""}${rule.ruleContent}`;
+
+                const response = await fetch(apiUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ fileName, content, group: "rules" }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: "Failed to parse error response" }));
+                    throw new Error(
+                        errorData.error || `Failed to create ${fileName}: ${response.status} ${response.statusText}`,
+                    );
+                }
+
+                // Update local state
+                const newFile = { name: fileName, content };
+                setRuleFiles((prev) => [...prev, newFile].sort((a, b) => a.name.localeCompare(b.name)));
+            }
+
+            // Select the first added rule
+            if (rules.length > 0) {
+                const firstRuleFileName = `${rules[0].title.replace(/[^a-zA-Z0-9-_]/g, "_")}.md`;
+                setSelectedFileName(firstRuleFileName);
+                setSelectedGroup("rules");
+            }
+
+            toast({ title: "Success", description: `Added ${rules.length} rule(s) to your project.` });
+        } catch (error: unknown) {
+            console.error(`Failed to add rules:`, error);
+            const message = error instanceof Error ? error.message : "An unknown error occurred";
+            setFilesError(message);
+            toast({ variant: "destructive", title: "Error Adding Rules", description: message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const [showRuleDialog, setShowRuleDialog] = useState(false);
+
     // --- Render Logic ---
     // Removed mobile-specific rendering and renderEditor function
 
@@ -393,6 +452,7 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
                     selectedGroup={selectedGroup}
                     onFileSelect={handleFileSelect}
                     onAddNewFile={handleAddNewFile}
+                    onAddNewRule={() => setShowRuleDialog(true)}
                     isLoading={isLoadingFiles}
                     isConfigReady={isConfigReady}
                     configError={configError}
@@ -421,6 +481,16 @@ export function ProjectSpecsTab({ project, projectSlug }: ProjectSpecsTabProps) 
                     filesError={filesError} // Pass file-specific errors
                 />
             </div>
+
+            {/* Rule Selection Dialog */}
+            <RuleSelectionDialog
+                open={showRuleDialog}
+                onOpenChange={setShowRuleDialog}
+                onAddRules={handleAddRulesFromNostr}
+                selectedRuleIds={new Set()}
+            >
+                <div />
+            </RuleSelectionDialog>
         </div>
     );
 }

@@ -9,7 +9,7 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@biomejs/biome": "^2.0.0-beta.1",
+        "@biomejs/biome": "^2.0.0-beta.6",
         "@hookform/resolvers": "^3.10.0",
         "@nostr-dev-kit/ndk": "^2.14.24",
         "@nostr-dev-kit/ndk-cache-dexie": "latest",
@@ -55,6 +55,7 @@
         "lucide-react": "^0.487.0",
         "next": "15.2.4",
         "next-themes": "latest",
+        "nostr-tools": "^2.14.2",
         "openai": "^4.103.0",
         "react": "^19.1.0",
         "react-day-picker": "8.10.1",
@@ -76,6 +77,9 @@
         "@types/node": "^22.14.1",
         "@types/react": "^19.1.2",
         "@types/react-dom": "^19.1.2",
+        "eslint": "^9.28.0",
+        "eslint-config-next": "15.3.3",
+        "mini-css-extract-plugin": "^2.9.2",
         "postcss": "^8.5.3",
         "tailwindcss": "^3.4.17",
         "typescript": "^5.8.3"

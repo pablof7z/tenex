@@ -1,5 +1,6 @@
-import NDK, { NDKEvent, NDKRawEvent } from "@nostr-dev-kit/ndk-hooks";
-import { NDKProject } from "./project";
+import type NDK from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, type NDKRawEvent } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKProject } from "./project";
 
 /**
  * Represents a task associated with a project.

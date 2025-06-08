@@ -1,17 +1,18 @@
 "use client";
 
+import { AppLayout } from "@/components/app-layout";
+import { ProjectCard } from "@/components/events/project/card"; // This will be modified later
+import { NewProjectButton } from "@/components/projects/buttons/new";
+import { ImportProjectsButton } from "@/components/projects/buttons/import";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useConfig } from "@/hooks/useConfig";
+import { useProjects } from "@/hooks/useProjects";
 import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Added for navigation
 import * as React from "react"; // Added React for useState
-import { AppLayout } from "@/components/app-layout";
-import { ProjectCard } from "@/components/events/project/card"; // This will be modified later
-import { NewProjectButton } from "@/components/projects/buttons/new";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { useConfig } from "@/hooks/useConfig";
-import { useProjects } from "@/hooks/useProjects";
 // import { Checkbox } from "@/components/ui/checkbox"; // Will be used in ProjectCard
 
 export default function DashboardPage() {
@@ -70,6 +71,7 @@ export default function DashboardPage() {
                             Enter multi-column view
                         </Button>
                     )}
+                    <ImportProjectsButton />
                     <NewProjectButton onProjectCreated={mutateProjects} />
                 </div>
             </div>

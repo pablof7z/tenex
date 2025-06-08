@@ -1,9 +1,9 @@
 import type React from "react";
 import "./globals.css";
-import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import NDKHeadless from "@/components/ndk";
 import { ThemeProvider } from "@/components/theme-provider";
+import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
 const inter = Inter({
     subsets: ["latin"],

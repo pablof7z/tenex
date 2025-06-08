@@ -1,13 +1,13 @@
 "use client";
 
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { ActivityFeed } from "../../components/ActivityFeed"; // Re-added ActivityFeed
 import { RecentTasksList } from "../../components/tasks/RecentTasksList";
 import { Button } from "../../components/ui/button";
-import { LoadedProject, useProjects } from "../../hooks/useProjects";
+import { type LoadedProject, useProjects } from "../../hooks/useProjects";
 
 export default function MultiColumnViewPage() {
     const router = useRouter();

@@ -1,3 +1,0 @@
-Whenever you are about to start working on something, make any progress, have questions, you MUST publish a nostr event using mcp-tool `publish_task_status_update`. Transparent and frequent communication is very important. Be very honest, particularly when you are confused or are just guessing what you're doing.
-
-Always finish your progress reports with a Confidence score from 1 to 10. 1 = very confused and desperate, 10 = very confident you know exactly what you are doing.

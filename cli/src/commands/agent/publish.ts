@@ -3,11 +3,11 @@
  * Publishes a new agent definition to Nostr.
  */
 
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import NDK, { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import fs from "fs";
 import path from "path";
-import { publishEvent, publishStatusUpdate } from "../../nostr/ndkClient";
-import { config, ndk } from "../../nostr/session";
+import { NDKClient } from "../../nostr/ndkClient";
+import { ConfigManager } from "../../config/manager";
 import { logError, logInfo } from "../../utils/logger";
 
 function getRandomAvatar(seed: string) {
@@ -34,12 +34,19 @@ function collectFiles(fileArgs: string[]): { [filename: string]: string } {
 }
 
 export async function runAgentPublish(cmd: any) {
-    if (!config) {
-        logError("TENEX is not initialized. Run `tenex init` first.");
+    const config = ConfigManager.loadConfig();
+    if (!config?.user?.nsec) {
+        logError("TENEX is not initialized. Run `tenex config` first.");
         return;
     }
     const nsec = config.user.nsec;
-    const pubkey = config.user.pubkey || ndk.signer?.pubKey;
+    
+    // Create NDK instance with signer
+    const tempNdk = new NDK({
+        signer: new NDKPrivateKeySigner(nsec),
+    });
+    await tempNdk.connect();
+    const pubkey = tempNdk.signer?.pubkey;
 
     // Gather parameters
     const title = cmd.title || "Untitled Agent";
@@ -62,7 +69,7 @@ export async function runAgentPublish(cmd: any) {
     };
 
     // Publish status update to Nostr: starting publish
-    publishStatusUpdate("Starting agent publish...", {
+    await NDKClient.publishStatusUpdate(nsec, "Starting agent publish...", {
         command: "agent publish",
         title,
         avatar,
@@ -74,22 +81,22 @@ export async function runAgentPublish(cmd: any) {
     });
 
     // Publish agent definition as a Nostr event (kind 31990, custom for agents)
-    const event = new NDKEvent(ndk);
+    const event = new NDKEvent(tempNdk);
     event.kind = 31990;
     event.content = JSON.stringify(agentDef);
 
     try {
-        publishEvent(event);
+        event.publish();
         logInfo("Agent published to Nostr.");
         // Publish status update to Nostr: success
-        publishStatusUpdate("Agent published to Nostr.", {
+        await NDKClient.publishStatusUpdate(nsec, "Agent published to Nostr.", {
             command: "agent publish",
             title,
         });
     } catch (err) {
         logError("Failed to publish agent: " + err);
         // Publish status update to Nostr: failure
-        publishStatusUpdate("Failed to publish agent.", {
+        await NDKClient.publishStatusUpdate(nsec, "Failed to publish agent.", {
             command: "agent publish",
             title,
             error: String(err),

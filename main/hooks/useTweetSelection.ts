@@ -1,4 +1,4 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useCallback, useMemo, useState } from "react";
 
 interface UseTweetSelectionReturn {

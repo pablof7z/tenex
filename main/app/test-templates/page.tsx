@@ -5,11 +5,7 @@ import { useEffect } from "react";
 
 export default function TestTemplatesPage() {
     // Subscribe to template events
-    const { events, eose } = useSubscribe(
-        [{ kinds: [30717], limit: 50 }],
-        {},
-        []
-    );
+    const { events, eose } = useSubscribe([{ kinds: [30717], limit: 50 }], {}, []);
 
     useEffect(() => {
         if (events && events.length > 0) {
@@ -20,7 +16,7 @@ export default function TestTemplatesPage() {
                     pubkey: event.pubkey,
                     tags: event.tags,
                     content: event.content,
-                    created_at: event.created_at
+                    created_at: event.created_at,
                 });
             });
         }
@@ -39,7 +35,9 @@ export default function TestTemplatesPage() {
                     <h2 className="text-xl font-semibold">Raw Events:</h2>
                     {events.map((event, index) => (
                         <div key={event.id || index} className="border p-4 rounded">
-                            <p><strong>Event {index}:</strong></p>
+                            <p>
+                                <strong>Event {index}:</strong>
+                            </p>
                             <p>ID: {event.id}</p>
                             <p>Pubkey: {event.pubkey}</p>
                             <p>Content: {event.content}</p>

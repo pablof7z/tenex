@@ -1,7 +1,5 @@
 "use client";
 
-import { Copy, ExternalLink, RotateCcw } from "lucide-react";
-import React, { useState } from "react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -24,7 +22,9 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { useGitOperations } from "@/hooks/useGitOperations";
 import { cn } from "@/lib/utils";
-import { CommitDetails } from "@/types/git";
+import type { CommitDetails } from "@/types/git";
+import { Copy, ExternalLink, RotateCcw } from "lucide-react";
+import React, { useState } from "react";
 
 interface CommitLabelProps {
     commitHash: string;

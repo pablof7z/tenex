@@ -1,7 +1,7 @@
 "use client";
 
+import type { CommitDetails, GitOperationResult, GitResetOptions } from "@/types/git";
 import { useCallback, useState } from "react";
-import { CommitDetails, GitOperationResult, GitResetOptions } from "@/types/git";
 
 /**
  * Custom hook for git operations using MCP tools

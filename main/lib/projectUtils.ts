@@ -40,6 +40,6 @@ export function getProjectContextPath(projectSlug: string): string {
  */
 export function getProjectRulesPath(projectSlug: string): string {
     const projectPath = getProjectPath(projectSlug);
-    // Use path.join to correctly handle the hidden directory '.roo'
-    return path.join(projectPath, ".roo", "rules");
+    // Use path.join to correctly handle the hidden directory '.tenex'
+    return path.join(projectPath, ".tenex", "rules");
 }

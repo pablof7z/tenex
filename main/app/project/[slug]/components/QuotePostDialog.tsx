@@ -1,5 +1,3 @@
-import { Send } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -10,7 +8,9 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { QuoteData } from "./types";
+import { Send } from "lucide-react";
+import { useState } from "react";
+import type { QuoteData } from "./types";
 
 interface QuotePostDialogProps {
     quoting: QuoteData | null;

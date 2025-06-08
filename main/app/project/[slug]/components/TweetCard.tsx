@@ -1,13 +1,13 @@
-import { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
-import { MessageSquare, Plus, Repeat, Send, Zap } from "lucide-react"; // Import Plus
-import { useCallback, useState } from "react";
-import { QuoteData } from "@/components/events/note/card";
+import type { QuoteData } from "@/components/events/note/card";
 import { Button } from "@/components/ui/button";
 import { CommitLabel } from "@/components/ui/commit-label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import UserAvatar from "@/components/user/avatar";
 import { useGitOperations } from "@/hooks/useGitOperations";
+import type { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
+import { MessageSquare, Plus, Repeat, Send, Zap } from "lucide-react"; // Import Plus
+import { useCallback, useState } from "react";
 
 interface TweetCardProps {
     event: NDKEvent;

@@ -1,7 +1,7 @@
-import { Hexpubkey } from "@nostr-dev-kit/ndk";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Hexpubkey } from "@nostr-dev-kit/ndk";
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { cx } from "class-variance-authority";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const getInitials = (displayName?: string, pubkey?: string): string => {
     if (!displayName) return pubkey?.slice(0, 2) || "NU";

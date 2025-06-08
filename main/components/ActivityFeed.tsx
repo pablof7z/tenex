@@ -1,7 +1,3 @@
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Removed NDKEvent
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Plus } from "lucide-react"; // Removed unused icons: MessageSquare, Repeat, Send, Sparkles, Zap
-import { useCallback, useState } from "react";
 import { CreateIssueDialog } from "@/app/project/[slug]/components/CreateIssueDialog";
 import { CreatePostDialog } from "@/app/project/[slug]/components/CreatePostDialog";
 import { NoteCard, QuoteData } from "@/components/events/note/card"; // Using NoteCard
@@ -9,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast"; // Keep toast for issue creation feedback
 import { NDKProject } from "@/lib/nostr/events/project";
+import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk"; // Removed NDKEvent
+import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { Plus } from "lucide-react"; // Removed unused icons: MessageSquare, Repeat, Send, Sparkles, Zap
+import { useCallback, useState } from "react";
 
 interface ActivityFeedProps {
     pubkeys: string[];

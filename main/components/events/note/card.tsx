@@ -1,7 +1,3 @@
-import { NDKEvent, NDKUser, NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK types
-import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
-import { Check, Copy, Eye, Loader2, MessageSquare, MoreHorizontal, Plus, Repeat, Send, Zap } from "lucide-react"; // Import necessary icons
-import React, { useCallback, useEffect, useState } from "react";
 import { QuotePostDialog } from "@/app/project/[slug]/components/QuotePostDialog"; // Import QuotePostDialog
 import { Button } from "@/components/ui/button";
 import { CommitLabel } from "@/components/ui/commit-label";
@@ -16,6 +12,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { useGitOperations } from "@/hooks/useGitOperations";
+import { NDKEvent, type NDKUser, type NDKUserProfile, NostrEvent } from "@nostr-dev-kit/ndk"; // Import NDK types
+import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks"; // Import useProfile here
+import { Check, Copy, Eye, Loader2, MessageSquare, MoreHorizontal, Plus, Repeat, Send, Zap } from "lucide-react"; // Import necessary icons
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import UserAvatar from "../../user/avatar";
 import TaggedTask from "../TaggedTask";
 

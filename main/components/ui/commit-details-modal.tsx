@@ -1,14 +1,14 @@
 "use client";
 
-import { Calendar, Copy, Hash, RotateCcw, User } from "lucide-react";
-import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { CommitDetails } from "@/types/git";
+import type { CommitDetails } from "@/types/git";
+import { Calendar, Copy, Hash, RotateCcw, User } from "lucide-react";
+import React from "react";
 
 interface CommitDetailsModalProps {
     isOpen: boolean;

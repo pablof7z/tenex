@@ -1,10 +1,10 @@
 "use client";
 
-import { AlertCircle, Mic, MicOff, Pause, Play, Square, Trash2, Upload } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { AlertCircle, Mic, MicOff, Pause, Play, Square, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RecordingState = "idle" | "recording" | "paused" | "stopped" | "processing" | "error";
 

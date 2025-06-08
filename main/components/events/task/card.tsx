@@ -1,13 +1,13 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import type { LoadedProject } from "@/hooks/useProjects";
+import type { NDKTask } from "@/lib/nostr/events/task";
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
 import ReactMarkdown from "react-markdown";
-import { Button } from "@/components/ui/button";
-import { LoadedProject } from "@/hooks/useProjects";
-import { NDKTask } from "@/lib/nostr/events/task";
 import { TaskReactButton } from "./TaskReactButton";
 
 interface TaskCardProps {

@@ -1,6 +1,7 @@
-import { NDKFilter, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { type NostrTemplate, TEMPLATE_KIND, type TemplateFilters } from "@/types/template";
+import { type NDKFilter, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { nip19 } from "nostr-tools";
 import { useMemo } from "react";
-import { NostrTemplate, TEMPLATE_KIND, TemplateFilters } from "@/types/template";
 
 // Define the filter interface to avoid type conflicts
 interface NostrFilter {
@@ -130,7 +131,7 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
     try {
         // Extract required fields from tags
         const dTag = event.tagValue("d");
-        const nameTag = event.tagValue("name") ?? event.tagValue("title");
+        const nameTag = event.tagValue("title") ?? event.tagValue("name");
         const descriptionTag = event.tagValue("description");
 
         // Validate required fields
@@ -147,6 +148,9 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
 
         // Extract optional fields
         const imageTag = event.tagValue("image");
+        const uriTag = event.tagValue("uri");
+        const commandTag = event.tagValue("command");
+        const agentTag = event.tagValue("agent");
 
         // Extract all 't' tags for template tags
         const templateTags = event
@@ -154,18 +158,39 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
             .map((tag: string[]) => tag[1])
             .filter(Boolean);
 
-        // Extract git repository URL from content
-        const repoUrl = event.content?.trim() || "";
+        // Extract git repository URL from 'uri' tag
+        const repoUrl = uriTag?.trim() || "";
 
         // Log but don't reject templates with invalid repo URLs
         if (!repoUrl || !repoUrl.startsWith("git+https://")) {
             console.warn("Template event has invalid or missing repo URL:", {
                 id: event.id,
                 repoUrl,
-                content: event.content,
+                uriTag,
             });
             // Don't return null - allow templates with missing/invalid repos
         }
+
+        // Parse agent configuration if present
+        let agentConfig: object | undefined;
+        if (agentTag) {
+            try {
+                agentConfig = JSON.parse(agentTag);
+            } catch (error) {
+                console.warn("Failed to parse agent config for template:", {
+                    id: event.id,
+                    agentTag,
+                    error,
+                });
+            }
+        }
+
+        // Generate naddr for the template
+        const naddr = nip19.naddrEncode({
+            kind: TEMPLATE_KIND,
+            pubkey: event.pubkey,
+            identifier: dTag,
+        });
 
         // Create NostrTemplate object
         const template: NostrTemplate = {
@@ -175,9 +200,13 @@ function parseEventToTemplate(event: NostrEvent): NostrTemplate | null {
             image: imageTag || undefined,
             tags: templateTags,
             repoUrl,
+            command: commandTag || undefined,
+            agent: agentConfig,
+            content: event.content?.trim() || undefined,
             authorPubkey: event.pubkey,
             createdAt: event.created_at || 0,
             event: event as unknown as NostrTemplate["event"],
+            naddr,
         };
 
         return template;

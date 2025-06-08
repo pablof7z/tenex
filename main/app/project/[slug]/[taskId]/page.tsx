@@ -1,20 +1,21 @@
 "use client";
 
-import { NDKEvent, NDKFilter, NDKKind, NDKTag } from "@nostr-dev-kit/ndk";
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { NoteCard } from "@/components/events/note/card";
-import { DescriptionBox } from "@/components/events/task/description-box";
 import { TaskUpdates } from "@/components/events/task/TaskUpdates"; // Import TaskUpdates
+import { DescriptionBox } from "@/components/events/task/description-box";
 import { ConfirmWorkModal } from "@/components/modals/ConfirmWorkModal"; // Import the modal
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Textarea import removed as it's now in DescriptionBox
 import { useToast } from "@/components/ui/use-toast"; // Import useToast
+import { useConfig } from "@/hooks/useConfig"; // Import useConfig
 import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
 import ndk from "@/lib/nostr/ndk";
+import { type NDKEvent, type NDKFilter, NDKKind, type NDKTag } from "@nostr-dev-kit/ndk";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 export default function TaskDetailPage() {
     const params = useParams();
@@ -39,6 +40,7 @@ export default function TaskDetailPage() {
     // Reply state (showReplyInput, replyContent, isPublishingReply) moved to DescriptionBox
     // isPublishingReply state removed, now handled by DescriptionBox
     const { toast } = useToast(); // Initialize toast
+    const { backendCommand } = useConfig(); // Get backend command
 
     useEffect(() => {
         if (!ndk || !taskId) return;
@@ -83,6 +85,7 @@ export default function TaskDetailPage() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "x-backend-command": backendCommand,
                 },
                 body: JSON.stringify({
                     title: taskTitle,

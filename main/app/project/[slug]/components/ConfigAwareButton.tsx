@@ -1,6 +1,6 @@
-import React from "react";
-import { Button, ButtonProps } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type React from "react";
 
 interface ConfigAwareButtonProps extends ButtonProps {
     isConfigReady: boolean;

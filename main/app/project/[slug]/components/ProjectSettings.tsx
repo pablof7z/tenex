@@ -1,8 +1,3 @@
-import { useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { AlertTriangle, Copy, Eye, EyeOff, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
     AlertDialog,
@@ -21,8 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { NDKProject } from "@/lib/nostr/events/project";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { AlertTriangle, Copy, Eye, EyeOff, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { NsecManager } from "./NsecManager"; // Import the new component
 import { ProjectAgentProfileSettings } from "./ProjectAgentProfileSettings";
 

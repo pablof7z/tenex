@@ -1,3 +1,0 @@
-# Ignore MCP configuration containing secrets
-.roo/mcp.json
-.tenex.json

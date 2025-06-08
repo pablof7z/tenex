@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import React, { useMemo, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
 // QuoteData import removed as quoting is handled in NoteCard
 import { Toolbar } from "@/components/ui/Toolbar";
 import { toast } from "@/components/ui/use-toast";
 import { useConfig } from "@/hooks/useConfig";
 import { useProjects } from "@/hooks/useProjects"; // Import the SWR hook
+import Link from "next/link";
+import React, { useMemo, useState } from "react";
 
 // Import common components
 import { ProjectHeader } from "./components/ProjectHeader";

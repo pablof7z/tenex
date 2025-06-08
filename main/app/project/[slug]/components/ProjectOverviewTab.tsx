@@ -1,7 +1,7 @@
 "use client";
 
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { RelatedTweets } from "./RelatedTweets";
 
 interface ProjectOverviewTabProps {

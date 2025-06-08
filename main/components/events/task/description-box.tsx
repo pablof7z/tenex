@@ -1,14 +1,14 @@
 "use client";
 
-import { NDKEvent } from "@nostr-dev-kit/ndk"; // Import NDKEvent
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
+import type { NDKTask } from "@/lib/nostr/events/task"; // Assuming this path is correct
+import type { NDKEvent } from "@nostr-dev-kit/ndk"; // Import NDKEvent
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface DescriptionBoxProps {
     task: NDKTask | null;

@@ -1,4 +1,5 @@
-import NDK, { NDKArticle, NDKEvent, NDKPrivateKeySigner, NDKRawEvent } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
+import { NDKArticle, type NDKEvent, NDKPrivateKeySigner, type NDKRawEvent } from "@nostr-dev-kit/ndk";
 
 export class NDKProject extends NDKArticle {
     static kind = 31933;

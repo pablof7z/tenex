@@ -1,10 +1,10 @@
-import { Filter, Search, X } from "lucide-react";
-import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTemplates } from "@/hooks/useTemplates";
-import { NostrTemplate, TemplateFilters } from "@/types/template";
+import type { NostrTemplate, TemplateFilters } from "@/types/template";
+import { Filter, Search, X } from "lucide-react";
+import React, { useMemo, useState } from "react";
 import { TemplateCard } from "./TemplateCard";
 
 interface TemplateSelectorProps {
@@ -167,7 +167,7 @@ export function TemplateSelector({ onTemplateSelect, selectedTemplate }: Templat
                         </div>
 
                         {/* Templates grid */}
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 max-h-[400px] overflow-y-auto pr-2">
                             {templates.map((template) => (
                                 <TemplateCard
                                     key={template.id}

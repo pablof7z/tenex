@@ -1,12 +1,14 @@
 "use client";
 
-import { Clock, FileText, GitBranch, MessageSquare, Settings, Users } from "lucide-react";
-import Link from "next/link";
-import React from "react"; // Import React for Label
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
+import { AlertTriangle, Clock, FileText, GitBranch, MessageSquare, Settings, Users } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import React from "react"; // Import React for Label
+import { MissingNaddrDialog } from "./MissingNaddrDialog";
 
 // Define props for ProjectCard
 interface ProjectCardProps {
@@ -17,6 +19,11 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCardProps) {
     const { slug, title, repoUrl } = project; // Removed description, hashtags
+    const [showMissingNaddrDialog, setShowMissingNaddrDialog] = useState(false);
+
+    // Check if project has projectNaddr
+    const hasNaddr = !!project.projectNaddr;
+
     // Attempt to get description from event, then split hashtags
     const description = project.event?.content || project.event?.summary || "No description available.";
     console.log("proejct hashtags", project.hashtags);
@@ -28,10 +35,23 @@ export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCar
     return (
         <Card className="card-hover overflow-hidden rounded-md border-border flex flex-col">
             <CardHeader className="pb-2">
-                {/* Use slug for the link */}
-                <Link href={`/project/${slug}`} className="hover:text-foreground/70 transition-colors">
-                    <CardTitle className="text-xl">{title}</CardTitle>
-                </Link>
+                <div className="flex items-start justify-between">
+                    {/* Use slug for the link */}
+                    <Link href={`/project/${slug}`} className="hover:text-foreground/70 transition-colors flex-1">
+                        <CardTitle className="text-xl">{title}</CardTitle>
+                    </Link>
+                    {!hasNaddr && (
+                        <Button
+                            onClick={() => setShowMissingNaddrDialog(true)}
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-yellow-500 hover:text-yellow-600"
+                        >
+                            <AlertTriangle className="h-5 w-5" />
+                            <span className="sr-only">Missing project event reference</span>
+                        </Button>
+                    )}
+                </div>
                 <CardDescription className="text-sm line-clamp-2">{description}</CardDescription>
             </CardHeader>
 
@@ -115,6 +135,14 @@ export function ProjectCard({ project, isSelected, onSelectProject }: ProjectCar
                     </Button>
                 </div>
             </CardFooter>
+
+            {!hasNaddr && (
+                <MissingNaddrDialog
+                    project={project}
+                    open={showMissingNaddrDialog}
+                    onOpenChange={setShowMissingNaddrDialog}
+                />
+            )}
         </Card>
     );
 }

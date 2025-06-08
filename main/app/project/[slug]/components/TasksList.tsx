@@ -1,19 +1,30 @@
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Plus } from "lucide-react"; // Removed MessageSquare as it's now in TaskCard
-import { useState } from "react";
 import { TaskCard } from "@/components/events/task/card"; // Import TaskCard
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { NDKTask } from "@/lib/nostr/events/task";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { Plus } from "lucide-react"; // Removed MessageSquare as it's now in TaskCard
+import { useState } from "react";
 
 interface TasksListProps {
     project: LoadedProject;
 }
 
 export function TasksList({ project }: TasksListProps) {
-    const { events } = useSubscribe(project.event ? [{ kinds: [NDKTask.kind], ...project.event.filter() }] : false);
+    console.log("TasksList for project", project.slug, project.projectNaddr);
+    const filter = project.filter
+        ? [
+              {
+                  kinds: [NDKTask.kind],
+                  ...project.filter,
+              },
+          ]
+        : false;
+    console.log("TasksList filter", filter);
+    // Use useSubscribe to fetch tasks based on the filter
+    const { events } = useSubscribe(filter);
     const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
 
     return (

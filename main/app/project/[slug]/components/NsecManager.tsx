@@ -1,10 +1,10 @@
-import { Copy, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
+import { Copy, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 
 interface NsecManagerProps {
     project: LoadedProject;

@@ -1,12 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Reverting to original path with .js
-import { NDKEvent, type NDKTag } from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKPrivateKeySigner, type NDKTag } from "@nostr-dev-kit/ndk";
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import { z } from "zod";
 import { createCommit, hasUncommittedChanges } from "../lib/git.js";
+import { getOrCreateAgentNsec } from "../lib/agents.js";
 import { log } from "../lib/utils/log.js"; // Use the correct log import
 import { ndk } from "../ndk.js"; // ndk instance should have the signer configured
+import { getConfig } from "../config.js";
 
 /**
  * Publish a note to Nostr using the globally configured signer.
@@ -26,6 +28,7 @@ export async function publishNote(
  * @param taskId The task ID to tag
  * @param confidenceLevel Confidence level (1-10) where 10 is very confident and 1 is very confused
  * @param title Short title for the status update (used as git commit message)
+ * @param agentName The name of the agent/mode publishing the update (e.g. "code", "planner", "debugger")
  * @returns Publication results
  */
 export async function publishTaskStatusUpdate(
@@ -33,6 +36,7 @@ export async function publishTaskStatusUpdate(
     taskId: string,
     confidenceLevel: number,
     title: string,
+    agentName: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
     let commitHash: string | undefined = undefined;
 
@@ -56,7 +60,7 @@ export async function publishTaskStatusUpdate(
         // Continue with nostr publishing even if git operations fail
     }
 
-    return await publishToNostr(content, taskId, confidenceLevel, commitHash);
+    return await publishToNostr(content, taskId, confidenceLevel, commitHash, agentName);
 }
 
 /**
@@ -65,7 +69,7 @@ export async function publishTaskStatusUpdate(
  * @param taskId The task ID to tag (optional)
  * @param confidenceLevel Confidence level (optional)
  * @param commitHash Git commit hash (optional)
- * @param title Title for git commit (optional)
+ * @param agentName The name of the agent/mode publishing (optional)
  * @returns Publication results
  */
 async function publishToNostr(
@@ -73,7 +77,7 @@ async function publishToNostr(
     taskId?: string,
     confidenceLevel?: number,
     commitHash?: string,
-    title?: string,
+    agentName?: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
     log(
         `INFO: Publishing note with content type: ${typeof content}, value: "${content ? content.substring(0, 50) : "undefined"}..."`,
@@ -89,9 +93,35 @@ async function publishToNostr(
         }
         await ndk.connect(); // Ensure connection before publishing
 
-        // Check if a signer is configured (should be set up by initNDK from NSEC env var)
-        if (!ndk.signer) {
-            throw new Error("NDK signer is not configured. Check NSEC environment variable.");
+        // Get the appropriate signer
+        let signer = ndk.signer;
+        
+        // If an agent name is provided and we have a config file, use agent-specific nsec
+        if (agentName) {
+            const config = await getConfig();
+            if (config.agentsConfigPath) {
+                // Extract project name from metadata.json in the same directory
+                const projectMetadataPath = path.join(path.dirname(config.agentsConfigPath), 'metadata.json');
+                let projectName = 'Unknown Project';
+                try {
+                    const metadataContent = await fs.readFile(projectMetadataPath, 'utf-8');
+                    const metadata = JSON.parse(metadataContent);
+                    projectName = metadata.title || metadata.name || projectName;
+                } catch (err) {
+                    log(`WARN: Failed to read project metadata: ${err}`);
+                }
+                
+                // Get or create agent nsec
+                const agentNsec = await getOrCreateAgentNsec(config.agentsConfigPath, agentName, projectName);
+                signer = new NDKPrivateKeySigner(agentNsec);
+                log(`INFO: Using agent '${agentName}' for publishing`);
+            } else {
+                log(`WARN: Agent name '${agentName}' provided but no config file available, using default signer`);
+            }
+        }
+        
+        if (!signer) {
+            throw new Error("No signer available for publishing.");
         }
 
         // If taskId is provided, try to read the previous event ID
@@ -143,12 +173,13 @@ async function publishToNostr(
             tags,
         });
 
-        // Sign the event using the default signer (from TENEX_PRIVATE_KEY)
-        await event.sign(); // No argument needed, uses ndk.signer
+        // Sign the event using the appropriate signer
+        await event.sign(signer);
 
         // Publish the already signed event
         const publishedRelays = await event.publish();
-        log(`INFO: Published event ${event.id} to ${publishedRelays.size} relays.`);
+        const agentInfo = agentName ? ` using agent '${agentName}'` : '';
+        log(`INFO: Published event ${event.id} to ${publishedRelays.size} relays${agentInfo}.`);
 
         if (publishedRelays.size === 0) {
             log("WARN: Event was not published to any relays.");
@@ -173,11 +204,12 @@ async function publishToNostr(
         }
 
         const commitInfo = commitHash ? ` (with git commit: ${commitHash})` : "";
+        const agentInfoSuffix = agentName ? ` as agent '${agentName}'` : '';
         return {
             content: [
                 {
                     type: "text",
-                    text: `Published to Nostr with ID: ${event.encode()} to ${publishedRelays.size} relays${commitInfo}.`,
+                    text: `Published to Nostr with ID: ${event.encode()} to ${publishedRelays.size} relays${commitInfo}${agentInfoSuffix}.`,
                 },
             ],
         };
@@ -235,6 +267,7 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
                     "Confidence level of how you, the LLM working, feel about the work being done. (1-10) where 10 is very confident and 1 is very confused",
                 ),
             title: z.string().describe("Short title for the status update (used as git commit message)"),
+            agent_name: z.string().describe("The name of the agent/mode publishing the update (e.g. 'code', 'planner', 'debugger')"),
         },
         async (
             {
@@ -242,10 +275,11 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
                 taskId,
                 confidence_level,
                 title,
-            }: { update: string; taskId: string; confidence_level: number; title: string },
+                agent_name,
+            }: { update: string; taskId: string; confidence_level: number; title: string; agent_name: string },
             _extra: unknown,
         ) => {
-            return await publishTaskStatusUpdate(update, taskId, confidence_level, title);
+            return await publishTaskStatusUpdate(update, taskId, confidence_level, title, agent_name);
         },
     );
 }

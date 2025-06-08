@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
-const LOCAL_STORAGE_KEY = "backendUrl";
+const BACKEND_URL_KEY = "backendUrl";
+const BACKEND_COMMAND_KEY = "backendCommand";
 // Default to relative path for same-origin deployment
 const DEFAULT_BACKEND_URL = "/api";
+const DEFAULT_BACKEND_COMMAND = "npx tenex";
 
 export function useConfig() {
     const [backendUrl, setBackendUrl] = useState<string>(DEFAULT_BACKEND_URL); // Initialize with default
+    const [backendCommand, setBackendCommand] = useState<string>(DEFAULT_BACKEND_COMMAND); // Initialize with default
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null); // Store potential config errors
 
@@ -13,10 +16,15 @@ export function useConfig() {
         // This effect runs only on the client-side
         setError(null); // Clear errors on re-check
         try {
-            const savedUrl = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const savedUrl = localStorage.getItem(BACKEND_URL_KEY);
+            const savedCommand = localStorage.getItem(BACKEND_COMMAND_KEY);
+
             // Use saved URL if it exists and is not empty, otherwise stick to default
             const effectiveUrl = savedUrl || DEFAULT_BACKEND_URL;
+            const effectiveCommand = savedCommand || DEFAULT_BACKEND_COMMAND;
+
             setBackendUrl(effectiveUrl);
+            setBackendCommand(effectiveCommand);
 
             // Basic validation for explicitly set URLs
             if (savedUrl && !savedUrl.startsWith("/") && !savedUrl.startsWith("http")) {
@@ -26,9 +34,10 @@ export function useConfig() {
                 setBackendUrl(DEFAULT_BACKEND_URL); // Fallback to default if stored value is invalid
             }
         } catch (err) {
-            console.error("Error reading backend URL from localStorage:", err);
-            setError("Error reading configuration from localStorage. Using default '/api'.");
+            console.error("Error reading config from localStorage:", err);
+            setError("Error reading configuration from localStorage. Using defaults.");
             setBackendUrl(DEFAULT_BACKEND_URL); // Fallback if localStorage fails
+            setBackendCommand(DEFAULT_BACKEND_COMMAND);
         } finally {
             setIsLoading(false);
         }
@@ -57,5 +66,5 @@ export function useConfig() {
     // isReady is true if not loading and no error occurred during loading/validation
     const isReady = !isLoading && !error;
 
-    return { backendUrl, isLoading, isReady, error, getApiUrl };
+    return { backendUrl, backendCommand, isLoading, isReady, error, getApiUrl };
 }

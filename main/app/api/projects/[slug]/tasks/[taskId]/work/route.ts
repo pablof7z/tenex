@@ -1,8 +1,10 @@
 import { exec } from "child_process";
-import fs from "fs";
-import { NextRequest, NextResponse } from "next/server";
 import path from "path";
+import { promisify } from "util";
 import { getProjectPath } from "@/lib/projectUtils"; // Assuming this utility exists and works
+import { type NextRequest, NextResponse } from "next/server";
+
+const execAsync = promisify(exec);
 
 // Get the base path from environment variable for security check
 const PROJECTS_PATH = process.env.PROJECTS_PATH;
@@ -68,74 +70,61 @@ export async function POST(
     }
     // --- End Security Check ---
 
-    // --- Prepare Task File ---
-    const taskFileName = `${taskId}.md`;
-    const tempTasksDir = path.join(projectDirPath, "temp", "tasks");
-    const taskFilePath = path.join(tempTasksDir, taskFileName);
+    // Get backend command from request headers or use default
+    const backendCommand = request.headers.get("x-backend-command") || "npx tenex";
 
-    let fileContent = `Work on the following:\n`;
-    fileContent += `Task ID: ${taskId}\n`;
-    fileContent += `Title: ${title}\n\n`;
-    fileContent += `${description}\n\n`;
-    fileContent += `When you start working, and as you make any progress,, publish updates to nostr.\n`;
+    // Build CLI command
+    const commandArgs = [
+        backendCommand,
+        "run",
+        "--roo", // Currently only supporting roo backend
+        "--project-path",
+        `"${projectDirPath.replace(/"/g, '\\"')}"`,
+        "--task-id",
+        `"${taskId.replace(/"/g, '\\"')}"`,
+        "--task-title",
+        `"${title.replace(/"/g, '\\"')}"`,
+        "--task-description",
+        `"${description.replace(/"/g, '\\"')}"`,
+    ];
 
-    if (context.length > 0) {
-        fileContent += `\n---------\n\n`;
-        fileContent += `Here is some more context that might be useful:\n`;
-        fileContent += `${context}\n`;
+    // Add context if provided
+    if (context && context.length > 0) {
+        const contextText = `When you start working, and as you make any progress, publish updates to nostr.\n\n${context}`;
+        commandArgs.push("--context", `"${contextText.replace(/"/g, '\\"')}"`);
+    } else {
+        const contextText = `When you start working, and as you make any progress, publish updates to nostr.`;
+        commandArgs.push("--context", `"${contextText.replace(/"/g, '\\"')}"`);
     }
 
-    try {
-        // Ensure the temp/tasks directory exists
-        fs.mkdirSync(tempTasksDir, { recursive: true });
-        // Write the task file
-        fs.writeFileSync(taskFilePath, fileContent);
-        console.log(`Task file created: ${taskFilePath}`);
-    } catch (error: unknown) {
-        // Changed any to unknown
-        const message = error instanceof Error ? error.message : "Unknown error creating task file";
-        console.error(`Error creating task file ${taskFilePath}: ${message}`);
-        return NextResponse.json({ error: `Failed to create task file: ${message}` }, { status: 500 });
-    }
-    // --- End Prepare Task File ---
+    const command = commandArgs.join(" ");
 
-    // --- Execute open-editor Script ---
-    const scriptPath = path.resolve(process.cwd(), "scripts/open-editor");
+    console.log(`Executing CLI command: ${command}`);
 
-    // Check if the script exists and is executable
     try {
-        fs.accessSync(scriptPath, fs.constants.X_OK);
-    } catch (err) {
-        console.error(`Error: Script not found or not executable: ${scriptPath}`, err);
-        // Note: We created the task file, but can't open the editor.
-        // Consider if this should be a 500 or maybe return success with a warning.
-        return NextResponse.json(
-            { error: "Task file created, but failed to execute open-editor script (not found or permissions)" },
-            { status: 500 },
+        // Execute the CLI command asynchronously (don't await)
+        execAsync(command).then(
+            ({ stdout, stderr }) => {
+                if (stdout) console.log(`tenex run stdout: ${stdout}`);
+                if (stderr) console.warn(`tenex run stderr: ${stderr}`);
+            },
+            (error) => {
+                console.error(`Error executing tenex run command: ${error.message}`);
+            },
         );
+
+        // Respond immediately
+        return NextResponse.json(
+            {
+                message: `Request received to start work on task ${taskId} for project ${projectSlug}.`,
+                projectPath: projectDirPath,
+                taskId: taskId,
+            },
+            { status: 202 },
+        ); // 202 Accepted
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error executing command";
+        console.error(`Error starting task work: ${message}`);
+        return NextResponse.json({ error: `Failed to start task work: ${message}` }, { status: 500 });
     }
-
-    // Prepare the relative path for response
-    const relativeTaskPath = path.relative(projectDirPath, taskFilePath); // Get path relative to project root
-
-    // Execute the script asynchronously, passing only the task file path
-    exec(`"${scriptPath}" "${projectDirPath}" "${taskFilePath}"`, (error, stdout, stderr) => {
-        if (error) {
-            // Log errors, but don't block the response as the main action (file creation) succeeded.
-            console.error(`Error executing open-editor script for task file "${taskFilePath}": ${error.message}`);
-            console.error(`stderr: ${stderr}`);
-        }
-        if (stdout) console.log(`open-editor stdout: ${stdout}`);
-        if (stderr) console.warn(`open-editor stderr: ${stderr}`);
-    });
-    // --- End Execute open-editor Script ---
-
-    // Respond immediately
-    return NextResponse.json(
-        {
-            message: `Request received to start work on task ${taskId} for project ${projectSlug}. Task file created at ${relativeTaskPath}.`, // Use projectSlug
-            taskFilePath: relativeTaskPath, // Send back the relative path
-        },
-        { status: 202 },
-    ); // 202 Accepted
 }

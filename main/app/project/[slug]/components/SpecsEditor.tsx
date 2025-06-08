@@ -1,7 +1,7 @@
-import { Loader2, Save, Undo2, Wand2 } from "lucide-react";
-import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Save, Undo2, Wand2 } from "lucide-react";
+import React from "react";
 
 interface SpecsEditorProps {
     editorContent: string;

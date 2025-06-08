@@ -1,8 +1,5 @@
 "use client";
 
-import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
-import { useState } from "react";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useConfig } from "@/hooks/useConfig";
 import { NDKProject } from "@/lib/nostr/events/project";
 import type { NostrTemplate } from "@/types/template";
+import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
+import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { useState } from "react";
 
 interface NewProjectButtonProps {
     onProjectCreated?: () => void;
@@ -30,7 +30,13 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
     const { ndk } = useNDK();
     const currentUser = useNDKCurrentUser();
     const { toast } = useToast();
-    const { getApiUrl, isLoading: isConfigLoading, isReady: isConfigReady, error: configError } = useConfig();
+    const {
+        getApiUrl,
+        backendCommand,
+        isLoading: isConfigLoading,
+        isReady: isConfigReady,
+        error: configError,
+    } = useConfig();
 
     const [isCreatingProject, setIsCreatingProject] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -137,6 +143,7 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        "x-backend-command": backendCommand,
                     },
                     body: JSON.stringify({
                         title: formData.name,
@@ -145,10 +152,9 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                         pubkey: projectSigner.pubkey,
                         repo: repoUrl || undefined,
                         hashtags: formData.hashtags || undefined,
-                        eventId: project.tagId(),
-                        // Include template metadata if a template was selected
-                        templateName: formData.selectedTemplate?.name || undefined,
-                        templateId: formData.selectedTemplate?.id || undefined,
+                        projectNaddr: project.encode(),
+                        // Include template naddr if a template was selected
+                        template: formData.selectedTemplate?.naddr || undefined,
                     }),
                 });
 
@@ -183,7 +189,13 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                 variant: "default",
             });
 
-            setFormData({ name: "", description: "", hashtags: "", repoUrl: "", selectedTemplate: null });
+            setFormData({
+                name: "",
+                description: "",
+                hashtags: "",
+                repoUrl: "",
+                selectedTemplate: null,
+            });
             setIsCreatingProject(false);
             setCurrentStep(1);
             setMaxStep(1);
@@ -213,7 +225,13 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
     const handleDialogChange = (open: boolean) => {
         setIsCreatingProject(open);
         if (!open) {
-            setFormData({ name: "", description: "", hashtags: "", repoUrl: "", selectedTemplate: null });
+            setFormData({
+                name: "",
+                description: "",
+                hashtags: "",
+                repoUrl: "",
+                selectedTemplate: null,
+            });
             setFormError(null);
             setCurrentStep(1);
             setMaxStep(1);
@@ -228,8 +246,8 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                     New Project {isConfigLoading ? "(Loading Config...)" : ""}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[1000px] max-h-[90vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                     <DialogTitle className="text-xl">Create new project</DialogTitle>
                     <DialogDescription>
                         {currentStep === 1 && "Add the details for your new project. You can edit these later."}
@@ -239,7 +257,7 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                 </DialogHeader>
 
                 {/* Step Indicator */}
-                <div className="flex justify-center items-center space-x-4 py-4">
+                <div className="flex justify-center items-center space-x-4 py-4 flex-shrink-0">
                     {[1, 2, 3].map((step) => (
                         <div key={step} className="flex items-center">
                             <button
@@ -263,7 +281,7 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                     ))}
                 </div>
 
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4 overflow-y-auto flex-1">
                     {/* Step 1: Project Details */}
                     {currentStep === 1 && (
                         <>
@@ -345,7 +363,7 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
 
                     {/* Step 2: Template Selection */}
                     {currentStep === 2 && shouldShowTemplateStep && (
-                        <div className="min-h-[400px]">
+                        <div className="h-full">
                             <TemplateSelector
                                 onTemplateSelect={handleTemplateSelect}
                                 selectedTemplate={formData.selectedTemplate}
@@ -393,7 +411,7 @@ export function NewProjectButton({ onProjectCreated }: NewProjectButtonProps) {
                     {formError && <div className="text-red-500 text-sm mt-2">{formError}</div>}
                     {configError && <div className="text-orange-600 text-sm mt-2">Note: {configError}</div>}
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0">
                     <div className="flex w-full justify-between">
                         <div>
                             {currentStep > 1 && (

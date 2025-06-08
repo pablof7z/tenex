@@ -1,38 +1,40 @@
 import { exec } from "child_process"; // For cp command
 import fs from "fs"; // Keep for access check if needed, but prefer promises
-import { access, readFile } from "fs/promises"; // Use promises
-import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { promisify } from "util";
 import { getProjectPath } from "@/lib/projectUtils"; // Keep utilities
+import { access, readFile } from "fs/promises"; // Use promises
+import { type NextRequest, NextResponse } from "next/server";
 
 const execAsync = promisify(exec);
 
 // Define the path to the template directory relative to the project root
 const NSEC_PLACEHOLDER = "__NSEC_PLACEHOLDER__";
 
-// --- Helper to check MCP configuration status ---
-async function checkMcpConfigStatus(projectPath: string): Promise<boolean> {
-    const mcpConfigFile = path.join(projectPath, ".roo", "mcp.json");
+// --- Helper to check project configuration status ---
+async function checkProjectConfigStatus(projectPath: string): Promise<boolean> {
+    const agentsConfigFile = path.join(projectPath, ".tenex", "agents.json");
+    
     try {
-        const fileContent = await readFile(mcpConfigFile, "utf-8");
-        const config = JSON.parse(fileContent);
-        // Check if the placeholder has been replaced
-        if (
-            config?.mcpServers?.tenex?.env?.NSEC &&
-            typeof config.mcpServers.tenex.env.NSEC === "string" &&
-            config.mcpServers.tenex.env.NSEC !== NSEC_PLACEHOLDER &&
-            config.mcpServers.tenex.env.NSEC.length > 0
-        ) {
-            return true; // Config exists and placeholder is replaced
+        const fileContent = await readFile(agentsConfigFile, "utf-8");
+        const agents = JSON.parse(fileContent);
+        // Check if there's at least one agent (preferably 'default')
+        if (agents && typeof agents === "object" && Object.keys(agents).length > 0) {
+            // Verify at least one valid nsec
+            const hasValidAgent = Object.values(agents).some(
+                (nsec) => typeof nsec === "string" && nsec.length > 0 && nsec.startsWith("nsec")
+            );
+            if (hasValidAgent) {
+                return true; // Valid agents.json exists
+            }
         }
-        return false; // Structure is wrong or placeholder is still present/empty
+        return false; // Invalid structure or no valid agents
     } catch (error: unknown) {
         // Check if it's an error object with a 'code' property
         if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
             return false; // File doesn't exist
         }
-        console.error(`Error reading or parsing MCP config ${mcpConfigFile}:`, error);
+        console.error(`Error reading or parsing agents config:`, error);
         return false;
     }
 }
@@ -58,7 +60,7 @@ export async function GET(
 
     try {
         await access(projectPath, fs.constants.F_OK); // Use promises version
-        const isConfigured = await checkMcpConfigStatus(projectPath);
+        const isConfigured = await checkProjectConfigStatus(projectPath);
         return NextResponse.json({ exists: true, configured: isConfigured }, { status: 200 });
     } catch (error: unknown) {
         // Check if it's an error object with a 'code' property
@@ -76,15 +78,13 @@ export async function POST(
     { params }: { params: { slug: string } }, // Changed id to slug
 ) {
     const projectSlug = params.slug; // Changed projectId to projectSlug
-    let description: string = ""; // Default description
+    let description = ""; // Default description
     let nsec: string | undefined; // Optional for Claude Code backend
     let repoUrl: string | undefined;
-    let eventId: string | undefined; // Added for the project event ID
+    let projectNaddr: string | undefined; // Added for the project event ID
     let title: string; // Added for the project title
     let hashtags: string | undefined; // Added for hashtags
-    let backendType: string = "roo"; // Default to Roo backend for backward compatibility
-    let templateName: string | undefined; // Added for template tracking
-    let templateId: string | undefined; // Added for template tracking
+    let template: string | undefined; // Added for template naddr
 
     // 1. Validate Project Slug
     if (!projectSlug) {
@@ -101,14 +101,12 @@ export async function POST(
             } else {
                 return NextResponse.json({ error: "title is required in the request body" }, { status: 400 });
             }
-            // NSEC is REQUIRED for Roo backend, optional for Claude Code
+            // NSEC is REQUIRED
             if (body.nsec && typeof body.nsec === "string" && body.nsec.trim() !== "") {
                 nsec = body.nsec;
-            } else if (backendType === "roo") {
-                // NSEC is required for Roo backend
-                return NextResponse.json({ error: "nsec is required for Roo backend" }, { status: 400 });
+            } else {
+                return NextResponse.json({ error: "nsec is required" }, { status: 400 });
             }
-            // For Claude Code backend, nsec is optional
             // Description is optional
             if (typeof body.description === "string" && body.description.trim() !== "") {
                 description = body.description;
@@ -124,31 +122,16 @@ export async function POST(
             if (body.hashtags && typeof body.hashtags === "string" && body.hashtags.trim() !== "") {
                 hashtags = body.hashtags;
             }
-            // Event ID is REQUIRED
-            if (body.eventId && typeof body.eventId === "string" && body.eventId.trim() !== "") {
-                eventId = body.eventId;
+            // Project naddr is REQUIRED
+            if (body.projectNaddr && typeof body.projectNaddr === "string" && body.projectNaddr.trim() !== "") {
+                projectNaddr = body.projectNaddr;
             } else {
-                // If eventId is missing or invalid, return an error immediately
-                return NextResponse.json({ error: "eventId is required in the request body" }, { status: 400 });
+                // If projectNaddr is missing or invalid, return an error immediately
+                return NextResponse.json({ error: "projectNaddr is required in the request body" }, { status: 400 });
             }
-            // Backend Type is optional (defaults to "roo")
-            if (body.backendType && typeof body.backendType === "string" && body.backendType.trim() !== "") {
-                const validBackends = ["roo", "claude-code"];
-                if (validBackends.includes(body.backendType.toLowerCase())) {
-                    backendType = body.backendType.toLowerCase();
-                } else {
-                    return NextResponse.json(
-                        { error: `Invalid backendType. Must be one of: ${validBackends.join(", ")}` },
-                        { status: 400 },
-                    );
-                }
-            }
-            // Template metadata is optional (for analytics/tracking)
-            if (body.templateName && typeof body.templateName === "string" && body.templateName.trim() !== "") {
-                templateName = body.templateName;
-            }
-            if (body.templateId && typeof body.templateId === "string" && body.templateId.trim() !== "") {
-                templateId = body.templateId;
+            // Template naddr is optional
+            if (body.template && typeof body.template === "string" && body.template.trim() !== "") {
+                template = body.template;
             }
         } else {
             return NextResponse.json({ error: "Request body must be JSON" }, { status: 415 });
@@ -158,54 +141,55 @@ export async function POST(
         return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    // --- Execute the create-project script ---
+    // --- Execute the tenex CLI command ---
     try {
-        const scriptPath = path.resolve(process.cwd(), "scripts", "create-project", backendType);
-        // Ensure script path is correctly quoted if it contains spaces, though unlikely here
-        const safeScriptPath = `"${scriptPath}"`;
+        // Get backend command from request headers or use default
+        const backendCommand = request.headers.get("x-backend-command") || "npx tenex";
+
+        // Get projects path from environment
+        const projectsPath = process.env.PROJECTS_PATH;
+        if (!projectsPath) {
+            return NextResponse.json({ error: "Server configuration error: PROJECTS_PATH not set" }, { status: 500 });
+        }
 
         // Build command arguments safely
         const commandArgs = [
-            safeScriptPath,
-            "--slug",
-            `"${projectSlug.replace(/"/g, '\\"')}"`, // *** CORRECTED: Use --slug ***
-            "--desc",
-            `"${description.replace(/"/g, '\\"')}"`,
-            "--eventId",
-            `"${eventId!.replace(/"/g, '\\"')}"`, // eventId is guaranteed by validation
+            backendCommand,
+            "project",
+            "init",
+            `"${projectsPath.replace(/"/g, '\\"')}"`,
+            "--name",
+            `"${projectSlug.replace(/"/g, '\\"')}"`,
+            "--nsec",
+            `"${nsec!.replace(/"/g, '\\"')}"`, // nsec is required
             "--title",
-            `"${title.replace(/"/g, '\\"')}"`, // Add title argument
+            `"${title.replace(/"/g, '\\"')}"`,
+            "--description",
+            `"${description.replace(/"/g, '\\"')}"`,
         ];
 
-        // Add NSEC only for Roo backend (Claude Code doesn't use it)
-        if (backendType === "roo" && nsec) {
-            commandArgs.push("--nsec", `"${nsec.replace(/"/g, '\\"')}"`);
+        if (projectNaddr) {
+            commandArgs.push("--project-naddr", `"${projectNaddr.replace(/"/g, '\\"')}"`);
         }
         if (repoUrl) {
-            commandArgs.push("--repo", `"${repoUrl.replace(/"/g, '\\"')}"`);
+            commandArgs.push("--repo-url", `"${repoUrl.replace(/"/g, '\\"')}"`);
         }
         if (hashtags) {
             commandArgs.push("--hashtags", `"${hashtags.replace(/"/g, '\\"')}"`);
         }
-        if (templateName) {
-            commandArgs.push("--templateName", `"${templateName.replace(/"/g, '\\"')}"`);
-        }
-        if (templateId) {
-            commandArgs.push("--templateId", `"${templateId.replace(/"/g, '\\"')}"`);
+        if (template) {
+            commandArgs.push("--template", `"${template.replace(/"/g, '\\"')}"`);
         }
 
         const command = commandArgs.join(" ");
 
         // Log template usage for analytics
-        if (templateName && templateId) {
-            console.log(`Project creation using template: ${templateName} (${templateId})`);
+        if (template) {
+            console.log(`Project creation using template: ${template}`);
         }
 
-        // Removed debug logs from previous step
-        console.log(`Executing script: ${command}`); // Keep this log for confirmation
-        // Execute using bun directly if preferred and available, otherwise rely on shebang
-        // const commandToRun = `bun ${command}`; // Or just `command` if relying on shebang + PATH
-        const { stdout, stderr } = await execAsync(command); // Use the command with args
+        console.log(`Executing CLI command: ${command}`);
+        const { stdout, stderr } = await execAsync(command);
 
         // Process stdout: Look for the JSON output line
         const outputLines = stdout.trim().split("\n");
@@ -221,13 +205,13 @@ export async function POST(
         }
 
         if (scriptResult && scriptResult.success) {
-            console.log(`Script executed successfully for project ${projectSlug}:`, scriptResult); // Use projectSlug
+            console.log(`CLI executed successfully for project ${projectSlug}:`, scriptResult);
             return NextResponse.json(
                 {
-                    message: scriptResult.message || "Project created successfully via script.",
-                    projectSlug: scriptResult.projectSlug, // Changed projectId to projectSlug
-                    path: scriptResult.path,
-                    configured: scriptResult.configured,
+                    message: "Project created successfully.",
+                    projectSlug: projectSlug,
+                    path: scriptResult.projectPath,
+                    configured: scriptResult.configured || true,
                 },
                 { status: 201 },
             );
@@ -241,7 +225,7 @@ export async function POST(
                 let projectPathCheck: string;
                 try {
                     projectPathCheck = getProjectPath(projectSlug); // Use projectSlug
-                    const isConfigured = await checkMcpConfigStatus(projectPathCheck);
+                    const isConfigured = await checkProjectConfigStatus(projectPathCheck);
                     return NextResponse.json(
                         {
                             message: scriptResult.error || "Project directory already exists.",
@@ -295,7 +279,7 @@ export async function POST(
                 let projectPathCheck: string;
                 try {
                     projectPathCheck = getProjectPath(projectSlug); // Use projectSlug
-                    const isConfigured = await checkMcpConfigStatus(projectPathCheck);
+                    const isConfigured = await checkProjectConfigStatus(projectPathCheck);
                     return NextResponse.json(
                         {
                             message: scriptErrorResult.error || "Project directory already exists.",

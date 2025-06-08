@@ -1,9 +1,9 @@
-import { AlertTriangle, Plus } from "lucide-react";
-import Link from "next/link";
-import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertTriangle, Plus } from "lucide-react";
+import Link from "next/link";
+import React from "react";
 
 interface FileData {
     name: string;
@@ -17,6 +17,7 @@ interface SpecsSidebarProps {
     selectedGroup: "specs" | "rules";
     onFileSelect: (name: string, group: "specs" | "rules") => void;
     onAddNewFile: (group: "specs" | "rules") => void;
+    onAddNewRule?: () => void; // Custom handler for adding rules
     isLoading: boolean;
     isConfigReady: boolean;
     configError: string | null;
@@ -31,6 +32,7 @@ export function SpecsSidebar({
     selectedGroup,
     onFileSelect,
     onAddNewFile,
+    onAddNewRule,
     isLoading,
     isConfigReady,
     configError,
@@ -121,7 +123,7 @@ export function SpecsSidebar({
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 rounded-md"
-                        onClick={() => onAddNewFile("rules")}
+                        onClick={() => (onAddNewRule ? onAddNewRule() : onAddNewFile("rules"))}
                         disabled={actionsDisabled}
                         title={!isConfigReady ? "Configure Backend URL first" : "Add New Rule"}
                     >

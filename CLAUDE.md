@@ -2,9 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Living Documentation
+
+**YOU MUST ALWAYS**:
+1. Read @SPEC.md at the start of every conversation to understand the current system
+2. Update @SPEC.md whenever:
+   - Requirements change
+   - New features are added
+   - Architecture evolves
+   - You discover how something actually works
+3. When updating @SPEC.md:
+   - Maintain it as a current state document, NOT a changelog
+   - Replace outdated information with current reality
+   - Remove historical changes unless they're essential context
+   - Focus on "what is" and "where we're going", not "what was"
+4. Refer to @SPEC.md as the source of truth for what TENEX is and how it works
+
 ## Project Overview
 
 TENEX is a context-first development environment that orchestrates AI assistants to manage software development. It's built as a Next.js application with TypeScript, React, and integrates deeply with the Nostr protocol for decentralized collaboration.
+
+**For detailed architecture and how components work together, see `/SPEC.md`**
 
 ## Common Development Commands
 
@@ -68,7 +86,7 @@ bun run start      # Run the TENEX CLI
 
 ### Important Context Rules
 
-The `.roo/` directory contains structured context rules that must be followed:
+The `.tenex/rules/` directory contains structured context rules that must be followed:
 
 1. **Task Status Updates**: You MUST publish frequent status updates using `mcp__tenex-mcp__publish_task_status_update` tool, including confidence levels (1-10)
 
@@ -105,10 +123,25 @@ The `.roo/` directory contains structured context rules that must be followed:
 
 ### Project Structure Notes
 
-- Projects are stored in `projects/` directory with `.tenex.json` config files
+- Projects are stored in `projects/` directory with `.tenex/` config directory containing `nostr.json` and `metadata.json`
 - Each project has its own nsec for Nostr communication
 - Voice transcription features use OpenAI Whisper API
 - MCP server enables AI agents to publish Nostr events and perform git operations
-- Templates system in `project-templates/` for creating new projects with predefined context
 
-When working on this codebase, always check the `.roo/rules/` directory for the latest context-specific guidelines and requirements.
+When working on this codebase, always check the `.tenex/rules/` directory for the latest context-specific guidelines and requirements.
+
+### Documentation Maintenance
+
+**REMEMBER**: `/SPEC.md` is the living source of truth for this project. You must:
+- Read it at the start of every session
+- Update it to reflect the current state when changes occur
+- Replace outdated sections rather than appending changes
+- Remove historical information that no longer serves the current understanding
+- Keep the "Last Updated" timestamp current
+- Use version numbers to track major architectural shifts, not individual changes
+
+This ensures future Claude Code instances have accurate, up-to-date information about TENEX.
+
+## Development Guidance
+
+- Whenever you finish something that you can easily test, always test it

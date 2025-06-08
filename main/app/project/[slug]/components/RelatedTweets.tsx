@@ -1,14 +1,14 @@
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Loader2, Plus, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react"; // Add useState, useCallback
 import { NoteCard, QuoteData } from "@/components/events/note/card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast"; // Import toast
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { useTweetSelection } from "@/hooks/useTweetSelection";
 import { NDKProject } from "@/lib/nostr/events/project";
 import { NDKTask } from "@/lib/nostr/events/task";
+import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { Loader2, Plus, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react"; // Add useState, useCallback
 import { CreateIssueDialog } from "./CreateIssueDialog"; // Import CreateIssueDialog
 
 interface RelatedTweetsProps {

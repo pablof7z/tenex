@@ -1,7 +1,5 @@
 "use client";
 
-import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
 import { AudioRecorder } from "@/components/ui/audio-recorder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranscription } from "@/hooks/useTranscription";
+import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 export default function TestAudioPage() {
     const [transcriptionResult, setTranscriptionResult] = useState<{

@@ -1,15 +1,15 @@
-import { NDKEvent, NDKUserProfile, serializeProfile } from "@nostr-dev-kit/ndk"; // Assuming profile structure might align
-import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { Loader2 } from "lucide-react";
-import { use, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"; // For Bio
 import { toast } from "@/components/ui/use-toast";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { NDKProject } from "@/lib/nostr/events/project";
+import { NDKEvent, type NDKUserProfile, serializeProfile } from "@nostr-dev-kit/ndk"; // Assuming profile structure might align
+import { useNDK, useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { Loader2 } from "lucide-react";
+import { use, useEffect, useState } from "react";
 
 interface ProjectAgentProfileSettingsProps {
     project: LoadedProject;

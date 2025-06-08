@@ -1,8 +1,8 @@
 "use client";
 
+import ndk from "@/lib/nostr/ndk";
 import { NDKSessionLocalStorage, useNDKInit, useNDKSessionMonitor } from "@nostr-dev-kit/ndk-hooks";
 import { useEffect } from "react";
-import ndk from "@/lib/nostr/ndk";
 
 const sessionStorage = new NDKSessionLocalStorage();
 

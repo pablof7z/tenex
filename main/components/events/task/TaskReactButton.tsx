@@ -1,8 +1,5 @@
 "use client";
 
-import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -10,7 +7,10 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NDKTask } from "@/lib/nostr/events/task";
+import type { NDKTask } from "@/lib/nostr/events/task";
+import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import React, { useEffect, useState } from "react";
 
 interface TaskReactButtonProps {
     taskEvent: NDKTask;

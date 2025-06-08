@@ -1,5 +1,5 @@
+import type { TranscriptionError, TranscriptionResponse } from "@/types/audio";
 import { useCallback, useState } from "react";
-import { TranscriptionError, TranscriptionResponse } from "@/types/audio";
 
 interface UseTranscriptionOptions {
     onSuccess?: (result: TranscriptionResponse) => void;

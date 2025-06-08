@@ -1,7 +1,3 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk"; // Added NDKEvent
-import { Code, MessageSquare, Send } from "lucide-react"; // Added MessageSquare
-import { nip19 } from "nostr-tools";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -14,7 +10,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 // import { Task } from "./types"; // Removed local Task type
-import { NDKTask } from "@/lib/nostr/events/task"; // Import NDKTask
+import type { NDKTask } from "@/lib/nostr/events/task"; // Import NDKTask
+import type { NDKEvent } from "@nostr-dev-kit/ndk"; // Added NDKEvent
+import { Code, MessageSquare, Send } from "lucide-react"; // Added MessageSquare
+import { nip19 } from "nostr-tools";
+import { useState } from "react";
 
 interface TaskDetailDialogProps {
     task: NDKTask | null; // Expect NDKTask

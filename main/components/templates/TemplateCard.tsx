@@ -1,11 +1,11 @@
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Calendar, ExternalLink, GitBranch, User } from "lucide-react";
-import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { NostrTemplate } from "@/types/template";
+import type { NostrTemplate } from "@/types/template";
+import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { Calendar, ExternalLink, GitBranch, User } from "lucide-react";
+import React from "react";
 
 interface TemplateCardProps {
     template: NostrTemplate;
@@ -56,7 +56,7 @@ export function TemplateCard({ template, onClick, isSelected = false }: Template
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <CardTitle className="text-lg font-semibold line-clamp-1">{template.name}</CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2">{template.description}</CardDescription>
+                        <CardDescription className="mt-1 break-words">{template.description}</CardDescription>
                     </div>
                     {template.image && (
                         <div className="ml-3 flex-shrink-0">
@@ -93,12 +93,12 @@ export function TemplateCard({ template, onClick, isSelected = false }: Template
 
                 {/* Repository URL */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <GitBranch className="h-4 w-4" />
+                    <GitBranch className="h-4 w-4 flex-shrink-0" />
                     <a
                         href={getDisplayUrl(template.repoUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
+                        className="flex items-center gap-1 hover:text-foreground transition-colors min-w-0"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <span className="truncate">{getDisplayUrl(template.repoUrl)}</span>

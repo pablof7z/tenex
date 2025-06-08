@@ -1,3 +1,5 @@
+import MiniCssExtractPlugin from "mini-css-extract-plugin";
+
 let userConfig = undefined;
 try {
     // try to import ESM first
@@ -26,6 +28,16 @@ const nextConfig = {
         webpackBuildWorker: true,
         parallelServerBuildTraces: true,
         parallelServerCompiles: true,
+    },
+    webpack: (config, { isServer }) => {
+        // Ensure CSS is handled properly
+        if (!isServer) {
+            // This ensures that CSS extraction works properly
+            if (!config.plugins.find((plugin) => plugin.constructor.name === "MiniCssExtractPlugin")) {
+                config.plugins.push(new MiniCssExtractPlugin());
+            }
+        }
+        return config;
     },
 };
 

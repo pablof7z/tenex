@@ -1,8 +1,8 @@
 import { exec } from "child_process";
 import fs from "fs";
-import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { getProjectPath } from "@/lib/projectUtils"; // Import the utility function
+import { type NextRequest, NextResponse } from "next/server";
 
 // Get the base path from environment variable for security check
 const PROJECTS_PATH = process.env.PROJECTS_PATH;

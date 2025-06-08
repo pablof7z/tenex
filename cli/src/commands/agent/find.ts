@@ -3,14 +3,15 @@
  * No-op: feature coming soon.
  */
 
-import { publishStatusUpdate } from "../../nostr/ndkClient";
-import { config, ndk } from "../../nostr/session";
+import { NDKClient } from "../../nostr/ndkClient";
+import { ConfigManager } from "../../config/manager";
 import { logInfo } from "../../utils/logger";
 
 export async function runAgentFind() {
     logInfo("The 'agent find' feature is coming soon.");
-    if (config) {
-        publishStatusUpdate("User ran 'agent find' (feature coming soon).", {
+    const config = ConfigManager.loadConfig();
+    if (config?.user?.nsec) {
+        await NDKClient.publishStatusUpdate(config.user.nsec, "User ran 'agent find' (feature coming soon).", {
             command: "agent find",
         });
     }

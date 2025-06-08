@@ -1,13 +1,14 @@
 "use client";
 
-import { NDKEvent, NDKFilter, NDKKind } from "@nostr-dev-kit/ndk";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast"; // Added useToast
+import { type NDKEvent, type NDKFilter, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { PlayIcon } from "lucide-react";
 import Link from "next/link";
-import React, { useMemo, useState } from "react"; // Added useState
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast"; // Added useToast
-import { LoadedProject } from "../../hooks/useProjects"; // Adjusted import path
+import type React from "react"; // Added useState
+import { useMemo, useState } from "react";
+import type { LoadedProject } from "../../hooks/useProjects"; // Adjusted import path
 import { NDKTask } from "../../lib/nostr/events/task"; // Adjusted import path
 import { TaskReactButton } from "../events/task/TaskReactButton";
 
@@ -22,9 +23,12 @@ export function RecentTasksList({ project }: RecentTasksListProps) {
     const filter: NDKFilter[] | false = useMemo(() => {
         // Corrected type here
         if (!project.event) return false;
-        const baseFilter: NDKFilter = { kinds: [NDKTask.kind], ...project.event.filter() };
+        const baseFilter: NDKFilter = {
+            kinds: [NDKTask.kind],
+            "#a": [project.event.tagReference()[1]],
+        };
         return [baseFilter]; // Wrap the filter in an array
-    }, [project.slug]); // Removed project.pubkey from deps unless used in filter
+    }, [project.event]); // Depend on project.event since we use it in the filter
 
     const { events: rawTasks, eose } = useSubscribe(filter);
 

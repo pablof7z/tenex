@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label"; // Import Label
 import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useState } from "react";
 
 interface CreateIssueDialogProps {
     isOpen: boolean;

@@ -1,9 +1,9 @@
-import { ArrowLeft, Code, FolderPlus, GitBranch, Loader2, Settings } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { NDKProject } from "@/lib/nostr/events/project";
+import { ArrowLeft, Code, FolderPlus, GitBranch, Loader2, Settings } from "lucide-react";
+import Link from "next/link";
 import { ConfigAwareButton } from "./ConfigAwareButton"; // Import the new component
 
 interface ProjectHeaderProps {

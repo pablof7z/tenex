@@ -1,8 +1,5 @@
 "use client";
 
-import { useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { Loader2, Mic } from "lucide-react";
-import { useState } from "react";
 import { AudioRecorder } from "@/components/ui/audio-recorder";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { LoadedProject } from "@/hooks/useProjects";
+import type { LoadedProject } from "@/hooks/useProjects";
 import { useTranscription } from "@/hooks/useTranscription";
 import { NDKTask } from "@/lib/nostr/events/task";
 import { parseTranscription } from "@/lib/parse-transcription";
 import { applyTextCorrections } from "@/lib/text-corrections";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { Loader2, Mic } from "lucide-react";
+import { useState } from "react";
 
 interface CreateTaskDialogProps {
     project: LoadedProject;

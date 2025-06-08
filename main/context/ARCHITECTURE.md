@@ -113,7 +113,7 @@ Contains additional global styles.
 Contains backend API endpoints built with Next.js API Routes. **Note:** Frontend components now use the `useConfig` hook (`hooks/useConfig.ts`) to determine the base URL for these API calls, reading the configuration from `localStorage`.
 
 *   `app/api/projects/route.ts` (Root endpoint)
-    *   **Responsibility:** Handles `GET` requests to list all projects (reading from local filesystem/`.tenex.json` files). Handles `POST` requests to create the local project structure and `.tenex.json` after a Nostr event is published.
+    *   **Responsibility:** Handles `GET` requests to list all projects (reading from local filesystem/`.tenex/agents.json` and `.tenex/metadata.json` files). Handles `POST` requests to create the local project structure and `.tenex/` configuration directory after a Nostr event is published.
     *   **Called From:** `app/dashboard/page.tsx` (via `useConfig` and `useProjectStore`).
 *   `app/api/projects/[slug]/route.ts` (Specific project endpoint)
     *   **Responsibility:** Handles `GET` requests to check project existence/configuration status (though this is less used now with client-side state). Handles `POST` requests to initialize the project locally (called during creation from dashboard).
