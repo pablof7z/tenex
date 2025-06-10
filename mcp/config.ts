@@ -3,14 +3,19 @@ import { join } from "node:path";
 import { promises as fs } from "node:fs";
 import { log } from "./lib/utils/log.js"; // Assuming log utility exists
 
-// Agent configuration
+// Agent configuration - supports both old and new formats
 export interface AgentConfig {
-    [agentName: string]: string; // Maps agent name to nsec
+    [agentName: string]: string | {
+        nsec: string;
+        name: string;
+        model?: string;
+        mcpServers?: string[];
+    };
 }
 
 // Simplified config structure
 export interface ConfigData {
-    privateKey: string; // Loaded from ENV or agents.json
+    privateKey?: string; // Optional - only needed for legacy single-signer mode
     dbPath: string;
     projectsDir: string; // Added projects directory path
     relays: string[];
@@ -68,22 +73,22 @@ export async function initConfig(nsecFromCli?: string, configFilePath?: string):
         }
     }
 
-    // Fall back to CLI parameter or environment variable
-    if (!privateKey) {
+    // Fall back to CLI parameter or environment variable if no agents config
+    if (!agents) {
         privateKey = nsecFromCli || process.env.NSEC;
         if (nsecFromCli) {
             log("WARN: Using deprecated --nsec parameter. Please use --config-file instead.");
         }
-    }
-
-    if (!privateKey) {
-        log("ERROR: FATAL: No valid configuration found. Provide --config-file, --nsec parameter, or NSEC environment variable.");
-        throw new Error("No valid configuration found. Provide --config-file, --nsec parameter, or NSEC environment variable.");
-    }
-
-    // Basic validation for nsec format
-    if (!privateKey.startsWith("nsec")) {
-        log("WARN: Private key does not look like a valid nsec key.");
+        
+        if (!privateKey) {
+            log("ERROR: FATAL: No valid configuration found. Provide --config-file, --nsec parameter, or NSEC environment variable.");
+            throw new Error("No valid configuration found. Provide --config-file, --nsec parameter, or NSEC environment variable.");
+        }
+        
+        // Basic validation for nsec format
+        if (!privateKey.startsWith("nsec")) {
+            log("WARN: Private key does not look like a valid nsec key.");
+        }
     }
 
     log("INFO: Configuration initialized.");
@@ -107,7 +112,11 @@ let configInstance: ConfigData | null = null;
 
 export async function getConfig(): Promise<ConfigData> {
     if (!configInstance) {
-        configInstance = await initConfig();
+        throw new Error("Config not initialized. Call initConfig() first.");
     }
     return configInstance;
+}
+
+export function setConfigInstance(config: ConfigData): void {
+    configInstance = config;
 }

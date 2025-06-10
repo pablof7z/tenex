@@ -15,4 +15,5 @@ export async function runAgentFind() {
             command: "agent find",
         });
     }
+    process.exit(0);
 }

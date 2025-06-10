@@ -9,13 +9,17 @@
         "start": "bun run ./bin/tenex.ts"
     },
     "dependencies": {
-        "@nostr-dev-kit/ndk": "latest",
+        "@nostr-dev-kit/ndk": "^2.14.29",
         "chalk": "^5.3.0",
         "commander": "^11.1.0",
         "fs-extra": "^11.2.0",
         "inquirer": "^9.2.16",
+        "js-base64": "^3.7.7",
+        "jwt-js-decode": "^1.9.0",
         "nostr-tools": "^2.0.0"
     },
-    "devDependencies": {},
+    "devDependencies": {
+        "typescript": "^5.8.3"
+    },
     "type": "module"
 }

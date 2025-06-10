@@ -15,4 +15,5 @@ export async function runAgentInstall() {
             command: "agent install",
         });
     }
+    process.exit(0);
 }

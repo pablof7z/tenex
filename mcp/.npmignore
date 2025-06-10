@@ -1,0 +1,21 @@
+# Source files
+*.ts
+commands/
+lib/
+logic/
+utils/
+
+# Development files
+.gitignore
+biome.json
+tsconfig.json
+bun.lockb
+
+# Build artifacts (except the binary)
+node_modules/
+*.log
+
+# Keep only the compiled binary and docs
+!tenex-mcp
+!README-TENEX.md
+!CHANGELOG.md

@@ -88,7 +88,7 @@ bun run start      # Run the TENEX CLI
 
 The `.tenex/rules/` directory contains structured context rules that must be followed:
 
-1. **Task Status Updates**: You MUST publish frequent status updates using `mcp__tenex-mcp__publish_task_status_update` tool, including confidence levels (1-10)
+1. **Task Status Updates**: You MUST publish frequent status updates using `mcp__tenex-mcp__publish_task_status_update` tool, including confidence levels (1-10) and your agent name (e.g., "claude-code")
 
 2. **NDK Usage**: 
    - Always use NDK as a singleton
@@ -123,10 +123,14 @@ The `.tenex/rules/` directory contains structured context rules that must be fol
 
 ### Project Structure Notes
 
-- Projects are stored in `projects/` directory with `.tenex/` config directory containing `nostr.json` and `metadata.json`
-- Each project has its own nsec for Nostr communication
+- Projects are stored in `projects/` directory with `.tenex/` config directory containing `agents.json` and `metadata.json`
+- Each project maintains multiple agent identities in `.tenex/agents.json`:
+  - `default`: Primary agent used by default
+  - `claude-code`: Agent used by Claude CLI integration
+  - Additional agents can be created as needed (e.g., `planner`, `debugger`)
 - Voice transcription features use OpenAI Whisper API
 - MCP server enables AI agents to publish Nostr events and perform git operations
+- When using `tenex run --claude`, the MCP server is configured with `--config-file` pointing to `agents.json`
 
 When working on this codebase, always check the `.tenex/rules/` directory for the latest context-specific guidelines and requirements.
 
@@ -145,3 +149,5 @@ This ensures future Claude Code instances have accurate, up-to-date information 
 ## Development Guidance
 
 - Whenever you finish something that you can easily test, always test it
+
+NEVER say "You are right!!, "You are absolutely right!" or any variation of that -- it's EXTREMELY annoying.

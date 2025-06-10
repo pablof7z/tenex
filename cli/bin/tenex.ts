@@ -7,6 +7,7 @@ import { runInit } from "../src/commands/init";
 import { runProjectInit } from "../src/commands/project/init";
 import { runTask } from "../src/commands/run";
 import { rulesCommand } from "../src/commands/rules";
+import { createChatCommand } from "../src/commands/chat";
 
 const program = new Command();
 
@@ -17,17 +18,9 @@ program.command("config").description("Initialize TENEX configuration").action(r
 const project = program.command("project").description("Project commands");
 
 project
-    .command("init <path>")
-    .description("Initialize a new TENEX project")
-    .requiredOption("--name <name>", "Project name")
-    .requiredOption("--nsec <nsec>", "Project nsec key")
-    .option("--title <title>", "Project title")
-    .option("--description <description>", "Project description")
-    .option("--repo-url <url>", "Git repository URL to clone")
-    .option("--hashtags <tags>", "Comma-separated hashtags")
-    .option("--project-naddr <naddr>", "Project naddr (bech32 encoding)")
-    .option("--template <naddr>", "Template naddr (bech32 encoding)")
-    .action((path, options) => runProjectInit({ path, ...options }));
+    .command("init <path> <naddr>")
+    .description("Initialize a new TENEX project from NDKProject naddr")
+    .action((path, naddr) => runProjectInit({ path, naddr }));
 
 const agent = program.command("agent").description("Agent commands");
 
@@ -41,6 +34,7 @@ agent
     .option("--instructions <instructions>", "Agent instructions")
     .option("--models <models>", "Recommended models")
     .option("--file <file...>", "File(s) or directory to include")
+    .option("--goose <uri>", "Goose URI with encoded agent configuration")
     .action(runAgentPublish);
 
 agent.command("find").description("Find agents").action(runAgentFind);
@@ -50,17 +44,13 @@ agent.command("install").description("Install an agent").action(runAgentInstall)
 program.addCommand(rulesCommand);
 
 program
-    .command("run")
-    .description("Run a task with an AI backend")
-    .requiredOption("--project-path <path>", "Path to the project")
-    .requiredOption("--task-id <id>", "Task ID")
-    .option("--task-title <title>", "Task title")
-    .option("--task-description <description>", "Task description")
-    .option("--context <context>", "Additional context for the task")
-    .option("--roo", "Use Roo backend (VS Code integration)")
-    .option("--claude", "Use Claude backend (not implemented)")
-    .option("--goose", "Use Goose backend (not implemented)")
-    .option("--dry-run", "Show the prompt that would be sent without executing")
+    .command("run <nevent1>")
+    .description("Run a task from a Nostr event")
+    .option("--roo", "Use Roo (VS Code) backend")
+    .option("--claude", "Use Claude backend")
+    .option("--goose", "Use Goose backend")
     .action(runTask);
+
+program.addCommand(createChatCommand());
 
 program.parse(process.argv);

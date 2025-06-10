@@ -1,0 +1,19 @@
+{
+  "name": "tenexd",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@nostr-dev-kit/ndk": "^2.14.25",
+    "@types/qrcode": "^1.5.5",
+    "chalk": "^5.4.1",
+    "qrcode": "^1.5.4",
+    "nostr-tools": "^2.10.2"
+  }
+}

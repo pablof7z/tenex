@@ -6,8 +6,8 @@ import { log } from "./lib/utils/log.js"; // Corrected log import path
 export const ndk = new NDK();
 
 /**
- * Initializes the NDK instance with relays and a private key signer.
- * @param config The configuration object containing relays and the private key.
+ * Initializes the NDK instance with relays and optionally a private key signer.
+ * @param config The configuration object containing relays and optionally a private key.
  */
 export async function initNDK(config: ConfigData) {
     log("INFO: Initializing NDK...");
@@ -21,18 +21,22 @@ export async function initNDK(config: ConfigData) {
     ndk.pool.on("relay:disconnect", (r: NDKRelay) => log(`INFO: Disconnected from ${r.url}`));
     ndk.pool.on("relay:connecting", (r: NDKRelay) => log(`INFO: Connecting to ${r.url}`));
 
-    // Create the signer from the private key provided in config
-    // The private key itself comes from the NSEC env var via initConfig()
-    try {
-        const signer: NDKSigner = new NDKPrivateKeySigner(config.privateKey);
-        ndk.signer = signer;
-        const user = await signer.user();
-        log(`INFO: NDK Signer initialized for user: ${user.npub}`);
-    } catch (error) {
-        log(`ERROR: Failed to initialize NDK signer: ${error instanceof Error ? error.message : String(error)}`);
-        throw new Error(
-            "Failed to initialize NDK signer. Ensure NSEC environment variable is set and is a valid nsec.",
-        );
+    // Only set a global signer if we have a single private key (legacy mode)
+    if (config.privateKey) {
+        try {
+            const signer: NDKSigner = new NDKPrivateKeySigner(config.privateKey);
+            ndk.signer = signer;
+            const user = await signer.user();
+            log(`INFO: NDK Signer initialized for user: ${user.npub} (legacy single-signer mode)`);
+        } catch (error) {
+            log(`ERROR: Failed to initialize NDK signer: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(
+                "Failed to initialize NDK signer. Ensure NSEC environment variable is set and is a valid nsec.",
+            );
+        }
+    } else if (config.agents) {
+        log(`INFO: NDK initialized in agent mode with ${Object.keys(config.agents).length} agents available`);
+        // No global signer - each publish operation will use agent-specific signers
     }
 
     // Connect to relays

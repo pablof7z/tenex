@@ -85,6 +85,7 @@ async function publishToNostr(
 
     const taskFilePath = taskId ? path.join(os.homedir(), ".tenex", "tasks", taskId) : undefined;
     let previousEventId: string | undefined = undefined;
+    let effectiveAgentName: string | undefined = undefined;
 
     try {
         // Ensure NDK is ready and connected
@@ -94,12 +95,29 @@ async function publishToNostr(
         await ndk.connect(); // Ensure connection before publishing
 
         // Get the appropriate signer
-        let signer = ndk.signer;
+        const config = await getConfig();
+        let signer: NDKSigner | undefined;
+        effectiveAgentName = agentName;
         
-        // If an agent name is provided and we have a config file, use agent-specific nsec
-        if (agentName) {
-            const config = await getConfig();
-            if (config.agentsConfigPath) {
+        // Determine which signer to use
+        if (config.agentsConfigPath && config.agents) {
+            // We're in agent mode
+            if (!effectiveAgentName) {
+                // No agent name provided, use 'default' or 'claude-code' if available
+                if (config.agents.default) {
+                    effectiveAgentName = 'default';
+                } else if (config.agents['claude-code']) {
+                    effectiveAgentName = 'claude-code';
+                } else {
+                    // Use the first available agent
+                    const agentNames = Object.keys(config.agents);
+                    if (agentNames.length > 0) {
+                        effectiveAgentName = agentNames[0];
+                    }
+                }
+            }
+            
+            if (effectiveAgentName) {
                 // Extract project name from metadata.json in the same directory
                 const projectMetadataPath = path.join(path.dirname(config.agentsConfigPath), 'metadata.json');
                 let projectName = 'Unknown Project';
@@ -112,16 +130,18 @@ async function publishToNostr(
                 }
                 
                 // Get or create agent nsec
-                const agentNsec = await getOrCreateAgentNsec(config.agentsConfigPath, agentName, projectName);
+                const agentNsec = await getOrCreateAgentNsec(config.agentsConfigPath, effectiveAgentName, projectName);
                 signer = new NDKPrivateKeySigner(agentNsec);
-                log(`INFO: Using agent '${agentName}' for publishing`);
-            } else {
-                log(`WARN: Agent name '${agentName}' provided but no config file available, using default signer`);
+                log(`INFO: Using agent '${effectiveAgentName}' for publishing`);
             }
+        } else if (ndk.signer) {
+            // Legacy mode - use global signer
+            signer = ndk.signer;
+            log(`INFO: Using legacy single-signer mode for publishing`);
         }
         
         if (!signer) {
-            throw new Error("No signer available for publishing.");
+            throw new Error("No signer available for publishing. Ensure agent configuration or NSEC is provided.");
         }
 
         // If taskId is provided, try to read the previous event ID
@@ -178,7 +198,7 @@ async function publishToNostr(
 
         // Publish the already signed event
         const publishedRelays = await event.publish();
-        const agentInfo = agentName ? ` using agent '${agentName}'` : '';
+        const agentInfo = effectiveAgentName ? ` using agent '${effectiveAgentName}'` : '';
         log(`INFO: Published event ${event.id} to ${publishedRelays.size} relays${agentInfo}.`);
 
         if (publishedRelays.size === 0) {
@@ -204,7 +224,7 @@ async function publishToNostr(
         }
 
         const commitInfo = commitHash ? ` (with git commit: ${commitHash})` : "";
-        const agentInfoSuffix = agentName ? ` as agent '${agentName}'` : '';
+        const agentInfoSuffix = effectiveAgentName ? ` as agent '${effectiveAgentName}'` : '';
         return {
             content: [
                 {

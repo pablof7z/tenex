@@ -91,4 +91,7 @@ export async function runConfigWizard() {
         command: "init",
         method: action,
     });
+    
+    // Ensure process exits cleanly
+    process.exit(0);
 }

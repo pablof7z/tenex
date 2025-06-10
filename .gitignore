@@ -8,7 +8,7 @@ bun.lock
 **/node_modules
 
 # next.js
-/.next/
+main/.next/
 /out/
 
 # production

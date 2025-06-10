@@ -1,0 +1,17 @@
+{
+  "privateKey": "f8a27c0d2e83fb60cdab96815d2b97d552a16da6e9ba7aeb239d17e514366edc",
+  "publicKey": "684c21cf8702edaafdcad3458aef674b87d28ee3eb529cb5ba793006daab519b",
+  "projectsPath": "/Users/pablofernandez/projects",
+  "taskCommand": "bun /Users/pablofernandez/test123/TENEX-pfkmc9/cli/bin/tenex run --claude",
+  "chatCommand": "bun /Users/pablofernandez/test123/TENEX-pfkmc9/cli/bin/tenex chat",
+  "relays": [
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://nos.lol",
+    "wss://relay.nostr.band"
+  ],
+  "whitelistedPubkeys": [
+    "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52"
+  ],
+  "hostname": "tenexd-daemon"
+}

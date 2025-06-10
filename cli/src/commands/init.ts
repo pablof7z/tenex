@@ -10,7 +10,7 @@ export async function runInit() {
     const config = ConfigManager.loadConfig();
     if (config) {
         logInfo("TENEX is already initialized. Config found at ~/.tenex/config");
-        return;
+        process.exit(0);
     }
     await runConfigWizard();
 }

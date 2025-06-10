@@ -52,15 +52,17 @@ A command-line interface for local development operations:
 
 Model Context Protocol server that enables AI agents to:
 
-- **Publish Status Updates**: Real-time progress updates to Nostr
+- **Publish Status Updates**: Real-time progress updates to Nostr with agent identification
 - **Git Operations**: Commit changes with context, reset to previous states
 - **Context Access**: Read and understand project rules and specifications
+- **Multi-Agent Support**: Manages multiple agent identities from `agents.json`
 
 **Key Features**:
 - Automatic git commits with task context
 - Commit hash tracking in Nostr events
-- Status updates with confidence levels
-- Integration with project nsec for authentication
+- Status updates with confidence levels and agent names
+- Integration with project agents via `--config-file` parameter
+- Agent-specific nsec management for each AI persona
 
 ## How It All Works Together
 
@@ -128,7 +130,6 @@ Project events are NDKArticle events with additional fields:
 - **title tag**: Project name
 - **repo tag**: Git repository URL
 - **hashtags tag**: Array of project hashtags/topics
-- **key tag**: Encrypted project nsec for agent identity
 - **content**: Project description/README
 
 #### Template Event Structure (kind 30717)
@@ -219,7 +220,12 @@ When extending TENEX:
 
 ### Task Execution
 - Uses `tenex run` command with backend flags: `--roo`, `--claude`, or `--goose`
-- Currently only `--roo` backend is implemented (VS Code integration)
+- `--roo` backend: VS Code integration with roo-executor
+- `--claude` backend: Claude CLI integration with MCP server
+  - Automatically creates/uses `claude-code` agent in `agents.json`
+  - Configures MCP server with `--config-file` instead of direct nsec
+  - Instructs Claude about its agent name for status updates
+- `--goose` backend: Not yet implemented
 - Accepts task details: `--project-path`, `--task-id`, `--task-title`, `--task-description`, `--context`
 - Replaces the previous script-based approach for better modularity
 
@@ -238,5 +244,5 @@ When extending TENEX:
 
 ---
 
-*Last Updated: January 6, 2025*
-*Version: 1.5.0*
+*Last Updated: January 10, 2025*
+*Version: 1.6.0*

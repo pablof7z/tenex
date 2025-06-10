@@ -21,21 +21,44 @@ export async function getNDK(): Promise<NDK> {
     return ndkInstance;
 }
 
+export async function shutdownNDK(): Promise<void> {
+    if (ndkInstance) {
+        // NDK doesn't have a built-in disconnect method, but we can
+        // stop all subscriptions and clear the instance
+        ndkInstance = null;
+    }
+}
+
 export const NDKClient = {
     publishEvent: async (nsec: string, eventData: any) => {
         const tempNdk = new NDK({
             signer: new NDKPrivateKeySigner(nsec),
+            explicitRelayUrls: [
+                "wss://relay.nostr.band",
+                "wss://relay.damus.io",
+                "wss://relay.nostr.wirednet.jp",
+                "wss://nostr.wine",
+            ],
         });
         await tempNdk.connect();
         
         const event = new NDKEvent(tempNdk);
         Object.assign(event, eventData);
-        event.publish();
+        await event.publish();
+        
+        // Give time for the event to be sent before disconnecting
+        await new Promise(resolve => setTimeout(resolve, 500));
     },
     
     publishStatusUpdate: async (nsec: string, message: string, context?: Record<string, any>) => {
         const tempNdk = new NDK({
             signer: new NDKPrivateKeySigner(nsec),
+            explicitRelayUrls: [
+                "wss://relay.nostr.band",
+                "wss://relay.damus.io",
+                "wss://relay.nostr.wirednet.jp",
+                "wss://nostr.wine",
+            ],
         });
         await tempNdk.connect();
         
@@ -50,6 +73,9 @@ export const NDKClient = {
             }
         }
         
-        event.publish();
+        await event.publish();
+        
+        // Give time for the event to be sent before disconnecting
+        await new Promise(resolve => setTimeout(resolve, 500));
     }
 };

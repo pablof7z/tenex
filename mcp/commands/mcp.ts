@@ -11,7 +11,7 @@ import { log } from "../utils/log.js";
 // Define the MCP server instance
 const mcpServer = new McpServer({
     name: "tenex", // Renamed server
-    version: "0.1.0", // Simplified version
+    version: "0.5.0", // Agent management system
     capabilities: {
         resources: {},
     },

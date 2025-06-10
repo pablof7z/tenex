@@ -55,7 +55,13 @@ export async function getOrCreateAgentNsec(
     // If agent already exists, return its nsec
     if (agents[agentName]) {
         log(`INFO: Using existing agent '${agentName}'`);
-        return agents[agentName];
+        // Handle both old format (string) and new format (object)
+        const agentData = agents[agentName];
+        if (typeof agentData === 'string') {
+            return agentData;
+        } else {
+            return agentData.nsec;
+        }
     }
     
     // Create new agent
@@ -63,15 +69,13 @@ export async function getOrCreateAgentNsec(
     
     // Generate new nsec
     const signer = NDKPrivateKeySigner.generate();
-    // Convert hex private key to nsec format
-    const hexPrivateKey = signer.privateKey!;
-    const hexBytes = hexPrivateKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16));
-    const nsec = nip19.nsecEncode(new Uint8Array(hexBytes));
+    const nsec = signer.nsec;
     
     // Publish kind:0 event for the new agent
     try {
         const displayName = `${agentName} @ ${projectName}`;
         const name = `${agentName}-${projectName.toLowerCase().replace(/\s+/g, '-')}`;
+        const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(displayName)}`;
         
         const profileEvent = new NDKEvent(ndk, {
             kind: 0,
@@ -79,7 +83,7 @@ export async function getOrCreateAgentNsec(
                 name: name,
                 display_name: displayName,
                 about: `AI agent ${agentName} for ${projectName} project`,
-                picture: null,
+                picture: avatarUrl,
                 created_at: Math.floor(Date.now() / 1000)
             }),
             tags: []
@@ -95,8 +99,12 @@ export async function getOrCreateAgentNsec(
         // Continue even if profile publish fails
     }
     
-    // Save the new agent
-    agents[agentName] = nsec;
+    // Save the new agent in the new format
+    agents[agentName] = {
+        nsec: nsec,
+        name: displayName,
+        model: "claude-3-5-sonnet-20241022"
+    };
     await saveAgentsConfig(agentsConfigPath, agents);
     
     return nsec;
