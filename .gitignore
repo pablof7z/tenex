@@ -35,6 +35,5 @@ bun.lock
 
 .repomix*
 
-tempmcp/tenex-mcp
 mcp/tenex-mcp
 .roo/mcp.json
