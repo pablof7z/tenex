@@ -8,6 +8,7 @@ export declare const EVENT_KINDS: {
     readonly CHAT_MESSAGE: 11;
     readonly CHAT_REPLY: 1111;
     readonly TASK: 1934;
+    readonly AGENT_LESSON: 4124;
     readonly AGENT_CONFIG: 4199;
     readonly PROJECT_STATUS: 24010;
     readonly TYPING_INDICATOR: 24111;
@@ -37,4 +38,14 @@ export interface ChatEventTags {
  */
 export interface TypingIndicatorContent {
     message: string;
+}
+/**
+ * Typing indicator event tags
+ * Kind: 24111 (typing) / 24112 (stop typing)
+ */
+export interface TypingIndicatorTags {
+    e: string;
+    a?: string;
+    "system-prompt"?: string;
+    prompt?: string;
 }

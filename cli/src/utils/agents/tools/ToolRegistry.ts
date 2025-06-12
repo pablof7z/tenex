@@ -44,6 +44,23 @@ export class ToolRegistry {
       prompt += '- Any other coding task\n\n';
     }
     
+    // Add special instructions for spec tools if available
+    const updateSpecTool = tools.find(t => t.name === 'update_spec');
+    const readSpecsTool = tools.find(t => t.name === 'read_specs');
+    if (updateSpecTool || readSpecsTool) {
+      prompt += '📖 SPECIFICATION MANAGEMENT:\n';
+      if (readSpecsTool) {
+        prompt += '- ALWAYS use "read_specs" at the start of conversations to check for existing project documentation\n';
+        prompt += '- The SPEC.md file (if it exists) contains the current system architecture and should be your primary reference\n';
+      }
+      if (updateSpecTool) {
+        prompt += '- When system architecture, requirements, or implementation details change, update SPEC.md using "update_spec"\n';
+        prompt += '- Keep SPEC.md as a living document that reflects the CURRENT state, not historical changes\n';
+        prompt += '- Only the default agent can update specifications\n';
+      }
+      prompt += '\n';
+    }
+    
     for (const tool of tools) {
       prompt += `Tool: ${tool.name}\n`;
       prompt += `Description: ${tool.description}\n`;

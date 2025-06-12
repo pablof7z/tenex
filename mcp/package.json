@@ -1,44 +1,44 @@
 {
-	"name": "tenex-mcp",
-	"version": "0.5.0",
-	"description": "Model Context Protocol server for TENEX",
-	"module": "index.ts",
-	"type": "module",
-	"bin": {
-		"tenex-mcp": "tenex-mcp"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/OpenAgentsInc/TENEX.git"
-	},
-	"keywords": ["mcp", "nostr", "tenex", "agents", "ai"],
-	"author": "TENEX Team",
-	"license": "MIT",
-	"files": ["tenex-mcp", "README-TENEX.md", "CHANGELOG.md"],
-	"scripts": {
-		"build": "bun build --compile --outfile tenex-mcp index.ts",
-		"lint": "biome lint .",
-		"format": "biome format . --write",
-		"check": "biome check --write .",
-		"setup": "bun run index.ts setup",
-		"prepublish": "bun run build",
-		"publish": "npm publish"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
-		"@types/bun": "latest",
-		"@types/inquirer": "^9.0.7"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
-	},
-	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.7.0",
-		"@nostr-dev-kit/ndk": "^2.14.29",
-		"@nostr-dev-kit/ndk-wallet": "latest",
-		"commander": "^13.1.0",
-		"inquirer": "^12.5.0",
-		"simple-git": "^3.25.0",
-		"yaml": "^2.7.0"
-	}
+    "name": "tenex-mcp",
+    "version": "0.5.0",
+    "description": "Model Context Protocol server for TENEX",
+    "module": "index.ts",
+    "type": "module",
+    "bin": {
+        "tenex-mcp": "tenex-mcp"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/OpenAgentsInc/TENEX.git"
+    },
+    "keywords": ["mcp", "nostr", "tenex", "agents", "ai"],
+    "author": "TENEX Team",
+    "license": "MIT",
+    "files": ["tenex-mcp", "README-TENEX.md", "CHANGELOG.md"],
+    "scripts": {
+        "build": "bun build --compile --outfile tenex-mcp index.ts",
+        "lint": "biome lint .",
+        "format": "biome format . --write",
+        "check": "biome check --write .",
+        "setup": "bun run index.ts setup",
+        "prepublish": "bun run build",
+        "publish": "npm publish"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@types/bun": "latest",
+        "@types/inquirer": "^9.0.7"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.7.0",
+        "@nostr-dev-kit/ndk": "^2.14.29",
+        "@nostr-dev-kit/ndk-wallet": "latest",
+        "commander": "^13.1.0",
+        "inquirer": "^12.5.0",
+        "simple-git": "^3.25.0",
+        "yaml": "^2.7.0"
+    }
 }

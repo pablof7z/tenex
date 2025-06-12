@@ -21,6 +21,7 @@ import { AgentsPage } from "./components/AgentsPage";
 import { ChatInterface } from "./components/ChatInterface";
 import { ChatsPage } from "./components/ChatsPage";
 import { DesktopLayout } from "./components/DesktopLayout";
+import { DocsPage } from "./components/DocsPage";
 import { InstructionsPage } from "./components/InstructionsPage";
 import { ProjectSettings } from "./components/ProjectSettings";
 import { SettingsPage } from "./components/SettingsPage";
@@ -33,7 +34,9 @@ import { useAppSubscriptions } from "./hooks/useAppSubscriptions";
 import { useBackendStatus } from "./hooks/useBackendStatus";
 import { useProject } from "./hooks/useProject";
 import { useProjectStatus } from "./hooks/useProjectStatus";
+import { useAgentLessons } from "./hooks/useAgentLessons";
 import { themeAtom } from "./lib/store";
+import { Toaster } from "sonner";
 
 // Layout component that wraps authenticated routes
 function AuthLayout() {
@@ -48,6 +51,9 @@ function AuthLayout() {
 
 	// Initialize project status tracking for online badges
 	useProjectStatus();
+
+	// Initialize agent lessons monitoring
+	useAgentLessons();
 
 	// Initialize app-level subscriptions
 	useAppSubscriptions();
@@ -288,9 +294,15 @@ function ChatInterfaceWrapper() {
 	);
 }
 
+function DocsPageWrapper() {
+	const navigate = useNavigate();
+	return <DocsPage onBack={() => navigate(-1)} />;
+}
+
 function AppContent() {
 	const sessionStorage = useRef(new NDKSessionLocalStorage());
 	const cache = useRef<NDKCacheSQLiteWASM | null>(null);
+	const theme = useAtomValue(themeAtom);
 
 	// Initialize SQLite cache
 	useEffect(() => {
@@ -318,6 +330,16 @@ function AppContent() {
 				session={{
 					storage: sessionStorage.current,
 					opts: { follows: true, profile: true },
+				}}
+			/>
+			<Toaster 
+				position="top-right"
+				toastOptions={{
+					style: {
+						background: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+						color: theme === 'dark' ? '#ffffff' : '#000000',
+						border: theme === 'dark' ? '1px solid #333' : '1px solid #e5e5e5',
+					},
 				}}
 			/>
 			<Routes>
@@ -353,6 +375,10 @@ function AppContent() {
 					<Route
 						path="/project/:projectId/thread/new"
 						element={<ChatInterfaceWrapper />}
+					/>
+					<Route
+						path="/project/:projectId/docs"
+						element={<DocsPageWrapper />}
 					/>
 				</Route>
 			</Routes>

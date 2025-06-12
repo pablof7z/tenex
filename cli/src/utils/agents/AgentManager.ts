@@ -16,6 +16,9 @@ import type { AgentResponse, LLMConfig } from "./types";
 import { ToolRegistry } from "./tools/ToolRegistry";
 import { exampleTools } from "./tools/examples";
 import { claudeCodeTool } from "./tools/claudeCode";
+import { rememberLessonTool } from "./tools/rememberLesson";
+import { updateSpecTool } from "./tools/updateSpec";
+import { readSpecsTool } from "./tools/readSpecs";
 
 interface LLMConfigs {
 	default?: string;
@@ -39,6 +42,7 @@ export class AgentManager {
 	private conversationStorage: ConversationStorage;
 	private projectInfo?: ProjectInfo;
 	private toolRegistry: ToolRegistry;
+	private ndk?: NDK;
 
 	constructor(projectPath: string, projectInfo?: ProjectInfo) {
 		this.projectPath = projectPath;
@@ -52,9 +56,17 @@ export class AgentManager {
 		this.registerDefaultTools();
 	}
 
+	setNDK(ndk: NDK): void {
+		this.ndk = ndk;
+	}
+
 	private registerDefaultTools(): void {
 		// Register Claude Code tool first (highest priority)
 		this.toolRegistry.register(claudeCodeTool);
+
+		// Register spec tools
+		this.toolRegistry.register(updateSpecTool);
+		this.toolRegistry.register(readSpecsTool);
 
 		// Register example tools
 		// In production, you might want to make this configurable
@@ -147,6 +159,14 @@ export class AgentManager {
 					configFile = configOrNsec.file;
 				}
 
+				// Create agent-specific tool registry
+				const agentToolRegistry = new ToolRegistry();
+				
+				// Copy all tools from the main registry
+				for (const tool of this.toolRegistry.getAllTools()) {
+					agentToolRegistry.register(tool);
+				}
+
 				const agent = await Agent.loadFromConfig(
 					name,
 					nsec,
@@ -154,7 +174,7 @@ export class AgentManager {
 					this.conversationStorage,
 					configFile,
 					this.projectInfo?.title || "unknown",
-					this.toolRegistry,
+					agentToolRegistry,
 				);
 
 				// Set agent-specific LLM config or fall back to default
@@ -163,7 +183,22 @@ export class AgentManager {
 					agent.setDefaultLLMConfig(llmConfig);
 				}
 
+				// Set NDK if available
+				if (this.ndk) {
+					agent.setNDK(this.ndk);
+				}
+
+				// Set agent manager reference
+				agent.setAgentManager(this);
+
 				this.agents.set(name, agent);
+
+				// Register remember_lesson tool if agent has an event ID
+				if (agent.getAgentEventId() && this.ndk) {
+					agentToolRegistry.register(rememberLessonTool);
+					// Update the agent with the new tool registry
+					agent.setToolRegistry(agentToolRegistry);
+				}
 				// Agent will log its own creation with project-specific logger
 			}
 		} catch (error: any) {
@@ -179,6 +214,14 @@ export class AgentManager {
 			// Agent will log its own creation with project-specific logger
 			const { nsec, configFile } = await getAgentSigner(this.projectPath, name);
 
+			// Create agent-specific tool registry
+			const agentToolRegistry = new ToolRegistry();
+			
+			// Copy all tools from the main registry
+			for (const tool of this.toolRegistry.getAllTools()) {
+				agentToolRegistry.register(tool);
+			}
+
 			agent = await Agent.loadFromConfig(
 				name,
 				nsec,
@@ -186,7 +229,7 @@ export class AgentManager {
 				this.conversationStorage,
 				configFile,
 				this.projectInfo?.title || "unknown",
-				this.toolRegistry,
+				agentToolRegistry,
 			);
 
 			// Set agent-specific LLM config or fall back to default
@@ -195,7 +238,22 @@ export class AgentManager {
 				agent.setDefaultLLMConfig(llmConfig);
 			}
 
+			// Set NDK if available
+			if (this.ndk) {
+				agent.setNDK(this.ndk);
+			}
+
+			// Set agent manager reference
+			agent.setAgentManager(this);
+
 			this.agents.set(name, agent);
+
+			// Register remember_lesson tool if agent has an event ID
+			if (agent.getAgentEventId() && this.ndk) {
+				agentToolRegistry.register(rememberLessonTool);
+				// Update the agent with the new tool registry
+				agent.setToolRegistry(agentToolRegistry);
+			}
 		}
 
 		return agent;
@@ -437,9 +495,13 @@ export class AgentManager {
 					? `${agentRules}${agentsInfo}`
 					: agentsInfo || undefined;
 
+				// Generate environment context
+				const environmentContext = this.generateEnvironmentContext(name);
+
 				const conversation = await agent.getOrCreateConversation(
 					conversationId,
 					combinedRules,
+					environmentContext,
 				);
 				conversation.addUserMessage(event.content, event);
 
@@ -690,9 +752,13 @@ export class AgentManager {
 					? `${agentRules}${agentsInfo}`
 					: agentsInfo || undefined;
 
+				// Generate environment context
+				const environmentContext = this.generateEnvironmentContext(name);
+
 				const conversation = await agent.getOrCreateConversation(
 					taskId,
 					combinedRules,
+					environmentContext,
 				);
 				conversation.addUserMessage(taskContent, event);
 				conversation.setMetadata("taskId", taskId);
@@ -1274,6 +1340,30 @@ export class AgentManager {
 		}
 
 		return availableAgents;
+	}
+
+	/**
+	 * Generate environment context for agent system prompt
+	 */
+	generateEnvironmentContext(agentName: string): string {
+		const parts: string[] = [];
+
+		// Add agent identity
+		parts.push(`## Environment Context`);
+		parts.push(`You are ${agentName}, an AI agent in the TENEX system.`);
+
+		// Add project information if available
+		if (this.projectInfo) {
+			parts.push(`\nYou are working on the project: "${this.projectInfo.title}"`);
+			if (this.projectInfo.metadata.title) {
+				parts.push(`Project Name: ${this.projectInfo.metadata.title}`);
+			}
+			if (this.projectInfo.repository) {
+				parts.push(`Repository: ${this.projectInfo.repository}`);
+			}
+		}
+
+		return parts.join("\n");
 	}
 
 	/**

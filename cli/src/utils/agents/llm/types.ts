@@ -25,6 +25,9 @@ export interface LLMContext {
 	projectName?: string;
 	conversationId?: string;
 	typingIndicator?: (message: string) => Promise<void>;
+	agent?: any; // The Agent instance
+	ndk?: any; // The NDK instance
+	agentEventId?: string; // The NDKAgent event ID
 }
 
 export interface LLMProvider {

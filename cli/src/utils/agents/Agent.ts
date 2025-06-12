@@ -23,6 +23,9 @@ export class Agent {
 	private logger: AgentLogger;
 	private projectName: string;
 	private toolRegistry?: ToolRegistry;
+	private agentEventId?: string;
+	private ndk?: any; // NDK instance
+	private agentManager?: any; // AgentManager instance
 
 	constructor(
 		name: string,
@@ -31,6 +34,7 @@ export class Agent {
 		storage?: ConversationStorage,
 		projectName?: string,
 		toolRegistry?: ToolRegistry,
+		agentEventId?: string,
 	) {
 		this.name = name;
 		this.nsec = nsec;
@@ -41,6 +45,7 @@ export class Agent {
 		this.projectName = projectName || "unknown";
 		this.logger = createAgentLogger(this.projectName, this.name);
 		this.toolRegistry = toolRegistry;
+		this.agentEventId = agentEventId;
 	}
 
 	getName(): string {
@@ -79,18 +84,43 @@ export class Agent {
 		return this.toolRegistry;
 	}
 
-	getSystemPrompt(additionalRules?: string): string {
+	getAgentEventId(): string | undefined {
+		return this.agentEventId;
+	}
+
+	setNDK(ndk: any): void {
+		this.ndk = ndk;
+	}
+
+	setAgentManager(agentManager: any): void {
+		this.agentManager = agentManager;
+	}
+
+	getAgentManager(): any {
+		return this.agentManager;
+	}
+
+	getSystemPrompt(additionalRules?: string, environmentContext?: string): string {
 		if (this.config.systemPrompt) {
-			// If there's a predefined system prompt and additional rules, append them
-			if (additionalRules) {
-				this.logger.debug(`Using configured system prompt for ${this.name} with additional rules`);
-				return `${this.config.systemPrompt}\n\n${additionalRules}`;
+			// If there's a predefined system prompt, prepend environment context and append additional rules
+			const parts: string[] = [];
+			if (environmentContext) {
+				parts.push(environmentContext);
 			}
-			this.logger.debug(`Using configured system prompt for ${this.name}`);
-			return this.config.systemPrompt;
+			parts.push(this.config.systemPrompt);
+			if (additionalRules) {
+				parts.push(additionalRules);
+			}
+			this.logger.debug(`Using configured system prompt for ${this.name} with environment context and additional rules`);
+			return parts.join("\n\n");
 		}
 
 		const parts: string[] = [];
+
+		// Add environment context first
+		if (environmentContext) {
+			parts.push(environmentContext);
+		}
 
 		if (this.config.role) {
 			parts.push(`You are ${this.config.role}.`);
@@ -118,8 +148,9 @@ export class Agent {
 	async createConversation(
 		conversationId: string,
 		additionalRules?: string,
+		environmentContext?: string,
 	): Promise<Conversation> {
-		const systemPrompt = this.getSystemPrompt(additionalRules);
+		const systemPrompt = this.getSystemPrompt(additionalRules, environmentContext);
 		const conversation = new Conversation(
 			conversationId,
 			this.name,
@@ -143,6 +174,7 @@ export class Agent {
 	async getOrCreateConversation(
 		conversationId: string,
 		additionalRules?: string,
+		environmentContext?: string,
 	): Promise<Conversation> {
 		let conversation = this.conversations.get(conversationId);
 
@@ -163,6 +195,7 @@ export class Agent {
 			conversation = await this.createConversation(
 				conversationId,
 				additionalRules,
+				environmentContext,
 			);
 		}
 
@@ -247,6 +280,8 @@ export class Agent {
 			}
 		}
 
+		let agentEventId: string | undefined;
+
 		// If a specific config file is provided, load from that directly
 		if (configFile) {
 			const eventConfigPath = path.join(
@@ -258,6 +293,9 @@ export class Agent {
 			try {
 				const eventConfigData = await fs.readFile(eventConfigPath, "utf-8");
 				const eventConfig = JSON.parse(eventConfigData);
+
+				// Extract the event ID
+				agentEventId = eventConfig.eventId;
 
 				// Override with the cached NDKAgent event configuration
 				config = {
@@ -290,6 +328,9 @@ export class Agent {
 
 							// Check if this event configuration matches the agent name
 							if (eventConfig.name && eventConfig.name.toLowerCase() === name.toLowerCase()) {
+								// Extract the event ID
+								agentEventId = eventConfig.eventId;
+
 								// Override with the cached NDKAgent event configuration
 								config = {
 									...config,
@@ -313,7 +354,7 @@ export class Agent {
 			}
 		}
 
-		return new Agent(name, nsec, config, storage, projectName, toolRegistry);
+		return new Agent(name, nsec, config, storage, projectName, toolRegistry, agentEventId);
 	}
 
 	async saveConfig(projectPath: string): Promise<void> {
@@ -366,6 +407,9 @@ export class Agent {
 				projectName: this.projectName,
 				conversationId,
 				typingIndicator: typingIndicatorCallback,
+				agent: this,
+				agentEventId: this.agentEventId,
+				ndk: this.ndk,
 			};
 			const response = await provider.generateResponse(messages, config, context);
 

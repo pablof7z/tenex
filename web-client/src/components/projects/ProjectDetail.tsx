@@ -1,4 +1,5 @@
 import {
+	type NDKArticle,
 	type NDKEvent,
 	type NDKProject,
 	NDKTask,
@@ -7,6 +8,7 @@ import {
 import {
 	Archive,
 	ArrowLeft,
+	BookOpen,
 	Edit3,
 	MoreVertical,
 	Plus,
@@ -36,6 +38,7 @@ interface ProjectDetailProps {
 		threadId: string,
 		threadTitle: string,
 	) => void;
+	onArticleSelect?: (project: NDKProject, article: NDKArticle) => void;
 }
 
 export function ProjectDetail({
@@ -50,7 +53,7 @@ export function ProjectDetail({
 	const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
 	const [showVoiceTaskDialog, setShowVoiceTaskDialog] = useState(false);
 	const [showThreadDialog, setShowThreadDialog] = useState(false);
-	const [activeTab, setActiveTab] = useState<"tasks" | "threads">("tasks");
+	const [activeTab, setActiveTab] = useState<"tasks" | "threads" | "docs">("tasks");
 	const [deletedTaskIds, setDeletedTaskIds] = useState<Set<string>>(new Set());
 
 	const { events: allTasks } = useSubscribe<NDKTask>(
@@ -84,6 +87,21 @@ export function ProjectDetail({
 				]
 			: false,
 		{},
+		[project?.tagId()],
+	);
+
+	// Subscribe to documentation articles (kind 30023) for this project
+	const { events: articles } = useSubscribe<NDKArticle>(
+		project
+			? [
+					{
+						kinds: [30023],
+						...project.filter(),
+						limit: 50,
+					},
+				]
+			: false,
+		{ wrap: true },
 		[project?.tagId()],
 	);
 
@@ -627,7 +645,8 @@ export function ProjectDetail({
 							</h1>
 							<p className="text-xs text-muted-foreground mt-0.5">
 								{tasks.length} {tasks.length === 1 ? "task" : "tasks"} •{" "}
-								{threads.length} {threads.length === 1 ? "thread" : "threads"}
+								{threads.length} {threads.length === 1 ? "thread" : "threads"} •{" "}
+								{articles.length} {articles.length === 1 ? "doc" : "docs"}
 							</p>
 						</div>
 					</div>
@@ -673,6 +692,16 @@ export function ProjectDetail({
 						onClick={() => setActiveTab("threads")}
 					>
 						Threads ({threads.length})
+					</button>
+					<button
+						className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+							activeTab === "docs"
+								? "border-blue-500 text-blue-600"
+								: "border-transparent text-muted-foreground hover:text-foreground"
+						}`}
+						onClick={() => setActiveTab("docs")}
+					>
+						Docs ({articles.length})
 					</button>
 				</div>
 			</div>

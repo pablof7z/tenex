@@ -2,6 +2,7 @@ import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import {
 	ArrowLeft,
 	Bot,
+	Brain,
 	Check,
 	Copy,
 	Edit,
@@ -19,6 +20,8 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import { EVENT_KINDS } from "../../../shared/dist/types/events";
+import type { NDKKind } from "@nostr-dev-kit/ndk";
 
 interface AgentsPageProps {
 	onBack: () => void;
@@ -46,6 +49,13 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 		[{ kinds: NDKAgent.kinds, limit: 100 }],
 		{ wrap: true },
 		[],
+	);
+
+	// Fetch lessons for selected agent (kind 4124)
+	const { events: lessons } = useSubscribe(
+		selectedAgent ? [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], "#e": [selectedAgent.id] }] : false,
+		{},
+		[selectedAgent?.id],
 	);
 
 	const handleAgentSelect = (agent: NDKAgent) => {
@@ -590,6 +600,52 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 															<pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
 																{selectedAgent.content}
 															</pre>
+														</div>
+													</div>
+												)}
+
+												{/* Lessons Learned */}
+												{lessons && lessons.length > 0 && (
+													<div className="mt-8">
+														<div className="flex items-center gap-2 mb-4">
+															<Brain className="w-5 h-5 text-pink-600" />
+															<h4 className="text-lg font-semibold text-foreground">
+																Lessons Learned
+															</h4>
+															<Badge variant="secondary" className="ml-auto">
+																{lessons.length} lesson{lessons.length !== 1 ? 's' : ''}
+															</Badge>
+														</div>
+														<div className="space-y-3">
+															{lessons.map((lesson) => {
+																const title = lesson.tagValue("title");
+																const timestamp = lesson.created_at ? new Date(lesson.created_at * 1000) : null;
+																
+																return (
+																	<div 
+																		key={lesson.id} 
+																		className="bg-muted/30 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+																	>
+																		<div className="flex items-start justify-between gap-3 mb-2">
+																			<h5 className="font-semibold text-sm text-foreground">
+																				{title || "Untitled Lesson"}
+																			</h5>
+																			{timestamp && (
+																				<time 
+																					className="text-xs text-muted-foreground whitespace-nowrap"
+																					dateTime={timestamp.toISOString()}
+																					title={timestamp.toLocaleString()}
+																				>
+																					{timestamp.toLocaleDateString()}
+																				</time>
+																			)}
+																		</div>
+																		<p className="text-sm text-muted-foreground leading-relaxed">
+																			{lesson.content}
+																		</p>
+																	</div>
+																);
+															})}
 														</div>
 													</div>
 												)}

@@ -10,6 +10,12 @@ export interface ToolParameter {
 
 export interface ToolContext {
   updateTypingIndicator?: (message: string) => Promise<void>;
+  agentName?: string;
+  projectName?: string;
+  conversationId?: string;
+  agent?: any; // The Agent instance
+  ndk?: any; // The NDK instance
+  agentEventId?: string; // The NDKAgent event ID
 }
 
 export interface ToolDefinition {

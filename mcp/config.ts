@@ -4,18 +4,20 @@ import { log } from "./lib/utils/log.js";
 
 // Simplified config structure
 export interface ConfigData {
-	privateKey: string;
-	dbPath: string;
-	projectsDir: string;
-	relays: string[];
+    privateKey: string;
+    dbPath: string;
+    projectsDir: string;
+    relays: string[];
+    agentEventId?: string; // Optional agent event ID for loading agent configuration
+    agentName?: string; // Optional agent name from the configuration
 }
 
 // Default relays - adjust as needed
 const DEFAULT_RELAYS = [
-	"wss://relay.nostr.band",
-	"wss://relay.damus.io",
-	"wss://relay.primal.net",
-	"wss://nos.lol",
+    "wss://relay.nostr.band",
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://nos.lol",
 ];
 
 // Default DB path
@@ -31,41 +33,47 @@ const DEFAULT_PROJECTS_DIR = join(process.cwd(), "mcp", "projects");
  * @throws Error if NSEC environment variable is not set.
  */
 export async function initConfig(): Promise<ConfigData> {
-	const privateKey = process.env.NSEC;
+    const privateKey = process.env.NSEC;
+    const agentEventId = process.env.AGENT_EVENT_ID;
 
-	if (!privateKey) {
-		log("ERROR: FATAL: NSEC environment variable not set.");
-		throw new Error("NSEC environment variable is required but not set.");
-	}
+    if (!privateKey) {
+        log("ERROR: FATAL: NSEC environment variable not set.");
+        throw new Error("NSEC environment variable is required but not set.");
+    }
 
-	// Basic validation for nsec format
-	if (!privateKey.startsWith("nsec")) {
-		log("WARN: Private key does not look like a valid nsec key.");
-	}
+    // Basic validation for nsec format
+    if (!privateKey.startsWith("nsec")) {
+        log("WARN: Private key does not look like a valid nsec key.");
+    }
 
-	log("INFO: Configuration initialized.");
-	log(`INFO: Using DB path: ${DEFAULT_DB_PATH}`);
-	log(`INFO: Using Projects path: ${DEFAULT_PROJECTS_DIR}`);
-	log(`INFO: Using default relays: ${DEFAULT_RELAYS.join(", ")}`);
+    log("INFO: Configuration initialized.");
+    log(`INFO: Using DB path: ${DEFAULT_DB_PATH}`);
+    log(`INFO: Using Projects path: ${DEFAULT_PROJECTS_DIR}`);
+    log(`INFO: Using default relays: ${DEFAULT_RELAYS.join(", ")}`);
 
-	return {
-		privateKey,
-		dbPath: DEFAULT_DB_PATH,
-		projectsDir: DEFAULT_PROJECTS_DIR,
-		relays: DEFAULT_RELAYS,
-	};
+    if (agentEventId) {
+        log(`INFO: Agent Event ID provided: ${agentEventId}`);
+    }
+
+    return {
+        privateKey,
+        dbPath: DEFAULT_DB_PATH,
+        projectsDir: DEFAULT_PROJECTS_DIR,
+        relays: DEFAULT_RELAYS,
+        agentEventId,
+    };
 }
 
 // Added a simple getConfig function to reuse the initialized config
 let configInstance: ConfigData | null = null;
 
 export async function getConfig(): Promise<ConfigData> {
-	if (!configInstance) {
-		throw new Error("Config not initialized. Call initConfig() first.");
-	}
-	return configInstance;
+    if (!configInstance) {
+        throw new Error("Config not initialized. Call initConfig() first.");
+    }
+    return configInstance;
 }
 
 export function setConfigInstance(config: ConfigData): void {
-	configInstance = config;
+    configInstance = config;
 }

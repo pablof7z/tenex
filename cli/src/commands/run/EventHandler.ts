@@ -22,6 +22,7 @@ export class EventHandler {
 	}
 
 	async initialize(): Promise<void> {
+		this.agentManager.setNDK(this.ndk);
 		await this.agentManager.initialize();
 	}
 

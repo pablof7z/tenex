@@ -1,11 +1,11 @@
 {
-	"mcpServers": {
-		"tenex": {
-			"command": "/Users/pablofernandez/ai/nostr-project/mcp/tenex",
-			"args": [],
-			"env": {
-				"NSEC": "nsec1fl3neaysnce5kf9mckalsp5dqc0m53dyewacdr59l3yshtvkguvs5ezutg"
-			}
-		}
-	}
+    "mcpServers": {
+        "tenex": {
+            "command": "/Users/pablofernandez/ai/nostr-project/mcp/tenex",
+            "args": [],
+            "env": {
+                "NSEC": "nsec1fl3neaysnce5kf9mckalsp5dqc0m53dyewacdr59l3yshtvkguvs5ezutg"
+            }
+        }
+    }
 }

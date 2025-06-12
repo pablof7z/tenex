@@ -73,10 +73,11 @@ export class ToolEnabledProvider implements LLMProvider {
       return response;
     }
 
-    // Create tool context with typing indicator
-    const toolContext = context?.typingIndicator ? {
-      updateTypingIndicator: context.typingIndicator
-    } : undefined;
+    // Create tool context with all necessary information
+    const toolContext = {
+      ...(context || {}),
+      updateTypingIndicator: context?.typingIndicator
+    };
 
     // Execute the tools
     const toolResponses = await this.executor.executeTools(toolCalls, toolContext);

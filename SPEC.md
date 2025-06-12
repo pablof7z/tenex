@@ -2,6 +2,8 @@
 
 > **IMPORTANT**: This is a LIVING DOCUMENT that reflects the current state of TENEX. When the system evolves, update this document to describe what TENEX IS, not what it WAS. Remove outdated information and maintain this as a current reference, not a historical record.
 
+> **NOTE FOR AI AGENTS**: When working through the TENEX CLI, use the `read_specs` tool to access this document and `update_spec` tool (default agent only) to update it. The specification is stored as a Nostr event (NDKArticle) and is the authoritative source of project documentation.
+
 ## What is TENEX?
 
 TENEX is a context-first development environment that fundamentally reimagines how software is built in the age of AI. Rather than treating code as the primary interface, TENEX positions **context** as the central building block, orchestrating multiple AI agents to collaborate on software development through a decentralized protocol.

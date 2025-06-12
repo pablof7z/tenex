@@ -6,7 +6,7 @@ import {
 	DollarSign,
 	GitCommit,
 } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -15,6 +15,14 @@ import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { LLMMetadataDialog } from "../dialogs/LLMMetadataDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "../ui/hover-card";
+import { MessageWithEntities } from "../common/MessageWithEntities";
+import { findNostrEntities, replaceNostrEntities } from "../../utils/nostrEntityParser";
+import { NostrEntityCard } from "../common/NostrEntityCard";
 
 interface StatusUpdateProps {
 	event: NDKEvent;
@@ -25,6 +33,27 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 	const currentPubkey = useNDKCurrentPubkey();
 	const { formatRelativeTime } = useTimeFormat();
 	const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+
+	// Process content for Nostr entities
+	const processedContent = useMemo(() => {
+		const entities = findNostrEntities(event.content);
+		if (entities.length === 0) {
+			return { content: event.content, hasEntities: false };
+		}
+
+		// Replace nostr: links with markdown links that will be rendered as entity cards
+		let processedText = event.content;
+		entities.forEach((entity) => {
+			const nostrLink = `nostr:${entity.bech32}`;
+			// Replace with a placeholder that won't be processed by markdown
+			processedText = processedText.replace(
+				nostrLink,
+				`[NOSTR_ENTITY:${entity.bech32}:${entity.type}]`
+			);
+		});
+
+		return { content: processedText, hasEntities: true, entities };
+	}, [event.content]);
 
 	// Custom components for ReactMarkdown
 	const markdownComponents = {
@@ -52,6 +81,63 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 		},
 		pre({ children }: any) {
 			return <div className="my-2 overflow-x-auto font-mono">{children}</div>;
+		},
+		p({ children, ...props }: any) {
+			// Process text nodes to replace entity placeholders
+			const processChildren = (children: any): any => {
+				if (typeof children === 'string') {
+					// Check for entity placeholders
+					const entityRegex = /\[NOSTR_ENTITY:([^:]+):([^\]]+)\]/g;
+					const parts = [];
+					let lastIndex = 0;
+					let match;
+
+					while ((match = entityRegex.exec(children)) !== null) {
+						// Add text before the entity
+						if (match.index > lastIndex) {
+							parts.push(children.slice(lastIndex, match.index));
+						}
+
+						// Find the entity
+						const bech32 = match[1];
+						const entity = processedContent.entities?.find(e => e.bech32 === bech32);
+						if (entity) {
+							parts.push(
+								<NostrEntityCard 
+									key={`entity-${bech32}`} 
+									entity={entity} 
+									className="inline-block mx-1 my-0.5"
+								/>
+							);
+						}
+
+						lastIndex = match.index + match[0].length;
+					}
+
+					// Add remaining text
+					if (lastIndex < children.length) {
+						parts.push(children.slice(lastIndex));
+					}
+
+					return parts.length > 0 ? parts : children;
+				} else if (Array.isArray(children)) {
+					return children.map((child, idx) => 
+						<span key={idx}>{processChildren(child)}</span>
+					);
+				} else if (children?.props?.children) {
+					return {
+						...children,
+						props: {
+							...children.props,
+							children: processChildren(children.props.children)
+						}
+					};
+				}
+				return children;
+			};
+
+			const processedChildren = processChildren(children);
+			return <p {...props}>{processedChildren}</p>;
 		},
 	};
 
@@ -115,6 +201,60 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 		return Object.keys(metadata).length > 0 ? metadata : null;
 	};
 
+	// Get p-tagged users
+	const pTaggedPubkeys = useMemo(() => {
+		const pubkeys: string[] = [];
+		event.tags.forEach((tag) => {
+			if (tag[0] === "p" && tag[1]) {
+				pubkeys.push(tag[1]);
+			}
+		});
+		return pubkeys;
+	}, [event.tags]);
+
+	// Component for rendering p-tagged avatars
+	const PTaggedAvatars = () => {
+		if (pTaggedPubkeys.length === 0) return null;
+
+		return (
+			<div className="flex -space-x-1">
+				{pTaggedPubkeys.map((pubkey) => (
+					<PTaggedAvatar key={pubkey} pubkey={pubkey} />
+				))}
+			</div>
+		);
+	};
+
+	// Individual avatar component with hover
+	const PTaggedAvatar = ({ pubkey }: { pubkey: string }) => {
+		const profile = useProfileValue(pubkey);
+		
+		return (
+			<HoverCard>
+				<HoverCardTrigger asChild>
+					<Avatar className="w-4 h-4 border border-background">
+						<AvatarImage src={profile?.image} alt={profile?.name || "User"} />
+						<AvatarFallback className="text-[8px]">
+							{profile?.name?.charAt(0).toUpperCase() || pubkey.slice(0, 2).toUpperCase()}
+						</AvatarFallback>
+					</Avatar>
+				</HoverCardTrigger>
+				<HoverCardContent className="w-48" side="top">
+					<div className="flex items-center gap-2">
+						<Avatar className="w-6 h-6">
+							<AvatarImage src={profile?.image} alt={profile?.name || "User"} />
+							<AvatarFallback className="text-[10px]">
+								{profile?.name?.charAt(0).toUpperCase() || pubkey.slice(0, 2).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<div>
+							<p className="text-sm font-semibold">{profile?.name || `user_${pubkey.slice(0, 8)}`}</p>
+						</div>
+					</div>
+				</HoverCardContent>
+			</HoverCard>
+		);
+	};
 
 	if (isUserMessage()) {
 		// User message - align right, different styling
@@ -131,8 +271,9 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 							</ReactMarkdown>
 						</div>
 					</div>
-					<div className="text-xs text-muted-foreground mt-1 text-right">
-						{formatRelativeTime(event.created_at!)}
+					<div className="flex items-center gap-2 justify-end text-xs text-muted-foreground mt-1">
+						<span>{formatRelativeTime(event.created_at!)}</span>
+						<PTaggedAvatars />
 					</div>
 				</div>
 			</div>
@@ -168,6 +309,8 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 						<span className="text-xs text-muted-foreground">
 							{formatRelativeTime(event.created_at!)}
 						</span>
+						{/* P-tagged avatars */}
+						<PTaggedAvatars />
 						{/* LLM Metadata Icon - shown when metadata exists */}
 						{getLLMMetadata() && (
 							<button
