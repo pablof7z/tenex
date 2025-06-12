@@ -10,9 +10,9 @@ export class ConversationOptimizer {
 	 */
 	static optimizeForContextWindow(
 		messages: ConversationMessage[],
-		maxTokens: number = this.DEFAULT_CONTEXT_WINDOW,
+		maxTokens: number = ConversationOptimizer.DEFAULT_CONTEXT_WINDOW,
 	): ConversationMessage[] {
-		const effectiveLimit = maxTokens - this.RESERVE_TOKENS;
+		const effectiveLimit = maxTokens - ConversationOptimizer.RESERVE_TOKENS;
 
 		// Always keep system message if present
 		const systemMessage = messages.find((m) => m.role === "system");
@@ -93,9 +93,13 @@ export class ConversationOptimizer {
 			messageCount: messages.length,
 			estimatedTokens: totalTokens,
 			withinStandardContext:
-				totalTokens < this.DEFAULT_CONTEXT_WINDOW - this.RESERVE_TOKENS,
+				totalTokens <
+				ConversationOptimizer.DEFAULT_CONTEXT_WINDOW -
+					ConversationOptimizer.RESERVE_TOKENS,
 			percentOfContext:
-				(totalTokens / (this.DEFAULT_CONTEXT_WINDOW - this.RESERVE_TOKENS)) *
+				(totalTokens /
+					(ConversationOptimizer.DEFAULT_CONTEXT_WINDOW -
+						ConversationOptimizer.RESERVE_TOKENS)) *
 				100,
 		};
 	}

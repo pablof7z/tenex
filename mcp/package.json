@@ -1,7 +1,7 @@
 {
 	"name": "tenex-mcp",
 	"version": "0.5.0",
-	"description": "Model Context Protocol server for TENEX with multi-agent support",
+	"description": "Model Context Protocol server for TENEX",
 	"module": "index.ts",
 	"type": "module",
 	"bin": {

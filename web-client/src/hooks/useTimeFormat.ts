@@ -36,17 +36,16 @@ export function useTimeFormat(options: UseTimeFormatOptions = {}) {
 					month: "short",
 					day: "numeric",
 				});
-			} else {
-				if (diffMins < 1) return "just now";
-				if (diffMins < 60) return `${diffMins}m ago`;
-				if (diffHours < 24) return `${diffHours}h ago`;
-				if (diffDays < 7) return `${diffDays}d ago`;
-				return date.toLocaleDateString("en-US", {
-					month: "short",
-					day: "numeric",
-					year: diffDays > 365 ? "numeric" : undefined,
-				});
 			}
+			if (diffMins < 1) return "just now";
+			if (diffMins < 60) return `${diffMins}m ago`;
+			if (diffHours < 24) return `${diffHours}h ago`;
+			if (diffDays < 7) return `${diffDays}d ago`;
+			return date.toLocaleDateString("en-US", {
+				month: "short",
+				day: "numeric",
+				year: diffDays > 365 ? "numeric" : undefined,
+			});
 		},
 		[relativeFormat],
 	);
@@ -63,13 +62,12 @@ export function useTimeFormat(options: UseTimeFormatOptions = {}) {
 					month: "short",
 					day: "numeric",
 				});
-			} else {
-				return date.toLocaleDateString("en-US", {
-					month: "short",
-					day: "numeric",
-					year: "numeric",
-				});
 			}
+			return date.toLocaleDateString("en-US", {
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+			});
 		},
 		[includeTime, use24Hour],
 	);
@@ -85,7 +83,7 @@ export function useTimeFormat(options: UseTimeFormatOptions = {}) {
 				return formatRelativeTime(timestamp);
 			}
 			// Less than 7 days: show day of week and time
-			else if (diffHours < 24 * 7) {
+			if (diffHours < 24 * 7) {
 				return date.toLocaleDateString("en-US", {
 					weekday: "short",
 					hour: includeTime ? "2-digit" : undefined,
@@ -94,13 +92,12 @@ export function useTimeFormat(options: UseTimeFormatOptions = {}) {
 				});
 			}
 			// More than 7 days: show date
-			else {
-				return date.toLocaleDateString("en-US", {
-					month: "short",
-					day: "numeric",
-					year: diffHours > 24 * 365 ? "numeric" : undefined,
-				});
-			}
+
+			return date.toLocaleDateString("en-US", {
+				month: "short",
+				day: "numeric",
+				year: diffHours > 24 * 365 ? "numeric" : undefined,
+			});
 		},
 		[formatRelativeTime, includeTime, use24Hour],
 	);
@@ -114,7 +111,6 @@ export function useTimeFormat(options: UseTimeFormatOptions = {}) {
 					return formatRelativeTime(timestamp);
 				case "absolute":
 					return formatAbsoluteTime(timestamp);
-				case "auto":
 				default:
 					return formatAutoTime(timestamp);
 			}

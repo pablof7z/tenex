@@ -1,5 +1,5 @@
-import path from "path";
-import { access, mkdir, readFile, writeFile } from "fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { logError } from "../logger.js";
 /**
  * Ensure a directory exists, creating it if necessary

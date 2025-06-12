@@ -245,16 +245,15 @@ export function ProjectColumn({
 								onClick={() => setSelectedTask(item.item as NDKTask)}
 							/>
 						);
-					} else {
-						return (
-							<ThreadOverview
-								key={item.item.id}
-								thread={item.item as NDKEvent}
-								replies={threadReplies}
-								onClick={() => onThreadClick?.(item.item as NDKEvent)}
-							/>
-						);
 					}
+					return (
+						<ThreadOverview
+							key={item.item.id}
+							thread={item.item as NDKEvent}
+							replies={threadReplies}
+							onClick={() => onThreadClick?.(item.item as NDKEvent)}
+						/>
+					);
 				})}
 
 				{/* Empty State */}

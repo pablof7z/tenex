@@ -75,7 +75,7 @@ export function SelectableCard<T>({
 			<div className="flex items-start justify-between">
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2 mb-2">
-						{renderIcon && renderIcon()}
+						{renderIcon?.()}
 						<h3 className="font-medium text-slate-900 truncate">
 							{renderTitle(item)}
 						</h3>
@@ -112,7 +112,7 @@ export function SelectableCard<T>({
 				</div>
 
 				<div className="flex items-center gap-2 ml-4">
-					{renderActions && renderActions(item)}
+					{renderActions?.(item)}
 					{showSelectButton && (
 						<Button
 							variant={isSelected ? "default" : "outline"}

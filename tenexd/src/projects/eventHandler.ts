@@ -1,6 +1,6 @@
-import path from "path";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { type NDK, NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { readFile } from "fs/promises";
 import { nip19 } from "nostr-tools";
 import {
 	logError,
@@ -169,7 +169,7 @@ export async function handleAgentEvent(
 		const agentConfigPath = path.join(agentDir, `${event.id}.json`);
 
 		// Create agents directory if it doesn't exist
-		const fs = await import("fs/promises");
+		const fs = await import("node:fs/promises");
 		await fs.mkdir(agentDir, { recursive: true });
 
 		// Write agent configuration

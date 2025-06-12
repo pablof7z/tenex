@@ -78,7 +78,7 @@ export async function getGitCommitDetails(
 		const details = await getCommitDetails(commitHash);
 
 		const detailsText = [
-			`Commit Details:`,
+			"Commit Details:",
 			`Hash: ${details.hash}`,
 			`Short Hash: ${details.shortHash}`,
 			`Message: ${details.message}`,

@@ -1,12 +1,12 @@
+import type { NDKEvent, NDKKind, NDKList } from "@nostr-dev-kit/ndk";
 import { useNDKCurrentPubkey, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { type NDKEvent, type NDKKind, NDKList } from "@nostr-dev-kit/ndk";
-import { useEffect, useMemo } from "react";
 import { atom, useAtom } from "jotai";
+import { useEffect, useMemo } from "react";
 
 // Atoms for storing app-level subscription data
 export const pendingAgentRequestsAtom = atom<number>(0);
 export const agentRequestEventsAtom = atom<NDKEvent[]>([]);
-export const approvedAgentsAtom = atom<Set<string>>(new Set());
+export const approvedAgentsAtom = atom<Set<string>>(new Set<string>());
 
 /**
  * Hook for managing app-level subscriptions that should always be active
@@ -21,26 +21,30 @@ export function useAppSubscriptions() {
 	// Subscribe to agent requests (kind 3199) for the current user
 	const { events: agentRequests } = useSubscribe(
 		currentPubkey
-			? [{
-					kinds: [3199 as NDKKind],
-					"#p": [currentPubkey],
-				}]
+			? [
+					{
+						kinds: [3199 as NDKKind],
+						"#p": [currentPubkey],
+					},
+				]
 			: false,
 		{},
-		[currentPubkey]
+		[currentPubkey],
 	);
 
 	// Subscribe to user's agent list (kind 13199) to know which agents are already approved
 	const { events: agentLists } = useSubscribe<NDKList>(
 		currentPubkey
-			? [{
-					kinds: [13199 as NDKKind],
-					authors: [currentPubkey],
-					limit: 1,
-				}]
+			? [
+					{
+						kinds: [13199 as NDKKind],
+						authors: [currentPubkey],
+						limit: 1,
+					},
+				]
 			: false,
 		{ wrap: true },
-		[currentPubkey]
+		[currentPubkey],
 	);
 
 	// Update approved agents when agent list changes
@@ -48,11 +52,11 @@ export function useAppSubscriptions() {
 		if (agentLists && agentLists.length > 0) {
 			const approvedSet = new Set<string>();
 			const latestList = agentLists[0];
-			
+
 			latestList.tags
 				.filter((tag) => tag[0] === "p")
 				.forEach((tag) => approvedSet.add(tag[1]));
-			
+
 			setApprovedAgents(approvedSet);
 		}
 	}, [agentLists, setApprovedAgents]);
@@ -61,19 +65,24 @@ export function useAppSubscriptions() {
 	useEffect(() => {
 		if (agentRequests) {
 			setAgentRequestEvents(agentRequests);
-			
+
 			// Get approved agents from the atom
-			setApprovedAgents((currentApproved) => {
+			setApprovedAgents((currentApproved: Set<string>) => {
 				// Count pending requests (not yet approved)
 				const pendingCount = agentRequests.filter(
-					(event) => !currentApproved.has(event.pubkey)
+					(event) => !currentApproved.has(event.pubkey),
 				).length;
-				
+
 				setPendingAgentRequests(pendingCount);
 				return currentApproved;
 			});
 		}
-	}, [agentRequests, setAgentRequestEvents, setPendingAgentRequests, setApprovedAgents]);
+	}, [
+		agentRequests,
+		setAgentRequestEvents,
+		setPendingAgentRequests,
+		setApprovedAgents,
+	]);
 
 	// Return data that components might need directly
 	return {
@@ -85,7 +94,8 @@ export function useAppSubscriptions() {
 					.filter((tag) => tag[0] === "p")
 					.forEach((tag) => approved.add(tag[1]));
 			}
-			return agentRequests.filter((event) => !approved.has(event.pubkey)).length;
+			return agentRequests.filter((event) => !approved.has(event.pubkey))
+				.length;
 		}, [agentRequests, agentLists]),
 	};
 }
@@ -100,8 +110,8 @@ export function usePendingAgentRequests() {
 export function useAgentRequestEvents() {
 	const [events] = useAtom(agentRequestEventsAtom);
 	const [approvedAgents] = useAtom(approvedAgentsAtom);
-	
+
 	return useMemo(() => {
-		return events.filter(event => !approvedAgents.has(event.pubkey));
+		return events.filter((event) => !approvedAgents.has(event.pubkey));
 	}, [events, approvedAgents]);
 }

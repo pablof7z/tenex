@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Command } from "commander";
 import { getNDK } from "../../nostr/ndkClient";

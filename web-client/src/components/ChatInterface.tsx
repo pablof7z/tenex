@@ -5,8 +5,9 @@ import {
 	useNDK,
 	useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, AtSign, Send } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EVENT_KINDS } from "../../../shared/src/types/events";
+import { ArrowDown, ArrowLeft, AtSign, Send, Info, X } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type ProjectAgent, useProjectAgents } from "../hooks/useProjectAgents";
 import { BackendButtons } from "./BackendButtons";
 import { StatusUpdate } from "./tasks/StatusUpdate";
@@ -28,6 +29,60 @@ interface ChatInterfaceProps {
 	onBack?: () => void;
 }
 
+// Memoized message list component
+const MessageList = memo(({ messages, onMessageClick }: { messages: NDKEvent[], onMessageClick?: (event: NDKEvent) => void }) => {
+	return (
+		<div className="space-y-1">
+			{messages.map((event) => (
+				<div
+					key={event.id}
+					onClick={() => onMessageClick?.(event)}
+					className={onMessageClick ? "cursor-pointer" : ""}
+				>
+					<StatusUpdate event={event} />
+				</div>
+			))}
+		</div>
+	);
+});
+
+MessageList.displayName = 'MessageList';
+
+// Memoized agent mention dropdown
+const AgentMentionDropdown = memo(({ 
+	agents, 
+	selectedIndex, 
+	onSelect 
+}: { 
+	agents: ProjectAgent[], 
+	selectedIndex: number, 
+	onSelect: (agent: ProjectAgent) => void 
+}) => {
+	return (
+		<div className="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto bg-popover border border-border rounded-md shadow-md z-50">
+			<div className="p-1">
+				{agents.map((agent, index) => (
+					<button
+						key={agent.pubkey}
+						onClick={() => onSelect(agent)}
+						onMouseDown={(e) => e.preventDefault()} // Prevent blur on click
+						className={`w-full text-left px-3 py-2 text-sm rounded flex items-center gap-2 transition-colors ${
+							index === selectedIndex
+								? "bg-accent text-accent-foreground"
+								: "hover:bg-accent/50"
+						}`}
+					>
+						<AtSign className="w-4 h-4 text-muted-foreground" />
+						<span className="font-medium">{agent.name}</span>
+					</button>
+				))}
+			</div>
+		</div>
+	);
+});
+
+AgentMentionDropdown.displayName = 'AgentMentionDropdown';
+
 export function ChatInterface({
 	statusUpdates = [],
 	taskId,
@@ -48,8 +103,13 @@ export function ChatInterface({
 	const [showAgentMenu, setShowAgentMenu] = useState(false);
 	const [mentionSearch, setMentionSearch] = useState("");
 	const [selectedAgentIndex, setSelectedAgentIndex] = useState(0);
+	const [isNearBottom, setIsNearBottom] = useState(true);
+	const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
+	const [showDebugDialog, setShowDebugDialog] = useState(false);
+	const [debugIndicator, setDebugIndicator] = useState<NDKEvent | null>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const messagesContainerRef = useRef<HTMLDivElement>(null);
 
 	// Determine if we're in thread mode
 	const isThreadMode = !!(project && threadTitle);
@@ -66,8 +126,9 @@ export function ChatInterface({
 	// Filter agents based on mention search
 	const filteredAgents = useMemo(() => {
 		if (!mentionSearch) return projectAgents;
+		const searchLower = mentionSearch.toLowerCase();
 		return projectAgents.filter((agent) =>
-			agent.name.toLowerCase().includes(mentionSearch.toLowerCase()),
+			agent.name.toLowerCase().includes(searchLower),
 		);
 	}, [projectAgents, mentionSearch]);
 
@@ -90,19 +151,63 @@ export function ChatInterface({
 			if (titleTag) return titleTag;
 			// Fallback to first line of content
 			const firstLine = currentThreadEvent.content?.split("\n")[0] || "Thread";
-			return firstLine.length > 50 ? firstLine.slice(0, 50) + "..." : firstLine;
+			return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
 		}
 		return "Thread";
 	}, [threadTitle, currentThreadEvent]);
 
 	// Subscribe to thread messages when currentThreadEvent is available
 	const { events: threadReplies } = useSubscribe(
-		currentThreadEvent
+		currentThreadEvent && typeof currentThreadEvent.nip22Filter === 'function'
 			? [{ kinds: [1111], ...currentThreadEvent.nip22Filter() }]
 			: false,
 		{},
 		[currentThreadEvent?.id],
 	);
+
+	// Subscribe to typing indicators when we have a thread or task
+	const { events: typingIndicatorEvents } = useSubscribe(
+		currentThreadEvent || taskId
+			? [{
+					kinds: [EVENT_KINDS.TYPING_INDICATOR as any, EVENT_KINDS.TYPING_INDICATOR_STOP as any], // Both start and stop events
+					"#e": currentThreadEvent ? [currentThreadEvent.id] : taskId ? [taskId] : [],
+					since: Math.floor(Date.now() / 1000) - 60, // Only show indicators from last minute
+				}]
+			: false,
+		{},
+		[currentThreadEvent?.id, taskId],
+	);
+
+	// Process typing indicators - only keep latest per pubkey
+	const activeTypingIndicators = useMemo(() => {
+		if (!typingIndicatorEvents || typingIndicatorEvents.length === 0) return [];
+
+		// Group by pubkey and keep only the latest event
+		const indicatorsByPubkey = new Map<string, NDKEvent>();
+		
+		// Sort events by created_at to process them in order
+		const sortedEvents = [...typingIndicatorEvents].sort(
+			(a, b) => (a.created_at ?? 0) - (b.created_at ?? 0)
+		);
+		
+		for (const event of sortedEvents) {
+			if (event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP) {
+				// Stop typing event - remove the indicator
+				indicatorsByPubkey.delete(event.pubkey);
+			} else if (event.kind === EVENT_KINDS.TYPING_INDICATOR) {
+				// Start typing event - add/update the indicator
+				indicatorsByPubkey.set(event.pubkey, event);
+			}
+		}
+
+		// Filter out indicators older than 30 seconds (safety net in case stop event was missed)
+		const thirtySecondsAgo = Math.floor(Date.now() / 1000) - 30;
+		const active = Array.from(indicatorsByPubkey.values()).filter(
+			event => (event.created_at ?? 0) > thirtySecondsAgo && event.kind === EVENT_KINDS.TYPING_INDICATOR
+		);
+
+		return active;
+	}, [typingIndicatorEvents]);
 
 	// Combine the thread event and its replies
 	const threadMessages = useMemo(() => {
@@ -120,21 +225,85 @@ export function ChatInterface({
 		return messages.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
 	}, [currentThreadEvent, threadReplies]);
 
-	// Auto-scroll to bottom when new messages arrive
-	const scrollToBottom = () => {
-		messagesEndRef.current?.scrollIntoView({
-			behavior: "smooth",
-			block: "nearest",
-		});
-	};
+	// Check if user is at the very bottom of scroll
+	const checkIfNearBottom = useCallback(() => {
+		const container = messagesContainerRef.current;
+		if (!container) return true;
+		
+		// Consider "at bottom" if within 5px of the bottom (to account for rounding)
+		const threshold = 5;
+		const isNear = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+		return isNear;
+	}, []);
 
+	// Handle scroll events
+	const handleScroll = useCallback(() => {
+		const nearBottom = checkIfNearBottom();
+		setIsNearBottom(nearBottom);
+		
+		// Hide new message indicator if user scrolls to bottom
+		if (nearBottom && showNewMessageIndicator) {
+			setShowNewMessageIndicator(false);
+		}
+	}, [checkIfNearBottom, showNewMessageIndicator]);
+
+	// Auto-scroll to bottom when new messages arrive
+	const scrollToBottom = useCallback((force = false) => {
+		// Only scroll if user is near bottom or if forced
+		if (!force && !isNearBottom) return;
+		
+		// Try multiple methods to ensure scrolling works in all contexts
+		if (messagesEndRef.current) {
+			// Method 1: scrollIntoView on the anchor element
+			messagesEndRef.current.scrollIntoView({
+				behavior: "smooth",
+				block: "end",
+			});
+		}
+		
+		// Method 2: Also try to scroll the container itself
+		const container = messagesContainerRef.current;
+		if (container) {
+			container.scrollTop = container.scrollHeight;
+		}
+	}, [isNearBottom]);
+
+	// Track previous message count to detect new messages
+	const prevMessageCountRef = useRef(0);
+	
 	useEffect(() => {
-		// Small delay to ensure DOM is updated
-		const timer = setTimeout(() => {
-			scrollToBottom();
-		}, 100);
-		return () => clearTimeout(timer);
-	}, [statusUpdates, threadMessages, threadReplies]);
+		const messageCount = isThreadMode ? threadMessages.length : statusUpdates.length;
+		
+		// Only handle if we have new messages
+		if (messageCount > prevMessageCountRef.current) {
+			// Check if user is near bottom before new messages
+			const nearBottom = checkIfNearBottom();
+			
+			// Small delay to ensure DOM is updated
+			const timer = setTimeout(() => {
+				if (nearBottom) {
+					// User was near bottom, auto-scroll
+					scrollToBottom(true);
+				} else {
+					// User was scrolled up, show indicator
+					setShowNewMessageIndicator(true);
+				}
+			}, 100);
+			prevMessageCountRef.current = messageCount;
+			return () => clearTimeout(timer);
+		}
+	}, [isThreadMode, threadMessages.length, statusUpdates.length, scrollToBottom, checkIfNearBottom]);
+	
+	// Also scroll on initial load when messages first appear
+	useEffect(() => {
+		if (isThreadMode && threadMessages.length > 0) {
+			// Delay to ensure the Sheet animation has completed
+			const timer = setTimeout(() => {
+				scrollToBottom(true); // Force scroll on initial load
+			}, 300);
+			return () => clearTimeout(timer);
+		}
+	}, [isThreadMode, threadMessages.length > 0, scrollToBottom]);
 
 	// Extract mentions from message and add p-tags
 	const extractMentions = (
@@ -176,21 +345,28 @@ export function ChatInterface({
 			);
 
 			if (isThreadMode) {
-				if (threadId && threadId !== "new" && currentThreadEvent) {
+				// Check if we have an existing thread with reply capability
+				if (currentThreadEvent && typeof currentThreadEvent.reply === 'function') {
+					// This is a reply to an existing thread
 					event = currentThreadEvent.reply();
 					event.content = cleanContent;
-					event.tags.push(["a", project!.tagId()]);
-				} else {
-					// Create new thread event (kind 11) for the first message
+					event.tags.push(["a", project?.tagId()]);
+					
+					// Add mentioned agents to the reply
+					mentionedAgents.forEach((agent) => {
+						event.tags.push(["p", agent.pubkey]);
+					});
+				} else if (!kind11Event) {
+					// This is the first message, create a new thread (kind 11)
 					event = new NDKEvent(ndk);
 					event.kind = 11;
 					event.content = cleanContent;
 					event.tags = [
 						["title", threadTitle!],
-						["a", project!.tagId()],
+						["a", project?.tagId()],
 					];
 
-					// Add initial agents as p-tags if this is the first message
+					// Add initial agents as p-tags
 					if (initialAgentPubkeys.length > 0) {
 						const projectAgentsMap = new Map(
 							projectAgents.map((a) => [a.pubkey, a]),
@@ -202,25 +378,48 @@ export function ChatInterface({
 							}
 						});
 					}
+					
+					// Add mentioned agents to the initial message
+					mentionedAgents.forEach((agent) => {
+						// Don't add duplicate p-tags
+						if (!event.tags.some(tag => tag[0] === "p" && tag[1] === agent.pubkey)) {
+							event.tags.push(["p", agent.pubkey]);
+						}
+					});
 
 					await event.sign();
 
 					// Store the kind11Event to start subscription
-					if (!kind11Event) {
-						setKind11Event(event);
-					}
+					setKind11Event(event);
+					
+					// Publish the event
+					await event.publish();
+					setMessageInput("");
+					
+					// Scroll to bottom after creating thread
+					setTimeout(() => {
+						scrollToBottom(true); // Force scroll after sending
+					}, 100);
+					
+					return; // Exit early since we've handled publishing
+				} else {
+					// We have a kind11Event but it might not have reply() yet
+					// This shouldn't happen in normal flow, but let's handle it
+					console.warn("Thread event exists but doesn't support reply(). Waiting for thread to be properly loaded.");
+					return;
 				}
 			} else {
 				throw new Error("Task mode not implemented yet");
 			}
 
-			// Add p-tags for mentioned agents
-			mentionedAgents.forEach((agent) => {
-				event.tags.push(["p", agent.pubkey]);
-			});
-
-			event.publish();
+			// Publish the reply event
+			await event.publish();
 			setMessageInput("");
+			
+			// Scroll to bottom after sending
+			setTimeout(() => {
+				scrollToBottom(true); // Force scroll after sending
+			}, 100);
 		} catch (error) {
 			console.error("Failed to send message:", error);
 		} finally {
@@ -229,7 +428,7 @@ export function ChatInterface({
 	};
 
 	// Handle @mention autocomplete
-	const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+	const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		const value = e.target.value;
 		setMessageInput(value);
 
@@ -255,7 +454,7 @@ export function ChatInterface({
 		} else {
 			setShowAgentMenu(false);
 		}
-	};
+	}, []);
 
 	// Insert agent mention
 	const insertMention = useCallback(
@@ -287,7 +486,7 @@ export function ChatInterface({
 		[messageInput],
 	);
 
-	const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+	const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (showAgentMenu && filteredAgents.length > 0) {
 			if (e.key === "ArrowDown") {
 				e.preventDefault();
@@ -310,15 +509,15 @@ export function ChatInterface({
 			e.preventDefault();
 			handleSendMessage();
 		}
-	};
+	}, [showAgentMenu, filteredAgents, selectedAgentIndex, insertMention, handleSendMessage]);
 
-	const handleStatusUpdateClick = (event: NDKEvent) => {
+	const handleStatusUpdateClick = useCallback((event: NDKEvent) => {
 		// Get the task ID this status update is related to
 		const relatedTaskId = event.tags?.find((tag) => tag[0] === "e")?.[1];
 		if (relatedTaskId && onReplyToTask) {
 			onReplyToTask(relatedTaskId);
 		}
-	};
+	}, [onReplyToTask]);
 
 	return (
 		<div className={`bg-background flex flex-col ${className}`}>
@@ -349,18 +548,16 @@ export function ChatInterface({
 			)}
 
 			{/* Messages Container */}
-			<div className="flex-1 overflow-y-auto">
+			<div 
+				ref={messagesContainerRef}
+				className="flex-1 overflow-y-auto relative" 
+				id="chat-messages-container"
+				onScroll={handleScroll}>
 				<div className="p-2">
 					{/* Show thread messages if in thread mode, otherwise show status updates */}
 					{isThreadMode ? (
 						threadMessages && threadMessages.length > 0 ? (
-							<div className="space-y-1">
-								{threadMessages.map((event) => (
-									<div key={event.id}>
-										<StatusUpdate event={event} />
-									</div>
-								))}
-							</div>
+							<MessageList messages={threadMessages} />
 						) : threadId && threadId !== "new" && !currentThreadEvent ? (
 							// Loading state for existing thread
 							<div className="text-center py-12">
@@ -382,17 +579,7 @@ export function ChatInterface({
 							</div>
 						)
 					) : statusUpdates.length > 0 ? (
-						<div className="space-y-1">
-							{statusUpdates.map((event) => (
-								<div
-									key={event.id}
-									onClick={() => handleStatusUpdateClick(event)}
-									className={onReplyToTask ? "cursor-pointer" : ""}
-								>
-									<StatusUpdate event={event} />
-								</div>
-							))}
-						</div>
+						<MessageList messages={statusUpdates} onMessageClick={handleStatusUpdateClick} />
 					) : (
 						<div className="text-center py-12">
 							<div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -414,10 +601,67 @@ export function ChatInterface({
 							)}
 						</div>
 					)}
+					
+					{/* Typing Indicators */}
+					{activeTypingIndicators.length > 0 && (
+						<div className="px-4 py-2 space-y-1">
+							{activeTypingIndicators.map((indicator) => {
+								// Extract system prompt and prompt from tags
+								const systemPromptTag = indicator.tags.find(tag => tag[0] === 'system-prompt');
+								const promptTag = indicator.tags.find(tag => tag[0] === 'prompt');
+								const hasDebugInfo = systemPromptTag || promptTag;
+								
+								return (
+									<div
+										key={indicator.id}
+										className="flex items-center gap-2 text-sm text-muted-foreground"
+									>
+										<div className="flex gap-0.5">
+											<span className="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-typing-bounce" style={{ animationDelay: "0ms" }} />
+											<span className="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-typing-bounce" style={{ animationDelay: "200ms" }} />
+											<span className="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-typing-bounce" style={{ animationDelay: "400ms" }} />
+										</div>
+										<span className="italic">{indicator.content}</span>
+										{hasDebugInfo && (
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-5 w-5 p-0 hover:bg-muted"
+												onClick={() => {
+													setDebugIndicator(indicator);
+													setShowDebugDialog(true);
+												}}
+											>
+												<Info className="h-3 w-3" />
+											</Button>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					)}
+					
+					{/* Scroll anchor - moved inside the content container */}
+					<div ref={messagesEndRef} className="h-1" />
 				</div>
 
-				{/* Scroll anchor */}
-				<div ref={messagesEndRef} />
+				{/* New Message Indicator */}
+				{showNewMessageIndicator && (
+					<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => {
+								scrollToBottom(true);
+								setShowNewMessageIndicator(false);
+							}}
+							className="flex items-center gap-2 shadow-lg"
+						>
+							<ArrowDown className="w-4 h-4" />
+							New message
+						</Button>
+					</div>
+				)}
 			</div>
 
 			{/* Input Area */}
@@ -440,25 +684,11 @@ export function ChatInterface({
 
 							{/* Agent mention dropdown */}
 							{showAgentMenu && filteredAgents.length > 0 && (
-								<div className="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto bg-popover border border-border rounded-md shadow-md z-50">
-									<div className="p-1">
-										{filteredAgents.map((agent, index) => (
-											<button
-												key={agent.pubkey}
-												onClick={() => insertMention(agent)}
-												onMouseDown={(e) => e.preventDefault()} // Prevent blur on click
-												className={`w-full text-left px-3 py-2 text-sm rounded flex items-center gap-2 transition-colors ${
-													index === selectedAgentIndex
-														? "bg-accent text-accent-foreground"
-														: "hover:bg-accent/50"
-												}`}
-											>
-												<AtSign className="w-4 h-4 text-muted-foreground" />
-												<span className="font-medium">{agent.name}</span>
-											</button>
-										))}
-									</div>
-								</div>
+								<AgentMentionDropdown 
+									agents={filteredAgents}
+									selectedIndex={selectedAgentIndex}
+									onSelect={insertMention}
+								/>
 							)}
 						</div>
 						<Button
@@ -473,6 +703,49 @@ export function ChatInterface({
 								<Send className="w-4 h-4" />
 							)}
 						</Button>
+					</div>
+				</div>
+			)}
+
+			{/* Debug Dialog */}
+			{showDebugDialog && debugIndicator && (
+				<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+					<div className="bg-background border rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+						<div className="flex items-center justify-between p-4 border-b">
+							<h3 className="text-lg font-semibold">LLM Debug Information</h3>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => {
+									setShowDebugDialog(false);
+									setDebugIndicator(null);
+								}}
+								className="h-8 w-8 p-0"
+							>
+								<X className="h-4 w-4" />
+							</Button>
+						</div>
+						<div className="flex-1 overflow-auto p-4 space-y-4">
+							{/* System Prompt */}
+							{debugIndicator.tags.find(tag => tag[0] === 'system-prompt') && (
+								<div>
+									<h4 className="font-semibold mb-2">System Prompt</h4>
+									<pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
+										{debugIndicator.tags.find(tag => tag[0] === 'system-prompt')?.[1]}
+									</pre>
+								</div>
+							)}
+							
+							{/* User Prompt */}
+							{debugIndicator.tags.find(tag => tag[0] === 'prompt') && (
+								<div>
+									<h4 className="font-semibold mb-2">User Prompt</h4>
+									<pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
+										{debugIndicator.tags.find(tag => tag[0] === 'prompt')?.[1]}
+									</pre>
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 			)}

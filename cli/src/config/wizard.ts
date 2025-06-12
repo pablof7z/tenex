@@ -40,9 +40,8 @@ export async function runConfigWizard() {
 				nsec = inputNsec;
 				logInfo("nsec validated.");
 				break;
-			} else {
-				logError("Invalid nsec. Please try again.");
 			}
+			logError("Invalid nsec. Please try again.");
 		}
 	} else {
 		// Create new key
@@ -78,7 +77,7 @@ export async function runConfigWizard() {
 			await NDKClient.publishEvent(nsec, profileEvent as any);
 			logInfo("Profile published to Nostr.");
 		} catch (err) {
-			logError("Failed to publish profile to Nostr: " + err);
+			logError(`Failed to publish profile to Nostr: ${err}`);
 		}
 	}
 

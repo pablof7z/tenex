@@ -1,6 +1,6 @@
-import path from "path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { mkdir, readFile, writeFile } from "fs/promises";
 import { nip19 } from "nostr-tools";
 import { logError, logInfo, logWarning } from "../logger.js";
 import { getNDK } from "../nostr.js";
@@ -129,7 +129,7 @@ export async function publishAgentRequest(agentSigner, agentName, projectNaddr, 
         await agentRequestEvent.sign(agentSigner);
         await agentRequestEvent.publish();
         logInfo(`Published kind:3199 agent request for '${agentName}'`);
-        logInfo(`Agent request event details:`);
+        logInfo("Agent request event details:");
         logInfo(JSON.stringify(agentRequestEvent.rawEvent(), null, 2));
     }
     catch (err) {
@@ -163,7 +163,7 @@ export async function getOrCreateAgentSigner(projectPath, agentSlug = "default")
             if (projectNaddr) {
                 try {
                     const decoded = nip19.decode(projectNaddr);
-                    if (decoded.type === 'naddr' && decoded.data) {
+                    if (decoded.type === "naddr" && decoded.data) {
                         projectAuthor = decoded.data.pubkey;
                     }
                 }

@@ -1,5 +1,5 @@
-import { type ChildProcess, spawn } from "child_process";
-import path from "path";
+import { type ChildProcess, spawn } from "node:child_process";
+import path from "node:path";
 import chalk from "chalk";
 import {
 	logError,
@@ -60,13 +60,13 @@ export class ProcessManager {
 
 		try {
 			// Check if llms.json already exists
-			const fs = await import("fs/promises");
+			const fs = await import("node:fs/promises");
 			await fs.access(llmsPath);
 			logInfo("Found existing llms.json");
 		} catch {
 			// Create llms.json from tenexd's AI configuration
 			try {
-				const fs = await import("fs/promises");
+				const fs = await import("node:fs/promises");
 				const tenexDir = path.join(projectPath, ".tenex");
 				await fs.mkdir(tenexDir, { recursive: true });
 
@@ -171,7 +171,7 @@ export class ProcessManager {
 				const lines = data.toString().split("\n");
 				lines.forEach((line: string) => {
 					if (line.trim()) {
-						console.log(chalk.gray(`[${projectId}]`) + " " + line);
+						console.log(`${chalk.gray(`[${projectId}]`)} ${line}`);
 					}
 				});
 			});
@@ -180,7 +180,7 @@ export class ProcessManager {
 				const lines = data.toString().split("\n");
 				lines.forEach((line: string) => {
 					if (line.trim()) {
-						console.error(chalk.red(`[${projectId}]`) + " " + chalk.red(line));
+						console.error(`${chalk.red(`[${projectId}]`)} ${chalk.red(line)}`);
 					}
 				});
 			});

@@ -90,9 +90,11 @@ export class AIService {
 				throw new Error(
 					`Authentication failed for ${this.config.name}: Invalid API key`,
 				);
-			} else if (error.status === 429) {
+			}
+			if (error.status === 429) {
 				throw new Error(`Rate limit exceeded for ${this.config.name}`);
-			} else if (error.status === 404) {
+			}
+			if (error.status === 404) {
 				throw new Error(
 					`Model ${this.config.model} not found for ${this.config.name}`,
 				);

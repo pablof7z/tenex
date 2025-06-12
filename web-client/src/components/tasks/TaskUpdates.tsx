@@ -56,7 +56,7 @@ export function TaskUpdates({
 		if (titleTag) return titleTag;
 
 		const firstLine = task.content?.split("\n")[0] || "Untitled Task";
-		return firstLine.length > 50 ? firstLine.slice(0, 50) + "..." : firstLine;
+		return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
 	};
 
 	if (!task) {

@@ -1,5 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { toKebabCase } from "../../../../shared/src/projects";

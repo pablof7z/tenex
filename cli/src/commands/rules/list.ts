@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { Command } from "commander";
 import { logger } from "../../utils/logger";
 import type { ListRuleOptions } from "./types";

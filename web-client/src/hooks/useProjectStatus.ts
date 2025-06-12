@@ -52,7 +52,7 @@ export function useProjectStatus() {
 			statusEvents.forEach((event) => {
 				// Find the "a" tag to get project info
 				const aTag = event.tags?.find((tag) => tag[0] === "a");
-				if (aTag && aTag[1]) {
+				if (aTag?.[1]) {
 					// Extract project directory from the tag
 					// Format: 31933:pubkey:directory
 					const parts = aTag[1].split(":");

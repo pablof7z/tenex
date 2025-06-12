@@ -1,22 +1,13 @@
-import { promises as fs } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { log } from "./lib/utils/log.js"; // Assuming log utility exists
-
-// Agent configuration - just agent name to nsec mapping
-export interface AgentConfig {
-	[agentName: string]: string;
-}
+import { log } from "./lib/utils/log.js";
 
 // Simplified config structure
 export interface ConfigData {
-	privateKey?: string; // Optional - only needed for legacy single-signer mode
+	privateKey: string;
 	dbPath: string;
-	projectsDir: string; // Added projects directory path
+	projectsDir: string;
 	relays: string[];
-	agentsConfigPath?: string; // Path to agents.json
-	agents?: AgentConfig; // Agent configurations
-	currentAgent?: string; // Current agent being used
 }
 
 // Default relays - adjust as needed
@@ -34,70 +25,22 @@ const DEFAULT_DB_PATH = join(homedir(), ".tenex.db");
 const DEFAULT_PROJECTS_DIR = join(process.cwd(), "mcp", "projects");
 
 /**
- * Initialize configuration by loading the private key from CLI parameter, config file, or environment
+ * Initialize configuration by loading the private key from environment variable
  * and setting defaults for other values.
- * @param nsecFromCli - Optional nsec key from command line parameter (deprecated)
- * @param configFilePath - Optional path to agents.json file
  * @returns The config data
- * @throws Error if no valid configuration is found.
+ * @throws Error if NSEC environment variable is not set.
  */
-export async function initConfig(
-	nsecFromCli?: string,
-	configFilePath?: string,
-): Promise<ConfigData> {
-	let privateKey: string | undefined;
-	let agents: AgentConfig | undefined;
-	let currentAgent: string | undefined;
+export async function initConfig(): Promise<ConfigData> {
+	const privateKey = process.env.NSEC;
 
-	// If config file is provided, load agents configuration
-	if (configFilePath) {
-		try {
-			const configContent = await fs.readFile(configFilePath, "utf-8");
-			agents = JSON.parse(configContent) as AgentConfig;
-			log(`INFO: Loaded agents configuration from ${configFilePath}`);
-
-			// Use 'default' agent if available
-			if (agents.default) {
-				privateKey = agents.default;
-				currentAgent = "default";
-				log("INFO: Using 'default' agent from agents.json");
-			} else {
-				// Use the first available agent
-				const agentNames = Object.keys(agents);
-				if (agentNames.length > 0) {
-					currentAgent = agentNames[0];
-					privateKey = agents[currentAgent];
-					log(`INFO: Using '${currentAgent}' agent from agents.json`);
-				}
-			}
-		} catch (err) {
-			log(`ERROR: Failed to load agents config from ${configFilePath}: ${err}`);
-			// Fall through to other methods
-		}
+	if (!privateKey) {
+		log("ERROR: FATAL: NSEC environment variable not set.");
+		throw new Error("NSEC environment variable is required but not set.");
 	}
 
-	// Fall back to CLI parameter or environment variable if no agents config
-	if (!agents) {
-		privateKey = nsecFromCli || process.env.NSEC;
-		if (nsecFromCli) {
-			log(
-				"WARN: Using deprecated --nsec parameter. Please use --config-file instead.",
-			);
-		}
-
-		if (!privateKey) {
-			log(
-				"ERROR: FATAL: No valid configuration found. Provide --config-file, --nsec parameter, or NSEC environment variable.",
-			);
-			throw new Error(
-				"No valid configuration found. Provide --config-file, --nsec parameter, or NSEC environment variable.",
-			);
-		}
-
-		// Basic validation for nsec format
-		if (!privateKey.startsWith("nsec")) {
-			log("WARN: Private key does not look like a valid nsec key.");
-		}
+	// Basic validation for nsec format
+	if (!privateKey.startsWith("nsec")) {
+		log("WARN: Private key does not look like a valid nsec key.");
 	}
 
 	log("INFO: Configuration initialized.");
@@ -110,9 +53,6 @@ export async function initConfig(
 		dbPath: DEFAULT_DB_PATH,
 		projectsDir: DEFAULT_PROJECTS_DIR,
 		relays: DEFAULT_RELAYS,
-		agentsConfigPath: configFilePath,
-		agents,
-		currentAgent,
 	};
 }
 

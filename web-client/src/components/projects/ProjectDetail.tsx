@@ -184,14 +184,14 @@ export function ProjectDetail({
 				minute: "2-digit",
 				hour12: false,
 			});
-		} else if (diffHours < 24 * 7) {
-			return date.toLocaleDateString("en-US", { weekday: "short" });
-		} else {
-			return date.toLocaleDateString("en-US", {
-				month: "short",
-				day: "numeric",
-			});
 		}
+		if (diffHours < 24 * 7) {
+			return date.toLocaleDateString("en-US", { weekday: "short" });
+		}
+		return date.toLocaleDateString("en-US", {
+			month: "short",
+			day: "numeric",
+		});
 	};
 
 	const getTaskTitle = (task: NDKTask) => {
@@ -201,7 +201,7 @@ export function ProjectDetail({
 
 		// Fallback to first line of content
 		const firstLine = task.content?.split("\n")[0] || "Untitled Task";
-		return firstLine.length > 50 ? firstLine.slice(0, 50) + "..." : firstLine;
+		return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
 	};
 
 	const getTaskDescription = (task: NDKTask) => {
@@ -210,9 +210,10 @@ export function ProjectDetail({
 		const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
 
 		if (titleTag && lines.length > 1) {
-			return lines.slice(1).join(" ").slice(0, 80) + "...";
-		} else if (lines.length > 1) {
-			return lines.slice(1).join(" ").slice(0, 80) + "...";
+			return `${lines.slice(1).join(" ").slice(0, 80)}...`;
+		}
+		if (lines.length > 1) {
+			return `${lines.slice(1).join(" ").slice(0, 80)}...`;
 		}
 
 		return "No description";
@@ -262,7 +263,7 @@ export function ProjectDetail({
 		if (titleTag) return titleTag;
 
 		const firstLine = thread.content?.split("\n")[0] || "Untitled Thread";
-		return firstLine.length > 50 ? firstLine.slice(0, 50) + "..." : firstLine;
+		return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
 	};
 
 	const handleOptionSelect = (option: "task" | "voice" | "thread") => {
@@ -304,7 +305,7 @@ export function ProjectDetail({
 					{/* Thread Icon */}
 					<div className="mr-3 sm:mr-4 flex-shrink-0">
 						<div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-							<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+							<div className="w-2 h-2 bg-blue-500 rounded-full" />
 						</div>
 					</div>
 
@@ -335,7 +336,7 @@ export function ProjectDetail({
 						{recentMessage && (
 							<p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
 								{recentMessage.content.length > 80
-									? recentMessage.content.slice(0, 80) + "..."
+									? `${recentMessage.content.slice(0, 80)}...`
 									: recentMessage.content}
 							</p>
 						)}
@@ -722,7 +723,7 @@ export function ProjectDetail({
 					<div className="flex flex-col items-center justify-center py-20 sm:py-32 px-4 sm:px-6 text-center">
 						<div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-sm">
 							<div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 rounded-full flex items-center justify-center">
-								<div className="w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full"></div>
+								<div className="w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full" />
 							</div>
 						</div>
 						<h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">

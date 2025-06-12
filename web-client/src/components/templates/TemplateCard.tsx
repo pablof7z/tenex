@@ -87,7 +87,7 @@ export function TemplateCard({
 							</Avatar>
 							<span className="text-xs text-muted-foreground truncate">
 								{template.author?.profile?.name ||
-									template.author?.npub.slice(0, 12) + "..." ||
+									`${template.author?.npub.slice(0, 12)}...` ||
 									"Unknown"}
 							</span>
 						</div>

@@ -258,7 +258,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 								const version = agent.tagValue("ver") || "1";
 								const description =
 									agent.tagValue("description") ||
-									agent.content?.slice(0, 100) + "...";
+									`${agent.content?.slice(0, 100)}...`;
 
 								return (
 									<div

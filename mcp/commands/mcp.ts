@@ -6,15 +6,15 @@ import {
 	addGitValidateCommitCommand,
 } from "../logic/git-reset.js";
 import {
-	addPublishCommand,
 	addPublishTaskStatusUpdateCommand,
+	addPublishTypingIndicatorCommand,
 } from "../logic/publish.js";
 import { log } from "../utils/log.js";
 
 // Define the MCP server instance
 const mcpServer = new McpServer({
-	name: "tenex", // Renamed server
-	version: "0.5.0", // Agent management system
+	name: "tenex",
+	version: "0.5.0",
 	capabilities: {
 		resources: {},
 	},
@@ -24,8 +24,8 @@ const mcpServer = new McpServer({
 export async function startMcpServer(): Promise<void> {
 	try {
 		// Register publish commands
-		addPublishCommand(mcpServer);
 		addPublishTaskStatusUpdateCommand(mcpServer);
+		addPublishTypingIndicatorCommand(mcpServer);
 
 		// Register git reset commands
 		addGitResetToCommitCommand(mcpServer);

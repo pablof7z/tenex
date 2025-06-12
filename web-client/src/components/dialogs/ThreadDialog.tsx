@@ -52,9 +52,8 @@ export function ThreadDialog({
 			const isSelected = prev.some((a) => a.pubkey === agent.pubkey);
 			if (isSelected) {
 				return prev.filter((a) => a.pubkey !== agent.pubkey);
-			} else {
-				return [...prev, agent];
 			}
+			return [...prev, agent];
 		});
 	};
 

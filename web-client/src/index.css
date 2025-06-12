@@ -284,4 +284,18 @@
 	.bottom-tab-safe {
 		bottom: max(1rem, env(safe-area-inset-bottom));
 	}
+
+	/* Typing indicator animation */
+	@keyframes typingBounce {
+		0%, 60%, 100% {
+			transform: translateY(0);
+		}
+		30% {
+			transform: translateY(-6px);
+		}
+	}
+
+	.animate-typing-bounce {
+		animation: typingBounce 1.4s infinite ease-in-out;
+	}
 }

@@ -101,7 +101,7 @@ export function LoginScreen() {
 						{/* Divider */}
 						<div className="relative my-8">
 							<div className="absolute inset-0 flex items-center">
-								<div className="w-full border-t border-[#30363D]"></div>
+								<div className="w-full border-t border-[#30363D]" />
 							</div>
 							<div className="relative flex justify-center text-sm">
 								<span className="px-4 bg-[#0F1419] text-[#8B949E]">or</span>
@@ -136,7 +136,6 @@ export function LoginScreen() {
 									value={nsecInput}
 									onChange={(e) => setNsecInput(e.target.value)}
 									className="w-full px-4 py-4 bg-[#21262D] border border-[#30363D] rounded-xl text-white placeholder-[#8B949E] focus:border-[#229ED9] focus:outline-none focus:ring-2 focus:ring-[#229ED9]/20 transition-all"
-									autoFocus
 								/>
 								<Button
 									onClick={handleNsecLogin}
@@ -197,13 +196,13 @@ export function LoginScreen() {
 			{/* Footer */}
 			<div className="text-center pb-8">
 				<div className="flex items-center justify-center gap-2 text-sm text-[#8B949E]">
-					<div className="w-2 h-2 bg-[#238636] rounded-full"></div>
+					<div className="w-2 h-2 bg-[#238636] rounded-full" />
 					<span>Secure</span>
-					<div className="w-1 h-1 bg-[#8B949E] rounded-full mx-2"></div>
-					<div className="w-2 h-2 bg-[#229ED9] rounded-full"></div>
+					<div className="w-1 h-1 bg-[#8B949E] rounded-full mx-2" />
+					<div className="w-2 h-2 bg-[#229ED9] rounded-full" />
 					<span>Decentralized</span>
-					<div className="w-1 h-1 bg-[#8B949E] rounded-full mx-2"></div>
-					<div className="w-2 h-2 bg-[#A855F7] rounded-full"></div>
+					<div className="w-1 h-1 bg-[#8B949E] rounded-full mx-2" />
+					<div className="w-2 h-2 bg-[#A855F7] rounded-full" />
 					<span>Open Source</span>
 				</div>
 			</div>

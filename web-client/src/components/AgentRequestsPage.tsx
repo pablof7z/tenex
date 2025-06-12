@@ -1,16 +1,15 @@
 import { type NDKEvent, type NDKKind, NDKList } from "@nostr-dev-kit/ndk";
-import { useNDKCurrentUser, useNDKSessionSigners, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Bot, CheckCircle2 } from "lucide-react";
+import {
+	useNDKCurrentUser,
+	useNDKSessionSigners,
+	useSubscribe,
+} from "@nostr-dev-kit/ndk-hooks";
+import { ArrowLeft, Bot, CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "./common/EmptyState";
 import { ErrorState } from "./common/ErrorState";
 import { Button } from "./ui/button";
-import {
-	Card,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "./ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 
 interface AgentRequest {
@@ -23,7 +22,11 @@ interface AgentRequest {
 	isApproved: boolean;
 }
 
-export function AgentRequestsPage() {
+interface AgentRequestsPageProps {
+	onBack?: () => void;
+}
+
+export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
 	const user = useNDKCurrentUser();
 	const signers = useNDKSessionSigners();
 	const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
@@ -33,11 +36,13 @@ export function AgentRequestsPage() {
 	// Fetch existing agent list (kind 13199)
 	const { events: agentLists } = useSubscribe<NDKList>(
 		user
-			? [{
-					kinds: [13199 as NDKKind],
-					authors: [user.pubkey],
-					limit: 1,
-				}]
+			? [
+					{
+						kinds: [13199 as NDKKind],
+						authors: [user.pubkey],
+						limit: 1,
+					},
+				]
 			: false,
 		{ wrap: true },
 		[user?.pubkey],
@@ -48,10 +53,12 @@ export function AgentRequestsPage() {
 	// Fetch agent requests (kind 3199) that are for this user
 	const { events: agentRequests } = useSubscribe(
 		user
-			? [{
-					kinds: [3199 as NDKKind],
-					"#p": [user.pubkey],
-				}]
+			? [
+					{
+						kinds: [3199 as NDKKind],
+						"#p": [user.pubkey],
+					},
+				]
 			: false,
 		{},
 		[user?.pubkey],
@@ -106,7 +113,7 @@ export function AgentRequestsPage() {
 
 	const handleSaveAgents = async () => {
 		if (!user || selectedAgents.size === 0) return;
-		
+
 		const signer = signers.get(user.pubkey);
 		if (!signer) return;
 
@@ -164,10 +171,36 @@ export function AgentRequestsPage() {
 		);
 	}
 
-
 	return (
-		<div className="p-6 max-w-4xl mx-auto">
-			<h1 className="text-2xl font-bold mb-6">Agent Requests</h1>
+		<div className="min-h-screen bg-background">
+			{/* Header */}
+			<div className="bg-card border-b border-border backdrop-blur-xl bg-card/95 sticky top-0 z-50">
+				<div className="max-w-4xl mx-auto px-6 py-4">
+					<div className="flex items-center gap-3">
+						{onBack && (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={onBack}
+								className="w-9 h-9"
+							>
+								<ArrowLeft className="w-5 h-5" />
+							</Button>
+						)}
+						<div>
+							<h1 className="text-2xl font-semibold">Agent Requests</h1>
+							{pendingRequests.length > 0 && (
+								<p className="text-sm text-muted-foreground mt-1">
+									{pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+								</p>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Content */}
+			<div className="max-w-4xl mx-auto px-6 py-8">
 
 			{error && (
 				<div className="mb-4 p-4 bg-red-50 text-red-600 rounded-lg">
@@ -237,27 +270,28 @@ export function AgentRequestsPage() {
 				</>
 			)}
 
-			{processedRequests.filter((req) => req.isApproved).length > 0 && (
-				<div className="mt-12">
-					<h2 className="text-xl font-semibold mb-4">Approved Agents</h2>
-					<div className="space-y-2">
-						{processedRequests
-							.filter((req) => req.isApproved)
-							.map((request) => (
-								<div
-									key={request.id}
-									className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"
-								>
-									<CheckCircle2 className="w-5 h-5 text-green-600" />
-									<span className="font-medium">{request.agentName}</span>
-									<span className="text-sm text-gray-600 font-mono">
-										{request.agentPubkey.slice(0, 8)}...
-									</span>
-								</div>
-							))}
+				{processedRequests.filter((req) => req.isApproved).length > 0 && (
+					<div className="mt-12">
+						<h2 className="text-xl font-semibold mb-4">Approved Agents</h2>
+						<div className="space-y-2">
+							{processedRequests
+								.filter((req) => req.isApproved)
+								.map((request) => (
+									<div
+										key={request.id}
+										className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"
+									>
+										<CheckCircle2 className="w-5 h-5 text-green-600" />
+										<span className="font-medium">{request.agentName}</span>
+										<span className="text-sm text-gray-600 font-mono">
+											{request.agentPubkey.slice(0, 8)}...
+										</span>
+									</div>
+								))}
+						</div>
 					</div>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	);
 }

@@ -20,7 +20,7 @@ export function TaskOverview({
 		if (titleTag) return titleTag;
 
 		const firstLine = task.content?.split("\n")[0] || "Untitled Task";
-		return firstLine.length > 60 ? firstLine.slice(0, 60) + "..." : firstLine;
+		return firstLine.length > 60 ? `${firstLine.slice(0, 60)}...` : firstLine;
 	};
 
 	// Get latest status update for this task

@@ -78,7 +78,7 @@ export function GlobalSearchDialog({
 		if (titleTag) return titleTag;
 
 		const firstLine = task.content?.split("\n")[0] || "Untitled Task";
-		return firstLine.length > 40 ? firstLine.slice(0, 40) + "..." : firstLine;
+		return firstLine.length > 40 ? `${firstLine.slice(0, 40)}...` : firstLine;
 	};
 
 	const getProjectForTask = useCallback(

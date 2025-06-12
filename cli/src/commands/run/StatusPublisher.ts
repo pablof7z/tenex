@@ -1,5 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { type NDK, NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { logWarning } from "../../utils/logger";
@@ -63,8 +63,18 @@ export class StatusPublisher {
 			const agents = JSON.parse(agentsContent);
 
 			for (const [agentName, nsec] of Object.entries(agents)) {
+				let nsecValue: string | undefined;
+				
 				if (typeof nsec === "string") {
-					const agentSigner = new NDKPrivateKeySigner(nsec);
+					// Handle old format where nsec is stored directly as string
+					nsecValue = nsec;
+				} else if (typeof nsec === "object" && nsec && (nsec as any).nsec) {
+					// Handle new format where nsec is stored in object with nsec property
+					nsecValue = (nsec as any).nsec;
+				}
+				
+				if (nsecValue) {
+					const agentSigner = new NDKPrivateKeySigner(nsecValue);
 					const agentPubkey = await agentSigner
 						.user()
 						.then((user) => user.pubkey);

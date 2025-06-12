@@ -15,7 +15,7 @@ export class ConfigManager {
 			return JSON.parse(raw) as TenexConfig;
 		} catch (err: any) {
 			// If file not found, return null (first run)
-			if (err.message && err.message.includes("no such file or directory")) {
+			if (err.message?.includes("no such file or directory")) {
 				return null;
 			}
 			throw err;
@@ -26,7 +26,7 @@ export class ConfigManager {
 		try {
 			writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
 		} catch (err) {
-			throw new Error("Failed to save TENEX config: " + err);
+			throw new Error(`Failed to save TENEX config: ${err}`);
 		}
 	}
 }

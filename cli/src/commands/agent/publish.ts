@@ -3,9 +3,9 @@
  * Publishes a new agent definition to Nostr.
  */
 
-import fs from "fs";
-import path from "path";
-import readline from "readline";
+import fs from "node:fs";
+import path from "node:path";
+import readline from "node:readline";
 import NDK, { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { Base64 } from "js-base64";
 import { ConfigManager } from "../../config/manager";
@@ -188,7 +188,7 @@ export async function runAgentPublish(cmd: any) {
 		// Ensure process exits cleanly
 		process.exit(0);
 	} catch (err) {
-		logError("Failed to publish agent: " + err);
+		logError(`Failed to publish agent: ${err}`);
 		// Publish status update to Nostr: failure
 		await NDKClient.publishStatusUpdate(nsec, "Failed to publish agent.", {
 			command: "agent publish",

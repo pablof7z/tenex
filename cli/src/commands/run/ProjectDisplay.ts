@@ -1,5 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import type { ProjectInfo } from "./ProjectLoader";
@@ -31,7 +31,7 @@ export class ProjectDisplay {
 		);
 		console.log(
 			chalk.gray("Event ID:   ") +
-				chalk.gray(projectInfo.projectEvent.id.substring(0, 16) + "..."),
+				chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`),
 		);
 	}
 
@@ -62,7 +62,7 @@ export class ProjectDisplay {
 			const agentEvent = await this.ndk.fetchEvent(eventId);
 
 			if (!agentEvent || agentEvent.kind !== EVENT_KINDS.AGENT_CONFIG) {
-				console.log(chalk.red("Failed to fetch agent event: " + eventId));
+				console.log(chalk.red(`Failed to fetch agent event: ${eventId}`));
 				return;
 			}
 
@@ -94,7 +94,7 @@ export class ProjectDisplay {
 				chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`),
 			);
 		} catch (err) {
-			console.log(chalk.red("Failed to fetch agent configuration: " + eventId));
+			console.log(chalk.red(`Failed to fetch agent configuration: ${eventId}`));
 		}
 	}
 
@@ -105,14 +105,24 @@ export class ProjectDisplay {
 			const llmsContent = await fs.readFile(llmsPath, "utf-8");
 			const llms = JSON.parse(llmsContent);
 
+			const defaultConfig = llms.default;
+			delete llms.default;
+
+			const configNames = Object.keys(llms).filter(
+				(name) =>
+					name !== undefined && llms[name] && typeof llms[name] === "object",
+			);
+
+			if (configNames.length === 0) {
+				// Don't show the header if there are no configs
+				return;
+			}
+
 			console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 			console.log(chalk.cyan("🤖 Available LLM Configurations"));
 			console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-			const defaultConfig = llms.default;
-			delete llms.default;
-
-			Object.keys(llms).forEach((name) => {
+			configNames.forEach((name) => {
 				const config = llms[name];
 				const isDefault = name === defaultConfig;
 				console.log(
@@ -127,9 +137,7 @@ export class ProjectDisplay {
 				}
 			});
 		} catch (err) {
-			console.log(
-				chalk.yellow("\n⚠️  No LLM configurations found in llms.json"),
-			);
+			// Silent failure - just don't display anything if llms.json doesn't exist
 		}
 	}
 }

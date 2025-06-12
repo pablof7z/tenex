@@ -1,12 +1,12 @@
-import { exec } from "child_process";
-import path from "path";
-import { promisify } from "util";
+import { exec } from "node:child_process";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
 import {
 	type NDKArticle,
 	NDKEvent,
 	NDKPrivateKeySigner,
 } from "@nostr-dev-kit/ndk";
-import { access, mkdir, readFile, writeFile } from "fs/promises";
 import { nip19 } from "nostr-tools";
 import {
 	type AgentDefinition,
@@ -127,14 +127,14 @@ async function fetchProjectFromNostr(naddr: string): Promise<ProjectEventData> {
 
 	const repoTag = projectEvent.tags.find((tag) => tag[0] === "repo");
 	let repoUrl: string | undefined;
-	if (repoTag && repoTag[1]) {
+	if (repoTag?.[1]) {
 		repoUrl = repoTag[1];
 		logSuccess(`Found project repository: ${repoUrl}`);
 	}
 
 	const templateTag = projectEvent.tags.find((tag) => tag[0] === "template");
 	let template: string | undefined;
-	if (templateTag && templateTag[1]) {
+	if (templateTag?.[1]) {
 		template = templateTag[1];
 		logInfo(`Found template reference: ${template}`);
 
@@ -188,11 +188,12 @@ async function fetchTemplateRepoUrl(
 				(tag) => tag[0] === "repo",
 			);
 
-			if (uriTag && uriTag[1]) {
+			if (uriTag?.[1]) {
 				const repoUrl = uriTag[1].replace("git+", "");
 				logSuccess(`Found template repository: ${repoUrl}`);
 				return repoUrl;
-			} else if (templateRepoTag && templateRepoTag[1]) {
+			}
+			if (templateRepoTag?.[1]) {
 				const repoUrl = templateRepoTag[1];
 				logSuccess(`Found template repository: ${repoUrl}`);
 				return repoUrl;
@@ -342,7 +343,7 @@ async function createTenexDirectory(tenexDir: string): Promise<void> {
 	try {
 		await access(tenexDir);
 		tenexExists = true;
-		logInfo(`.tenex directory found from template. Updating configuration...`);
+		logInfo(".tenex directory found from template. Updating configuration...");
 	} catch (err: any) {
 		if (err.code !== "ENOENT") throw err;
 	}

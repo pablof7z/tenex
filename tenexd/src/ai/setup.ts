@@ -100,7 +100,8 @@ async function addNewConfiguration(
 		if (choice === "1") {
 			provider = "openai";
 			break;
-		} else if (choice === "2") {
+		}
+		if (choice === "2") {
 			provider = "openrouter";
 			break;
 		}
@@ -150,13 +151,16 @@ async function addNewConfiguration(
 			if (choice === "1") {
 				model = "gpt-4o";
 				break;
-			} else if (choice === "2") {
+			}
+			if (choice === "2") {
 				model = "gpt-4o-mini";
 				break;
-			} else if (choice === "3") {
+			}
+			if (choice === "3") {
 				model = "gpt-4-turbo";
 				break;
-			} else if (choice === "4") {
+			}
+			if (choice === "4") {
 				console.log(chalk.yellow("Enter custom model name:"));
 				process.stdout.write(chalk.cyan("> "));
 				for await (const customLine of console) {

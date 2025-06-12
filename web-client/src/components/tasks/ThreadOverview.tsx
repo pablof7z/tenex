@@ -20,7 +20,7 @@ export function ThreadOverview({
 		if (titleTag) return titleTag;
 
 		const firstLine = thread.content?.split("\n")[0] || "Untitled Thread";
-		return firstLine.length > 60 ? firstLine.slice(0, 60) + "..." : firstLine;
+		return firstLine.length > 60 ? `${firstLine.slice(0, 60)}...` : firstLine;
 	};
 
 	// Get thread replies for this thread
@@ -126,7 +126,7 @@ export function ThreadOverview({
 									<span className="mx-1">replied:</span>
 									<span className="line-clamp-1">
 										{latestActivity.content.length > 80
-											? latestActivity.content.slice(0, 80) + "..."
+											? `${latestActivity.content.slice(0, 80)}...`
 											: latestActivity.content}
 									</span>
 								</div>

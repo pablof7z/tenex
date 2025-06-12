@@ -1,4 +1,4 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import chalk from "chalk";
 
 interface ClaudeMessage {
@@ -38,10 +38,6 @@ export class ClaudeOutputParser extends EventEmitter {
 	private buffer = "";
 	private sessionId: string | null = null;
 	private currentToolUse: { id: string; name: string } | null = null;
-
-	constructor() {
-		super();
-	}
 
 	parse(chunk: string): void {
 		this.buffer += chunk;
@@ -144,7 +140,7 @@ export class ClaudeOutputParser extends EventEmitter {
 		for (const item of content) {
 			if (item.type === "tool_result") {
 				const result = item as unknown as ToolResult;
-				console.log(chalk.green(`\n✓ Tool result:`));
+				console.log(chalk.green("\n✓ Tool result:"));
 
 				const contentLines = result.content.split("\n");
 				const maxLines = 20;
@@ -164,14 +160,14 @@ export class ClaudeOutputParser extends EventEmitter {
 	private formatText(text: string): string {
 		return text
 			.split("\n")
-			.map((line) => "  " + line)
+			.map((line) => `  ${line}`)
 			.join("\n");
 	}
 
 	private formatJson(obj: any): string {
 		return JSON.stringify(obj, null, 2)
 			.split("\n")
-			.map((line) => "  " + line)
+			.map((line) => `  ${line}`)
 			.join("\n");
 	}
 

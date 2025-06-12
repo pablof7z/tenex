@@ -1,7 +1,7 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner, NDKEvent as NDKEventClass } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { toKebabCase } from "../../../../shared/src/projects";
 import { AgentManager } from "../../utils/agents/AgentManager";
@@ -28,8 +28,10 @@ export class EventHandler {
 	async handleEvent(event: NDKEvent): Promise<void> {
 		console.log(chalk.gray("\n📥 Event received:", event.id));
 
-		// Ignore kind 24010 events
-		if (event.kind === EVENT_KINDS.PROJECT_STATUS) {
+		// Ignore kind 24010 (project status), 24111 (typing indicator), and 24112 (typing stop) events
+		if (event.kind === EVENT_KINDS.PROJECT_STATUS || 
+		    event.kind === EVENT_KINDS.TYPING_INDICATOR ||
+		    event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP) {
 			return;
 		}
 
@@ -301,7 +303,7 @@ export class EventHandler {
 					const fullAgentName = `${agentKey} @ ${projectTitle}`;
 					const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fullAgentName)}`;
 
-					const profileEvent = new NDKEvent(this.ndk, {
+					const profileEvent = new NDKEventClass(this.ndk, {
 						kind: 0,
 						pubkey: signer.pubkey,
 						content: JSON.stringify({
@@ -320,6 +322,34 @@ export class EventHandler {
 					console.log(
 						chalk.green(`✅ Published kind:0 profile for ${agentName} agent`),
 					);
+
+					// Publish kind 3199 agent request to the project owner
+					try {
+						const agentRequestEvent = new NDKEventClass(this.ndk, {
+							kind: 3199,
+							pubkey: signer.pubkey,
+							content: `Agent '${fullAgentName}' requesting to join project '${projectTitle}'`,
+							tags: [
+								["p", this.projectInfo.projectPubkey], // Project owner
+								["a", `31933:${this.projectInfo.projectPubkey}:${this.projectInfo.projectId}`], // Project reference
+								["agent-name", agentKey],
+								["agent-event", agentEventId], // Reference to the NDKAgent event
+							],
+						});
+
+						await agentRequestEvent.sign(signer);
+						await agentRequestEvent.publish();
+
+						console.log(
+							chalk.green(`✅ Published kind:3199 agent request for ${agentName}`),
+						);
+					} catch (err: any) {
+						console.log(
+							chalk.yellow(
+								`⚠️  Failed to publish agent request for ${agentName}: ${err.message}`,
+							),
+						);
+					}
 				} catch (err: any) {
 					console.log(
 						chalk.yellow(

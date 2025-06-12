@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { mkdirSync } from "fs";
-import { dirname } from "path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import chalk from "chalk";
 import { AIService } from "./service.js";
 import { type AIConfig, AIConfigSchema, type AIModelConfig } from "./types.js";

@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import {
 	type AgentSignerResult,

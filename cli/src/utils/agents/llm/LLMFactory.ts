@@ -4,17 +4,19 @@ import { AnthropicProvider } from "./AnthropicProvider";
 import { AnthropicProviderWithCache } from "./AnthropicProviderWithCache";
 import { OpenAIProvider } from "./OpenAIProvider";
 import { OpenRouterProvider } from "./OpenRouterProvider";
+import { ToolEnabledProvider } from "./ToolEnabledProvider";
 import type { LLMProvider } from "./types";
+import type { ToolRegistry } from "../tools/ToolRegistry";
 
 export class LLMFactory {
 	private static providers: Map<string, LLMProvider> = new Map();
 
-	static createProvider(config: LLMConfig): LLMProvider {
-		// Include caching preference in cache key to distinguish providers
-		const cacheKey = `${config.provider}-${config.model}-${config.baseURL || "default"}-${config.enableCaching !== false}`;
+	static createProvider(config: LLMConfig, toolRegistry?: ToolRegistry): LLMProvider {
+		// Include caching preference and tools in cache key to distinguish providers
+		const cacheKey = `${config.provider}-${config.model}-${config.baseURL || "default"}-${config.enableCaching !== false}-${toolRegistry ? 'tools' : 'notools'}`;
 
 		// Return cached provider if exists
-		const cached = this.providers.get(cacheKey);
+		const cached = LLMFactory.providers.get(cacheKey);
 		if (cached) {
 			return cached;
 		}
@@ -54,13 +56,23 @@ export class LLMFactory {
 				provider = new OpenAIProvider();
 		}
 
+		// Wrap with tool support if toolRegistry is provided
+		if (toolRegistry) {
+			const providerType = config.provider.toLowerCase() === 'anthropic' || config.provider.toLowerCase() === 'claude' 
+				? 'anthropic' 
+				: config.provider.toLowerCase() === 'openrouter' 
+					? 'openrouter'
+					: 'openai';
+			provider = new ToolEnabledProvider(provider, toolRegistry, providerType);
+		}
+
 		// Cache the provider
-		this.providers.set(cacheKey, provider);
+		LLMFactory.providers.set(cacheKey, provider);
 
 		return provider;
 	}
 
 	static clearCache(): void {
-		this.providers.clear();
+		LLMFactory.providers.clear();
 	}
 }

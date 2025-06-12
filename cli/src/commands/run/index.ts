@@ -85,8 +85,8 @@ async function runProjectListener(projectInfo: any, ndk: any) {
 			),
 		);
 
-		logSuccess(`\nProject listener is running!`);
-		logInfo(`Publishing status updates every 60 seconds`);
+		logSuccess("\nProject listener is running!");
+		logInfo("Publishing status updates every 60 seconds");
 		logInfo("Press Ctrl+C to stop\n");
 
 		// Handle shutdown

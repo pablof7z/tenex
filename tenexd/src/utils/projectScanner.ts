@@ -1,5 +1,5 @@
-import path from "path";
-import { readFile, readdir, stat } from "fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
+import path from "node:path";
 import { logError, logInfo } from "../../../shared/src/logger.js";
 
 export interface ProjectSummary {
@@ -62,10 +62,7 @@ export async function scanProjects(
 				}
 
 				projects.push(summary);
-			} catch (err) {
-				// Not a valid TENEX project (no .tenex directory)
-				continue;
-			}
+			} catch (err) {}
 		}
 
 		logInfo(`Found ${projects.length} TENEX projects in ${projectsPath}`);

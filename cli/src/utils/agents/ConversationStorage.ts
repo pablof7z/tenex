@@ -1,5 +1,5 @@
-import path from "path";
-import fs from "fs/promises";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { logger } from "../logger";
 import type { ConversationContext } from "./types";
 
@@ -61,16 +61,32 @@ export class ConversationStorage {
 		// Handle both raw ConversationContext and Conversation instances
 		const data =
 			"toJSON" in conversation ? conversation.toJSON() : conversation;
-		const fileName = `${data.id}.json`;
+		// Use agent-specific file names to avoid conflicts
+		const fileName = `${data.agentName}-${data.id}.json`;
 		const filePath = path.join(this.storageDir, fileName);
 
 		await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-		logger.info(`Saved conversation ${data.id} to ${filePath}`);
+		logger.info(`Saved conversation ${data.id} for agent ${data.agentName} to ${filePath}`);
 	}
 
 	async loadConversation(
 		conversationId: string,
+		agentName?: string,
 	): Promise<ConversationContext | null> {
+		// If agentName is provided, look for agent-specific file first
+		if (agentName) {
+			const agentFileName = `${agentName}-${conversationId}.json`;
+			const agentFilePath = path.join(this.storageDir, agentFileName);
+			
+			try {
+				const data = await fs.readFile(agentFilePath, "utf-8");
+				return JSON.parse(data);
+			} catch (error) {
+				// Fall through to legacy file name
+			}
+		}
+		
+		// Legacy support: try loading without agent prefix
 		const fileName = `${conversationId}.json`;
 		const filePath = path.join(this.storageDir, fileName);
 
@@ -85,15 +101,44 @@ export class ConversationStorage {
 	async listConversations(): Promise<string[]> {
 		try {
 			const files = await fs.readdir(this.storageDir);
-			return files
-				.filter((f) => f.endsWith(".json") && f !== "processed-events.json")
-				.map((f) => f.replace(".json", ""));
+			const conversationIds = new Set<string>();
+			
+			for (const file of files) {
+				if (file.endsWith(".json") && file !== "processed-events.json") {
+					// Handle both old format (conversationId.json) and new format (agentName-conversationId.json)
+					const parts = file.replace(".json", "").split("-");
+					if (parts.length > 1) {
+						// New format: skip agent name and join the rest
+						conversationIds.add(parts.slice(1).join("-"));
+					} else {
+						// Old format
+						conversationIds.add(parts[0]);
+					}
+				}
+			}
+			
+			return Array.from(conversationIds);
 		} catch (error) {
 			return [];
 		}
 	}
 
-	async deleteConversation(conversationId: string): Promise<void> {
+	async deleteConversation(conversationId: string, agentName?: string): Promise<void> {
+		// Try to delete agent-specific file first if agentName provided
+		if (agentName) {
+			const agentFileName = `${agentName}-${conversationId}.json`;
+			const agentFilePath = path.join(this.storageDir, agentFileName);
+			
+			try {
+				await fs.unlink(agentFilePath);
+				logger.info(`Deleted conversation ${conversationId} for agent ${agentName}`);
+				return;
+			} catch (error) {
+				// Fall through to try legacy file name
+			}
+		}
+		
+		// Try legacy file name
 		const fileName = `${conversationId}.json`;
 		const filePath = path.join(this.storageDir, fileName);
 
@@ -109,13 +154,29 @@ export class ConversationStorage {
 		maxAgeMs: number = 30 * 24 * 60 * 60 * 1000,
 	): Promise<void> {
 		const now = Date.now();
-		const conversations = await this.listConversations();
-
-		for (const id of conversations) {
-			const conversation = await this.loadConversation(id);
-			if (conversation && now - conversation.lastActivityAt > maxAgeMs) {
-				await this.deleteConversation(id);
+		
+		try {
+			const files = await fs.readdir(this.storageDir);
+			
+			for (const file of files) {
+				if (file.endsWith(".json") && file !== "processed-events.json") {
+					const filePath = path.join(this.storageDir, file);
+					
+					try {
+						const data = await fs.readFile(filePath, "utf-8");
+						const conversation: ConversationContext = JSON.parse(data);
+						
+						if (conversation.lastActivityAt && now - conversation.lastActivityAt > maxAgeMs) {
+							await fs.unlink(filePath);
+							logger.info(`Deleted old conversation file: ${file}`);
+						}
+					} catch (error) {
+						logger.warn(`Failed to process conversation file ${file}: ${error}`);
+					}
+				}
 			}
+		} catch (error) {
+			logger.warn(`Failed to cleanup old conversations: ${error}`);
 		}
 	}
 }

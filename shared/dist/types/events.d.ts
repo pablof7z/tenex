@@ -10,6 +10,8 @@ export declare const EVENT_KINDS: {
     readonly TASK: 1934;
     readonly AGENT_CONFIG: 4199;
     readonly PROJECT_STATUS: 24010;
+    readonly TYPING_INDICATOR: 24111;
+    readonly TYPING_INDICATOR_STOP: 24112;
     readonly TEMPLATE: 30717;
     readonly PROJECT: 31933;
 };
@@ -29,4 +31,10 @@ export interface ChatEventTags {
     a?: string;
     agent?: string;
     parentTaskId?: string;
+}
+/**
+ * Typing indicator event content
+ */
+export interface TypingIndicatorContent {
+    message: string;
 }

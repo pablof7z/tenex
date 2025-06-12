@@ -1,5 +1,5 @@
-import { spawn } from "child_process";
-import path from "path";
+import { spawn } from "node:child_process";
+import path from "node:path";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { nip19 } from "nostr-tools";
@@ -56,7 +56,7 @@ export async function handleChatEvent(
 		}
 
 		eventToProcess = rootEvent;
-		logSuccess(`Fetched root event for kind:1111 reply`);
+		logSuccess("Fetched root event for kind:1111 reply");
 	}
 
 	// Find the project a-tag

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
-import fs from "fs/promises";
 import { getNDK } from "./src/nostr/ndkClient";
 import { Agent } from "./src/utils/agents/Agent";
 import { AgentManager } from "./src/utils/agents/AgentManager";

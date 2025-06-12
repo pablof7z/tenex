@@ -31,28 +31,19 @@ export async function initNDK(config: ConfigData) {
 		log(`INFO: Connecting to ${r.url}`),
 	);
 
-	// Only set a global signer if we have a single private key (legacy mode)
-	if (config.privateKey) {
-		try {
-			const signer: NDKSigner = new NDKPrivateKeySigner(config.privateKey);
-			ndk.signer = signer;
-			const user = await signer.user();
-			log(
-				`INFO: NDK Signer initialized for user: ${user.npub} (legacy single-signer mode)`,
-			);
-		} catch (error) {
-			log(
-				`ERROR: Failed to initialize NDK signer: ${error instanceof Error ? error.message : String(error)}`,
-			);
-			throw new Error(
-				"Failed to initialize NDK signer. Ensure NSEC environment variable is set and is a valid nsec.",
-			);
-		}
-	} else if (config.agents) {
+	// Set up signer from private key
+	try {
+		const signer: NDKSigner = new NDKPrivateKeySigner(config.privateKey);
+		ndk.signer = signer;
+		const user = await signer.user();
+		log(`INFO: NDK Signer initialized for user: ${user.npub}`);
+	} catch (error) {
 		log(
-			`INFO: NDK initialized in agent mode with ${Object.keys(config.agents).length} agents available`,
+			`ERROR: Failed to initialize NDK signer: ${error instanceof Error ? error.message : String(error)}`,
 		);
-		// No global signer - each publish operation will use agent-specific signers
+		throw new Error(
+			"Failed to initialize NDK signer. Ensure NSEC environment variable is set and is a valid nsec.",
+		);
 	}
 
 	// Connect to relays

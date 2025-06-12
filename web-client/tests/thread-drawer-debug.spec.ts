@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 test.describe("Thread Drawer Debug", () => {

@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 test.describe("Thread Drawer Functionality", () => {
@@ -190,7 +190,7 @@ test.describe("Thread Drawer Functionality", () => {
 
 			// Verify the thread content is visible
 			await expect(
-				page.locator('[role="sheet"]').locator("text=" + threadContent),
+				page.locator('[role="sheet"]').locator(`text=${threadContent}`),
 			).toBeVisible();
 
 			// Verify it says "Thread discussion" under the title
@@ -211,7 +211,7 @@ test.describe("Thread Drawer Functionality", () => {
 
 			// Verify reply appears
 			await expect(
-				page.locator('[role="sheet"]').locator("text=" + replyText),
+				page.locator('[role="sheet"]').locator(`text=${replyText}`),
 			).toBeVisible({ timeout: 5000 });
 
 			// Close the drawer by clicking the back button

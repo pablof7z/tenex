@@ -2,9 +2,9 @@
  * TENEX CLI: File Utility
  * Provides read/write helpers with ~ expansion and error handling.
  */
-import * as fs from "fs";
-import * as os from "os";
-import * as pathModule from "path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as pathModule from "node:path";
 
 /**
  * Expands ~ to the user's home directory.

@@ -18,12 +18,11 @@
 		{
 			"name": "default",
 			"provider": "openrouter",
-			"apiKey": "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 npub194dvgwd6ukrg72z79a0dpwlcjedv46ja2zgy50sgx8przp8wsr9q7mrhdr",
+			"apiKey": "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",
 			"model": "deepseek/deepseek-chat-v3-0324",
 			"baseURL": "https://openrouter.ai/api/v1",
 			"maxTokens": 100000,
-			"temperature": 0.7,
-			"systemPrompt": "You are a helpful AI assistant."
+			"temperature": 0.7
 		}
 	],
 	"defaultAIConfiguration": "default"

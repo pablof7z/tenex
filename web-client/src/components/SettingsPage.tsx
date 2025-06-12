@@ -4,7 +4,7 @@ import {
 	useNDKSessionLogout,
 	useNDKSessionSigners,
 } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, Check, Copy, Eye, EyeOff, LogOut, Bot } from "lucide-react";
+import { ArrowLeft, Bot, Check, Copy, Eye, EyeOff, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -179,7 +179,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 					{/* Agent Management */}
 					<div className="bg-card rounded-lg p-6 space-y-4 md:col-span-2">
 						<h2 className="text-lg font-semibold">Agent Management</h2>
-						
+
 						<div className="grid gap-4 sm:grid-cols-2">
 							<Button
 								variant="outline"

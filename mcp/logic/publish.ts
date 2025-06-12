@@ -1,26 +1,13 @@
-import { promises as fs } from "fs";
-import os from "os";
-import path from "path";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Reverting to original path with .js
-import { NDKEvent, NDKPrivateKeySigner, type NDKTag } from "@nostr-dev-kit/ndk";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { NDKEvent, type NDKTag } from "@nostr-dev-kit/ndk";
 import { z } from "zod";
-import { getConfig } from "../config.js";
-import { getOrCreateAgentNsec } from "../lib/agents.js";
 import { createCommit, hasUncommittedChanges } from "../lib/git.js";
-import { log } from "../lib/utils/log.js"; // Use the correct log import
-import { ndk } from "../ndk.js"; // ndk instance should have the signer configured
+import { log } from "../lib/utils/log.js";
+import { ndk } from "../ndk.js";
 
-/**
- * Publish a note to Nostr using the globally configured signer.
- * @param content The content of the note to publish
- * @returns Publication results
- */
-export async function publishNote(
-	content: string,
-	taskId?: string,
-): Promise<{ content: Array<{ type: "text"; text: string }> }> {
-	return await publishToNostr(content, taskId);
-}
 
 /**
  * Publish a task status update to Nostr with confidence level.
@@ -28,7 +15,6 @@ export async function publishNote(
  * @param taskId The task ID to tag
  * @param confidenceLevel Confidence level (1-10) where 10 is very confident and 1 is very confused
  * @param title Short title for the status update (used as git commit message)
- * @param agentName The name of the agent/mode publishing the update (e.g. "code", "planner", "debugger")
  * @returns Publication results
  */
 export async function publishTaskStatusUpdate(
@@ -36,7 +22,6 @@ export async function publishTaskStatusUpdate(
 	taskId: string,
 	confidenceLevel: number,
 	title: string,
-	agentName: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
 	let commitHash: string | undefined = undefined;
 
@@ -69,7 +54,6 @@ export async function publishTaskStatusUpdate(
 		taskId,
 		confidenceLevel,
 		commitHash,
-		agentName,
 	);
 }
 
@@ -79,7 +63,6 @@ export async function publishTaskStatusUpdate(
  * @param taskId The task ID to tag (optional)
  * @param confidenceLevel Confidence level (optional)
  * @param commitHash Git commit hash (optional)
- * @param agentName The name of the agent/mode publishing (optional)
  * @returns Publication results
  */
 async function publishToNostr(
@@ -87,7 +70,6 @@ async function publishToNostr(
 	taskId?: string,
 	confidenceLevel?: number,
 	commitHash?: string,
-	agentName?: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
 	log(
 		`INFO: Publishing note with content type: ${typeof content}, value: "${content ? content.substring(0, 50) : "undefined"}..."`,
@@ -97,7 +79,6 @@ async function publishToNostr(
 		? path.join(os.homedir(), ".tenex", "tasks", taskId)
 		: undefined;
 	let previousEventId: string | undefined = undefined;
-	let effectiveAgentName: string | undefined = undefined;
 
 	try {
 		// Ensure NDK is ready and connected
@@ -106,66 +87,9 @@ async function publishToNostr(
 		}
 		await ndk.connect(); // Ensure connection before publishing
 
-		// Get the appropriate signer
-		const config = await getConfig();
-		let signer: NDKSigner | undefined;
-		effectiveAgentName = agentName;
-
-		// Determine which signer to use
-		if (config.agentsConfigPath && config.agents) {
-			// We're in agent mode
-			if (!effectiveAgentName) {
-				// No agent name provided, use 'default' or 'claude-code' if available
-				if (config.agents.default) {
-					effectiveAgentName = "default";
-				} else if (config.agents["claude-code"]) {
-					effectiveAgentName = "claude-code";
-				} else {
-					// Use the first available agent
-					const agentNames = Object.keys(config.agents);
-					if (agentNames.length > 0) {
-						effectiveAgentName = agentNames[0];
-					}
-				}
-			}
-
-			if (effectiveAgentName) {
-				// Extract project name from metadata.json in the same directory
-				const projectMetadataPath = path.join(
-					path.dirname(config.agentsConfigPath),
-					"metadata.json",
-				);
-				let projectName = "Unknown Project";
-				try {
-					const metadataContent = await fs.readFile(
-						projectMetadataPath,
-						"utf-8",
-					);
-					const metadata = JSON.parse(metadataContent);
-					projectName = metadata.title || metadata.name || projectName;
-				} catch (err) {
-					log(`WARN: Failed to read project metadata: ${err}`);
-				}
-
-				// Get or create agent nsec
-				const agentNsec = await getOrCreateAgentNsec(
-					config.agentsConfigPath,
-					effectiveAgentName,
-					projectName,
-				);
-				signer = new NDKPrivateKeySigner(agentNsec);
-				log(`INFO: Using agent '${effectiveAgentName}' for publishing`);
-			}
-		} else if (ndk.signer) {
-			// Legacy mode - use global signer
-			signer = ndk.signer;
-			log(`INFO: Using legacy single-signer mode for publishing`);
-		}
-
-		if (!signer) {
-			throw new Error(
-				"No signer available for publishing. Ensure agent configuration or NSEC is provided.",
-			);
+		// Ensure signer is available
+		if (!ndk.signer) {
+			throw new Error("No signer available for publishing. Ensure NSEC is provided.");
 		}
 
 		// If taskId is provided, try to read the previous event ID
@@ -228,17 +152,12 @@ async function publishToNostr(
 			tags,
 		});
 
-		// Sign the event using the appropriate signer
-		await event.sign(signer);
+		// Sign the event
+		await event.sign();
 
 		// Publish the already signed event
 		const publishedRelays = await event.publish();
-		const agentInfo = effectiveAgentName
-			? ` using agent '${effectiveAgentName}'`
-			: "";
-		log(
-			`INFO: Published event ${event.id} to ${publishedRelays.size} relays${agentInfo}.`,
-		);
+		log(`INFO: Published event ${event.id} to ${publishedRelays.size} relays.`);
 
 		if (publishedRelays.size === 0) {
 			log("WARN: Event was not published to any relays.");
@@ -263,14 +182,11 @@ async function publishToNostr(
 		}
 
 		const commitInfo = commitHash ? ` (with git commit: ${commitHash})` : "";
-		const agentInfoSuffix = effectiveAgentName
-			? ` as agent '${effectiveAgentName}'`
-			: "";
 		return {
 			content: [
 				{
 					type: "text",
-					text: `Published to Nostr with ID: ${event.encode()} to ${publishedRelays.size} relays${commitInfo}${agentInfoSuffix}.`,
+					text: `Published to Nostr with ID: ${event.encode()} to ${publishedRelays.size} relays${commitInfo}.`,
 				},
 			],
 		};
@@ -285,29 +201,60 @@ async function publishToNostr(
 	}
 }
 
+
 /**
- * Register the publish command with the MCP server
- * @param server The MCP server instance
+ * Publish a typing indicator to Nostr.
+ * @param threadId The thread/conversation ID to e-tag
+ * @param isTyping Whether the agent is typing (true) or stopped typing (false)
+ * @returns Publication results
  */
-export function addPublishCommand(server: McpServer) {
-	// Add publish tool - simplified schema
-	server.tool(
-		"publish",
-		"Publish a note to Nostr not related to a task",
-		{
-			// Only content is needed
-			content: z
-				.string()
-				.describe("The content of the note you want to publish"),
-		},
-		// Handler uses only content
-		async (
-			{ content, taskId }: { content: string; taskId?: string },
-			_extra: unknown, // Use unknown since it's unused
-		) => {
-			return await publishNote(content, taskId);
-		},
-	);
+export async function publishTypingIndicator(
+	threadId: string,
+	isTyping: boolean,
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+	try {
+		// Ensure NDK is ready and connected
+		if (!ndk) {
+			throw new Error("NDK instance is not initialized.");
+		}
+		await ndk.connect();
+
+		// Ensure signer is available
+		if (!ndk.signer) {
+			throw new Error("No signer available for publishing typing indicator. Ensure NSEC is provided.");
+		}
+
+		// Prepare tags
+		const tags: NDKTag[] = [["e", threadId]];
+
+		// Create the event
+		const event = new NDKEvent(ndk, {
+			kind: isTyping ? 24111 : 24112,
+			content: isTyping ? "Typing..." : "",
+			tags,
+		});
+
+		// Sign and publish
+		await event.sign();
+		const publishedRelays = await event.publish();
+
+		log(
+			`INFO: Published ${isTyping ? "typing" : "stop typing"} indicator to ${publishedRelays.size} relays.`,
+		);
+
+		return {
+			content: [
+				{
+					type: "text",
+					text: `Published ${isTyping ? "typing" : "stop typing"} indicator to ${publishedRelays.size} relays.`,
+				},
+			],
+		};
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		log(`ERROR: Failed to publish typing indicator: ${errorMessage}`);
+		throw new Error(`Failed to publish typing indicator: ${errorMessage}`);
+	}
 }
 
 /**
@@ -336,11 +283,6 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
 				.describe(
 					"Short title for the status update (used as git commit message)",
 				),
-			agent_name: z
-				.string()
-				.describe(
-					"The name of the agent/mode publishing the update (e.g. 'code', 'planner', 'debugger')",
-				),
 		},
 		async (
 			{
@@ -348,13 +290,11 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
 				taskId,
 				confidence_level,
 				title,
-				agent_name,
 			}: {
 				update: string;
 				taskId: string;
 				confidence_level: number;
 				title: string;
-				agent_name: string;
 			},
 			_extra: unknown,
 		) => {
@@ -363,8 +303,36 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
 				taskId,
 				confidence_level,
 				title,
-				agent_name,
 			);
+		},
+	);
+}
+
+/**
+ * Register the publish_typing_indicator command with the MCP server
+ * @param server The MCP server instance
+ */
+export function addPublishTypingIndicatorCommand(server: McpServer) {
+	server.tool(
+		"publish_typing_indicator",
+		"Publish a typing indicator to Nostr",
+		{
+			threadId: z.string().describe("The thread/conversation ID to e-tag"),
+			isTyping: z
+				.boolean()
+				.describe("Whether the agent is typing (true) or stopped typing (false)"),
+		},
+		async (
+			{
+				threadId,
+				isTyping,
+			}: {
+				threadId: string;
+				isTyping: boolean;
+			},
+			_extra: unknown,
+		) => {
+			return await publishTypingIndicator(threadId, isTyping);
 		},
 	);
 }

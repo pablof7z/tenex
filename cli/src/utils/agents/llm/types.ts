@@ -1,6 +1,10 @@
+import type { ToolCall } from '../tools/types';
+
 export interface LLMMessage {
-	role: "system" | "user" | "assistant";
+	role: "system" | "user" | "assistant" | "tool";
 	content: string;
+	tool_calls?: ToolCall[];
+	tool_call_id?: string;
 }
 
 export interface LLMResponse {
@@ -16,6 +20,18 @@ export interface LLMResponse {
 	};
 }
 
+export interface LLMContext {
+	agentName?: string;
+	projectName?: string;
+	conversationId?: string;
+	typingIndicator?: (message: string) => Promise<void>;
+}
+
 export interface LLMProvider {
-	generateResponse(messages: LLMMessage[], config: any): Promise<LLMResponse>;
+	generateResponse(
+		messages: LLMMessage[], 
+		config: any,
+		context?: LLMContext,
+		tools?: any[] // Provider-specific tool format
+	): Promise<LLMResponse>;
 }

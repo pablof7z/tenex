@@ -1,11 +1,13 @@
 import { logger } from "../../logger";
 import type { LLMConfig } from "../types";
-import type { LLMMessage, LLMProvider, LLMResponse } from "./types";
+import type { LLMMessage, LLMProvider, LLMResponse, LLMContext } from "./types";
 
 export class OpenRouterProvider implements LLMProvider {
 	async generateResponse(
 		messages: LLMMessage[],
 		config: LLMConfig,
+		context?: LLMContext,
+		tools?: any[],
 	): Promise<LLMResponse> {
 		if (!config.apiKey) {
 			throw new Error("OpenRouter API key is required");
@@ -85,20 +87,35 @@ export class OpenRouterProvider implements LLMProvider {
 			usage: { include: true },
 		};
 
+		// Add tools if provided
+		if (tools && tools.length > 0) {
+			requestBody.tools = tools;
+			// Some models may need tool_choice to be set
+			requestBody.tool_choice = "auto";
+		}
+
 		// Add any additional OpenRouter-specific parameters
 		if (config.additionalParams) {
 			Object.assign(requestBody, config.additionalParams);
 		}
 
-		// Debug logging
+		// Debug logging - log complete request
 		logger.debug("\n=== OPENROUTER API REQUEST (WITH CACHING) ===");
+		if (context) {
+			logger.debug(`Agent: ${context.agentName || "unknown"}`);
+			logger.debug(`Project: ${context.projectName || "unknown"}`);
+			logger.debug(`Conversation: ${context.conversationId || "unknown"}`);
+		}
 		logger.debug(`URL: ${baseURL}/chat/completions`);
-		logger.debug(`Model: ${requestBody.model}`);
-		logger.debug(`Temperature: ${requestBody.temperature}`);
-		logger.debug(`Max Tokens: ${requestBody.max_tokens}`);
+		logger.debug("Headers:", {
+			"Content-Type": "application/json",
+			"Authorization": `Bearer ${config.apiKey}`,
+			"HTTP-Referer": config.appName || "tenex-cli",
+			"X-Title": config.appTitle || "TENEX CLI Agent",
+		});
 		logger.debug(`Caching enabled: ${config.enableCaching !== false}`);
 
-		// Count cached messages
+		// Count cached messages for summary
 		let cachedMessages = 0;
 		formattedMessages.forEach((msg) => {
 			if (Array.isArray(msg.content)) {
@@ -108,6 +125,9 @@ export class OpenRouterProvider implements LLMProvider {
 			}
 		});
 		logger.debug(`Messages with cache control: ${cachedMessages}`);
+		
+		logger.debug("Complete Request Body:");
+		logger.debug(JSON.stringify(requestBody, null, 2));
 		logger.debug("=== END API REQUEST ===\n");
 
 		try {
@@ -147,8 +167,24 @@ export class OpenRouterProvider implements LLMProvider {
 			// Extract the response
 			const choice = data.choices[0];
 
+			// Check if the model returned tool calls in the native format
+			let content = choice.message.content || "";
+			const toolCalls = choice.message.tool_calls;
+
+			// If we have native tool calls, format them in our expected format
+			if (toolCalls && toolCalls.length > 0) {
+				logger.debug("Model returned native tool calls:", toolCalls);
+				// Convert native tool calls to our format in the content
+				for (const toolCall of toolCalls) {
+					content += `\n<tool_use>\n${JSON.stringify({
+						tool: toolCall.function.name,
+						arguments: JSON.parse(toolCall.function.arguments)
+					}, null, 2)}\n</tool_use>`;
+				}
+			}
+
 			return {
-				content: choice.message.content,
+				content: content,
 				model: data.model,
 				usage: data.usage
 					? {

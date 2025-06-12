@@ -243,7 +243,7 @@ export function InstructionsPage({ onBack }: InstructionsPageProps) {
 								const version = instruction.version || "1.0.0";
 								const description =
 									instruction.description ||
-									instruction.content?.slice(0, 100) + "...";
+									`${instruction.content?.slice(0, 100)}...`;
 
 								return (
 									<div

@@ -1,8 +1,8 @@
-import { exec } from "child_process";
-import path from "path";
-import { promisify } from "util";
+import { exec } from "node:child_process";
+import { access, mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
 import { NDKPrivateKeySigner, } from "@nostr-dev-kit/ndk";
-import { access, mkdir, writeFile } from "fs/promises";
 import { nip19 } from "nostr-tools";
 import { fetchAndSaveAgentDefinitions as fetchAgentDefs, publishAgentProfile, } from "./agents/index.js";
 import { logError, logInfo, logSuccess, logWarning } from "./logger.js";
@@ -75,13 +75,13 @@ async function fetchProjectFromNostr(naddr) {
     const projectDescription = projectEvent.content || `Project ${projectName}`;
     const repoTag = projectEvent.tags.find((tag) => tag[0] === "repo");
     let repoUrl;
-    if (repoTag && repoTag[1]) {
+    if (repoTag?.[1]) {
         repoUrl = repoTag[1];
         logSuccess(`Found project repository: ${repoUrl}`);
     }
     const templateTag = projectEvent.tags.find((tag) => tag[0] === "template");
     let template;
-    if (templateTag && templateTag[1]) {
+    if (templateTag?.[1]) {
         template = templateTag[1];
         logInfo(`Found template reference: ${template}`);
         if (!repoUrl) {
@@ -118,12 +118,12 @@ async function fetchTemplateRepoUrl(template) {
         if (templateEvent) {
             const uriTag = templateEvent.tags.find((tag) => tag[0] === "uri");
             const templateRepoTag = templateEvent.tags.find((tag) => tag[0] === "repo");
-            if (uriTag && uriTag[1]) {
+            if (uriTag?.[1]) {
                 const repoUrl = uriTag[1].replace("git+", "");
                 logSuccess(`Found template repository: ${repoUrl}`);
                 return repoUrl;
             }
-            else if (templateRepoTag && templateRepoTag[1]) {
+            if (templateRepoTag?.[1]) {
                 const repoUrl = templateRepoTag[1];
                 logSuccess(`Found template repository: ${repoUrl}`);
                 return repoUrl;
@@ -245,7 +245,7 @@ async function createTenexDirectory(tenexDir) {
     try {
         await access(tenexDir);
         tenexExists = true;
-        logInfo(`.tenex directory found from template. Updating configuration...`);
+        logInfo(".tenex directory found from template. Updating configuration...");
     }
     catch (err) {
         if (err.code !== "ENOENT")

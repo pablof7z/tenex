@@ -7,11 +7,20 @@ import {
 	useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom, useAtomValue } from "jotai";
-import { Bot, Circle, FileText, Moon, Plus, Settings, Sun, Users } from "lucide-react";
+import {
+	Bot,
+	Circle,
+	FileText,
+	Moon,
+	Plus,
+	Settings,
+	Sun,
+	Users,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ProjectAgent } from "../hooks/useProjectAgents";
 import { usePendingAgentRequests } from "../hooks/useAppSubscriptions";
+import type { ProjectAgent } from "../hooks/useProjectAgents";
 import {
 	onlineBackendsAtom,
 	onlineProjectsAtom,
@@ -378,7 +387,7 @@ export function DesktopLayout({ onEditProject }: DesktopLayoutProps) {
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end" className="w-48">
-							<DropdownMenuItem 
+							<DropdownMenuItem
 								onClick={() => navigate("/agent-requests")}
 								className="cursor-pointer"
 							>
@@ -559,7 +568,7 @@ export function DesktopLayout({ onEditProject }: DesktopLayoutProps) {
 				open={!!selectedThread}
 				onOpenChange={(open) => !open && setSelectedThread(null)}
 			>
-				<SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+				<SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col overflow-hidden">
 					{selectedThread &&
 						(() => {
 							// Find the project for this thread
@@ -600,7 +609,7 @@ export function DesktopLayout({ onEditProject }: DesktopLayoutProps) {
 									threadTitle={threadTitle}
 									initialAgentPubkeys={initialAgentPubkeys}
 									onBack={() => setSelectedThread(null)}
-									className="h-full"
+									className="h-full overflow-hidden"
 								/>
 							);
 						})()}

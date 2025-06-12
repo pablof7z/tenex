@@ -16,8 +16,8 @@ import {
 	useNavigate,
 	useParams,
 } from "react-router-dom";
-import { AgentsPage } from "./components/AgentsPage";
 import { AgentRequestsPage } from "./components/AgentRequestsPage";
+import { AgentsPage } from "./components/AgentsPage";
 import { ChatInterface } from "./components/ChatInterface";
 import { ChatsPage } from "./components/ChatsPage";
 import { DesktopLayout } from "./components/DesktopLayout";
@@ -29,10 +29,10 @@ import { BottomTabBar } from "./components/navigation/BottomTabBar";
 import { ProjectDetail } from "./components/projects/ProjectDetail";
 import { ProjectList } from "./components/projects/ProjectList";
 import { TaskUpdates } from "./components/tasks/TaskUpdates";
+import { useAppSubscriptions } from "./hooks/useAppSubscriptions";
 import { useBackendStatus } from "./hooks/useBackendStatus";
 import { useProject } from "./hooks/useProject";
 import { useProjectStatus } from "./hooks/useProjectStatus";
-import { useAppSubscriptions } from "./hooks/useAppSubscriptions";
 import { themeAtom } from "./lib/store";
 
 // Layout component that wraps authenticated routes
@@ -48,7 +48,7 @@ function AuthLayout() {
 
 	// Initialize project status tracking for online badges
 	useProjectStatus();
-	
+
 	// Initialize app-level subscriptions
 	useAppSubscriptions();
 
@@ -195,7 +195,8 @@ function InstructionsPageWrapper() {
 }
 
 function AgentRequestsPageWrapper() {
-	return <AgentRequestsPage />;
+	const navigate = useNavigate();
+	return <AgentRequestsPage onBack={() => navigate(-1)} />;
 }
 
 function ChatsPageWrapper() {
@@ -329,7 +330,10 @@ function AppContent() {
 					<Route path="/settings" element={<SettingsPageWrapper />} />
 					<Route path="/agents" element={<AgentsPageWrapper />} />
 					<Route path="/instructions" element={<InstructionsPageWrapper />} />
-					<Route path="/agent-requests" element={<AgentRequestsPageWrapper />} />
+					<Route
+						path="/agent-requests"
+						element={<AgentRequestsPageWrapper />}
+					/>
 					<Route
 						path="/project/:projectId"
 						element={<ProjectDetailWrapper />}

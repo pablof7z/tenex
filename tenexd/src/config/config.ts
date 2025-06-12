@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { mkdirSync } from "fs";
-import { hostname } from "os";
-import { dirname } from "path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { hostname } from "node:os";
+import { dirname } from "node:path";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { AIConfiguration } from "../ai/types.js";
 
@@ -33,12 +33,12 @@ export class ConfigManager {
 			this.config = JSON.parse(data);
 
 			// Validate required fields
-			if (!this.config!.projectsPath) {
+			if (!this.config?.projectsPath) {
 				throw new Error(
 					"Configuration error: 'projectsPath' is required but not set in config.json",
 				);
 			}
-			if (!this.config!.taskCommand) {
+			if (!this.config?.taskCommand) {
 				throw new Error(
 					"Configuration error: 'taskCommand' is required but not set in config.json",
 				);
@@ -221,7 +221,7 @@ export class ConfigManager {
 				this.config.defaultAIConfiguration = oldConfig.defaultConfiguration;
 
 				// Remove old aiConfigPath field
-				delete (this.config as any).aiConfigPath;
+				(this.config as any).aiConfigPath = undefined;
 
 				// Save the migrated config
 				this.save();

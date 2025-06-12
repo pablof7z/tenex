@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import NDK, { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { AgentManager } from "./src/utils/agents/AgentManager";
 

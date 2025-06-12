@@ -3,6 +3,7 @@ import { useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
 import { SearchIconButton } from "../common/SearchBar";
 import { CreateProjectDialog } from "../dialogs/CreateProjectDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -15,7 +16,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
 
 interface ProjectListProps {
 	onProjectSelect: (project: NDKProject) => void;
@@ -282,7 +282,10 @@ export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
 									)}
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
-								<DropdownMenuItem onClick={onSettings} className="cursor-pointer">
+								<DropdownMenuItem
+									onClick={onSettings}
+									className="cursor-pointer"
+								>
 									<Settings className="mr-2 h-4 w-4" />
 									Settings
 								</DropdownMenuItem>
@@ -426,7 +429,7 @@ export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
 										<p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
 											{mostRecentStatus ||
 												project.tagValue("summary") ||
-												project.content?.slice(0, 60) + "..." ||
+												`${project.content?.slice(0, 60)}...` ||
 												"No recent activity"}
 										</p>
 									</div>
