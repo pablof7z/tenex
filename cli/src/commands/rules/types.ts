@@ -1,19 +1,19 @@
 export interface RuleData {
-    eventId: string;
-    title: string;
-    description: string;
-    content: string;
+	eventId: string;
+	title: string;
+	description: string;
+	content: string;
 }
 
 export interface RuleOptions {
-    agent?: string;
-    projectPath?: string;
+	agent?: string;
+	projectPath?: string;
 }
 
 export interface AddRuleOptions extends RuleOptions {}
 
 export interface GetRuleOptions extends RuleOptions {
-    limit?: number;
+	limit?: number;
 }
 
 export interface ListRuleOptions extends RuleOptions {}

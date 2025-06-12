@@ -1,11 +1,24 @@
-import { NDKEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { NDKAgent } from "../lib/ndk-setup";
-import { ArrowLeft, Edit, Plus, Save, X, Tag, Bot, Sparkles, FileText, User, Copy, Check } from "lucide-react";
+import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import {
+	ArrowLeft,
+	Bot,
+	Check,
+	Copy,
+	Edit,
+	FileText,
+	Plus,
+	Save,
+	Sparkles,
+	Tag,
+	User,
+	X,
+} from "lucide-react";
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { Input } from "./ui/input";
+import { NDKAgent } from "../lib/ndk-setup";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 interface AgentsPageProps {
 	onBack: () => void;
@@ -17,7 +30,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isCreatingNew, setIsCreatingNew] = useState(false);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
-	
+
 	// Form state
 	const [formData, setFormData] = useState({
 		title: "",
@@ -25,14 +38,14 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 		role: "",
 		instructions: "",
 		tags: [] as string[],
-		newTag: ""
+		newTag: "",
 	});
 
 	// Fetch agent events (kind 4199)
 	const { events: agents } = useSubscribe<NDKAgent>(
 		[{ kinds: NDKAgent.kinds, limit: 100 }],
 		{ wrap: true },
-		[]
+		[],
 	);
 
 	const handleAgentSelect = (agent: NDKAgent) => {
@@ -51,7 +64,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 			role: "",
 			instructions: "",
 			tags: [],
-			newTag: ""
+			newTag: "",
 		});
 	};
 
@@ -61,14 +74,22 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 			const agentTags = selectedAgent.tags
 				.filter((tag) => tag[0] === "t")
 				.map((tag) => tag[1]);
-			
+
 			setFormData({
-				title: selectedAgent.tagValue("title") || selectedAgent.tagValue("name") || selectedAgent.tagValue("d") || "",
-				description: selectedAgent.tagValue("description") || extractDescriptionFromContent(selectedAgent.content || ""),
-				role: selectedAgent.tagValue("role") || extractRoleFromContent(selectedAgent.content || ""),
+				title:
+					selectedAgent.tagValue("title") ||
+					selectedAgent.tagValue("name") ||
+					selectedAgent.tagValue("d") ||
+					"",
+				description:
+					selectedAgent.tagValue("description") ||
+					extractDescriptionFromContent(selectedAgent.content || ""),
+				role:
+					selectedAgent.tagValue("role") ||
+					extractRoleFromContent(selectedAgent.content || ""),
 				instructions: selectedAgent.content || "",
 				tags: agentTags,
-				newTag: ""
+				newTag: "",
 			});
 			setIsEditing(true);
 		}
@@ -96,7 +117,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 				["description", formData.description],
 				["role", formData.role],
 				["ver", "1"],
-				...formData.tags.map(tag => ["t", tag] as [string, string])
+				...formData.tags.map((tag) => ["t", tag] as [string, string]),
 			];
 		} else if (selectedAgent) {
 			// Editing existing agent
@@ -105,12 +126,16 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 
 			// Build new tags
 			newAgent.tags = [
-				["d", selectedAgent.tagValue("d") || formData.title.toLowerCase().replace(/\s+/g, "-")],
+				[
+					"d",
+					selectedAgent.tagValue("d") ||
+						formData.title.toLowerCase().replace(/\s+/g, "-"),
+				],
 				["title", formData.title],
 				["description", formData.description],
 				["role", formData.role],
 				["ver", newVersion],
-				...formData.tags.map(tag => ["t", tag] as [string, string])
+				...formData.tags.map((tag) => ["t", tag] as [string, string]),
 			];
 		}
 
@@ -126,7 +151,9 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 
 	const extractDescriptionFromContent = (content: string): string => {
 		const lines = content.split("\n");
-		const descIndex = lines.findIndex(line => line.toLowerCase().includes("description"));
+		const descIndex = lines.findIndex((line) =>
+			line.toLowerCase().includes("description"),
+		);
 		if (descIndex >= 0 && descIndex < lines.length - 1) {
 			return lines[descIndex + 1].trim();
 		}
@@ -135,7 +162,9 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 
 	const extractRoleFromContent = (content: string): string => {
 		const lines = content.split("\n");
-		const roleIndex = lines.findIndex(line => line.toLowerCase().includes("role"));
+		const roleIndex = lines.findIndex((line) =>
+			line.toLowerCase().includes("role"),
+		);
 		if (roleIndex >= 0 && roleIndex < lines.length - 1) {
 			return lines[roleIndex + 1].trim();
 		}
@@ -151,18 +180,18 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 			role: "",
 			instructions: "",
 			tags: [],
-			newTag: ""
+			newTag: "",
 		});
 	};
 
 	const handleCopyAgentId = async (agent: NDKAgent) => {
 		if (!agent) return;
-		
+
 		try {
 			const encoded = agent.encode();
 			await navigator.clipboard.writeText(encoded);
 			setCopiedId(agent.id);
-			
+
 			// Reset copied state after 2 seconds
 			setTimeout(() => {
 				setCopiedId(null);
@@ -173,32 +202,34 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 	};
 
 	const handleAddTag = () => {
-		if (formData.newTag.trim() && !formData.tags.includes(formData.newTag.trim())) {
-			setFormData(prev => ({
+		if (
+			formData.newTag.trim() &&
+			!formData.tags.includes(formData.newTag.trim())
+		) {
+			setFormData((prev) => ({
 				...prev,
 				tags: [...prev.tags, prev.newTag.trim()],
-				newTag: ""
+				newTag: "",
 			}));
 		}
 	};
 
 	const handleRemoveTag = (tagToRemove: string) => {
-		setFormData(prev => ({
+		setFormData((prev) => ({
 			...prev,
-			tags: prev.tags.filter(tag => tag !== tagToRemove)
+			tags: prev.tags.filter((tag) => tag !== tagToRemove),
 		}));
 	};
 
 	const handleFormChange = (field: keyof typeof formData, value: string) => {
-		setFormData(prev => ({ ...prev, [field]: value }));
+		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
 
-
 	return (
-		<div className="h-screen bg-slate-50 flex">
+		<div className="h-screen bg-background flex">
 			{/* Left Sidebar - Agents List */}
-			<div className="w-80 bg-white border-r border-slate-200 flex flex-col">
-				<div className="p-4 border-b border-slate-200">
+			<div className="w-80 bg-card border-r border-border flex flex-col">
+				<div className="p-4 border-b border-border">
 					<div className="flex items-center gap-3 mb-2">
 						<Button
 							variant="ghost"
@@ -208,13 +239,13 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 						>
 							<ArrowLeft className="w-4 h-4" />
 						</Button>
-						<h1 className="text-lg font-semibold">Agents</h1>
+						<h1 className="text-lg font-semibold text-foreground">Agents</h1>
 					</div>
 				</div>
 
-				<div className="flex-1 overflow-y-auto bg-slate-50/50">
+				<div className="flex-1 overflow-y-auto bg-muted/30">
 					{agents.length === 0 ? (
-						<div className="p-4 text-center text-slate-500">
+						<div className="p-4 text-center text-muted-foreground">
 							No agents found
 						</div>
 					) : (
@@ -234,19 +265,21 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 										key={agent.id}
 										className={`p-3 rounded-lg cursor-pointer transition-colors ${
 											selectedAgent?.id === agent.id
-												? "bg-blue-50 border border-blue-200"
-												: "hover:bg-slate-50"
+												? "bg-primary/10 border border-primary/20"
+												: "hover:bg-accent"
 										}`}
 										onClick={() => handleAgentSelect(agent)}
 									>
 										<div className="flex items-center justify-between mb-1">
-											<h3 className="font-medium text-sm">{name}</h3>
-											<span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+											<h3 className="font-medium text-sm text-foreground">
+												{name}
+											</h3>
+											<span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
 												v{version}
 											</span>
 										</div>
 										{description && (
-											<p className="text-xs text-slate-600 line-clamp-2">
+											<p className="text-xs text-muted-foreground line-clamp-2">
 												{description}
 											</p>
 										)}
@@ -258,7 +291,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 				</div>
 
 				{/* Add new agent button */}
-				<div className="p-2 border-t border-slate-200">
+				<div className="p-2 border-t border-border">
 					<Button
 						variant="outline"
 						size="sm"
@@ -276,13 +309,13 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 				{!selectedAgent && !isCreatingNew ? (
 					<div className="flex-1 flex items-center justify-center">
 						<div className="text-center">
-							<div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+							<div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 mx-auto">
 								<span className="text-2xl">🤖</span>
 							</div>
-							<h3 className="text-lg font-semibold text-slate-900 mb-2">
+							<h3 className="text-lg font-semibold text-foreground mb-2">
 								Select an Agent
 							</h3>
-							<p className="text-slate-600">
+							<p className="text-muted-foreground">
 								Choose an agent from the sidebar to view its definition, or
 								create a new one
 							</p>
@@ -291,17 +324,17 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 				) : (
 					<>
 						{/* Header */}
-						<div className="bg-white border-b border-slate-200 px-6 py-4">
+						<div className="bg-card border-b border-border px-6 py-4">
 							<div className="flex items-center justify-between">
 								<div>
-									<h1 className="text-xl font-semibold text-slate-900">
+									<h1 className="text-xl font-semibold text-foreground">
 										{isCreatingNew
 											? "Create New Agent"
 											: selectedAgent?.tagValue("name") ||
 												selectedAgent?.tagValue("d") ||
 												"Unnamed Agent"}
 									</h1>
-									<p className="text-sm text-slate-500">
+									<p className="text-sm text-muted-foreground">
 										{isCreatingNew
 											? "Version 1"
 											: `Version ${selectedAgent?.tagValue("ver") || "1"}`}
@@ -318,8 +351,8 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 												<X className="w-4 h-4 mr-2" />
 												Cancel
 											</Button>
-											<Button 
-												size="sm" 
+											<Button
+												size="sm"
 												onClick={handleSave}
 												disabled={!formData.title.trim()}
 											>
@@ -356,50 +389,56 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 						</div>
 
 						{/* Content */}
-						<div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100/50">
+						<div className="flex-1 overflow-y-auto bg-background">
 							{isEditing ? (
 								<div className="max-w-3xl mx-auto p-8">
-									<div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+									<div className="bg-card rounded-xl shadow-sm border border-border p-8">
 										<div className="space-y-8">
 											{/* Title */}
 											<div className="space-y-2">
-												<label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+												<label className="flex items-center gap-2 text-sm font-semibold text-foreground">
 													<Bot className="w-4 h-4 text-blue-600" />
 													Agent Name
 													<span className="text-red-500">*</span>
 												</label>
 												<Input
 													value={formData.title}
-													onChange={(e) => handleFormChange("title", e.target.value)}
+													onChange={(e) =>
+														handleFormChange("title", e.target.value)
+													}
 													placeholder="e.g., Code Reviewer Agent"
-													className="w-full h-12 px-4 text-base border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+													className="w-full h-12 px-4 text-base"
 												/>
 											</div>
 
 											{/* Description */}
 											<div className="space-y-2">
-												<label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+												<label className="flex items-center gap-2 text-sm font-semibold text-foreground">
 													<FileText className="w-4 h-4 text-purple-600" />
 													Description
 												</label>
 												<Textarea
 													value={formData.description}
-													onChange={(e) => handleFormChange("description", e.target.value)}
+													onChange={(e) =>
+														handleFormChange("description", e.target.value)
+													}
 													placeholder="Brief description of what this agent does..."
 													rows={3}
-													className="w-full p-4 text-base border-slate-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
+													className="w-full p-4 text-base resize-none"
 												/>
 											</div>
 
 											{/* Role */}
 											<div className="space-y-2">
-												<label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+												<label className="flex items-center gap-2 text-sm font-semibold text-foreground">
 													<User className="w-4 h-4 text-green-600" />
 													Role/Specialty
 												</label>
 												<Input
 													value={formData.role}
-													onChange={(e) => handleFormChange("role", e.target.value)}
+													onChange={(e) =>
+														handleFormChange("role", e.target.value)
+													}
 													placeholder="e.g., Senior Software Engineer, UX Designer, DevOps Specialist"
 													className="w-full h-12 px-4 text-base border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
 												/>
@@ -407,14 +446,16 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 
 											{/* Tags */}
 											<div className="space-y-2">
-												<label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+												<label className="flex items-center gap-2 text-sm font-semibold text-foreground">
 													<Tag className="w-4 h-4 text-orange-600" />
 													Tags
 												</label>
 												<div className="flex gap-2">
 													<Input
 														value={formData.newTag}
-														onChange={(e) => handleFormChange("newTag", e.target.value)}
+														onChange={(e) =>
+															handleFormChange("newTag", e.target.value)
+														}
 														onKeyDown={(e) => {
 															if (e.key === "Enter") {
 																e.preventDefault();
@@ -422,7 +463,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 															}
 														}}
 														placeholder="Add a tag and press Enter..."
-														className="flex-1 h-12 px-4 text-base border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+														className="flex-1 h-12 px-4 text-base"
 													/>
 													<Button
 														type="button"
@@ -430,7 +471,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 														size="lg"
 														onClick={handleAddTag}
 														disabled={!formData.newTag.trim()}
-														className="h-12 px-4 border-slate-200 hover:bg-orange-50 hover:border-orange-300 transition-all"
+														className="h-12 px-4"
 													>
 														<Plus className="w-5 h-5" />
 													</Button>
@@ -441,7 +482,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 															<Badge
 																key={tag}
 																variant="secondary"
-																className="px-3 py-1.5 text-sm bg-orange-100 text-orange-800 hover:bg-orange-200 cursor-pointer transition-all flex items-center gap-1.5"
+																className="px-3 py-1.5 text-sm bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 cursor-pointer transition-all flex items-center gap-1.5"
 																onClick={() => handleRemoveTag(tag)}
 															>
 																{tag}
@@ -454,16 +495,18 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 
 											{/* Instructions */}
 											<div className="space-y-2">
-												<label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+												<label className="flex items-center gap-2 text-sm font-semibold text-foreground">
 													<Sparkles className="w-4 h-4 text-indigo-600" />
 													Detailed Instructions
 												</label>
 												<Textarea
 													value={formData.instructions}
-													onChange={(e) => handleFormChange("instructions", e.target.value)}
+													onChange={(e) =>
+														handleFormChange("instructions", e.target.value)
+													}
 													placeholder="Detailed instructions for how the agent should operate, its personality, specific guidelines, etc..."
 													rows={12}
-													className="w-full p-4 font-mono text-sm border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+													className="w-full p-4 font-mono text-sm resize-none"
 												/>
 											</div>
 										</div>
@@ -473,26 +516,29 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 								<div className="max-w-3xl mx-auto p-8">
 									{isCreatingNew ? (
 										<div className="text-center py-12">
-											<Bot className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-											<p className="text-slate-500 text-lg">
+											<Bot className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+											<p className="text-muted-foreground text-lg">
 												Fill out the form above to create your agent
 											</p>
 										</div>
 									) : selectedAgent ? (
-										<div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+										<div className="bg-card rounded-xl shadow-sm border border-border p-8">
 											<div className="space-y-6">
 												{/* Agent Header */}
-												<div className="border-b border-slate-200 pb-6">
+												<div className="border-b border-border pb-6">
 													<div className="flex items-start gap-4">
 														<div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
 															<Bot className="w-7 h-7 text-white" />
 														</div>
 														<div className="flex-1">
-															<h3 className="text-2xl font-bold text-slate-900 mb-2">
-																{selectedAgent.tagValue("title") || selectedAgent.tagValue("name") || selectedAgent.tagValue("d") || "Unnamed Agent"}
+															<h3 className="text-2xl font-bold text-foreground mb-2">
+																{selectedAgent.tagValue("title") ||
+																	selectedAgent.tagValue("name") ||
+																	selectedAgent.tagValue("d") ||
+																	"Unnamed Agent"}
 															</h3>
 															{selectedAgent.tagValue("description") && (
-																<p className="text-slate-600 text-base leading-relaxed">
+																<p className="text-muted-foreground text-base leading-relaxed">
 																	{selectedAgent.tagValue("description")}
 																</p>
 															)}
@@ -505,22 +551,23 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 													{selectedAgent.tagValue("role") && (
 														<div className="flex items-center gap-2">
 															<User className="w-5 h-5 text-green-600" />
-															<span className="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium">
+															<span className="inline-block bg-green-500/10 text-green-600 dark:text-green-400 px-4 py-2 rounded-full text-sm font-medium">
 																{selectedAgent.tagValue("role")}
 															</span>
 														</div>
 													)}
-													{selectedAgent.tags.filter(tag => tag[0] === "t").length > 0 && (
+													{selectedAgent.tags.filter((tag) => tag[0] === "t")
+														.length > 0 && (
 														<div className="flex items-start gap-2">
 															<Tag className="w-5 h-5 text-orange-600 mt-0.5" />
 															<div className="flex flex-wrap gap-2">
 																{selectedAgent.tags
-																	.filter(tag => tag[0] === "t")
+																	.filter((tag) => tag[0] === "t")
 																	.map((tag, index) => (
-																		<Badge 
-																			key={index} 
-																			variant="outline" 
-																			className="text-sm px-3 py-1 bg-orange-50 border-orange-200 text-orange-700"
+																		<Badge
+																			key={index}
+																			variant="outline"
+																			className="text-sm px-3 py-1 bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
 																		>
 																			{tag[1]}
 																		</Badge>
@@ -535,12 +582,12 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 													<div className="mt-8">
 														<div className="flex items-center gap-2 mb-4">
 															<Sparkles className="w-5 h-5 text-indigo-600" />
-															<h4 className="text-lg font-semibold text-slate-900">
+															<h4 className="text-lg font-semibold text-foreground">
 																Instructions
 															</h4>
 														</div>
-														<div className="bg-gradient-to-br from-slate-50 to-slate-100/50 p-6 rounded-xl border border-slate-200">
-															<pre className="whitespace-pre-wrap text-sm text-slate-700 font-mono leading-relaxed">
+														<div className="bg-muted/50 p-6 rounded-xl border border-border">
+															<pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
 																{selectedAgent.content}
 															</pre>
 														</div>
@@ -550,8 +597,8 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 										</div>
 									) : (
 										<div className="text-center py-12">
-											<Bot className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-											<p className="text-slate-500 text-lg">
+											<Bot className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+											<p className="text-muted-foreground text-lg">
 												No agent selected
 											</p>
 										</div>

@@ -1,39 +1,75 @@
 import {
+	NDKEvent,
 	NDKProject,
 	NDKTask,
+	useNDK,
 	useNDKCurrentUser,
 	useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { useAtom } from "jotai";
-import { Bot, Eye, Plus, Search, Settings } from "lucide-react";
+import { useAtom, useAtomValue } from "jotai";
+import { Bot, Circle, FileText, Moon, Plus, Settings, Sun, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { selectedTaskAtom } from "../lib/store";
-import { CreateProjectDialog } from "./CreateProjectDialog";
-import { ProjectColumn } from "./ProjectColumn";
-import { TaskDetailPanel } from "./TaskDetailPanel";
+import { useNavigate } from "react-router-dom";
+import type { ProjectAgent } from "../hooks/useProjectAgents";
+import { usePendingAgentRequests } from "../hooks/useAppSubscriptions";
+import {
+	onlineBackendsAtom,
+	onlineProjectsAtom,
+	selectedProjectAtom,
+	selectedTaskAtom,
+	selectedThreadAtom,
+	themeAtom,
+} from "../lib/store";
+import { ChatInterface } from "./ChatInterface";
+import { SearchIconButton } from "./common/SearchBar";
+import { CreateProjectDialog } from "./dialogs/CreateProjectDialog";
+import { CreateTaskDialog } from "./dialogs/CreateTaskDialog";
+import { GlobalSearchDialog } from "./dialogs/GlobalSearchDialog";
+import { TaskCreationOptionsDialog } from "./dialogs/TaskCreationOptionsDialog";
+import { ThreadDialog } from "./dialogs/ThreadDialog";
+import { VoiceTaskDialog } from "./dialogs/VoiceTaskDialog";
+import { ProjectColumn } from "./projects/ProjectColumn";
+import { ProjectDetail } from "./projects/ProjectDetail";
+import { TaskUpdates } from "./tasks/TaskUpdates";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Sheet, SheetContent } from "./ui/sheet";
 
 interface DesktopLayoutProps {
-	onSettings: () => void;
-	onAgents: () => void;
-	onProjectSelect?: (project: NDKProject) => void;
 	onEditProject?: (project: NDKProject) => void;
 }
 
-export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditProject }: DesktopLayoutProps) {
+export function DesktopLayout({ onEditProject }: DesktopLayoutProps) {
+	const navigate = useNavigate();
+	const { ndk } = useNDK();
 	const currentUser = useNDKCurrentUser();
 	const [showCreateDialog, setShowCreateDialog] = useState(false);
-	const [activatedProjects, setActivatedProjects] = useState<Set<string>>(
-		new Set(),
+	const [showSearchDialog, setShowSearchDialog] = useState(false);
+	const [showTaskOptionsDialog, setShowTaskOptionsDialog] = useState(false);
+	const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
+	const [showVoiceTaskDialog, setShowVoiceTaskDialog] = useState(false);
+	const [showThreadDialog, setShowThreadDialog] = useState(false);
+	const [selectedProjectForTask, setSelectedProjectForTask] =
+		useState<NDKProject | null>(null);
+	const [manuallyToggled, setManuallyToggled] = useState<Map<string, boolean>>(
+		new Map(),
 	);
-	const [selectedTask] = useAtom(selectedTaskAtom);
+	const [selectedTask, setSelectedTask] = useAtom(selectedTaskAtom);
+	const [selectedThread, setSelectedThread] = useAtom(selectedThreadAtom);
+	const [selectedProject, setSelectedProject] = useAtom(selectedProjectAtom);
+	const onlineProjects = useAtomValue(onlineProjectsAtom);
+	const onlineBackends = useAtomValue(onlineBackendsAtom);
+	const [theme, setTheme] = useAtom(themeAtom);
+	const pendingAgentRequests = usePendingAgentRequests();
 
 	const { events: projects } = useSubscribe<NDKProject>(
 		currentUser
@@ -77,6 +113,21 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 		[tasks.length],
 	);
 
+	const { events: threads } = useSubscribe(
+		projects.length > 0
+			? [
+					{
+						kinds: [11], // Kind 11 for threads
+						"#a": projects.map(
+							(p) => `${NDKProject.kind}:${p.pubkey}:${p.tagValue("d")}`,
+						),
+					},
+				]
+			: false,
+		{},
+		[projects.length],
+	);
+
 	// Filter projects with activity in last 72 hours OR created in last 24 hours OR manually activated
 	const filteredProjects = useMemo(() => {
 		const now = Date.now() / 1000;
@@ -86,18 +137,19 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 		return projects.filter((project) => {
 			const projectId = project.tagId();
 
-			// Always show if manually activated
-			if (activatedProjects.has(projectId)) {
-				return true;
+			// Check if manually toggled
+			if (manuallyToggled.has(projectId)) {
+				// User has explicitly set visibility
+				return manuallyToggled.get(projectId);
 			}
 
-			// Check if project was created in last 24 hours
+			// Default behavior: show if created in last 24 hours
 			const projectCreatedAt = project.created_at || 0;
 			if (projectCreatedAt > twentyFourHoursAgo) {
 				return true;
 			}
 
-			// Check if project has activity in last 72 hours
+			// Default behavior: show if has activity in last 72 hours
 			const projectTasks = tasks.filter((task) => {
 				const projectReference = task.tags?.find((tag) => tag[0] === "a")?.[1];
 				if (projectReference) {
@@ -123,7 +175,7 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 
 			return hasRecentActivity;
 		});
-	}, [projects, tasks, statusUpdates, activatedProjects]);
+	}, [projects, tasks, statusUpdates, manuallyToggled]);
 
 	const getProjectAvatar = (project: NDKProject) => {
 		if (project.picture) {
@@ -160,64 +212,84 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 	};
 
 	const toggleProjectActivation = (projectId: string) => {
-		setActivatedProjects((prev) => {
-			const newSet = new Set(prev);
-			if (newSet.has(projectId)) {
-				newSet.delete(projectId);
-			} else {
-				newSet.add(projectId);
-			}
-			return newSet;
+		setManuallyToggled((prev) => {
+			const newMap = new Map(prev);
+			const isCurrentlyShown = filteredProjects.some(
+				(p) => p.tagId() === projectId,
+			);
+
+			// Toggle the visibility
+			newMap.set(projectId, !isCurrentlyShown);
+
+			return newMap;
 		});
+	};
+
+	const handleTaskCreate = (project: NDKProject) => {
+		setSelectedProjectForTask(project);
+		setShowTaskOptionsDialog(true);
+	};
+
+	const handleThreadClick = (thread: NDKEvent) => {
+		// Set the selected thread to open in drawer
+		setSelectedThread(thread);
+	};
+
+	const handleTaskOptionSelect = (option: "task" | "voice" | "thread") => {
+		setShowTaskOptionsDialog(false);
+
+		switch (option) {
+			case "task":
+				setShowCreateTaskDialog(true);
+				break;
+			case "voice":
+				setShowVoiceTaskDialog(true);
+				break;
+			case "thread":
+				setShowThreadDialog(true);
+				break;
+		}
 	};
 
 	if (!currentUser) {
 		return (
-			<div className="h-screen bg-slate-50 flex items-center justify-center">
+			<div className="h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
-					<p className="text-slate-600">No user logged in</p>
+					<p className="text-muted-foreground">No user logged in</p>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="h-screen bg-slate-50 flex">
+		<div className="h-screen bg-background flex">
 			{/* Left Sidebar */}
-			<div className="w-20 bg-white border-r border-slate-200 flex flex-col">
+			<div className="w-16 bg-card border-r border-border flex flex-col">
 				{/* Header */}
-				<div className="p-4 border-b border-slate-200">
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								variant="ghost"
-								className="w-8 h-8 p-0 bg-blue-600 rounded-lg hover:bg-blue-700"
-							>
-								<span className="text-white font-bold text-sm">T</span>
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="start" className="w-48">
-							<DropdownMenuItem onClick={onAgents}>
-								<Bot className="w-4 h-4 mr-2" />
-								Agents
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+				<div className="flex items-center justify-center p-2 border-b border-border">
+					<Button
+						variant="ghost"
+						className="w-12 h-12 p-0 bg-primary rounded-lg hover:bg-primary/90"
+						disabled
+					>
+						<span className="text-primary-foreground font-bold text-lg">T</span>
+					</Button>
 				</div>
 
 				{/* Project Icons */}
 				<div className="flex-1 overflow-y-auto py-4">
-					<div className="space-y-2 px-2">
+					<div className="flex flex-col items-center space-y-2">
 						{projects.map((project) => {
 							const title =
 								project.title ||
 								project.tagValue("title") ||
 								"Untitled Project";
 							const projectId = project.tagId();
-							const isActive = activatedProjects.has(projectId);
 							const isInFilteredList = filteredProjects.some(
 								(p) => p.tagId() === projectId,
 							);
+							const projectDir = project.tagValue("d") || "";
+							const isOnline = onlineProjects.has(projectDir);
 
 							return (
 								<div key={projectId} className="relative">
@@ -225,12 +297,11 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 										variant="ghost"
 										size="icon"
 										className={`w-12 h-12 rounded-xl group relative ${
-											isActive
-												? "bg-blue-100 text-blue-600"
-												: "hover:bg-slate-100"
+											isInFilteredList
+												? "bg-primary/10 text-primary"
+												: "hover:bg-accent"
 										}`}
 										onClick={() => toggleProjectActivation(projectId)}
-										title={title}
 									>
 										<Avatar className="w-8 h-8">
 											<AvatarImage
@@ -238,21 +309,38 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 												alt={title}
 											/>
 											<AvatarFallback
-												className={`text-white font-semibold text-xs ${getAvatarColors(title)}`}
+												className={`text-primary-foreground font-semibold text-xs ${getAvatarColors(title)}`}
 											>
 												{getInitials(title)}
 											</AvatarFallback>
 										</Avatar>
-										{isActive && (
-											<Eye className="w-3 h-3 absolute -top-1 -right-1 text-blue-600" />
-										)}
 									</Button>
-									{isInFilteredList && !isActive && (
-										<div
-											className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"
-											title="Has recent activity"
-										/>
-									)}
+									<div
+										className="absolute bottom-1 right-1"
+										title={
+											isOnline
+												? "Project is online in a backend"
+												: "Click to start project"
+										}
+									>
+										{isOnline ? (
+											<Circle className="w-2 h-2 text-green-500 fill-green-500" />
+										) : (
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													if (!ndk) return;
+													const event = new NDKEvent(ndk);
+													event.kind = 24020;
+													event.tag(project);
+													event.publish();
+												}}
+												className="hover:opacity-80 transition-opacity"
+											>
+												<Circle className="w-2 h-2 text-gray-400 fill-gray-400" />
+											</button>
+										)}
+									</div>
 								</div>
 							);
 						})}
@@ -260,122 +348,264 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 				</div>
 
 				{/* Bottom Actions */}
-				<div className="p-2 border-t border-slate-200 space-y-2">
+				<div className="flex flex-col items-center p-2 border-t border-border space-y-2">
 					<Button
 						variant="ghost"
 						size="icon"
-						className="w-12 h-12 rounded-xl hover:bg-slate-100"
+						className="w-12 h-12 rounded-xl hover:bg-accent"
 						onClick={() => setShowCreateDialog(true)}
-						title="Create Project"
 					>
 						<Plus className="w-5 h-5" />
 					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="w-12 h-12 rounded-xl hover:bg-slate-100"
-						title="Search"
-					>
-						<Search className="w-5 h-5" />
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="w-12 h-12 rounded-xl hover:bg-slate-100"
-						onClick={onSettings}
-						title="Settings"
-					>
-						<Settings className="w-5 h-5" />
-					</Button>
+					<SearchIconButton
+						onClick={() => setShowSearchDialog(true)}
+						size="lg"
+						className="rounded-xl hover:bg-accent"
+					/>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="w-12 h-12 rounded-xl hover:bg-accent relative"
+							>
+								<Settings className="w-5 h-5" />
+								{pendingAgentRequests > 0 && (
+									<span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs font-medium flex items-center justify-center">
+										{pendingAgentRequests}
+									</span>
+								)}
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-48">
+							<DropdownMenuItem 
+								onClick={() => navigate("/agent-requests")}
+								className="cursor-pointer"
+							>
+								<Users className="w-4 h-4 mr-2" />
+								<span className="flex-1">Your agents</span>
+								{pendingAgentRequests > 0 && (
+									<Badge variant="destructive" className="ml-2">
+										{pendingAgentRequests}
+									</Badge>
+								)}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onClick={() => navigate("/agents")}>
+								<Bot className="w-4 h-4 mr-2" />
+								Agents
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={() => navigate("/instructions")}>
+								<FileText className="w-4 h-4 mr-2" />
+								Instructions
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+							>
+								{theme === "dark" ? (
+									<Sun className="w-4 h-4 mr-2" />
+								) : (
+									<Moon className="w-4 h-4 mr-2" />
+								)}
+								{theme === "dark" ? "Light Mode" : "Dark Mode"}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onClick={() => navigate("/settings")}>
+								<Settings className="w-4 h-4 mr-2" />
+								Settings
+							</DropdownMenuItem>
+							{onlineBackends.size > 0 && (
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuLabel className="text-xs">
+										Online Backends
+									</DropdownMenuLabel>
+									{Array.from(onlineBackends.values()).map((backend) => (
+										<DropdownMenuItem
+											key={backend.hostname}
+											className="text-xs"
+											disabled
+										>
+											<Circle className="w-2 h-2 text-green-500 fill-green-500 mr-2" />
+											{backend.hostname}
+											<span className="ml-auto text-muted-foreground">
+												{backend.projects.length} projects
+											</span>
+										</DropdownMenuItem>
+									))}
+								</>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 
 			{/* Main Content Area */}
 			<div className="flex-1 flex flex-col">
 				{/* Top Bar */}
-				<div className="bg-white border-b border-slate-200 px-6 py-4">
+				<div className="bg-card border-b border-border px-6 py-4">
 					<div className="flex items-center justify-between">
 						<div>
-							<h1 className="text-xl font-semibold text-slate-900">
+							<h1 className="text-xl font-semibold text-foreground">
 								Projects Dashboard
 							</h1>
-							<p className="text-sm text-slate-500">
-								{filteredProjects.length} active projects • {projects.length} total
+							<p className="text-sm text-muted-foreground">
+								{filteredProjects.length} active projects • {projects.length}{" "}
+								total
 							</p>
 						</div>
 					</div>
 				</div>
 
-				{/* Main Content - Split Screen Layout */}
-				<div className="flex-1 overflow-hidden flex">
-					{/* Projects Area */}
-					<div
-						className={`flex-1 overflow-hidden ${selectedTask ? "min-w-0" : ""}`}
-						style={{ width: selectedTask ? "50%" : "100%" }}
-					>
-						{filteredProjects.length === 0 ? (
-							<div className="h-full flex items-center justify-center">
-								<div className="text-center max-w-md">
-									{projects.length === 0 ? (
-										<>
-											<div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-												<Plus className="w-8 h-8 text-slate-400" />
-											</div>
-											<h3 className="text-lg font-semibold text-slate-900 mb-2">
-												No projects yet
-											</h3>
-											<p className="text-slate-600 mb-4">
-												Create your first project to get started.
-											</p>
-											<Button onClick={() => setShowCreateDialog(true)}>
-												<Plus className="w-4 h-4 mr-2" />
-												Create Project
-											</Button>
-										</>
-									) : (
-										<>
-											<h3 className="text-lg font-semibold text-slate-900 mb-2">
-												No active projects
-											</h3>
-											<p className="text-slate-600 mb-4">
-												Click on project icons in the sidebar to activate them, or create a new project.
-											</p>
-											<Button onClick={() => setShowCreateDialog(true)}>
-												<Plus className="w-4 h-4 mr-2" />
-												Create Project
-											</Button>
-										</>
-									)}
-								</div>
+				{/* Main Content - Projects Area */}
+				<div className="flex-1 overflow-hidden">
+					{filteredProjects.length === 0 ? (
+						<div className="h-full flex items-center justify-center">
+							<div className="text-center max-w-md">
+								{projects.length === 0 ? (
+									<>
+										<div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mb-4 mx-auto">
+											<Plus className="w-8 h-8 text-muted-foreground" />
+										</div>
+										<h3 className="text-lg font-semibold text-foreground mb-2">
+											No projects yet
+										</h3>
+										<p className="text-muted-foreground mb-4">
+											Create your first project to get started.
+										</p>
+										<Button onClick={() => setShowCreateDialog(true)}>
+											<Plus className="w-4 h-4 mr-2" />
+											Create Project
+										</Button>
+									</>
+								) : (
+									<>
+										<h3 className="text-lg font-semibold text-foreground mb-2">
+											No active projects
+										</h3>
+										<p className="text-muted-foreground mb-4">
+											Click on project icons in the sidebar to activate them, or
+											create a new project.
+										</p>
+										<Button onClick={() => setShowCreateDialog(true)}>
+											<Plus className="w-4 h-4 mr-2" />
+											Create Project
+										</Button>
+									</>
+								)}
 							</div>
-						) : (
-							<div className="h-full overflow-x-auto">
-								<div className="flex h-full min-w-max">
-									{filteredProjects.map((project) => (
-										<ProjectColumn
-											key={project.tagId()}
-											project={project}
-											tasks={tasks}
-											statusUpdates={statusUpdates}
-											onProjectClick={onProjectSelect}
-										/>
-									))}
-								</div>
+						</div>
+					) : (
+						<div className="h-full overflow-x-auto">
+							<div className="flex h-full min-w-max">
+								{filteredProjects.map((project) => (
+									<ProjectColumn
+										key={project.tagId()}
+										project={project}
+										tasks={tasks}
+										statusUpdates={statusUpdates}
+										threads={threads}
+										onProjectClick={(project) => setSelectedProject(project)}
+										onTaskCreate={handleTaskCreate}
+										onThreadClick={handleThreadClick}
+									/>
+								))}
 							</div>
-						)}
-					</div>
-
-					{/* Task Detail Panel */}
-					{selectedTask && (
-						<div className="w-1/2 flex-shrink-0">
-							<TaskDetailPanel
-								task={selectedTask}
-								statusUpdates={statusUpdates}
-							/>
 						</div>
 					)}
 				</div>
 			</div>
+
+			{/* Task Detail Drawer */}
+			<Sheet
+				open={!!selectedTask}
+				onOpenChange={(open) => !open && setSelectedTask(null)}
+			>
+				<SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+					{selectedTask &&
+						(() => {
+							// Find the project for this task
+							const project = projects.find((p) => {
+								const projectReference = selectedTask.tags?.find(
+									(tag) => tag[0] === "a",
+								)?.[1];
+								if (projectReference) {
+									const parts = projectReference.split(":");
+									if (parts.length >= 3) {
+										const projectTagId = parts[2];
+										return p.tagValue("d") === projectTagId;
+									}
+								}
+								return false;
+							});
+
+							if (!project) return null;
+
+							return (
+								<TaskUpdates
+									project={project}
+									taskId={selectedTask.id}
+									onBack={() => setSelectedTask(null)}
+									embedded={true}
+								/>
+							);
+						})()}
+				</SheetContent>
+			</Sheet>
+
+			{/* Thread Detail Drawer */}
+			<Sheet
+				open={!!selectedThread}
+				onOpenChange={(open) => !open && setSelectedThread(null)}
+			>
+				<SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+					{selectedThread &&
+						(() => {
+							// Find the project for this thread
+							const project = projects.find((p) => {
+								const projectRef = selectedThread.tags?.find(
+									(tag) => tag[0] === "a",
+								)?.[1];
+								if (projectRef) {
+									const parts = projectRef.split(":");
+									if (parts.length >= 3) {
+										const projectTagId = parts[2];
+										return p.tagValue("d") === projectTagId;
+									}
+								}
+								return false;
+							});
+
+							if (!project) return null;
+
+							const threadTitle =
+								selectedThread.tags?.find(
+									(tag: string[]) => tag[0] === "title",
+								)?.[1] ||
+								selectedThread.content?.split("\n")[0] ||
+								"Thread";
+
+							// Extract selected agents from temporary thread object
+							const tempThread = selectedThread as NDKEvent & {
+								selectedAgents?: ProjectAgent[];
+							};
+							const initialAgentPubkeys =
+								tempThread.selectedAgents?.map((a) => a.pubkey) || [];
+
+							return (
+								<ChatInterface
+									project={project}
+									threadId={selectedThread.id}
+									threadTitle={threadTitle}
+									initialAgentPubkeys={initialAgentPubkeys}
+									onBack={() => setSelectedThread(null)}
+									className="h-full"
+								/>
+							);
+						})()}
+				</SheetContent>
+			</Sheet>
 
 			{/* Create Project Dialog */}
 			<CreateProjectDialog
@@ -385,6 +615,119 @@ export function DesktopLayout({ onSettings, onAgents, onProjectSelect, onEditPro
 					// Projects will automatically refresh via the useSubscribe hook
 				}}
 			/>
+
+			{/* Global Search Dialog */}
+			<GlobalSearchDialog
+				open={showSearchDialog}
+				onOpenChange={setShowSearchDialog}
+			/>
+
+			{/* Task Creation Options Dialog */}
+			<TaskCreationOptionsDialog
+				open={showTaskOptionsDialog}
+				onOpenChange={setShowTaskOptionsDialog}
+				onOptionSelect={handleTaskOptionSelect}
+			/>
+
+			{/* Create Task Dialog */}
+			{selectedProjectForTask && (
+				<CreateTaskDialog
+					open={showCreateTaskDialog}
+					onOpenChange={setShowCreateTaskDialog}
+					project={selectedProjectForTask}
+					onTaskCreated={() => {
+						setShowCreateTaskDialog(false);
+						setSelectedProjectForTask(null);
+					}}
+				/>
+			)}
+
+			{/* Voice Task Dialog */}
+			{selectedProjectForTask && (
+				<VoiceTaskDialog
+					open={showVoiceTaskDialog}
+					onOpenChange={setShowVoiceTaskDialog}
+					project={selectedProjectForTask}
+					onTaskCreated={() => {
+						setShowVoiceTaskDialog(false);
+						setSelectedProjectForTask(null);
+					}}
+				/>
+			)}
+
+			{/* Thread Dialog */}
+			{selectedProjectForTask && (
+				<ThreadDialog
+					open={showThreadDialog}
+					onOpenChange={setShowThreadDialog}
+					project={selectedProjectForTask}
+					onThreadStart={(title, selectedAgents) => {
+						setShowThreadDialog(false);
+
+						// Create a temporary thread object to open the chat interface
+						// No event is published yet - that happens when the first message is sent
+						const tempThread = {
+							id: "new",
+							content: "",
+							tags: [
+								["title", title],
+								["a", selectedProjectForTask.tagId()],
+							],
+							selectedAgents, // Store agents temporarily on the object
+						} as NDKEvent & { selectedAgents?: ProjectAgent[] };
+
+						// Set the thread as selected to open in drawer
+						setSelectedThread(tempThread);
+						setSelectedProjectForTask(null);
+					}}
+				/>
+			)}
+
+			{/* Project Detail Drawer */}
+			<Sheet
+				open={!!selectedProject}
+				onOpenChange={(open) => !open && setSelectedProject(null)}
+			>
+				<SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+					{selectedProject && (
+						<ProjectDetail
+							project={selectedProject}
+							onBack={() => setSelectedProject(null)}
+							onTaskSelect={(_, taskId) => {
+								// Find the task by its ID
+								const task = tasks.find((t) => t.encode() === taskId);
+								if (task) {
+									setSelectedTask(task);
+								}
+							}}
+							onEditProject={onEditProject || (() => {})}
+							onThreadStart={(project, threadTitle, selectedAgents) => {
+								// Create a temporary thread object to open the chat interface
+								// No event is published yet - that happens when the first message is sent
+								const tempThread = {
+									id: "new",
+									content: "",
+									tags: [
+										["title", threadTitle],
+										["a", project.tagId()],
+									],
+									selectedAgents, // Store agents temporarily on the object
+								} as NDKEvent & { selectedAgents?: ProjectAgent[] };
+
+								// Set the thread as selected to open in drawer
+								setSelectedThread(tempThread);
+							}}
+							onThreadSelect={(_, threadId) => {
+								// Find the thread by its ID
+								const thread = threads.find((t) => t.encode() === threadId);
+								if (thread) {
+									setSelectedThread(thread);
+								}
+							}}
+						/>
+					)}
+				</SheetContent>
+			</Sheet>
 		</div>
 	);
 }

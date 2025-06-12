@@ -1,24 +1,21 @@
 // TENEX CLI: Logger Utility
-export function logInfo(message: string) {
-    console.log("[INFO]", message);
-}
+// Re-export from shared logger with CLI-specific configuration
+import {
+	configureLogger,
+	logDebug as sharedLogDebug,
+	logError as sharedLogError,
+	logInfo as sharedLogInfo,
+	logSuccess as sharedLogSuccess,
+	logWarning as sharedLogWarning,
+	logger as sharedLogger,
+} from "@tenex/shared/logger";
 
-export function logError(message: string) {
-    console.error("[ERROR]", message);
-}
+// Configure logger for CLI (use labels instead of emojis)
+configureLogger({ useEmoji: false, useLabels: true });
 
-export function logSuccess(message: string) {
-    console.log("[SUCCESS]", message);
-}
-
-export function logWarning(message: string) {
-    console.warn("[WARNING]", message);
-}
-
-export const logger = {
-    info: logInfo,
-    error: logError,
-    success: logSuccess,
-    warn: logWarning,
-    debug: (message: string) => console.log("[DEBUG]", message),
-};
+// Re-export functions for backward compatibility
+export const logInfo = sharedLogInfo;
+export const logError = sharedLogError;
+export const logSuccess = sharedLogSuccess;
+export const logWarning = sharedLogWarning;
+export const logger = sharedLogger;

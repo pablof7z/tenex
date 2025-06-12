@@ -1,0 +1,103 @@
+{
+	"id": "e0870fbd506f355718aadd2824009bcc44800eb2e52157cd539bb4be6a31dfa1",
+	"agentName": "default",
+	"messages": [
+		{
+			"role": "system",
+			"content": "You are default.",
+			"timestamp": 1749686398004
+		},
+		{
+			"role": "user",
+			"content": "Hey @code and @planner, can you help me with this?",
+			"event": {
+				"created_at": 1749686398,
+				"content": "Hey @code and @planner, can you help me with this?",
+				"tags": [
+					[
+						"p",
+						"a31623e5e400449acee9f42fcc6da3ec5aee9b84c4ec675663b770fc26525e76",
+						"wss://relay.example.com",
+						"code"
+					],
+					[
+						"p",
+						"c452992eb03676f427e2a6b2db280ab0c23b0eccd527816fd0d000963a968922",
+						"wss://relay.example.com",
+						"planner"
+					]
+				],
+				"kind": 1,
+				"pubkey": "352fafe29623c71e35c5780f271df1ea12d594883e661178a101f91dbcdbfc7d",
+				"id": "e0870fbd506f355718aadd2824009bcc44800eb2e52157cd539bb4be6a31dfa1"
+			},
+			"timestamp": 1749686398004
+		},
+		{
+			"role": "user",
+			"content": "Hey @code and @planner, can you help me with this?",
+			"event": {
+				"created_at": 1749686398,
+				"content": "Hey @code and @planner, can you help me with this?",
+				"tags": [
+					[
+						"p",
+						"a31623e5e400449acee9f42fcc6da3ec5aee9b84c4ec675663b770fc26525e76",
+						"wss://relay.example.com",
+						"code"
+					],
+					[
+						"p",
+						"c452992eb03676f427e2a6b2db280ab0c23b0eccd527816fd0d000963a968922",
+						"wss://relay.example.com",
+						"planner"
+					]
+				],
+				"kind": 1,
+				"pubkey": "352fafe29623c71e35c5780f271df1ea12d594883e661178a101f91dbcdbfc7d",
+				"id": "e0870fbd506f355718aadd2824009bcc44800eb2e52157cd539bb4be6a31dfa1"
+			},
+			"timestamp": 1749686398004
+		},
+		{
+			"role": "user",
+			"content": "Hey @code and @planner, can you help me with this?",
+			"event": {
+				"created_at": 1749686398,
+				"content": "Hey @code and @planner, can you help me with this?",
+				"tags": [
+					[
+						"p",
+						"a31623e5e400449acee9f42fcc6da3ec5aee9b84c4ec675663b770fc26525e76",
+						"wss://relay.example.com",
+						"code"
+					],
+					[
+						"p",
+						"c452992eb03676f427e2a6b2db280ab0c23b0eccd527816fd0d000963a968922",
+						"wss://relay.example.com",
+						"planner"
+					]
+				],
+				"kind": 1,
+				"pubkey": "352fafe29623c71e35c5780f271df1ea12d594883e661178a101f91dbcdbfc7d",
+				"id": "e0870fbd506f355718aadd2824009bcc44800eb2e52157cd539bb4be6a31dfa1"
+			},
+			"timestamp": 1749686398005
+		},
+		{
+			"role": "assistant",
+			"content": "This is a test response",
+			"timestamp": 1749686398014
+		}
+	],
+	"createdAt": 1749686398004,
+	"lastActivityAt": 1749686398014,
+	"metadata": {
+		"participants": [
+			"352fafe29623c71e35c5780f271df1ea12d594883e661178a101f91dbcdbfc7d",
+			"a31623e5e400449acee9f42fcc6da3ec5aee9b84c4ec675663b770fc26525e76",
+			"c452992eb03676f427e2a6b2db280ab0c23b0eccd527816fd0d000963a968922"
+		]
+	}
+}

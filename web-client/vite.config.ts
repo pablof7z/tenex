@@ -10,4 +10,12 @@ export default defineConfig({
 			"@": path.resolve(__dirname, "./src"),
 		},
 	},
+	optimizeDeps: {
+		exclude: ["@nostr-dev-kit/ndk-cache-sqlite-wasm"],
+	},
+	server: {
+		fs: {
+			allow: [".."],
+		},
+	},
 });

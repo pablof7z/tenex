@@ -10,18 +10,17 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					"bg-slate-900 text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200",
+					"bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
 				primary:
 					"bg-blue-600 text-white shadow-sm hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
 				destructive:
-					"bg-red-600 text-white shadow-sm hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600",
+					"bg-destructive text-white shadow-sm hover:bg-destructive/90",
 				outline:
-					"border border-slate-300 bg-transparent shadow-sm hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+					"border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
 				secondary:
-					"bg-slate-100 text-slate-900 shadow-sm hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
-				ghost:
-					"hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100",
-				link: "text-blue-600 underline-offset-4 hover:underline dark:text-blue-500",
+					"bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+				ghost: "hover:bg-accent hover:text-accent-foreground",
+				link: "text-primary underline-offset-4 hover:underline",
 				success:
 					"bg-green-600 text-white shadow-sm hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600",
 			},
@@ -37,7 +36,7 @@ const buttonVariants = cva(
 			rounded: {
 				default: "rounded-md",
 				sm: "rounded-sm",
-				lg: "rounded-lg", 
+				lg: "rounded-lg",
 				xl: "rounded-xl",
 				full: "rounded-full",
 				none: "rounded-none",
@@ -73,4 +72,4 @@ function Button({
 	);
 }
 
-export { Button, buttonVariants };
+export { Button };

@@ -22,7 +22,7 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
 
 		try {
 			const event = new NDKEvent(ndk);
-			event.kind = 24010 as any;
+			event.kind = 24010;
 			event.content = "Start task";
 			event.tags = [
 				["p", backendPubkey],
@@ -42,7 +42,7 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
 	if (onlineBackends.size === 0) {
 		return (
 			<div className="text-center py-4">
-				<p className="text-sm text-slate-500">
+				<p className="text-sm text-muted-foreground">
 					No backends are currently online
 				</p>
 			</div>
@@ -51,16 +51,15 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
 
 	return (
 		<div className="space-y-3">
-			<h4 className="text-sm font-medium text-slate-700 mb-2">
+			<h4 className="text-sm font-medium text-foreground mb-2">
 				Available Backends
 			</h4>
 			<div className="space-y-2">
 				{Array.from(onlineBackends.entries()).map(
-					([backendPubkey, backendName]) => (
+					([backendPubkey, backendInfo]) => (
 						<BackendButton
 							key={backendPubkey}
-							backendPubkey={backendPubkey}
-							backendName={backendName}
+							backendName={backendInfo.hostname}
 							onStart={() => handleStartTask(backendPubkey)}
 							isTriggered={triggeredBackends.has(backendPubkey)}
 						/>
@@ -72,14 +71,12 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
 }
 
 interface BackendButtonProps {
-	backendPubkey: string;
 	backendName: string;
 	onStart: () => void;
 	isTriggered: boolean;
 }
 
 function BackendButton({
-	backendPubkey,
 	backendName,
 	onStart,
 	isTriggered,
@@ -92,8 +89,8 @@ function BackendButton({
 			disabled={isTriggered}
 			className={`w-full justify-between ${
 				isTriggered
-					? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300"
-					: "bg-green-50 border-green-200 text-green-800 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+					? "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
+					: "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400 hover:bg-green-500/20"
 			}`}
 		>
 			<span>{backendName}</span>

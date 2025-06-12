@@ -10,7 +10,12 @@ export function useTemplates(options?: {
 	const { search = "", tags = [], author, limit = 50 } = options || {};
 
 	const filters = useMemo(() => {
-		const baseFilter: any = {
+		const baseFilter: {
+			kinds: number[];
+			limit: number;
+			authors?: string[];
+			"#t"?: string[];
+		} = {
 			kinds: [NDKProjectTemplate.kind],
 			limit,
 		};
@@ -32,10 +37,8 @@ export function useTemplates(options?: {
 		[author, tags.join(","), limit],
 	);
 
-
 	const templates = useMemo(() => {
 		if (!templateEvents) return [];
-
 
 		const templatesMap = new Map<string, NDKProjectTemplate>();
 
@@ -45,9 +48,11 @@ export function useTemplates(options?: {
 			if (!d) continue;
 
 			if (search) {
-				const title = template.title || "";
-				const description = template.description || "";
-				const tags = template.tags || [];
+				const title = template.tagValue("title") || "";
+				const description = template.tagValue("description") || "";
+				const tags = template.tags
+					.filter((tag) => tag[0] === "t")
+					.map((tag) => tag[1]);
 
 				if (
 					!title.toLowerCase().includes(search.toLowerCase()) &&

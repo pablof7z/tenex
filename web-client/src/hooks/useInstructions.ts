@@ -1,3 +1,5 @@
+import type { NDKKind } from "@nostr-dev-kit/ndk";
+import type { NDKFilter } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useMemo } from "react";
 import type { NDKLLMRule } from "../types/template";
@@ -13,8 +15,8 @@ export function useInstructions(options?: {
 	const { search = "", tags = [], author, limit = 100 } = options || {};
 
 	const filters = useMemo(() => {
-		const baseFilter: Record<string, unknown> = {
-			kinds: [INSTRUCTION_KIND],
+		const baseFilter: NDKFilter = {
+			kinds: [INSTRUCTION_KIND as NDKKind],
 			limit,
 		};
 

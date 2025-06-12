@@ -1,41 +1,44 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-    addGitCommitDetailsCommand,
-    addGitResetToCommitCommand,
-    addGitValidateCommitCommand,
+	addGitCommitDetailsCommand,
+	addGitResetToCommitCommand,
+	addGitValidateCommitCommand,
 } from "../logic/git-reset.js";
-import { addPublishCommand, addPublishTaskStatusUpdateCommand } from "../logic/publish.js";
+import {
+	addPublishCommand,
+	addPublishTaskStatusUpdateCommand,
+} from "../logic/publish.js";
 import { log } from "../utils/log.js";
 
 // Define the MCP server instance
 const mcpServer = new McpServer({
-    name: "tenex", // Renamed server
-    version: "0.5.0", // Agent management system
-    capabilities: {
-        resources: {},
-    },
+	name: "tenex", // Renamed server
+	version: "0.5.0", // Agent management system
+	capabilities: {
+		resources: {},
+	},
 });
 
 // Function to start the MCP server
 export async function startMcpServer(): Promise<void> {
-    try {
-        // Register publish commands
-        addPublishCommand(mcpServer);
-        addPublishTaskStatusUpdateCommand(mcpServer);
+	try {
+		// Register publish commands
+		addPublishCommand(mcpServer);
+		addPublishTaskStatusUpdateCommand(mcpServer);
 
-        // Register git reset commands
-        addGitResetToCommitCommand(mcpServer);
-        addGitCommitDetailsCommand(mcpServer);
-        addGitValidateCommitCommand(mcpServer);
+		// Register git reset commands
+		addGitResetToCommitCommand(mcpServer);
+		addGitCommitDetailsCommand(mcpServer);
+		addGitValidateCommitCommand(mcpServer);
 
-        // Connect the server to the transport
-        log("Starting tenex MCP server...");
-        const transport = new StdioServerTransport();
-        await mcpServer.connect(transport);
-        log("tenex MCP server connected.");
-    } catch (error) {
-        console.error("Error starting tenex MCP server:", error);
-        process.exit(1);
-    }
+		// Connect the server to the transport
+		log("Starting tenex MCP server...");
+		const transport = new StdioServerTransport();
+		await mcpServer.connect(transport);
+		log("tenex MCP server connected.");
+	} catch (error) {
+		console.error("Error starting tenex MCP server:", error);
+		process.exit(1);
+	}
 }

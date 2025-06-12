@@ -1,13 +1,13 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
 import {
 	NDKProject,
 	NDKTask,
 	useNDKCurrentUser,
 	useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { Clock, MessageCircle, Search } from "lucide-react";
+import { Clock, MessageCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ChatInterface } from "./ChatInterface";
+import { SearchIconButton } from "./common/SearchBar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
@@ -136,25 +136,25 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
 
 	if (!currentUser) {
 		return (
-			<div className="min-h-screen bg-slate-50 flex items-center justify-center">
+			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
-					<p className="text-slate-600">No user logged in</p>
+					<p className="text-muted-foreground">No user logged in</p>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="h-screen bg-slate-50 flex flex-col">
+		<div className="h-screen bg-background flex flex-col">
 			{/* Header */}
-			<div className="bg-white border-b border-slate-200/60 backdrop-blur-xl bg-white/95 sticky top-0 z-40">
+			<div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-40">
 				<div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
 					<div className="flex items-center gap-2 sm:gap-3">
 						<div>
-							<h1 className="text-lg sm:text-xl font-semibold text-slate-900">
+							<h1 className="text-lg sm:text-xl font-semibold text-foreground">
 								Chats
 							</h1>
-							<p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
+							<p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
 								{selectedTaskId
 									? "Task conversation"
 									: `${sortedStatusUpdates.length} updates`}
@@ -172,20 +172,20 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
 								Show All
 							</Button>
 						)}
-						<Button
-							variant="ghost"
-							size="icon"
-							className="w-8 h-8 sm:w-9 sm:h-9 text-slate-700 hover:bg-slate-100"
-						>
-							<Search className="w-4 h-4 sm:w-5 sm:h-5" />
-						</Button>
+						<SearchIconButton
+							onClick={() => {
+								// TODO: Implement chat search
+							}}
+							size="sm"
+							className="sm:w-9 sm:h-9"
+						/>
 					</div>
 				</div>
 			</div>
 
 			{/* Selected Task Info */}
 			{selectedTaskId && (
-				<div className="bg-blue-50/50 border-b border-blue-100 p-3">
+				<div className="bg-primary/5 border-b border-primary/10 p-3">
 					{(() => {
 						const task = getTaskById(selectedTaskId);
 						const project = task ? getProjectForTask(task) : null;
@@ -194,19 +194,22 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
 
 						return (
 							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-									<MessageCircle className="w-4 h-4 text-white" />
+								<div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+									<MessageCircle className="w-4 h-4 text-primary-foreground" />
 								</div>
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-2 mb-1">
-										<span className="font-semibold text-sm text-blue-900 truncate">
+										<span className="font-semibold text-sm text-foreground truncate">
 											{getTaskTitle(task)}
 										</span>
-										<Badge variant="outline" className="text-xs bg-white/50">
+										<Badge
+											variant="outline"
+											className="text-xs bg-background/50"
+										>
 											{project.title || "Project"}
 										</Badge>
 									</div>
-									<div className="text-xs text-blue-600 flex items-center gap-1">
+									<div className="text-xs text-primary flex items-center gap-1">
 										<Clock className="w-3 h-3" />
 										{formatTimestamp(task.created_at!)}
 									</div>
@@ -215,7 +218,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
 									variant="ghost"
 									size="sm"
 									onClick={() => handleTaskClick(selectedTaskId)}
-									className="text-blue-600 hover:bg-blue-100"
+									className="text-primary hover:bg-primary/10"
 								>
 									View Task
 								</Button>
@@ -235,13 +238,13 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
 				{sortedStatusUpdates.length === 0 ? (
 					<div className="h-full flex items-center justify-center">
 						<div className="text-center">
-							<div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-								<MessageCircle className="w-6 h-6 text-slate-400" />
+							<div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+								<MessageCircle className="w-6 h-6 text-muted-foreground" />
 							</div>
-							<h3 className="text-lg font-medium text-slate-900 mb-2">
+							<h3 className="text-lg font-medium text-foreground mb-2">
 								No conversations yet
 							</h3>
-							<p className="text-slate-600 text-sm max-w-sm mx-auto leading-relaxed">
+							<p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
 								Start working on tasks and their status updates will appear
 								here.
 							</p>
@@ -250,7 +253,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
 				) : (
 					<ChatInterface
 						statusUpdates={selectedTaskUpdates}
-						taskId={selectedTaskId}
+						taskId={selectedTaskId || undefined}
 						inputPlaceholder={
 							selectedTaskId
 								? "Reply to this task..."

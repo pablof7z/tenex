@@ -1,313 +1,327 @@
-import NDK, { NDKEvent, NDKPrivateKeySigner, NDKFilter, NDKUser } from "@nostr-dev-kit/ndk";
+import NDK, {
+	type NDKEvent,
+	NDKPrivateKeySigner,
+	NDKUser,
+} from "@nostr-dev-kit/ndk";
+import type { NDKFilter } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import qrcode from "qrcode";
+import { setupAIConfiguration } from "./src/ai/index.js";
 import { ConfigManager } from "./src/config/config.js";
-import { handleTaskEvent } from "./src/projects/handler.js";
-import { handleChatEvent } from "./src/nostr/chatHandler.js";
-
-const COMMAND_KIND = 9801;
-const STATUS_KIND = 24009;
-const TASK_KIND = 24010;
-const CHAT_KIND = 11;
-const CHAT_REPLY_KIND = 1111;
+import {
+	handleAgentEvent,
+	handleProjectEvent,
+} from "./src/projects/eventHandler.js";
+import { ProcessManager } from "./src/utils/processManager.js";
+import { scanProjects } from "./src/utils/projectScanner.js";
 
 async function generateQRCode(text: string): Promise<void> {
-    try {
-        const qr = await qrcode.toString(text, { type: "terminal", small: true });
-        console.log(qr);
-    } catch (err) {
-        console.error(chalk.red("Error generating QR code:"), err);
-    }
+	try {
+		const qr = await qrcode.toString(text, { type: "terminal", small: true });
+		console.log(qr);
+	} catch (err) {
+		console.error(chalk.red("Error generating QR code:"), err);
+	}
 }
 
 async function promptForPubkey(): Promise<string | null> {
-    console.log(chalk.yellow("\nEnter a pubkey to whitelist (npub or hex format):"));
-    console.log(chalk.gray("Press Enter to skip and accept commands from anyone\n"));
-    
-    process.stdout.write(chalk.cyan("> "));
-    
-    for await (const line of console) {
-        const input = line.trim();
-        
-        if (input === "") {
-            return null;
-        }
-        
-        try {
-            let pubkey: string;
-            
-            if (input.startsWith("npub")) {
-                const user = new NDKUser({ npub: input });
-                pubkey = user.pubkey;
-            } else if (/^[0-9a-fA-F]{64}$/.test(input)) {
-                pubkey = input.toLowerCase();
-            } else {
-                throw new Error("Invalid format. Please enter npub or 64-character hex pubkey");
-            }
-            
-            return pubkey;
-        } catch (err) {
-            console.error(chalk.red(`\n❌ ${err instanceof Error ? err.message : "Invalid input"}`));
-            console.log(chalk.yellow("\nPlease try again:"));
-            process.stdout.write(chalk.cyan("> "));
-        }
-    }
-    
-    return null;
-}
+	console.log(
+		chalk.yellow("\nEnter a pubkey to whitelist (npub or hex format):"),
+	);
+	console.log(
+		chalk.gray("Press Enter to skip and accept commands from anyone\n"),
+	);
 
-async function publishStatusEvent(ndk: NDK, whitelistedPubkeys: string[], hostname: string): Promise<void> {
-    try {
-        const event = new NDKEvent(ndk);
-        event.kind = STATUS_KIND;
-        event.content = hostname;
-        
-        whitelistedPubkeys.forEach(pubkey => {
-            event.tags.push(["p", pubkey]);
-        });
-        
-        await event.publish();
-        console.log(chalk.green(`✅ Published status event (kind ${STATUS_KIND}) from ${hostname} with ${whitelistedPubkeys.length} p-tags`));
-    } catch (error) {
-        console.error(chalk.red("❌ Failed to publish status event:"), error);
-    }
+	process.stdout.write(chalk.cyan("> "));
+
+	for await (const line of console) {
+		const input = line.trim();
+
+		if (input === "") {
+			return null;
+		}
+
+		try {
+			let pubkey: string;
+
+			if (input.startsWith("npub")) {
+				const user = new NDKUser({ npub: input });
+				pubkey = user.pubkey;
+			} else if (/^[0-9a-fA-F]{64}$/.test(input)) {
+				pubkey = input.toLowerCase();
+			} else {
+				throw new Error(
+					"Invalid format. Please enter npub or 64-character hex pubkey",
+				);
+			}
+
+			return pubkey;
+		} catch (err) {
+			console.error(
+				chalk.red(
+					`\n❌ ${err instanceof Error ? err.message : "Invalid input"}`,
+				),
+			);
+			console.log(chalk.yellow("\nPlease try again:"));
+			process.stdout.write(chalk.cyan("> "));
+		}
+	}
+
+	return null;
 }
 
 async function main() {
-    console.log(chalk.cyan.bold("\n🚀 Starting TENEX Daemon...\n"));
+	console.log(chalk.cyan.bold("\n🚀 Starting TENEX Daemon...\n"));
 
-    const configManager = new ConfigManager();
-    const config = await configManager.getConfig();
+	// Check for pubkey argument
+	const args = process.argv.slice(2);
+	let pubkeyFromArg: string | null = null;
 
-    // Check for required taskCommand
-    if (!config.taskCommand) {
-        console.error(chalk.red("❌ Configuration error: 'taskCommand' is required but not set in config.json"));
-        console.error(chalk.yellow("Please add a 'taskCommand' field to your config.json file."));
-        console.error(chalk.gray("Example: \"taskCommand\": \"tenex run --roo\""));
-        process.exit(1);
-    }
+	// Show help if requested
+	if (args.length > 0 && (args[0] === "--help" || args[0] === "-h")) {
+		console.log(chalk.yellow("Usage: bun run index.ts [options] [pubkey]"));
+		console.log(chalk.gray("\nOptions:"));
+		console.log(
+			chalk.gray("  --setup-ai    Configure AI providers (OpenAI, OpenRouter)"),
+		);
+		console.log(chalk.gray("  --help, -h    Show this help message"));
+		console.log(
+			chalk.gray(
+				"  pubkey        Optional pubkey (npub or hex format) to use as whitelist",
+			),
+		);
+		console.log(
+			chalk.gray(
+				"                If provided, this overrides the whitelist in config.json",
+			),
+		);
+		console.log(chalk.gray("\nExamples:"));
+		console.log(chalk.gray("  bun run index.ts --setup-ai"));
+		console.log(
+			chalk.gray(
+				"  bun run index.ts npub1l2vyh47mk2p0qlsku7hg0vn29faehy9hy34ygaclpn66ukqp3afqutajft",
+			),
+		);
+		console.log(
+			chalk.gray(
+				"  bun run index.ts fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52",
+			),
+		);
+		process.exit(0);
+	}
 
-    const daemonUser = new NDKUser({ pubkey: config.publicKey });
-    const npub = daemonUser.npub;
-    
-    console.log(chalk.green("✅ Configuration loaded"));
-    console.log(chalk.yellow("📍 Public Key (npub):"), chalk.white(npub));
-    console.log(chalk.yellow("📋 Task Command:"), chalk.white(config.taskCommand));
-    console.log(chalk.yellow("\n📱 Scan this QR code to add the daemon:\n"));
-    
-    await generateQRCode(npub);
-    
-    const signer = new NDKPrivateKeySigner(config.privateKey);
-    const ndk = new NDK({
-        explicitRelayUrls: config.relays,
-        signer
-    });
+	// Check for --setup-ai flag early
+	const setupAiIndex = args.indexOf("--setup-ai");
+	const hasSetupAi = setupAiIndex !== -1;
 
-    console.log(chalk.yellow("\n🔌 Connecting to relays..."));
-    
-    await ndk.connect();
-    
-    console.log(chalk.green("✅ Connected to relays:"));
-    config.relays.forEach(relay => {
-        console.log(chalk.gray(`   - ${relay}`));
-    });
+	// Remove --setup-ai from args if present
+	if (hasSetupAi) {
+		args.splice(setupAiIndex, 1);
+	}
 
-    if (config.whitelistedPubkeys.length === 0) {
-        console.log(chalk.yellow("\n⚠️  No whitelisted pubkeys configured."));
-        
-        const pubkeyToAdd = await promptForPubkey();
-        
-        if (pubkeyToAdd) {
-            await configManager.addWhitelistedPubkey(pubkeyToAdd);
-            config.whitelistedPubkeys.push(pubkeyToAdd);
-            const addedUser = new NDKUser({ pubkey: pubkeyToAdd });
-            console.log(chalk.green(`\n✅ Added ${addedUser.npub} to whitelist`));
-        } else {
-            console.log(chalk.yellow("\n⚠️  Running without whitelist - accepting commands from anyone"));
-        }
-    }
-    
-    if (config.whitelistedPubkeys.length > 0) {
-        console.log(chalk.green("\n🔒 Whitelisted pubkeys:"));
-        config.whitelistedPubkeys.forEach(pk => {
-            const user = new NDKUser({ pubkey: pk });
-            console.log(chalk.gray(`   - ${user.npub}`));
-        });
-    }
+	// Now check for pubkey argument
+	if (args.length > 0) {
+		const input = args[0];
+		try {
+			if (input.startsWith("npub")) {
+				const user = new NDKUser({ npub: input });
+				pubkeyFromArg = user.pubkey;
+				console.log(chalk.green(`✅ Using pubkey from argument: ${input}`));
+			} else if (/^[0-9a-fA-F]{64}$/.test(input)) {
+				pubkeyFromArg = input.toLowerCase();
+				const user = new NDKUser({ pubkey: pubkeyFromArg });
+				console.log(chalk.green(`✅ Using pubkey from argument: ${user.npub}`));
+			} else {
+				console.error(
+					chalk.red(
+						"❌ Invalid pubkey format. Please provide npub or 64-character hex pubkey",
+					),
+				);
+				console.error(chalk.gray("Run with --help for usage information"));
+				process.exit(1);
+			}
+		} catch (err) {
+			console.error(
+				chalk.red(
+					`❌ Error parsing pubkey: ${err instanceof Error ? err.message : "Invalid input"}`,
+				),
+			);
+			process.exit(1);
+		}
+	}
 
-    console.log(chalk.cyan("\n👂 Listening for commands (kind: " + COMMAND_KIND + ")...\n"));
+	const configManager = new ConfigManager();
+	const config = await configManager.getConfig();
 
-    const commandFilter: NDKFilter = {
-        kinds: [COMMAND_KIND],
-        since: Math.floor(Date.now() / 1000)
-    };
+	// Check for required taskCommand
+	if (!config.taskCommand) {
+		console.error(
+			chalk.red(
+				"❌ Configuration error: 'taskCommand' is required but not set in config.json",
+			),
+		);
+		console.error(
+			chalk.yellow(
+				"Please add a 'taskCommand' field to your config.json file.",
+			),
+		);
+		console.error(chalk.gray('Example: "taskCommand": "tenex run --roo"'));
+		process.exit(1);
+	}
 
-    const commandSubscription = ndk.subscribe(commandFilter, { closeOnEose: false });
+	const daemonUser = new NDKUser({ pubkey: config.publicKey });
+	const npub = daemonUser.npub;
 
-    commandSubscription.on("event", (event: NDKEvent) => {
-        const author = event.author.pubkey;
-        const authorUser = new NDKUser({ pubkey: author });
-        const authorNpub = authorUser.npub;
-        
-        if (config.whitelistedPubkeys.length > 0 && !config.whitelistedPubkeys.includes(author)) {
-            console.log(chalk.red(`\n❌ Unauthorized command from ${authorNpub}`));
-            return;
-        }
+	console.log(chalk.green("✅ Configuration loaded"));
+	console.log(chalk.yellow("📍 Public Key (npub):"), chalk.white(npub));
+	console.log(
+		chalk.yellow("📋 Task Command:"),
+		chalk.white(config.taskCommand),
+	);
+	console.log(chalk.yellow("\n📱 Scan this QR code to add the daemon:\n"));
 
-        const command = event.tagValue("command");
-        const project = event.tagValue("project");
-        const timestamp = new Date(event.created_at! * 1000).toLocaleString();
+	await generateQRCode(npub);
 
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.cyan("📨 New Command Received"));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.gray("Time:     ") + chalk.white(timestamp));
-        console.log(chalk.gray("From:     ") + chalk.white(authorNpub));
-        console.log(chalk.gray("Command:  ") + chalk.yellow(command || "<no command>"));
-        console.log(chalk.gray("Project:  ") + chalk.magenta(project || "<no project>"));
-        console.log(chalk.gray("Event ID: ") + chalk.gray(event.id));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
-    });
+	const signer = new NDKPrivateKeySigner(config.privateKey);
+	const ndk = new NDK({
+		explicitRelayUrls: config.relays,
+		signer,
+	});
 
-    console.log(chalk.cyan("\n👂 Listening for task events (kind: " + TASK_KIND + ") from whitelisted pubkeys...\n"));
+	console.log(chalk.yellow("\n🔌 Connecting to relays..."));
 
-    const taskFilter: NDKFilter = {
-        kinds: [TASK_KIND],
-        authors: config.whitelistedPubkeys,
-        since: Math.floor(Date.now() / 1000)
-    };
+	await ndk.connect();
 
-    const taskSubscription = ndk.subscribe(taskFilter, { closeOnEose: false });
+	console.log(chalk.green("✅ Connected to relays:"));
+	config.relays.forEach((relay) => {
+		console.log(chalk.gray(`   - ${relay}`));
+	});
 
-    taskSubscription.on("event", async (event: NDKEvent) => {
-        const author = event.author.pubkey;
-        const authorUser = new NDKUser({ pubkey: author });
-        const authorNpub = authorUser.npub;
-        
-        const projectTag = event.tagValue("a");
-        const taskId = event.tagValue("e");
-        const timestamp = new Date(event.created_at! * 1000).toLocaleString();
+	// If pubkey was provided as argument, use it as the whitelist
+	if (pubkeyFromArg) {
+		config.whitelistedPubkeys = [pubkeyFromArg];
+		console.log(
+			chalk.yellow(
+				"\n🔒 Using command-line pubkey as whitelist (ignoring config.json whitelist)",
+			),
+		);
+	} else if (config.whitelistedPubkeys.length === 0) {
+		console.log(chalk.yellow("\n⚠️  No whitelisted pubkeys configured."));
 
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.magenta("📋 New Task Event Received"));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.gray("Time:       ") + chalk.white(timestamp));
-        console.log(chalk.gray("From:       ") + chalk.white(authorNpub));
-        console.log(chalk.gray("Project ID: ") + chalk.cyan(projectTag || "<no project>"));
-        console.log(chalk.gray("Task ID:    ") + chalk.yellow(taskId || "<no task>"));
-        console.log(chalk.gray("Event ID:   ") + chalk.gray(event.id));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
-        
-        // Handle the task event with project directory checking
-        await handleTaskEvent(event, config, ndk);
-    });
+		const pubkeyToAdd = await promptForPubkey();
 
-    let chatReplySubscription: any = null;
+		if (pubkeyToAdd) {
+			await configManager.addWhitelistedPubkey(pubkeyToAdd);
+			config.whitelistedPubkeys.push(pubkeyToAdd);
+			const addedUser = new NDKUser({ pubkey: pubkeyToAdd });
+			console.log(chalk.green(`\n✅ Added ${addedUser.npub} to whitelist`));
+		} else {
+			console.log(
+				chalk.yellow(
+					"\n⚠️  Running without whitelist - accepting commands from anyone",
+				),
+			);
+		}
+	}
 
-    if (config.chatCommand) {
-        console.log(chalk.cyan("\n💬 Listening for chat events (kind: " + CHAT_KIND + ") from whitelisted pubkeys...\n"));
-        
-        const chatFilter: NDKFilter = {
-            kinds: [CHAT_KIND],
-            authors: config.whitelistedPubkeys.length > 0 ? config.whitelistedPubkeys : undefined,
-            since: Math.floor(Date.now() / 1000)
-        };
-        
-        const chatSubscription = ndk.subscribe(chatFilter, { closeOnEose: false });
-        
-        chatSubscription.on("event", async (event: NDKEvent) => {
-            const author = event.author.pubkey;
-            const authorUser = new NDKUser({ pubkey: author });
-            const authorNpub = authorUser.npub;
-            
-            if (config.whitelistedPubkeys.length > 0 && !config.whitelistedPubkeys.includes(author)) {
-                console.log(chalk.red(`\n❌ Unauthorized chat event from ${authorNpub}`));
-                return;
-            }
-            
-            const projectTag = event.tags.find(tag => tag[0] === "a" && tag[1]?.startsWith("31933:"));
-            const timestamp = new Date(event.created_at! * 1000).toLocaleString();
-            
-            console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-            console.log(chalk.green("💬 New Chat Event Received"));
-            console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-            console.log(chalk.gray("Time:       ") + chalk.white(timestamp));
-            console.log(chalk.gray("From:       ") + chalk.white(authorNpub));
-            console.log(chalk.gray("Project:    ") + chalk.cyan(projectTag?.[1] || "<no project>"));
-            console.log(chalk.gray("Message:    ") + chalk.white(event.content.substring(0, 80) + (event.content.length > 80 ? "..." : "")));
-            console.log(chalk.gray("Event ID:   ") + chalk.gray(event.id));
-            console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
-            
-            await handleChatEvent(event, config, ndk);
-        });
-        
-        // Also subscribe to kind:1111 replies
-        console.log(chalk.cyan("\n💬 Listening for chat replies (kind: " + CHAT_REPLY_KIND + ") from whitelisted pubkeys...\n"));
-        
-        const chatReplyFilter: NDKFilter = {
-            kinds: [CHAT_REPLY_KIND],
-            "#K": ["11"],
-            authors: config.whitelistedPubkeys.length > 0 ? config.whitelistedPubkeys : undefined,
-            since: Math.floor(Date.now() / 1000)
-        };
-        
-        chatReplySubscription = ndk.subscribe(chatReplyFilter, { closeOnEose: false });
-        
-        chatReplySubscription.on("event", async (event: NDKEvent) => {
-            const author = event.author.pubkey;
-            const authorUser = new NDKUser({ pubkey: author });
-            const authorNpub = authorUser.npub;
-            
-            if (config.whitelistedPubkeys.length > 0 && !config.whitelistedPubkeys.includes(author)) {
-                console.log(chalk.red(`\n❌ Unauthorized chat reply from ${authorNpub}`));
-                return;
-            }
-            
-            const rootEventTag = event.tags.find(tag => tag[0] === "E");
-            const timestamp = new Date(event.created_at! * 1000).toLocaleString();
-            
-            console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-            console.log(chalk.green("💬 New Chat Reply Event Received"));
-            console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-            console.log(chalk.gray("Time:       ") + chalk.white(timestamp));
-            console.log(chalk.gray("From:       ") + chalk.white(authorNpub));
-            console.log(chalk.gray("Root Event: ") + chalk.cyan(rootEventTag?.[1] || "<no root event>"));
-            console.log(chalk.gray("Message:    ") + chalk.white(event.content.substring(0, 80) + (event.content.length > 80 ? "..." : "")));
-            console.log(chalk.gray("Event ID:   ") + chalk.gray(event.id));
-            console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
-            
-            await handleChatEvent(event, config, ndk);
-        });
-        
-        process.on("SIGINT", () => {
-            chatSubscription.stop();
-            chatReplySubscription.stop();
-        });
-    } else {
-        console.log(chalk.yellow("\n⚠️  Chat command not configured - skipping kind:11 subscription"));
-    }
+	if (config.whitelistedPubkeys.length > 0) {
+		console.log(chalk.green("\n🔒 Whitelisted pubkeys:"));
+		config.whitelistedPubkeys.forEach((pk) => {
+			const user = new NDKUser({ pubkey: pk });
+			console.log(chalk.gray(`   - ${user.npub}`));
+		});
+	}
 
-    console.log(chalk.cyan("📡 Starting status event publishing every 60 seconds...\n"));
-    
-    await publishStatusEvent(ndk, config.whitelistedPubkeys, config.hostname);
-    
-    const statusInterval = setInterval(async () => {
-        await publishStatusEvent(ndk, config.whitelistedPubkeys, config.hostname);
-    }, 60000);
+	// Check for --setup-ai flag
+	if (hasSetupAi) {
+		await setupAIConfiguration(configManager);
+		process.exit(0);
+	}
 
-    process.on("SIGINT", () => {
-        console.log(chalk.yellow("\n\n👋 Shutting down TENEX daemon..."));
-        clearInterval(statusInterval);
-        commandSubscription.stop();
-        taskSubscription.stop();
-        if (chatReplySubscription) {
-            chatReplySubscription.stop();
-        }
-        process.exit(0);
-    });
+	// Check if AI is configured
+	if (!(await configManager.hasAIConfigurations())) {
+		console.log(chalk.yellow("\n⚠️  No AI configurations found."));
+		console.log(
+			chalk.yellow(
+				"AI configuration is required for tenexd to function properly.\n",
+			),
+		);
+		await setupAIConfiguration(configManager);
+
+		// If still no configurations (user skipped), exit
+		if (!(await configManager.hasAIConfigurations())) {
+			console.log(chalk.red("\n❌ AI configuration is required. Exiting."));
+			process.exit(1);
+		}
+	}
+
+	const updatedConfig = await configManager.getConfig();
+	const aiConfigs = updatedConfig.aiConfigurations || [];
+	console.log(chalk.green("\n🤖 AI Configurations:"));
+	aiConfigs.forEach((aiConfig) => {
+		const isDefault = aiConfig.name === updatedConfig.defaultAIConfiguration;
+		console.log(
+			chalk.gray(`   - ${aiConfig.name}${isDefault ? " (default)" : ""}`),
+		);
+	});
+
+	// Initialize process manager
+	const processManager = new ProcessManager(config, configManager);
+
+	console.log(
+		chalk.cyan("\n👂 Listening for all events from whitelisted pubkeys...\n"),
+	);
+	console.log(
+		chalk.gray(
+			"Events with project 'a' tags will trigger 'tenex run' processes\n",
+		),
+	);
+
+	// Subscribe to all events from whitelisted users
+	// We'll filter for project tags in the event handler
+	const projectEventFilter: NDKFilter = {
+		authors:
+			config.whitelistedPubkeys.length > 0
+				? config.whitelistedPubkeys
+				: undefined,
+		since: Math.floor(Date.now() / 1000),
+	};
+
+	const projectEventSubscription = ndk.subscribe(projectEventFilter, {
+		closeOnEose: false,
+	});
+
+	projectEventSubscription.on("event", async (event: NDKEvent) => {
+		// Show incoming event
+		const timestamp = new Date().toLocaleTimeString();
+		const eventKind = event.kind;
+		const author = event.author.pubkey;
+		const authorUser = new NDKUser({ pubkey: author });
+
+		console.log(
+			chalk.gray(`[${timestamp}] `) +
+				chalk.cyan(
+					`Event kind:${eventKind} from ${authorUser.npub.substring(0, 16)}...`,
+				),
+		);
+
+		// Handle agent configuration events
+		if (event.kind === 4199) {
+			await handleAgentEvent(event, config);
+		}
+
+		// Handle all project-related events
+		await handleProjectEvent(event, config, ndk, processManager);
+	});
+
+	process.on("SIGINT", () => {
+		console.log(chalk.yellow("\n\n👋 Shutting down TENEX daemon..."));
+		projectEventSubscription.stop();
+		process.exit(0);
+	});
 }
 
-main().catch(err => {
-    console.error(chalk.red("\n❌ Fatal error:"), err);
-    process.exit(1);
+main().catch((err) => {
+	console.error(chalk.red("\n❌ Fatal error:"), err);
+	process.exit(1);
 });

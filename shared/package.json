@@ -1,17 +1,45 @@
 {
-  "name": "@tenex/shared",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
-  },
-  "dependencies": {
-    "@nostr-dev-kit/ndk": "^2.15.12",
-    "nostr-tools": "^2.10.2"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.3",
-    "@types/node": "^22.10.6"
-  }
+	"name": "@tenex/shared",
+	"version": "1.0.0",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./logger": {
+			"import": "./dist/logger.js",
+			"types": "./dist/logger.d.ts"
+		},
+		"./projects": {
+			"import": "./dist/projects.js",
+			"types": "./dist/projects.d.ts"
+		},
+		"./agents": {
+			"import": "./dist/agents/index.js",
+			"types": "./dist/agents/index.d.ts"
+		},
+		"./fs": {
+			"import": "./dist/fs/index.js",
+			"types": "./dist/fs/index.d.ts"
+		},
+		"./types": {
+			"import": "./dist/types/index.js",
+			"types": "./dist/types/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch"
+	},
+	"dependencies": {
+		"@nostr-dev-kit/ndk": "^2.14.29",
+		"nostr-tools": "^2.10.2"
+	},
+	"devDependencies": {
+		"typescript": "^5.7.3",
+		"@types/node": "^22.10.6"
+	}
 }

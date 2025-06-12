@@ -1,0 +1,60 @@
+{
+	"default": "openrouter-claude",
+
+	"// Agent-specific configurations": "Agents will use their own configs if available",
+	"coder": "anthropic-direct",
+	"architect": "openrouter-gpt4",
+	"debugger": "coder",
+	"planner": "architect",
+
+	"openrouter-claude": {
+		"provider": "openrouter",
+		"model": "anthropic/claude-3.5-sonnet",
+		"apiKey": "sk-or-v1-YOUR-OPENROUTER-API-KEY-HERE",
+		"baseURL": "https://openrouter.ai/api/v1",
+		"temperature": 0.7,
+		"maxTokens": 4096,
+		"enableCaching": true,
+		"contextWindowSize": 200000,
+		"appName": "tenex-cli",
+		"appTitle": "TENEX CLI Agent"
+	},
+
+	"openrouter-gpt4": {
+		"provider": "openrouter",
+		"model": "openai/gpt-4-turbo-preview",
+		"apiKey": "sk-or-v1-YOUR-OPENROUTER-API-KEY-HERE",
+		"baseURL": "https://openrouter.ai/api/v1",
+		"temperature": 0.8,
+		"maxTokens": 8192,
+		"enableCaching": true,
+		"contextWindowSize": 128000
+	},
+
+	"openai-direct": {
+		"provider": "openai",
+		"model": "gpt-4-turbo-preview",
+		"apiKey": "sk-YOUR-OPENAI-API-KEY-HERE",
+		"temperature": 0.7,
+		"maxTokens": 4096,
+		"contextWindowSize": 128000
+	},
+
+	"anthropic-direct": {
+		"provider": "anthropic",
+		"model": "claude-3-opus-20240229",
+		"apiKey": "sk-ant-YOUR-ANTHROPIC-API-KEY-HERE",
+		"temperature": 0.7,
+		"maxTokens": 4096,
+		"enableCaching": true,
+		"contextWindowSize": 200000
+	},
+
+	"ollama-local": {
+		"provider": "openai",
+		"model": "llama2",
+		"baseURL": "http://localhost:11434/v1",
+		"temperature": 0.5,
+		"maxTokens": 2048
+	}
+}
