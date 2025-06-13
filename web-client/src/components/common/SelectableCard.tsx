@@ -63,11 +63,11 @@ export function SelectableCard<T>({
 				clickable
 					? `cursor-pointer hover:shadow-md hover:scale-[1.02] ${
 							isSelected
-								? "ring-2 ring-blue-500 bg-blue-50"
-								: "hover:bg-slate-50"
+								? "ring-2 ring-primary bg-primary/10"
+								: "hover:bg-accent"
 						}`
-					: `hover:bg-slate-50 ${
-							isSelected ? "border-blue-500 bg-blue-50/30" : "border-slate-200"
+					: `hover:bg-accent ${
+							isSelected ? "border-primary bg-primary/10" : "border-border"
 						}`
 			} ${cardClassName || className}`}
 			onClick={handleCardClick}
@@ -76,22 +76,22 @@ export function SelectableCard<T>({
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2 mb-2">
 						{renderIcon?.()}
-						<h3 className="font-medium text-slate-900 truncate">
+						<h3 className="font-medium text-foreground truncate">
 							{renderTitle(item)}
 						</h3>
 						{isSelected && !clickable && (
-							<Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
+							<Check className="w-4 h-4 text-primary flex-shrink-0" />
 						)}
 					</div>
 
 					{renderDescription && (
-						<div className="text-sm text-slate-600 mb-3 leading-relaxed">
+						<div className="text-sm text-muted-foreground mb-3 leading-relaxed">
 							{renderDescription(item)}
 						</div>
 					)}
 
 					{renderMeta && (
-						<div className="text-xs text-slate-500 mb-2">
+						<div className="text-xs text-muted-foreground mb-2">
 							{renderMeta(item)}
 						</div>
 					)}
@@ -121,9 +121,7 @@ export function SelectableCard<T>({
 								e.stopPropagation();
 								handleToggle();
 							}}
-							className={`h-8 min-w-[80px] ${
-								isSelected ? "bg-blue-600 hover:bg-blue-700" : ""
-							}`}
+							className="h-8 min-w-[80px]"
 						>
 							{isSelected ? selectedButtonText : selectButtonText}
 						</Button>

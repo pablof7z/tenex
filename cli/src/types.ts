@@ -9,15 +9,16 @@ export type TenexConfig = {
 	};
 };
 
-export type AgentDefinition = {
+// CLI-specific agent definition for publishing
+export interface CLIAgentDefinition {
 	title: string;
-	avatar: string;
+	avatar?: string;
 	description: string;
 	role: string;
 	instructions: string;
 	models: string[];
 	files: { [filename: string]: string };
-};
+}
 
 export type AgentPublishParams = {
 	title?: string;

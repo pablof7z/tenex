@@ -1,4 +1,5 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { logger } from "../logger";
 import type { ConversationContext, ConversationMessage } from "./types";
 
 export class Conversation {
@@ -37,6 +38,9 @@ export class Conversation {
 	}
 
 	addUserMessage(content: string, event?: NDKEvent): void {
+		logger.debug(
+			`[Conversation ${this.getId()}] Adding user message: "${content.substring(0, 100)}..."`,
+		);
 		this.addMessage({
 			role: "user",
 			content,
@@ -58,6 +62,9 @@ export class Conversation {
 				}
 			}
 		}
+		logger.debug(
+			`[Conversation ${this.getId()}] Total messages after adding user message: ${this.getMessageCount()}`,
+		);
 	}
 
 	addAssistantMessage(content: string): void {
@@ -81,24 +88,28 @@ export class Conversation {
 	}
 
 	getFormattedMessages(): Array<{ role: string; content: string }> {
-		return this.context.messages.map((msg) => ({
+		const formatted = this.context.messages.map((msg) => ({
 			role: msg.role,
 			content: msg.content,
 		}));
+		logger.debug(
+			`[Conversation ${this.getId()}] returning ${formatted.length} formatted messages`,
+		);
+		return formatted;
 	}
 
-	setMetadata(key: string, value: any): void {
+	setMetadata(key: string, value: unknown): void {
 		if (!this.context.metadata) {
 			this.context.metadata = {};
 		}
 		this.context.metadata[key] = value;
 	}
 
-	getMetadata(key: string): any {
+	getMetadata(key: string): unknown {
 		return this.context.metadata?.[key];
 	}
 
-	getAllMetadata(): Record<string, any> | undefined {
+	getAllMetadata(): Record<string, unknown> | undefined {
 		return this.context.metadata;
 	}
 
@@ -126,8 +137,8 @@ export class Conversation {
 				...msg,
 				event: msg.event
 					? // Check if it's an NDKEvent instance with rawEvent method
-						typeof (msg.event as any).rawEvent === "function"
-						? (msg.event as any).rawEvent()
+						this.isNDKEvent(msg.event)
+						? msg.event.rawEvent()
 						: msg.event // Already a raw event object
 					: undefined,
 			})),
@@ -137,6 +148,14 @@ export class Conversation {
 			},
 		};
 		return serializable;
+	}
+
+	private isNDKEvent(event: unknown): event is NDKEvent {
+		return (
+			typeof event === "object" &&
+			event !== null &&
+			typeof (event as NDKEvent).rawEvent === "function"
+		);
 	}
 
 	static fromJSON(data: ConversationContext): Conversation {

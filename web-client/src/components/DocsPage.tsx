@@ -1,7 +1,7 @@
-import { NDKArticle, type NDKFilter } from "@nostr-dev-kit/ndk";
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { type NDKArticle, type NDKFilter, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronLeftIcon } from "@radix-ui/react-icons";
 import { formatDistanceToNow } from "date-fns";
+import { FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useProject } from "../hooks/useProject";
@@ -29,23 +29,7 @@ interface SpecDocument {
 export function DocsPage({ onBack }: DocsPageProps) {
 	const { projectId } = useParams();
 	const project = useProject(projectId);
-	const { ndk } = useNDK();
 	const [selectedDoc, setSelectedDoc] = useState<SpecDocument | null>(null);
-
-	// Get default agent pubkey for the project
-	const defaultAgentPubkey = useMemo(() => {
-		if (!project) return null;
-		
-		// Find the default agent tag
-		const defaultAgentTag = project.tags.find(
-			tag => tag[0] === "agent" && tag[2] === "default"
-		);
-		
-		if (!defaultAgentTag?.[1]) return null;
-		
-		// The agent tag contains the event ID, we need to fetch the agent event to get its pubkey
-		return null; // We'll need to fetch the agent event first
-	}, [project]);
 
 	// First, fetch the default agent event to get its pubkey
 	const agentFilter = useMemo(() => {
@@ -57,10 +41,10 @@ export function DocsPage({ onBack }: DocsPageProps) {
 		
 		if (!defaultAgentTag?.[1]) return false;
 		
-		return {
+		return [{
 			ids: [defaultAgentTag[1]],
 			kinds: [4199], // NDKAgent kind
-		};
+		}];
 	}, [project]);
 
 	const { events: agentEvents } = useSubscribe(agentFilter, {}, [project?.id]);
@@ -71,13 +55,13 @@ export function DocsPage({ onBack }: DocsPageProps) {
 	}, [agentEvents]);
 
 	// Subscribe to NDKArticle events from the default agent
-	const filter = useMemo<NDKFilter | false>(() => {
+	const filter = useMemo<NDKFilter[] | false>(() => {
 		if (!agentPubkey) return false;
 		
-		return {
+		return [{
 			kinds: [30023], // NDKArticle kind
 			authors: [agentPubkey],
-		};
+		}];
 	}, [agentPubkey]);
 
 	const { events: docEvents, eose } = useSubscribe<NDKArticle>(
@@ -156,6 +140,7 @@ export function DocsPage({ onBack }: DocsPageProps) {
 								<LoadingState />
 							) : documents.length === 0 ? (
 								<EmptyState
+									icon={<FileText className="w-8 h-8 text-muted-foreground" />}
 									title="No documentation"
 									description="No specification documents have been published yet"
 								/>
@@ -234,6 +219,7 @@ export function DocsPage({ onBack }: DocsPageProps) {
 					) : (
 						<div className="flex-1 flex items-center justify-center">
 							<EmptyState
+								icon={<FileText className="w-8 h-8 text-muted-foreground" />}
 								title="Select a document"
 								description="Choose a specification from the list to view its contents"
 							/>

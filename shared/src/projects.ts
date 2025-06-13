@@ -9,16 +9,16 @@ import {
 } from "@nostr-dev-kit/ndk";
 import { nip19 } from "nostr-tools";
 import {
-	type AgentDefinition,
-	type AgentsJson,
 	fetchAndSaveAgentDefinitions as fetchAgentDefs,
 	publishAgentProfile,
 	toKebabCase,
 	updateAgentConfig,
 } from "./agents/index.js";
+import type { AgentDefinition, AgentsJson } from "@tenex/types/agents";
 import { logError, logInfo, logSuccess, logWarning } from "./logger.js";
 import { getNDK } from "./nostr.js";
-import type { ProjectInfo, ProjectInitOptions } from "./types/index.js";
+import type { ProjectInfo, ProjectInitOptions } from "@tenex/types/projects";
+import { getErrorMessage } from "@tenex/types/utils";
 
 const execAsync = promisify(exec);
 
@@ -32,16 +32,14 @@ interface ProjectEventData {
 	agentEventIds: string[];
 }
 
-// Re-export from agents module for backward compatibility
+// Re-export utility functions from agents module
 export {
 	toKebabCase,
 	updateAgentConfig,
-	type AgentsJson,
 } from "./agents/index.js";
-export type { AgentConfig } from "./agents/index.js";
 
-// Re-export project types
-export type { ProjectInitOptions, ProjectInfo } from "./types/index.js";
+// Re-export project types from @tenex/types
+export type { ProjectInitOptions, ProjectInfo } from "@tenex/types/projects";
 
 export function extractProjectIdentifierFromTag(aTag: string): string {
 	const parts = aTag.split(":");
@@ -63,8 +61,8 @@ export async function checkProjectExists(
 	try {
 		await access(tenexDir);
 		exists = true;
-	} catch (err: any) {
-		if (err.code !== "ENOENT") {
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code !== "ENOENT") {
 			throw err;
 		}
 	}
@@ -199,8 +197,8 @@ async function fetchTemplateRepoUrl(
 				return repoUrl;
 			}
 		}
-	} catch (templateErr: any) {
-		logWarning(`Failed to fetch template: ${templateErr.message}`);
+	} catch (templateErr: unknown) {
+		logWarning(`Failed to fetch template: ${getErrorMessage(templateErr)}`);
 	}
 	return undefined;
 }
@@ -213,8 +211,8 @@ export async function initializeProject(
 	let projectData: ProjectEventData;
 	try {
 		projectData = await fetchProjectFromNostr(naddr);
-	} catch (err: any) {
-		logError(`Failed to fetch project: ${err.message}`);
+	} catch (err: unknown) {
+		logError(`Failed to fetch project: ${getErrorMessage(err)}`);
 		throw err;
 	}
 
@@ -231,6 +229,9 @@ export async function initializeProject(
 	const agentsConfigPath = path.join(tenexDir, "agents.json");
 
 	try {
+		// Set environment variable to prevent duplicate profile publishing
+		process.env.TENEX_PROJECT_INIT = "true";
+
 		// Create project directory and setup git
 		await createProjectDirectory(projectPath, projectData.repoUrl);
 
@@ -283,9 +284,12 @@ export async function initializeProject(
 			`Project "${projectData.projectName}" created successfully at ${projectPath}`,
 		);
 		return projectPath;
-	} catch (err: any) {
-		logError(`Failed to create project: ${err.message}`);
+	} catch (err: unknown) {
+		logError(`Failed to create project: ${getErrorMessage(err)}`);
 		throw err;
+	} finally {
+		// Clean up the environment variable
+		delete process.env.TENEX_PROJECT_INIT;
 	}
 }
 
@@ -298,8 +302,8 @@ async function createProjectDirectory(
 		await access(projectPath);
 		projectExists = true;
 		logInfo(`Using existing project directory: ${projectPath}`);
-	} catch (err: any) {
-		if (err.code !== "ENOENT") throw err;
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code !== "ENOENT") throw err;
 	}
 
 	if (!projectExists) {
@@ -312,9 +316,13 @@ async function createProjectDirectory(
 		try {
 			await execAsync(`git clone --depth 1 "${repoUrl}" "${projectPath}"`);
 			logSuccess("Repository cloned successfully");
-		} catch (err: any) {
-			const errorMessage =
-				err.stderr || err.message || "Unknown error during clone";
+		} catch (err: unknown) {
+			let errorMessage = "Unknown error during clone";
+			if (err instanceof Error) {
+				errorMessage = err.message;
+			} else if (err && typeof err === 'object' && 'stderr' in err) {
+				errorMessage = String(err.stderr);
+			}
 			logError(`Failed to clone repository: ${errorMessage}`);
 			await execAsync(`rm -rf "${projectPath}"`);
 			throw err;
@@ -344,8 +352,8 @@ async function createTenexDirectory(tenexDir: string): Promise<void> {
 		await access(tenexDir);
 		tenexExists = true;
 		logInfo(".tenex directory found from template. Updating configuration...");
-	} catch (err: any) {
-		if (err.code !== "ENOENT") throw err;
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code !== "ENOENT") throw err;
 	}
 
 	if (!tenexExists) {
@@ -372,18 +380,19 @@ async function publishAgentProfiles(
 ): Promise<void> {
 	for (const [agentKey, agentData] of Object.entries(agentsConfig)) {
 		try {
+			const nsec = typeof agentData === 'string' ? agentData : agentData.nsec;
 			await publishAgentProfile(
-				agentData.nsec,
+				nsec,
 				agentKey,
 				projectTitle,
 				agentKey === "default",
 			);
 			logSuccess(
-				`Published kind:0 profile for agent '${agentKey}' with avatar`,
+				`✅ Published kind:0 profile for agent '${agentKey}' with avatar`,
 			);
-		} catch (err: any) {
+		} catch (err: unknown) {
 			logWarning(
-				`Failed to publish kind:0 profile for agent '${agentKey}': ${err.message}`,
+				`Failed to publish kind:0 profile for agent '${agentKey}': ${getErrorMessage(err)}`,
 			);
 		}
 	}

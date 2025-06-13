@@ -1,4 +1,4 @@
-import type { ProjectMetadata } from "../types/index.js";
+import type { ProjectMetadata } from "@tenex/types/projects";
 /**
  * Ensure a directory exists, creating it if necessary
  */

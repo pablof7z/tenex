@@ -1,3 +1,5 @@
+import chalk from "chalk";
+
 export interface LoggerConfig {
 	useEmoji?: boolean;
 	useLabels?: boolean;
@@ -12,22 +14,24 @@ export function configureLogger(config: Partial<LoggerConfig>): void {
 	globalConfig = { ...globalConfig, ...config };
 }
 
-export function logError(message: string, error?: any): void {
+export function logError(message: string, error?: unknown): void {
 	const prefix = globalConfig.useEmoji
 		? "❌"
 		: globalConfig.useLabels
 			? "[ERROR]"
 			: "";
-	console.error(prefix ? `${prefix} ${message}` : message, error || "");
+	const fullMessage = prefix ? `${prefix} ${message}` : message;
+	console.error(chalk.redBright(fullMessage), error || "");
 }
 
-export function logInfo(message: string, ...args: any[]): void {
+export function logInfo(message: string, ...args: unknown[]): void {
 	const prefix = globalConfig.useEmoji
-		? "ℹ️ "
+		? "ℹ️"
 		: globalConfig.useLabels
 			? "[INFO]"
 			: "";
-	console.log(prefix ? `${prefix} ${message}` : message, ...args);
+	const fullMessage = prefix ? `${prefix} ${message}` : message;
+	console.log(chalk.blueBright(fullMessage), ...args);
 }
 
 export function logSuccess(message: string): void {
@@ -36,21 +40,28 @@ export function logSuccess(message: string): void {
 		: globalConfig.useLabels
 			? "[SUCCESS]"
 			: "";
-	console.log(prefix ? `${prefix} ${message}` : message);
+	const fullMessage = prefix ? `${prefix} ${message}` : message;
+	console.log(chalk.greenBright(fullMessage));
 }
 
-export function logWarning(message: string, ...args: any[]): void {
+export function logWarning(message: string, ...args: unknown[]): void {
 	const prefix = globalConfig.useEmoji
-		? "⚠️ "
+		? "⚠️"
 		: globalConfig.useLabels
 			? "[WARNING]"
 			: "";
-	console.warn(prefix ? `${prefix} ${message}` : message, ...args);
+	const fullMessage = prefix ? `${prefix} ${message}` : message;
+	console.warn(chalk.yellowBright(fullMessage), ...args);
 }
 
-export function logDebug(message: string, ...args: any[]): void {
-	const prefix = globalConfig.useLabels ? "[DEBUG]" : "";
-	console.log(prefix ? `${prefix} ${message}` : message, ...args);
+export function logDebug(message: string, ...args: unknown[]): void {
+	const prefix = globalConfig.useEmoji
+		? "🔍"
+		: globalConfig.useLabels
+			? "[DEBUG]"
+			: "";
+	const fullMessage = prefix ? `${prefix} ${message}` : message;
+	console.log(chalk.magentaBright(fullMessage), ...args);
 }
 
 // Export a logger object for compatibility

@@ -2,8 +2,8 @@ import { type NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
+import { useNavigation } from "../../contexts/NavigationContext";
 import { SearchIconButton } from "../common/SearchBar";
 import { CreateProjectDialog } from "../dialogs/CreateProjectDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -17,10 +17,9 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-interface ProjectListProps {
-	onProjectSelect: (project: NDKProject) => void;
-	onSettings: () => void;
-}
+interface ProjectListProps {}
+
+// Remove props - navigation is handled by context
 
 // Helper function to mark all status updates for a project as seen
 const markProjectStatusUpdatesSeen = (
@@ -36,10 +35,10 @@ const markProjectStatusUpdatesSeen = (
 	localStorage.setItem("seenStatusUpdates", JSON.stringify(seenUpdates));
 };
 
-export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
+export function ProjectList({}: ProjectListProps) {
 	const currentUser = useNDKCurrentUser();
 	const [showCreateDialog, setShowCreateDialog] = useState(false);
-	const navigate = useNavigate();
+	const { goToProject, goToSettings, goToAgentRequests } = useNavigation();
 	const pendingAgentRequests = usePendingAgentRequests();
 
 	const { events: projects } = useSubscribe<NDKProject>(
@@ -72,12 +71,12 @@ export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
 		[projects.length],
 	);
 
-	// Get status updates for all tasks (kind 1 events with 'e' tag referencing any task)
+	// Get status updates for all tasks (NIP-22 replies - kind 1111 events with 'e' tag referencing any task)
 	const { events: statusUpdates } = useSubscribe(
 		tasks.length > 0
 			? [
 					{
-						kinds: [1],
+						kinds: [1111],
 						"#e": tasks.map((t) => t.id),
 					},
 				]
@@ -270,7 +269,7 @@ export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end" className="w-56">
 								<DropdownMenuItem
-									onClick={() => navigate("/agent-requests")}
+									onClick={goToAgentRequests}
 									className="cursor-pointer"
 								>
 									<Users className="mr-2 h-4 w-4" />
@@ -283,7 +282,7 @@ export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
 								<DropdownMenuItem
-									onClick={onSettings}
+									onClick={goToSettings}
 									className="cursor-pointer"
 								>
 									<Settings className="mr-2 h-4 w-4" />
@@ -366,13 +365,13 @@ export function ProjectList({ onProjectSelect, onSettings }: ProjectListProps) {
 									project.tagId(),
 									projectStatusUpdates,
 								);
-								onProjectSelect(project);
+								goToProject(project);
 							};
 
 							return (
 								<div
 									key={project.tagId()}
-									className="group flex items-center p-2.5 sm:p-3 mx-0.5 sm:mx-1 rounded-lg sm:rounded-xl hover:bg-card/80 cursor-pointer transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] border border-transparent hover:border-border"
+									className="group flex items-center p-2.5 sm:p-3 mx-0.5 sm:mx-1 rounded-lg sm:rounded-xl bg-card/50 hover:bg-card/80 cursor-pointer transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] border border-border/40 hover:border-border"
 									onClick={handleProjectClick}
 								>
 									{/* Avatar */}

@@ -1,37 +1,40 @@
 /**
  * TENEX CLI: File Utility
  * Provides read/write helpers with ~ expansion and error handling.
+ *
+ * @deprecated Use the new file system abstraction from './fs' instead.
+ * This module is maintained for backward compatibility.
  */
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as pathModule from "node:path";
+import { fs } from "./fs";
 
 /**
  * Expands ~ to the user's home directory.
+ * @deprecated Use fs.expandHome() instead
  */
 function expandHome(filePath: string): string {
-	if (filePath.startsWith("~")) {
-		return pathModule.join(os.homedir(), filePath.slice(1));
-	}
-	return filePath;
+	return fs.expandHome(filePath);
 }
 
+/**
+ * @deprecated Use fs.readFileSync() or fs.readFile() instead
+ */
 export function readFile(path: string): string {
-	const fullPath = expandHome(path);
 	try {
-		return fs.readFileSync(fullPath, "utf8");
+		return fs.readFileSync(path, "utf8");
 	} catch (err) {
+		const fullPath = fs.expandHome(path);
 		throw new Error(`Failed to read file: ${fullPath}\n${err}`);
 	}
 }
 
+/**
+ * @deprecated Use fs.writeFileSync() or fs.writeFile() instead
+ */
 export function writeFile(path: string, data: string) {
-	const fullPath = expandHome(path);
 	try {
-		// Ensure directory exists
-		fs.mkdirSync(pathModule.dirname(fullPath), { recursive: true });
-		fs.writeFileSync(fullPath, data, "utf8");
+		fs.writeFileSync(path, data, "utf8");
 	} catch (err) {
+		const fullPath = fs.expandHome(path);
 		throw new Error(`Failed to write file: ${fullPath}\n${err}`);
 	}
 }

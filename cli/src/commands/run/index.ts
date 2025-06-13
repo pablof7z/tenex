@@ -1,10 +1,11 @@
+import type { NDK } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { getNDK } from "../../nostr/ndkClient";
 import { getAgentSigner } from "../../utils/agentManager";
 import { logError, logInfo, logSuccess } from "../../utils/logger";
 import { EventHandler } from "./EventHandler";
 import { ProjectDisplay } from "./ProjectDisplay";
-import { ProjectLoader } from "./ProjectLoader";
+import { type ProjectInfo, ProjectLoader } from "./ProjectLoader";
 import { StatusPublisher } from "./StatusPublisher";
 import { STARTUP_FILTER_MINUTES } from "./constants";
 
@@ -26,13 +27,14 @@ export async function runTask() {
 
 		// Start the project listener
 		await runProjectListener(projectInfo, ndk);
-	} catch (err: any) {
-		logError(`Failed to start project: ${err.message}`);
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		logError(`Failed to start project: ${errorMessage}`);
 		process.exit(1);
 	}
 }
 
-async function runProjectListener(projectInfo: any, ndk: any) {
+async function runProjectListener(projectInfo: ProjectInfo, ndk: NDK) {
 	try {
 		logInfo(
 			`Starting listener for project: ${projectInfo.title} (${projectInfo.projectId})`,
@@ -96,8 +98,9 @@ async function runProjectListener(projectInfo: any, ndk: any) {
 			sub.stop();
 			process.exit(0);
 		});
-	} catch (err: any) {
-		logError(`Failed to start project listener: ${err.message}`);
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		logError(`Failed to start project listener: ${errorMessage}`);
 		process.exit(1);
 	}
 }

@@ -1,7 +1,10 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
-import { NDKPrivateKeySigner, NDKEvent as NDKEventClass } from "@nostr-dev-kit/ndk";
+import {
+	NDKEvent as NDKEventClass,
+	NDKPrivateKeySigner,
+} from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { toKebabCase } from "../../../../shared/src/projects";
 import { AgentManager } from "../../utils/agents/AgentManager";
@@ -27,14 +30,16 @@ export class EventHandler {
 	}
 
 	async handleEvent(event: NDKEvent): Promise<void> {
-		console.log(chalk.gray("\n📥 Event received:", event.id));
-
 		// Ignore kind 24010 (project status), 24111 (typing indicator), and 24112 (typing stop) events
-		if (event.kind === EVENT_KINDS.PROJECT_STATUS || 
-		    event.kind === EVENT_KINDS.TYPING_INDICATOR ||
-		    event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP) {
+		if (
+			event.kind === EVENT_KINDS.PROJECT_STATUS ||
+			event.kind === EVENT_KINDS.TYPING_INDICATOR ||
+			event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP
+		) {
 			return;
 		}
+
+		console.log(chalk.gray("\n📥 Event received:", event.id));
 
 		const timestamp = new Date().toLocaleTimeString();
 		const eventKindName = getEventKindName(event.kind);
@@ -46,12 +51,12 @@ export class EventHandler {
 		console.log(chalk.gray("Event:   ") + chalk.gray(event.encode()));
 
 		switch (event.kind) {
-			case EVENT_KINDS.STATUS_UPDATE:
+			case EVENT_KINDS.TEXT_NOTE:
 				this.handleStatusUpdate(event);
 				break;
 
-			case EVENT_KINDS.CHAT_MESSAGE:
-			case EVENT_KINDS.CHAT_REPLY:
+			case EVENT_KINDS.CHAT:
+			case EVENT_KINDS.THREAD_REPLY:
 				await this.handleChatMessage(event);
 				break;
 
@@ -67,7 +72,7 @@ export class EventHandler {
 				await this.agentEventHandler.handleAgentEvent(event, this.projectInfo);
 				break;
 
-			case 31933: // Project event
+			case EVENT_KINDS.PROJECT:
 				await this.handleProjectEvent(event);
 				break;
 
@@ -233,7 +238,7 @@ export class EventHandler {
 			try {
 				const agentEvent = await this.ndk.fetchEvent(agentEventId);
 
-				if (agentEvent && agentEvent.kind === 4199) {
+				if (agentEvent && agentEvent.kind === EVENT_KINDS.AGENT_CONFIG) {
 					const agentName = agentEvent.tagValue("title") || "unnamed";
 					const agentConfig = {
 						eventId: agentEventId,
@@ -257,9 +262,10 @@ export class EventHandler {
 					// Ensure this agent has an nsec in agents.json
 					await this.ensureAgentNsec(agentName, agentEventId);
 				}
-			} catch (err: any) {
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : String(err);
 				console.log(
-					chalk.red(`Failed to fetch agent ${agentEventId}: ${err.message}`),
+					chalk.red(`Failed to fetch agent ${agentEventId}: ${errorMessage}`),
 				);
 			}
 		}
@@ -286,8 +292,11 @@ export class EventHandler {
 			if (!agentEntry) {
 				// Generate new nsec for this agent
 				const signer = NDKPrivateKeySigner.generate();
+				if (!signer.privateKey) {
+					throw new Error("Failed to generate private key for agent");
+				}
 				agents[agentKey] = {
-					nsec: (signer as any).nsec,
+					nsec: signer.privateKey,
 					file: `${agentEventId}.json`,
 				};
 
@@ -327,34 +336,41 @@ export class EventHandler {
 					// Publish kind 3199 agent request to the project owner
 					try {
 						const agentRequestEvent = new NDKEventClass(this.ndk, {
-							kind: 3199,
+							kind: EVENT_KINDS.AGENT_REQUEST,
 							pubkey: signer.pubkey,
 							content: `Agent '${fullAgentName}' requesting to join project '${projectTitle}'`,
 							tags: [
 								["p", this.projectInfo.projectPubkey], // Project owner
-								["a", `31933:${this.projectInfo.projectPubkey}:${this.projectInfo.projectId}`], // Project reference
 								["agent-name", agentKey],
 								["agent-event", agentEventId], // Reference to the NDKAgent event
 							],
 						});
 
+						// Tag the project properly
+						agentRequestEvent.tag(this.projectInfo.projectEvent);
+
 						await agentRequestEvent.sign(signer);
 						await agentRequestEvent.publish();
 
 						console.log(
-							chalk.green(`✅ Published kind:3199 agent request for ${agentName}`),
+							chalk.green(
+								`✅ Published kind:3199 agent request for ${agentName}`,
+							),
 						);
-					} catch (err: any) {
+					} catch (err) {
+						const errorMessage =
+							err instanceof Error ? err.message : String(err);
 						console.log(
 							chalk.yellow(
-								`⚠️  Failed to publish agent request for ${agentName}: ${err.message}`,
+								`⚠️  Failed to publish agent request for ${agentName}: ${errorMessage}`,
 							),
 						);
 					}
-				} catch (err: any) {
+				} catch (err) {
+					const errorMessage = err instanceof Error ? err.message : String(err);
 					console.log(
 						chalk.yellow(
-							`⚠️  Failed to publish profile for ${agentName}: ${err.message}`,
+							`⚠️  Failed to publish profile for ${agentName}: ${errorMessage}`,
 						),
 					);
 				}
@@ -379,8 +395,9 @@ export class EventHandler {
 					);
 				}
 			}
-		} catch (err: any) {
-			console.log(chalk.red(`Failed to update agents.json: ${err.message}`));
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : String(err);
+			console.log(chalk.red(`Failed to update agents.json: ${errorMessage}`));
 		}
 	}
 }

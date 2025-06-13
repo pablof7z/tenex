@@ -1,13 +1,19 @@
 import { logger } from "../../logger";
 import type { LLMConfig } from "../types";
-import type { LLMMessage, LLMProvider, LLMResponse, LLMContext } from "./types";
+import type {
+	LLMContext,
+	LLMMessage,
+	LLMProvider,
+	LLMResponse,
+	ProviderTool,
+} from "./types";
 
 export class OpenAIProvider implements LLMProvider {
 	async generateResponse(
 		messages: LLMMessage[],
 		config: LLMConfig,
 		context?: LLMContext,
-		tools?: any[],
+		tools?: ProviderTool[],
 	): Promise<LLMResponse> {
 		if (!config.apiKey) {
 			throw new Error("OpenAI API key is required");
@@ -16,7 +22,7 @@ export class OpenAIProvider implements LLMProvider {
 		const baseURL = config.baseURL || "https://api.openai.com/v1";
 		const model = config.model || "gpt-4";
 
-		const requestBody: any = {
+		const requestBody: Record<string, unknown> = {
 			model,
 			messages,
 			temperature: config.temperature ?? 0.7,
@@ -39,11 +45,15 @@ export class OpenAIProvider implements LLMProvider {
 		logger.debug(`URL: ${baseURL}/chat/completions`);
 		logger.debug("Headers:", {
 			"Content-Type": "application/json",
-			"Authorization": `Bearer ${config.apiKey}`,
+			Authorization: `Bearer ${config.apiKey}`,
 		});
-		logger.debug("Complete Request Body:");
-		logger.debug(JSON.stringify(requestBody, null, 2));
-		logger.debug("=== END API REQUEST ===\n");
+		// Log user prompt only
+		const userMessage = messages.find((msg) => msg.role === "user");
+		if (userMessage) {
+			logger.debug(
+				`OpenAI request - User: "${userMessage.content.substring(0, 100)}..."`,
+			);
+		}
 
 		try {
 			const response = await fetch(`${baseURL}/chat/completions`, {
@@ -62,10 +72,10 @@ export class OpenAIProvider implements LLMProvider {
 
 			const data = await response.json();
 
-			// Log the raw API response
-			logger.debug("\n=== OPENAI RAW API RESPONSE ===");
-			logger.debug(JSON.stringify(data, null, 2));
-			logger.debug("=== END RAW API RESPONSE ===\n");
+			// Log response summary only
+			logger.debug(
+				`OpenAI response - tokens: ${data.usage?.prompt_tokens || 0}+${data.usage?.completion_tokens || 0}`,
+			);
 
 			const choice = data.choices[0];
 
@@ -78,10 +88,14 @@ export class OpenAIProvider implements LLMProvider {
 				logger.debug("Model returned native tool calls:", toolCalls);
 				// Convert native tool calls to our format in the content
 				for (const toolCall of toolCalls) {
-					content += `\n<tool_use>\n${JSON.stringify({
-						tool: toolCall.function.name,
-						arguments: JSON.parse(toolCall.function.arguments)
-					}, null, 2)}\n</tool_use>`;
+					content += `\n<tool_use>\n${JSON.stringify(
+						{
+							tool: toolCall.function.name,
+							arguments: JSON.parse(toolCall.function.arguments),
+						},
+						null,
+						2,
+					)}\n</tool_use>`;
 				}
 			}
 

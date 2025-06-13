@@ -1,13 +1,19 @@
 import { logger } from "../../logger";
 import type { LLMConfig } from "../types";
-import type { LLMMessage, LLMProvider, LLMResponse, LLMContext } from "./types";
+import type {
+	LLMContext,
+	LLMMessage,
+	LLMProvider,
+	LLMResponse,
+	ProviderTool,
+} from "./types";
 
 export class OpenRouterProvider implements LLMProvider {
 	async generateResponse(
 		messages: LLMMessage[],
 		config: LLMConfig,
 		context?: LLMContext,
-		tools?: any[],
+		tools?: ProviderTool[],
 	): Promise<LLMResponse> {
 		if (!config.apiKey) {
 			throw new Error("OpenRouter API key is required");
@@ -26,7 +32,18 @@ export class OpenRouterProvider implements LLMProvider {
 		);
 
 		// Convert messages to OpenRouter format with caching
-		const formattedMessages: any[] = [];
+		interface OpenRouterMessage {
+			role: string;
+			content:
+				| string
+				| Array<{
+						type: string;
+						text: string;
+						cache_control?: { type: string };
+				  }>;
+		}
+
+		const formattedMessages: OpenRouterMessage[] = [];
 
 		// Add system message with caching if enabled
 		if (systemMessage) {
@@ -57,28 +74,62 @@ export class OpenRouterProvider implements LLMProvider {
 		const cacheBreakpoint = Math.max(0, conversationMessages.length - 1);
 
 		conversationMessages.forEach((msg, index) => {
-			// For messages before the last one, use caching if enabled
-			if (config.enableCaching !== false && index < cacheBreakpoint) {
+			// Handle tool messages specially
+			if (msg.role === "tool") {
 				formattedMessages.push({
-					role: msg.role,
+					role: "user",
 					content: [
 						{
-							type: "text",
-							text: msg.content,
-							cache_control: { type: "ephemeral" },
+							type: "tool_result",
+							tool_use_id: msg.tool_call_id,
+							content: msg.content,
 						},
 					],
 				});
-			} else {
-				// Last message or caching disabled
+			} else if (
+				msg.role === "assistant" &&
+				msg.tool_calls &&
+				msg.tool_calls.length > 0
+			) {
+				// Handle assistant messages with tool calls
+				const toolUses = msg.tool_calls.map((tc) => ({
+					type: "tool_use",
+					id: tc.id,
+					name: tc.name,
+					input: tc.arguments,
+				}));
+
+				// Ensure there's always text content for non-empty messages
+				const textContent = msg.content || "I'll use the following tools:";
+
 				formattedMessages.push({
 					role: msg.role,
-					content: msg.content,
+					content: [{ type: "text", text: textContent }, ...toolUses],
 				});
+			} else {
+				// For messages before the last one, use caching if enabled
+				if (config.enableCaching !== false && index < cacheBreakpoint) {
+					formattedMessages.push({
+						role: msg.role,
+						content: [
+							{
+								type: "text",
+								text: msg.content,
+								cache_control: { type: "ephemeral" },
+							},
+						],
+					});
+				} else {
+					// Last message or caching disabled
+					formattedMessages.push({
+						role: msg.role,
+						content: msg.content,
+					});
+				}
 			}
 		});
 
-		const requestBody: any = {
+		const requestBody: Record<string, unknown> = {
 			model,
 			messages: formattedMessages,
 			temperature: config.temperature ?? 0.7,
@@ -99,36 +150,13 @@ export class OpenRouterProvider implements LLMProvider {
 			Object.assign(requestBody, config.additionalParams);
 		}
 
-		// Debug logging - log complete request
-		logger.debug("\n=== OPENROUTER API REQUEST (WITH CACHING) ===");
-		if (context) {
-			logger.debug(`Agent: ${context.agentName || "unknown"}`);
-			logger.debug(`Project: ${context.projectName || "unknown"}`);
-			logger.debug(`Conversation: ${context.conversationId || "unknown"}`);
+		// Log user prompt only
+		const userMessage = conversationMessages.find((msg) => msg.role === "user");
+		if (userMessage && context) {
+			logger.debug(
+				`OpenRouter request - Agent: ${context.agentName}, User: "${userMessage.content.substring(0, 100)}..."`,
+			);
 		}
-		logger.debug(`URL: ${baseURL}/chat/completions`);
-		logger.debug("Headers:", {
-			"Content-Type": "application/json",
-			"Authorization": `Bearer ${config.apiKey}`,
-			"HTTP-Referer": config.appName || "tenex-cli",
-			"X-Title": config.appTitle || "TENEX CLI Agent",
-		});
-		logger.debug(`Caching enabled: ${config.enableCaching !== false}`);
-
-		// Count cached messages for summary
-		let cachedMessages = 0;
-		formattedMessages.forEach((msg) => {
-			if (Array.isArray(msg.content)) {
-				msg.content.forEach((c: any) => {
-					if (c.cache_control) cachedMessages++;
-				});
-			}
-		});
-		logger.debug(`Messages with cache control: ${cachedMessages}`);
-		
-		logger.debug("Complete Request Body:");
-		logger.debug(JSON.stringify(requestBody, null, 2));
-		logger.debug("=== END API REQUEST ===\n");
 
 		try {
 			const response = await fetch(`${baseURL}/chat/completions`, {
@@ -149,10 +177,10 @@ export class OpenRouterProvider implements LLMProvider {
 
 			const data = await response.json();
 
-			// Log the raw API response
-			logger.debug("\n=== OPENROUTER RAW API RESPONSE ===");
-			logger.debug(JSON.stringify(data, null, 2));
-			logger.debug("=== END RAW API RESPONSE ===\n");
+			// Log response summary only
+			logger.debug(
+				`OpenRouter response - tokens: ${data.usage?.prompt_tokens || 0}+${data.usage?.completion_tokens || 0}`,
+			);
 
 			// Log cache usage if available
 			if (data.usage?.cached_tokens) {
@@ -162,6 +190,21 @@ export class OpenRouterProvider implements LLMProvider {
 			}
 			if (data.cache_discount) {
 				logger.info(`Cache discount: ${data.cache_discount}`);
+			}
+
+			// Validate response structure
+			if (
+				!data.choices ||
+				!Array.isArray(data.choices) ||
+				data.choices.length === 0
+			) {
+				logger.error(
+					"Invalid OpenRouter response structure:",
+					JSON.stringify(data, null, 2),
+				);
+				throw new Error(
+					"Invalid response from OpenRouter: missing or empty choices array",
+				);
 			}
 
 			// Extract the response
@@ -176,10 +219,28 @@ export class OpenRouterProvider implements LLMProvider {
 				logger.debug("Model returned native tool calls:", toolCalls);
 				// Convert native tool calls to our format in the content
 				for (const toolCall of toolCalls) {
-					content += `\n<tool_use>\n${JSON.stringify({
-						tool: toolCall.function.name,
-						arguments: JSON.parse(toolCall.function.arguments)
-					}, null, 2)}\n</tool_use>`;
+					// Parse the arguments if they're a JSON string
+					let parsedArgs = {};
+					if (toolCall.function.arguments) {
+						try {
+							parsedArgs =
+								typeof toolCall.function.arguments === "string"
+									? JSON.parse(toolCall.function.arguments)
+									: toolCall.function.arguments;
+						} catch (e) {
+							logger.error("Failed to parse tool call arguments:", e);
+							parsedArgs = { raw: toolCall.function.arguments };
+						}
+					}
+
+					content += `\n<tool_use>\n${JSON.stringify(
+						{
+							tool: toolCall.function.name,
+							arguments: parsedArgs,
+						},
+						null,
+						2,
+					)}\n</tool_use>`;
 				}
 			}
 

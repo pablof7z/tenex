@@ -36,7 +36,9 @@
 	},
 	"dependencies": {
 		"@nostr-dev-kit/ndk": "^2.14.29",
-		"nostr-tools": "^2.10.2"
+		"nostr-tools": "^2.10.2",
+		"@tenex/types": "file:../packages/types",
+		"chalk": "^5.3.0"
 	},
 	"devDependencies": {
 		"typescript": "^5.7.3",

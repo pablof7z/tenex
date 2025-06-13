@@ -2,7 +2,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { atom, useAtom } from "jotai";
 import { useEffect, useRef } from "react";
-import { EVENT_KINDS } from "../../../shared/dist/types/events";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { toast } from "sonner";
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 

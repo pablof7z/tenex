@@ -1,3 +1,4 @@
+import chalk from "chalk";
 let globalConfig = {
     useEmoji: true,
     useLabels: false,
@@ -11,15 +12,17 @@ export function logError(message, error) {
         : globalConfig.useLabels
             ? "[ERROR]"
             : "";
-    console.error(prefix ? `${prefix} ${message}` : message, error || "");
+    const fullMessage = prefix ? `${prefix} ${message}` : message;
+    console.error(chalk.redBright(fullMessage), error || "");
 }
 export function logInfo(message, ...args) {
     const prefix = globalConfig.useEmoji
-        ? "ℹ️ "
+        ? "ℹ️"
         : globalConfig.useLabels
             ? "[INFO]"
             : "";
-    console.log(prefix ? `${prefix} ${message}` : message, ...args);
+    const fullMessage = prefix ? `${prefix} ${message}` : message;
+    console.log(chalk.blueBright(fullMessage), ...args);
 }
 export function logSuccess(message) {
     const prefix = globalConfig.useEmoji
@@ -27,19 +30,26 @@ export function logSuccess(message) {
         : globalConfig.useLabels
             ? "[SUCCESS]"
             : "";
-    console.log(prefix ? `${prefix} ${message}` : message);
+    const fullMessage = prefix ? `${prefix} ${message}` : message;
+    console.log(chalk.greenBright(fullMessage));
 }
 export function logWarning(message, ...args) {
     const prefix = globalConfig.useEmoji
-        ? "⚠️ "
+        ? "⚠️"
         : globalConfig.useLabels
             ? "[WARNING]"
             : "";
-    console.warn(prefix ? `${prefix} ${message}` : message, ...args);
+    const fullMessage = prefix ? `${prefix} ${message}` : message;
+    console.warn(chalk.yellowBright(fullMessage), ...args);
 }
 export function logDebug(message, ...args) {
-    const prefix = globalConfig.useLabels ? "[DEBUG]" : "";
-    console.log(prefix ? `${prefix} ${message}` : message, ...args);
+    const prefix = globalConfig.useEmoji
+        ? "🔍"
+        : globalConfig.useLabels
+            ? "[DEBUG]"
+            : "";
+    const fullMessage = prefix ? `${prefix} ${message}` : message;
+    console.log(chalk.magentaBright(fullMessage), ...args);
 }
 // Export a logger object for compatibility
 export const logger = {

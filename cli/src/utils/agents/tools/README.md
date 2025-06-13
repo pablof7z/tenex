@@ -102,12 +102,8 @@ The system supports multiple tool call formats:
 
 ## Example Tools
 
-The `examples/` directory contains several pre-built tools:
+The `examples/` directory contains a pre-built tool:
 
-- **read_file** - Read file contents
-- **write_file** - Write content to files
-- **shell** - Execute shell commands
-- **search_files** - Search for files using glob patterns
 - **get_time** - Get current time in various formats
 
 ## Provider Support

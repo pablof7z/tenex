@@ -1,7 +1,8 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { logError, logWarning } from "../logger.js";
-import type { ProjectMetadata } from "../types/index.js";
+import type { ProjectMetadata } from "@tenex/types/projects";
+import { getErrorMessage } from "@tenex/types/utils";
 
 /**
  * Ensure a directory exists, creating it if necessary
@@ -9,8 +10,8 @@ import type { ProjectMetadata } from "../types/index.js";
 export async function ensureDirectory(dirPath: string): Promise<void> {
 	try {
 		await access(dirPath);
-	} catch (err: any) {
-		if (err.code === "ENOENT") {
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
 			await mkdir(dirPath, { recursive: true });
 		} else {
 			throw err;
@@ -25,8 +26,8 @@ export async function directoryExists(dirPath: string): Promise<boolean> {
 	try {
 		await access(dirPath);
 		return true;
-	} catch (err: any) {
-		if (err.code === "ENOENT") {
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
 			return false;
 		}
 		throw err;
@@ -40,11 +41,11 @@ export async function readJsonFile<T>(filePath: string): Promise<T | null> {
 	try {
 		const content = await readFile(filePath, "utf-8");
 		return JSON.parse(content) as T;
-	} catch (err: any) {
-		if (err.code === "ENOENT") {
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
 			return null;
 		}
-		logError(`Failed to read JSON file ${filePath}: ${err.message}`);
+		logError(`Failed to read JSON file ${filePath}: ${getErrorMessage(err)}`);
 		throw err;
 	}
 }

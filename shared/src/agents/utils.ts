@@ -4,6 +4,7 @@ import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { nip19 } from "nostr-tools";
 import { logError, logInfo, logWarning } from "../logger.js";
 import { getNDK } from "../nostr.js";
+import { getErrorMessage } from "@tenex/types/utils";
 import type {
 	AgentConfigEntry,
 	AgentDefinition,
@@ -11,7 +12,7 @@ import type {
 	AgentSignerResult,
 	AgentsJson,
 	LegacyAgentsJson,
-} from "./types.js";
+} from "@tenex/types/agents";
 
 /**
  * Convert agent name to kebab-case for use as key in agents.json
@@ -45,12 +46,12 @@ export async function loadAgentsConfig(
 		}
 
 		return agents;
-	} catch (err: any) {
-		if (err.code === "ENOENT") {
+	} catch (err: unknown) {
+		if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
 			return {};
 		}
 		logWarning(
-			`Failed to load agents config from ${configPath}: ${err.message}`,
+			`Failed to load agents config from ${configPath}: ${getErrorMessage(err)}`,
 		);
 		return {};
 	}
@@ -67,8 +68,8 @@ export async function saveAgentsConfig(
 		await mkdir(path.dirname(configPath), { recursive: true });
 		await writeFile(configPath, JSON.stringify(agents, null, 2));
 		logInfo(`Saved agents config to ${configPath}`);
-	} catch (err: any) {
-		logError(`Failed to save agents config to ${configPath}: ${err.message}`);
+	} catch (err: unknown) {
+		logError(`Failed to save agents config to ${configPath}: ${getErrorMessage(err)}`);
 		throw err;
 	}
 }
@@ -124,9 +125,9 @@ export async function publishAgentProfile(
 		await profileEvent.sign(signer);
 		await profileEvent.publish();
 
-		logInfo(`Published kind:0 profile for agent '${agentName}'`);
-	} catch (err: any) {
-		logWarning(`Failed to publish agent profile: ${err.message}`);
+		// Profile publishing logged by caller
+	} catch (err: unknown) {
+		logWarning(`Failed to publish agent profile: ${getErrorMessage(err)}`);
 	}
 }
 
@@ -176,8 +177,8 @@ export async function publishAgentRequest(
 		logInfo(`Published kind:3199 agent request for '${agentName}'`);
 		logInfo("Agent request event details:");
 		logInfo(JSON.stringify(agentRequestEvent.rawEvent(), null, 2));
-	} catch (err: any) {
-		logWarning(`Failed to publish agent request: ${err.message}`);
+	} catch (err: unknown) {
+		logWarning(`Failed to publish agent request: ${getErrorMessage(err)}`);
 	}
 }
 
@@ -220,11 +221,11 @@ export async function getOrCreateAgentSigner(
 						projectAuthor = decoded.data.pubkey;
 					}
 				} catch (err) {
-					logWarning(`Failed to decode project naddr: ${err}`);
+					logWarning(`Failed to decode project naddr: ${getErrorMessage(err)}`);
 				}
 			}
-		} catch (err: any) {
-			logWarning(`Could not load project metadata: ${err.message}`);
+		} catch (err: unknown) {
+			logWarning(`Could not load project metadata: ${getErrorMessage(err)}`);
 		}
 
 		// Save new agent
@@ -232,13 +233,17 @@ export async function getOrCreateAgentSigner(
 		agents[agentSlug] = agentEntry;
 		await saveAgentsConfig(agentsPath, agents);
 
-		// Publish profile
-		await publishAgentProfile(
-			nsec,
-			agentSlug,
-			projectName,
-			agentSlug === "default",
-		);
+		// Only publish profile if this is truly a runtime-created agent
+		// (not during project initialization where profiles are bulk-published)
+		const isRuntimeCreation = !process.env.TENEX_PROJECT_INIT;
+		if (isRuntimeCreation) {
+			await publishAgentProfile(
+				nsec,
+				agentSlug,
+				projectName,
+				agentSlug === "default",
+			);
+		}
 
 		// Publish kind 3199 event to request human acknowledgment
 		if (projectNaddr && projectAuthor) {
@@ -341,8 +346,8 @@ export async function fetchAndSaveAgentDefinitions(
 			} else {
 				logWarning(`Agent event ${agentEventId} not found or invalid kind`);
 			}
-		} catch (err: any) {
-			logWarning(`Failed to fetch agent ${agentEventId}: ${err.message}`);
+		} catch (err: unknown) {
+			logWarning(`Failed to fetch agent ${agentEventId}: ${getErrorMessage(err)}`);
 		}
 	}
 }

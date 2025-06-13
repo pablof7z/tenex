@@ -1,11 +1,11 @@
-import type { ToolDefinition, ToolContext } from "./types";
 import { NDKArticle, type NDKFilter } from "@nostr-dev-kit/ndk";
 import { logger } from "../../logger";
+import type { ToolContext, ToolDefinition } from "./types";
 
 export const readSpecsTool: ToolDefinition = {
 	name: "read_specs",
 	description:
-		"Read all specification documents (NDKArticle events) published by the default agent for this project. Returns the most recent version of each spec.",
+		"Read all specification documents published by the default agent for this project. Returns the most recent version of each spec.",
 	parameters: [
 		{
 			name: "spec_name",
@@ -68,8 +68,18 @@ export const readSpecsTool: ToolDefinition = {
 				(a, b) => (b.created_at || 0) - (a.created_at || 0),
 			);
 
+			// Spec document interface
+			interface SpecDocument {
+				name: string;
+				title: string;
+				content: string;
+				summary: string;
+				published_at: number;
+				event_id: string;
+			}
+
 			// Group by d tag to get only the most recent version of each spec
-			const latestSpecs = new Map<string, any>();
+			const latestSpecs = new Map<string, SpecDocument>();
 
 			for (const event of specEvents) {
 				const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
@@ -100,15 +110,14 @@ export const readSpecsTool: ToolDefinition = {
 					success: true,
 					output,
 				};
-			} else {
-				// Multiple specs
-				const output = formatMultipleSpecs(Array.from(latestSpecs.values()));
-
-				return {
-					success: true,
-					output,
-				};
 			}
+			// Multiple specs
+			const output = formatMultipleSpecs(Array.from(latestSpecs.values()));
+
+			return {
+				success: true,
+				output,
+			};
 		} catch (error) {
 			logger.error(`Failed to read specs: ${error}`);
 			return {
@@ -123,7 +132,16 @@ export const readSpecsTool: ToolDefinition = {
 	},
 };
 
-function formatSingleSpec(spec: any): string {
+interface SpecDocument {
+	name: string;
+	title: string;
+	content: string;
+	summary: string;
+	published_at: number;
+	event_id: string;
+}
+
+function formatSingleSpec(spec: SpecDocument): string {
 	const date = new Date(spec.published_at * 1000).toISOString();
 
 	return `# ${spec.title}
@@ -136,7 +154,7 @@ function formatSingleSpec(spec: any): string {
 ${spec.content}`;
 }
 
-function formatMultipleSpecs(specs: any[]): string {
+function formatMultipleSpecs(specs: SpecDocument[]): string {
 	if (specs.length === 0) {
 		return "No specifications found.";
 	}

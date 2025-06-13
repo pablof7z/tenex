@@ -4,9 +4,7 @@ Command Line Interface for TENEX.
 
 ## Commands
 
-- `npx tenex init`
-- `npx tenex agent publish`
-- `npx tenex agent find`
-- `npx tenex agent install`
+- `npx tenex project init <path> <naddr>` - Initialize a new project from Nostr event
+- `npx tenex run` - Start multi-agent orchestration system
 
 See `/src` for implementation details.

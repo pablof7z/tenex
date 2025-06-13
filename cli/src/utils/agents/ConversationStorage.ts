@@ -66,7 +66,9 @@ export class ConversationStorage {
 		const filePath = path.join(this.storageDir, fileName);
 
 		await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-		logger.info(`Saved conversation ${data.id} for agent ${data.agentName} to ${filePath}`);
+		logger.info(
+			`Saved conversation ${data.id} for agent ${data.agentName} to ${filePath}`,
+		);
 	}
 
 	async loadConversation(
@@ -77,7 +79,7 @@ export class ConversationStorage {
 		if (agentName) {
 			const agentFileName = `${agentName}-${conversationId}.json`;
 			const agentFilePath = path.join(this.storageDir, agentFileName);
-			
+
 			try {
 				const data = await fs.readFile(agentFilePath, "utf-8");
 				return JSON.parse(data);
@@ -85,7 +87,7 @@ export class ConversationStorage {
 				// Fall through to legacy file name
 			}
 		}
-		
+
 		// Legacy support: try loading without agent prefix
 		const fileName = `${conversationId}.json`;
 		const filePath = path.join(this.storageDir, fileName);
@@ -102,7 +104,7 @@ export class ConversationStorage {
 		try {
 			const files = await fs.readdir(this.storageDir);
 			const conversationIds = new Set<string>();
-			
+
 			for (const file of files) {
 				if (file.endsWith(".json") && file !== "processed-events.json") {
 					// Handle both old format (conversationId.json) and new format (agentName-conversationId.json)
@@ -116,28 +118,33 @@ export class ConversationStorage {
 					}
 				}
 			}
-			
+
 			return Array.from(conversationIds);
 		} catch (error) {
 			return [];
 		}
 	}
 
-	async deleteConversation(conversationId: string, agentName?: string): Promise<void> {
+	async deleteConversation(
+		conversationId: string,
+		agentName?: string,
+	): Promise<void> {
 		// Try to delete agent-specific file first if agentName provided
 		if (agentName) {
 			const agentFileName = `${agentName}-${conversationId}.json`;
 			const agentFilePath = path.join(this.storageDir, agentFileName);
-			
+
 			try {
 				await fs.unlink(agentFilePath);
-				logger.info(`Deleted conversation ${conversationId} for agent ${agentName}`);
+				logger.info(
+					`Deleted conversation ${conversationId} for agent ${agentName}`,
+				);
 				return;
 			} catch (error) {
 				// Fall through to try legacy file name
 			}
 		}
-		
+
 		// Try legacy file name
 		const fileName = `${conversationId}.json`;
 		const filePath = path.join(this.storageDir, fileName);
@@ -154,24 +161,29 @@ export class ConversationStorage {
 		maxAgeMs: number = 30 * 24 * 60 * 60 * 1000,
 	): Promise<void> {
 		const now = Date.now();
-		
+
 		try {
 			const files = await fs.readdir(this.storageDir);
-			
+
 			for (const file of files) {
 				if (file.endsWith(".json") && file !== "processed-events.json") {
 					const filePath = path.join(this.storageDir, file);
-					
+
 					try {
 						const data = await fs.readFile(filePath, "utf-8");
 						const conversation: ConversationContext = JSON.parse(data);
-						
-						if (conversation.lastActivityAt && now - conversation.lastActivityAt > maxAgeMs) {
+
+						if (
+							conversation.lastActivityAt &&
+							now - conversation.lastActivityAt > maxAgeMs
+						) {
 							await fs.unlink(filePath);
 							logger.info(`Deleted old conversation file: ${file}`);
 						}
 					} catch (error) {
-						logger.warn(`Failed to process conversation file ${file}: ${error}`);
+						logger.warn(
+							`Failed to process conversation file ${file}: ${error}`,
+						);
 					}
 				}
 			}

@@ -105,7 +105,7 @@ export function ThreadOverview({
 
 	return (
 		<div
-			className={`bg-white p-3 border-b cursor-pointer transition-all hover:shadow-sm ${getActivityColor()}`}
+			className={`bg-card p-3 border-b cursor-pointer transition-all hover:shadow-sm ${getActivityColor()}`}
 			onClick={onClick}
 		>
 			<div className="flex items-start gap-3">

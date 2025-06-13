@@ -1,18 +1,6 @@
 /**
- * Nostr event kinds used throughout TENEX
+ * @deprecated This file is kept for backward compatibility only.
+ * Please import from @tenex/types/events instead.
  */
-export const EVENT_KINDS = {
-    PROFILE: 0,
-    STATUS_UPDATE: 1,
-    CONTACT_LIST: 3,
-    CHAT_MESSAGE: 11,
-    CHAT_REPLY: 1111,
-    TASK: 1934,
-    AGENT_LESSON: 4124,
-    AGENT_CONFIG: 4199,
-    PROJECT_STATUS: 24010,
-    TYPING_INDICATOR: 24111,
-    TYPING_INDICATOR_STOP: 24112,
-    TEMPLATE: 30717,
-    PROJECT: 31933,
-};
+// Re-export everything from @tenex/types for backward compatibility
+export * from "@tenex/types/events";

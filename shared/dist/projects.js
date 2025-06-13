@@ -7,8 +7,9 @@ import { nip19 } from "nostr-tools";
 import { fetchAndSaveAgentDefinitions as fetchAgentDefs, publishAgentProfile, } from "./agents/index.js";
 import { logError, logInfo, logSuccess, logWarning } from "./logger.js";
 import { getNDK } from "./nostr.js";
+import { getErrorMessage } from "@tenex/types/utils";
 const execAsync = promisify(exec);
-// Re-export from agents module for backward compatibility
+// Re-export utility functions from agents module
 export { toKebabCase, updateAgentConfig, } from "./agents/index.js";
 export function extractProjectIdentifierFromTag(aTag) {
     const parts = aTag.split(":");
@@ -26,7 +27,7 @@ export async function checkProjectExists(projectsPath, projectIdentifier) {
         exists = true;
     }
     catch (err) {
-        if (err.code !== "ENOENT") {
+        if (err instanceof Error && 'code' in err && err.code !== "ENOENT") {
             throw err;
         }
     }
@@ -131,7 +132,7 @@ async function fetchTemplateRepoUrl(template) {
         }
     }
     catch (templateErr) {
-        logWarning(`Failed to fetch template: ${templateErr.message}`);
+        logWarning(`Failed to fetch template: ${getErrorMessage(templateErr)}`);
     }
     return undefined;
 }
@@ -142,7 +143,7 @@ export async function initializeProject(options) {
         projectData = await fetchProjectFromNostr(naddr);
     }
     catch (err) {
-        logError(`Failed to fetch project: ${err.message}`);
+        logError(`Failed to fetch project: ${getErrorMessage(err)}`);
         throw err;
     }
     // Generate new nsec for project
@@ -153,6 +154,8 @@ export async function initializeProject(options) {
     const tenexDir = path.join(projectPath, ".tenex");
     const agentsConfigPath = path.join(tenexDir, "agents.json");
     try {
+        // Set environment variable to prevent duplicate profile publishing
+        process.env.TENEX_PROJECT_INIT = "true";
         // Create project directory and setup git
         await createProjectDirectory(projectPath, projectData.repoUrl);
         // Create .tenex directory structure
@@ -189,8 +192,12 @@ export async function initializeProject(options) {
         return projectPath;
     }
     catch (err) {
-        logError(`Failed to create project: ${err.message}`);
+        logError(`Failed to create project: ${getErrorMessage(err)}`);
         throw err;
+    }
+    finally {
+        // Clean up the environment variable
+        delete process.env.TENEX_PROJECT_INIT;
     }
 }
 async function createProjectDirectory(projectPath, repoUrl) {
@@ -201,7 +208,7 @@ async function createProjectDirectory(projectPath, repoUrl) {
         logInfo(`Using existing project directory: ${projectPath}`);
     }
     catch (err) {
-        if (err.code !== "ENOENT")
+        if (err instanceof Error && 'code' in err && err.code !== "ENOENT")
             throw err;
     }
     if (!projectExists) {
@@ -215,7 +222,13 @@ async function createProjectDirectory(projectPath, repoUrl) {
             logSuccess("Repository cloned successfully");
         }
         catch (err) {
-            const errorMessage = err.stderr || err.message || "Unknown error during clone";
+            let errorMessage = "Unknown error during clone";
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            }
+            else if (err && typeof err === 'object' && 'stderr' in err) {
+                errorMessage = String(err.stderr);
+            }
             logError(`Failed to clone repository: ${errorMessage}`);
             await execAsync(`rm -rf "${projectPath}"`);
             throw err;
@@ -248,7 +261,7 @@ async function createTenexDirectory(tenexDir) {
         logInfo(".tenex directory found from template. Updating configuration...");
     }
     catch (err) {
-        if (err.code !== "ENOENT")
+        if (err instanceof Error && 'code' in err && err.code !== "ENOENT")
             throw err;
     }
     if (!tenexExists) {
@@ -269,11 +282,12 @@ async function getGitRemoteUrl(projectPath) {
 async function publishAgentProfiles(agentsConfig, projectTitle) {
     for (const [agentKey, agentData] of Object.entries(agentsConfig)) {
         try {
-            await publishAgentProfile(agentData.nsec, agentKey, projectTitle, agentKey === "default");
-            logSuccess(`Published kind:0 profile for agent '${agentKey}' with avatar`);
+            const nsec = typeof agentData === 'string' ? agentData : agentData.nsec;
+            await publishAgentProfile(nsec, agentKey, projectTitle, agentKey === "default");
+            logSuccess(`✅ Published kind:0 profile for agent '${agentKey}' with avatar`);
         }
         catch (err) {
-            logWarning(`Failed to publish kind:0 profile for agent '${agentKey}': ${err.message}`);
+            logWarning(`Failed to publish kind:0 profile for agent '${agentKey}': ${getErrorMessage(err)}`);
         }
     }
 }

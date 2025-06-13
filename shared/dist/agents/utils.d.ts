@@ -1,5 +1,5 @@
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import type { AgentProfile, AgentSignerResult, AgentsJson } from "./types.js";
+import type { AgentProfile, AgentSignerResult, AgentsJson } from "@tenex/types/agents";
 /**
  * Convert agent name to kebab-case for use as key in agents.json
  * Examples: "Christ" -> "christ", "Hello World" -> "hello-world"

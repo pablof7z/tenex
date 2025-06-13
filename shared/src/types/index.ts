@@ -1,3 +1,2 @@
-export * from "./events.js";
-export * from "./llm.js";
-export * from "./projects.js";
+// All types now live in @tenex/types
+export * from "@tenex/types";

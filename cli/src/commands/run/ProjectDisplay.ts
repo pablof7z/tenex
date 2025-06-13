@@ -106,7 +106,7 @@ export class ProjectDisplay {
 			const llms = JSON.parse(llmsContent);
 
 			const defaultConfig = llms.default;
-			delete llms.default;
+			llms.default = undefined;
 
 			const configNames = Object.keys(llms).filter(
 				(name) =>
@@ -122,7 +122,7 @@ export class ProjectDisplay {
 			console.log(chalk.cyan("🤖 Available LLM Configurations"));
 			console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-			configNames.forEach((name) => {
+			for (const name of configNames) {
 				const config = llms[name];
 				const isDefault = name === defaultConfig;
 				console.log(
@@ -135,7 +135,7 @@ export class ProjectDisplay {
 				if (config.baseURL) {
 					console.log(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
 				}
-			});
+			}
 		} catch (err) {
 			// Silent failure - just don't display anything if llms.json doesn't exist
 		}

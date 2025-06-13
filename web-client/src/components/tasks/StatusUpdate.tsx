@@ -6,8 +6,8 @@ import {
 	DollarSign,
 	GitCommit,
 } from "lucide-react";
-import { memo, useState, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
+import { memo, useState, useMemo, type ReactNode } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
@@ -20,8 +20,7 @@ import {
 	HoverCardContent,
 	HoverCardTrigger,
 } from "../ui/hover-card";
-import { MessageWithEntities } from "../common/MessageWithEntities";
-import { findNostrEntities, replaceNostrEntities } from "../../utils/nostrEntityParser";
+import { findNostrEntities } from "../../utils/nostrEntityParser";
 import { NostrEntityCard } from "../common/NostrEntityCard";
 
 interface StatusUpdateProps {
@@ -56,35 +55,43 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 	}, [event.content]);
 
 	// Custom components for ReactMarkdown
-	const markdownComponents = {
-		code({ node, inline, className, children, ...props }: any) {
+	const markdownComponents: Components = {
+		code({ className, children }) {
 			const match = /language-(\w+)/.exec(className || "");
-			return !inline && match ? (
+			const isInline = !match;
+			return !isInline && match ? (
 				<SyntaxHighlighter
 					style={oneDark}
 					language={match[1]}
 					PreTag="div"
 					className="rounded-md text-xs font-mono"
 					customStyle={{ fontSize: "0.75rem" }}
-					{...props}
 				>
 					{String(children).replace(/\n$/, "")}
 				</SyntaxHighlighter>
 			) : (
 				<code
 					className="bg-muted px-1 py-0.5 rounded text-xs font-mono"
-					{...props}
 				>
 					{children}
 				</code>
 			);
 		},
-		pre({ children }: any) {
+		pre({ children }) {
 			return <div className="my-2 overflow-x-auto font-mono">{children}</div>;
 		},
-		p({ children, ...props }: any) {
+		ul({ children }) {
+			return <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>;
+		},
+		ol({ children }) {
+			return <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>;
+		},
+		li({ children }) {
+			return <li className="ml-2">{children}</li>;
+		},
+		p({ children, ...props }) {
 			// Process text nodes to replace entity placeholders
-			const processChildren = (children: any): any => {
+			const processChildren = (children: ReactNode): ReactNode => {
 				if (typeof children === 'string') {
 					// Check for entity placeholders
 					const entityRegex = /\[NOSTR_ENTITY:([^:]+):([^\]]+)\]/g;
@@ -121,15 +128,25 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 
 					return parts.length > 0 ? parts : children;
 				} else if (Array.isArray(children)) {
-					return children.map((child, idx) => 
-						<span key={idx}>{processChildren(child)}</span>
-					);
-				} else if (children?.props?.children) {
+					return children.map((child, idx) => {
+						const processed = processChildren(child);
+						return typeof processed === 'string' || !processed 
+							? processed 
+							: <span key={idx}>{processed}</span>;
+					});
+				} else if (
+					children && 
+					typeof children === 'object' && 
+					'props' in children && 
+					children.props && 
+					typeof children.props === 'object' && 
+					'children' in children.props
+				) {
 					return {
 						...children,
 						props: {
 							...children.props,
-							children: processChildren(children.props.children)
+							children: processChildren(children.props.children as React.ReactNode)
 						}
 					};
 				}
@@ -198,6 +215,30 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 			}
 		}
 
+		// Also check for system-prompt and user-prompt tags (without llm- prefix)
+		// These are used in typing indicators and response events
+		const systemPromptValue = event.tagValue("system-prompt");
+		if (systemPromptValue && !metadata["llm-system-prompt"]) {
+			metadata["llm-system-prompt"] = systemPromptValue;
+		}
+
+		const userPromptValue = event.tagValue("prompt");
+		if (userPromptValue && !metadata["llm-user-prompt"]) {
+			metadata["llm-user-prompt"] = userPromptValue;
+		}
+
+		// Check for alternative token naming conventions
+		// CLI uses llm-input-tokens/llm-output-tokens instead of llm-prompt-tokens/llm-completion-tokens
+		const inputTokensValue = event.tagValue("llm-input-tokens");
+		if (inputTokensValue && !metadata["llm-prompt-tokens"]) {
+			metadata["llm-prompt-tokens"] = inputTokensValue;
+		}
+
+		const outputTokensValue = event.tagValue("llm-output-tokens");
+		if (outputTokensValue && !metadata["llm-completion-tokens"]) {
+			metadata["llm-completion-tokens"] = outputTokensValue;
+		}
+
 		return Object.keys(metadata).length > 0 ? metadata : null;
 	};
 
@@ -262,12 +303,12 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 			<div className="flex justify-end p-3">
 				<div className="max-w-[80%]">
 					<div className="bg-primary text-primary-foreground rounded-lg px-3 py-2">
-						<div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:text-primary-foreground prose-a:text-primary-foreground prose-a:underline prose-strong:text-primary-foreground prose-blockquote:text-primary-foreground/80 prose-blockquote:border-l-primary-foreground prose-ul:list-disc prose-ul:list-inside prose-ol:list-decimal prose-ol:list-inside prose-li:my-0.5 prose-ul:my-1 prose-ol:my-1">
+						<div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:text-primary-foreground prose-a:text-primary-foreground prose-a:underline prose-strong:text-primary-foreground prose-blockquote:text-primary-foreground/80 prose-blockquote:border-l-primary-foreground">
 							<ReactMarkdown
 								remarkPlugins={[remarkGfm]}
 								components={markdownComponents}
 							>
-								{event.content}
+								{processedContent.content}
 							</ReactMarkdown>
 						</div>
 					</div>
@@ -340,12 +381,12 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 					</div>
 
 					{/* Message content */}
-					<div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary prose-ul:list-disc prose-ul:list-inside prose-ol:list-decimal prose-ol:list-inside prose-li:my-0.5 prose-ul:my-1 prose-ol:my-1">
+					<div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary">
 						<ReactMarkdown
 							remarkPlugins={[remarkGfm]}
 							components={markdownComponents}
 						>
-							{event.content}
+							{processedContent.content}
 						</ReactMarkdown>
 					</div>
 

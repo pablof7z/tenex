@@ -165,14 +165,14 @@ export function ProjectColumn({
 	}, [projectTasks, projectThreads]);
 
 	return (
-		<div className="w-80 flex-shrink-0 bg-muted border-x-[1px] border-border flex flex-col h-full">
+		<div className="w-80 flex-shrink-0 bg-muted/50 border-x-[1px] border-border flex flex-col h-full">
 			{/* Column Header */}
-			<div className="p-4 bg-card rounded-t-lg border-b border-border">
+			<div className="p-4 bg-card/80 rounded-t-lg border-b border-border">
 				<div className="flex items-center gap-3">
 					<Avatar className="w-10 h-10">
 						<AvatarImage src={getProjectAvatar(project)} alt={title} />
 						<AvatarFallback
-							className={`text-primary-foreground font-semibold text-sm ${getAvatarColors(title)}`}
+							className={`text-white font-semibold text-sm ${getAvatarColors(title)}`}
 						>
 							{getInitials(title)}
 						</AvatarFallback>

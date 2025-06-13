@@ -1,13 +1,19 @@
 import { logger } from "../../logger";
 import type { LLMConfig } from "../types";
-import type { LLMMessage, LLMProvider, LLMResponse, LLMContext } from "./types";
+import type {
+	LLMContext,
+	LLMMessage,
+	LLMProvider,
+	LLMResponse,
+	ProviderTool,
+} from "./types";
 
 export class AnthropicProviderWithCache implements LLMProvider {
 	async generateResponse(
 		messages: LLMMessage[],
 		config: LLMConfig,
 		context?: LLMContext,
-		tools?: any[],
+		tools?: ProviderTool[],
 	): Promise<LLMResponse> {
 		if (!config.apiKey) {
 			throw new Error("Anthropic API key is required");
@@ -23,7 +29,34 @@ export class AnthropicProviderWithCache implements LLMProvider {
 		);
 
 		// Build request with cache control
-		const requestBody: any = {
+		interface AnthropicMessage {
+			role: string;
+			content:
+				| string
+				| Array<{
+						type: string;
+						text: string;
+						cache_control?: { type: string };
+				  }>;
+		}
+
+		interface AnthropicRequest {
+			model: string;
+			messages: AnthropicMessage[];
+			max_tokens: number;
+			temperature: number;
+			system?:
+				| string
+				| Array<{
+						type: string;
+						text: string;
+						cache_control?: { type: string };
+				  }>;
+			tools?: ProviderTool[];
+			tool_choice?: { type: string };
+		}
+
+		const requestBody: AnthropicRequest = {
 			model,
 			messages: [],
 			max_tokens: config.maxTokens || 4096,
@@ -85,26 +118,30 @@ export class AnthropicProviderWithCache implements LLMProvider {
 			"anthropic-version": "2023-06-01",
 			"anthropic-beta": "prompt-caching-2024-07-31",
 		});
-		
+
 		// Count cached messages for summary
 		let cachedMessages = 0;
 		if (Array.isArray(requestBody.system)) {
-			requestBody.system.forEach((s: any) => {
+			for (const s of requestBody.system) {
 				if (s.cache_control) cachedMessages++;
-			});
-		}
-		requestBody.messages.forEach((msg: any) => {
-			if (Array.isArray(msg.content)) {
-				msg.content.forEach((c: any) => {
-					if (c.cache_control) cachedMessages++;
-				});
 			}
-		});
+		}
+		for (const msg of requestBody.messages) {
+			if (Array.isArray(msg.content)) {
+				for (const c of msg.content) {
+					if (c.cache_control) cachedMessages++;
+				}
+			}
+		}
 		logger.debug(`Messages with cache control: ${cachedMessages}`);
-		
-		logger.debug("Complete Request Body:");
-		logger.debug(JSON.stringify(requestBody, null, 2));
-		logger.debug("=== END API REQUEST ===\n");
+
+		// Log user prompt only
+		const userMessage = messages.find((msg) => msg.role === "user");
+		if (userMessage) {
+			logger.debug(
+				`Anthropic request - User: "${userMessage.content.substring(0, 100)}..."`,
+			);
+		}
 
 		try {
 			const response = await fetch(`${baseURL}/messages`, {
@@ -125,10 +162,10 @@ export class AnthropicProviderWithCache implements LLMProvider {
 
 			const data = await response.json();
 
-			// Log the raw API response
-			logger.debug("\n=== ANTHROPIC RAW API RESPONSE ===");
-			logger.debug(JSON.stringify(data, null, 2));
-			logger.debug("=== END RAW API RESPONSE ===\n");
+			// Log response summary only
+			logger.debug(
+				`Anthropic response - tokens: ${data.usage?.input_tokens || 0}+${data.usage?.output_tokens || 0}`,
+			);
 
 			// Log cache usage if available
 			if (data.usage?.cache_creation_input_tokens) {
@@ -144,17 +181,21 @@ export class AnthropicProviderWithCache implements LLMProvider {
 
 			// Extract content - Anthropic returns an array of content blocks
 			let content = "";
-			
+
 			for (const block of data.content) {
 				if (block.type === "text") {
 					content += block.text;
 				} else if (block.type === "tool_use") {
 					// Convert native tool call to our format
 					logger.debug("Model returned native tool call:", block);
-					content += `\n<tool_use>\n${JSON.stringify({
-						tool: block.name,
-						arguments: block.input
-					}, null, 2)}\n</tool_use>`;
+					content += `\n<tool_use>\n${JSON.stringify(
+						{
+							tool: block.name,
+							arguments: block.input,
+						},
+						null,
+						2,
+					)}\n</tool_use>`;
 				}
 			}
 

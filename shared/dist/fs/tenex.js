@@ -1,6 +1,7 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { logError } from "../logger.js";
+import { getErrorMessage } from "@tenex/types/utils";
 /**
  * Ensure a directory exists, creating it if necessary
  */
@@ -9,7 +10,7 @@ export async function ensureDirectory(dirPath) {
         await access(dirPath);
     }
     catch (err) {
-        if (err.code === "ENOENT") {
+        if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
             await mkdir(dirPath, { recursive: true });
         }
         else {
@@ -26,7 +27,7 @@ export async function directoryExists(dirPath) {
         return true;
     }
     catch (err) {
-        if (err.code === "ENOENT") {
+        if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
             return false;
         }
         throw err;
@@ -41,10 +42,10 @@ export async function readJsonFile(filePath) {
         return JSON.parse(content);
     }
     catch (err) {
-        if (err.code === "ENOENT") {
+        if (err instanceof Error && 'code' in err && err.code === "ENOENT") {
             return null;
         }
-        logError(`Failed to read JSON file ${filePath}: ${err.message}`);
+        logError(`Failed to read JSON file ${filePath}: ${getErrorMessage(err)}`);
         throw err;
     }
 }

@@ -66,7 +66,7 @@ export function TemplateCard({
 						/>
 					) : (
 						<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-							<span className="text-primary-foreground font-semibold text-sm">
+							<span className="text-white font-semibold text-sm">
 								{getInitials(template.tagValue("title") || "Template")}
 							</span>
 						</div>

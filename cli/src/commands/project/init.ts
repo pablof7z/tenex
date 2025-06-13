@@ -23,8 +23,9 @@ export async function runProjectInit(options: ProjectInitOptions) {
 		);
 
 		process.exit(0);
-	} catch (err: any) {
-		logError(`Failed to create project: ${err.message}`);
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		logError(`Failed to create project: ${errorMessage}`);
 		process.exit(1);
 	}
 }

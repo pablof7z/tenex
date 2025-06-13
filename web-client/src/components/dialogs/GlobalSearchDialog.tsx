@@ -4,6 +4,7 @@ import {
 	useNDKCurrentUser,
 	useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { FileText, FolderOpen, MessageCircle, Search, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -97,8 +98,8 @@ export function GlobalSearchDialog({
 	);
 
 	const getTaskForUpdate = useCallback(
-		(update: any) => {
-			const taskId = update.tags?.find((tag: string[]) => tag[0] === "e")?.[1];
+		(update: NDKEvent) => {
+			const taskId = update.tags?.find((tag) => tag[0] === "e")?.[1];
 			return tasks.find((t) => t.id === taskId);
 		},
 		[tasks],
@@ -158,7 +159,7 @@ export function GlobalSearchDialog({
 		}
 	};
 
-	const handleUpdateClick = (update: any) => {
+	const handleUpdateClick = (update: NDKEvent) => {
 		const task = getTaskForUpdate(update);
 		const project = task ? getProjectForTask(task) : null;
 		if (task && project) {

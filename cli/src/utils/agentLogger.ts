@@ -43,30 +43,35 @@ export class AgentLogger {
 		this.color = getAgentColor(agentName);
 	}
 
-	private formatMessage(level: string, emoji: string, message: string): string {
+	private formatMessage(
+		emoji: string,
+		message: string,
+		colorFn: typeof chalk.red,
+	): string {
 		const prefix = `${chalk.gray(`[${this.projectName}]`)} ${this.color(`[${this.agentName}]`)} ${emoji}`;
-		return `${prefix} ${message}`;
+		const coloredMessage = colorFn(message);
+		return `${prefix} ${coloredMessage}`;
 	}
 
 	info(message: string): void {
-		console.log(this.formatMessage("INFO", "ℹ️", message));
+		console.log(this.formatMessage("ℹ️", message, chalk.blueBright));
 	}
 
 	success(message: string): void {
-		console.log(this.formatMessage("SUCCESS", "✅", chalk.green(message)));
+		console.log(this.formatMessage("✅", message, chalk.greenBright));
 	}
 
 	warning(message: string): void {
-		console.log(this.formatMessage("WARNING", "⚠️", chalk.yellow(message)));
+		console.log(this.formatMessage("⚠️", message, chalk.yellowBright));
 	}
 
 	error(message: string): void {
-		console.error(this.formatMessage("ERROR", "❌", chalk.red(message)));
+		console.error(this.formatMessage("❌", message, chalk.redBright));
 	}
 
 	debug(message: string): void {
 		if (process.env.DEBUG) {
-			console.log(this.formatMessage("DEBUG", "🐛", chalk.gray(message)));
+			console.log(this.formatMessage("🔍", message, chalk.magentaBright));
 		}
 	}
 }

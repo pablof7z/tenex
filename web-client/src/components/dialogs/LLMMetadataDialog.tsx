@@ -9,6 +9,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
@@ -73,11 +74,67 @@ export function LLMMetadataDialog({
 						)}
 					</Button>
 				</div>
-				<div className="bg-muted/50 rounded-md p-3">
-					<ScrollArea className="max-h-[200px]">
-						<pre className="text-xs font-mono whitespace-pre-wrap break-words">
-							{content}
-						</pre>
+				<div className="bg-muted/50 rounded-md overflow-hidden">
+					<ScrollArea className="h-[300px] w-full">
+						<div className="p-4">
+							<div className="prose prose-sm dark:prose-invert max-w-none 
+								prose-headings:text-foreground prose-p:text-foreground 
+								prose-strong:text-foreground prose-code:text-foreground
+								prose-pre:bg-background/80 prose-pre:text-foreground
+								prose-ul:text-foreground prose-ol:text-foreground
+								prose-li:text-foreground prose-a:text-primary">
+								<ReactMarkdown 
+									components={{
+										pre: ({ children }) => (
+											<pre className="bg-background/80 border border-border p-3 rounded-md text-xs overflow-x-auto">
+												{children}
+											</pre>
+										),
+										code: ({ className, children, ...props }) => {
+											const isInline = !className;
+											return isInline ? (
+												<code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+													{children}
+												</code>
+											) : (
+												<code className={`text-xs font-mono ${className || ''}`} {...props}>
+													{children}
+												</code>
+											);
+										},
+										p: ({ children }) => (
+											<p className="text-sm mb-3 leading-relaxed">{children}</p>
+										),
+										h1: ({ children }) => (
+											<h1 className="text-lg font-semibold mb-3 mt-4">{children}</h1>
+										),
+										h2: ({ children }) => (
+											<h2 className="text-base font-semibold mb-2 mt-3">{children}</h2>
+										),
+										h3: ({ children }) => (
+											<h3 className="text-sm font-medium mb-2 mt-2">{children}</h3>
+										),
+										ul: ({ children }) => (
+											<ul className="text-sm list-disc pl-5 mb-3 space-y-1">{children}</ul>
+										),
+										ol: ({ children }) => (
+											<ol className="text-sm list-decimal pl-5 mb-3 space-y-1">{children}</ol>
+										),
+										li: ({ children }) => (
+											<li className="leading-relaxed">{children}</li>
+										),
+										blockquote: ({ children }) => (
+											<blockquote className="border-l-2 border-primary/50 pl-4 italic my-3">
+												{children}
+											</blockquote>
+										),
+										hr: () => <hr className="my-4 border-border" />,
+									}}
+								>
+									{content}
+								</ReactMarkdown>
+							</div>
+						</div>
 					</ScrollArea>
 				</div>
 			</div>

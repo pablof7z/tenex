@@ -49,8 +49,9 @@ export class AgentEventHandler {
 				chalk.gray("Desc:    ") + chalk.white(agentDefinition.description),
 			);
 			logSuccess(`Saved agent configuration: ${agentName}`);
-		} catch (err: any) {
-			logError(`Failed to handle agent event: ${err.message}`);
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : String(err);
+			logError(`Failed to handle agent event: ${errorMessage}`);
 		}
 	}
 

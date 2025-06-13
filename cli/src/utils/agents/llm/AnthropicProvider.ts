@@ -1,13 +1,19 @@
 import { logger } from "../../logger";
 import type { LLMConfig } from "../types";
-import type { LLMMessage, LLMProvider, LLMResponse, LLMContext } from "./types";
+import type {
+	LLMContext,
+	LLMMessage,
+	LLMProvider,
+	LLMResponse,
+	ProviderTool,
+} from "./types";
 
 export class AnthropicProvider implements LLMProvider {
 	async generateResponse(
 		messages: LLMMessage[],
 		config: LLMConfig,
 		context?: LLMContext,
-		tools?: any[],
+		tools?: ProviderTool[],
 	): Promise<LLMResponse> {
 		if (!config.apiKey) {
 			throw new Error("Anthropic API key is required");
@@ -22,7 +28,16 @@ export class AnthropicProvider implements LLMProvider {
 			(msg) => msg.role !== "system",
 		);
 
-		const requestBody: any = {
+		interface AnthropicRequestBody {
+			model: string;
+			messages: LLMMessage[];
+			max_tokens: number;
+			temperature: number;
+			system?: string;
+			tools?: ProviderTool[];
+		}
+
+		const requestBody: AnthropicRequestBody = {
 			model,
 			messages: conversationMessages,
 			max_tokens: config.maxTokens || 4096,
@@ -40,22 +55,13 @@ export class AnthropicProvider implements LLMProvider {
 			requestBody.tool_choice = { type: "auto" };
 		}
 
-		// Debug logging - log complete request
-		logger.debug("\n=== ANTHROPIC API REQUEST ===");
-		if (context) {
-			logger.debug(`Agent: ${context.agentName || "unknown"}`);
-			logger.debug(`Project: ${context.projectName || "unknown"}`);
-			logger.debug(`Conversation: ${context.conversationId || "unknown"}`);
+		// Log user prompt only
+		const userMessage = conversationMessages.find((msg) => msg.role === "user");
+		if (userMessage && context) {
+			logger.debug(
+				`Anthropic request - Agent: ${context.agentName}, User: "${userMessage.content.substring(0, 100)}..."`,
+			);
 		}
-		logger.debug(`URL: ${baseURL}/messages`);
-		logger.debug("Headers:", {
-			"Content-Type": "application/json",
-			"x-api-key": config.apiKey,
-			"anthropic-version": "2023-06-01",
-		});
-		logger.debug("Complete Request Body:");
-		logger.debug(JSON.stringify(requestBody, null, 2));
-		logger.debug("=== END API REQUEST ===\n");
 
 		try {
 			const response = await fetch(`${baseURL}/messages`, {
@@ -75,24 +81,28 @@ export class AnthropicProvider implements LLMProvider {
 
 			const data = await response.json();
 
-			// Log the raw API response
-			logger.debug("\n=== ANTHROPIC RAW API RESPONSE ===");
-			logger.debug(JSON.stringify(data, null, 2));
-			logger.debug("=== END RAW API RESPONSE ===\n");
+			// Log response summary only
+			logger.debug(
+				`Anthropic response - tokens: ${data.usage?.input_tokens || 0}+${data.usage?.output_tokens || 0}`,
+			);
 
 			// Extract content - Anthropic returns an array of content blocks
 			let content = "";
-			
+
 			for (const block of data.content) {
 				if (block.type === "text") {
 					content += block.text;
 				} else if (block.type === "tool_use") {
 					// Convert native tool call to our format
 					logger.debug("Model returned native tool call:", block);
-					content += `\n<tool_use>\n${JSON.stringify({
-						tool: block.name,
-						arguments: block.input
-					}, null, 2)}\n</tool_use>`;
+					content += `\n<tool_use>\n${JSON.stringify(
+						{
+							tool: block.name,
+							arguments: block.input,
+						},
+						null,
+						2,
+					)}\n</tool_use>`;
 				}
 			}
 

@@ -36,19 +36,14 @@ export class StatusPublisher {
 				project: projectInfo.title,
 			});
 
-			event.tags = [
-				["a", `31933:${projectInfo.projectPubkey}:${projectInfo.projectId}`],
-			];
+			// Tag the project event properly
+			event.tag(projectInfo.projectEvent);
 
 			await this.addAgentPubkeys(event, projectInfo.projectPath);
-			await event.publish();
-
-			const timestamp = new Date().toLocaleTimeString();
-			console.log(
-				chalk.gray(`[${timestamp}] `) + chalk.green("✓ Published status ping"),
-			);
-		} catch (err: any) {
-			logWarning(`Failed to publish status event: ${err.message}`);
+			event.publish();
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : String(err);
+			logWarning(`Failed to publish status event: ${errorMessage}`);
 		}
 	}
 
@@ -62,17 +57,21 @@ export class StatusPublisher {
 			const agentsContent = await fs.readFile(agentsPath, "utf-8");
 			const agents = JSON.parse(agentsContent);
 
-			for (const [agentName, nsec] of Object.entries(agents)) {
+			for (const [agentName, agentConfig] of Object.entries(agents)) {
 				let nsecValue: string | undefined;
-				
-				if (typeof nsec === "string") {
+
+				if (typeof agentConfig === "string") {
 					// Handle old format where nsec is stored directly as string
-					nsecValue = nsec;
-				} else if (typeof nsec === "object" && nsec && (nsec as any).nsec) {
+					nsecValue = agentConfig;
+				} else if (
+					typeof agentConfig === "object" &&
+					agentConfig &&
+					"nsec" in agentConfig
+				) {
 					// Handle new format where nsec is stored in object with nsec property
-					nsecValue = (nsec as any).nsec;
+					nsecValue = agentConfig.nsec;
 				}
-				
+
 				if (nsecValue) {
 					const agentSigner = new NDKPrivateKeySigner(nsecValue);
 					const agentPubkey = await agentSigner

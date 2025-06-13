@@ -27,12 +27,12 @@ export function TaskUpdates({
 	// Get the task details
 	const task = useEvent<NDKTask>(taskId || false) as NDKTask | null;
 
-	// Get status updates for this task (kind 1 events with 'e' tag referencing the task)
+	// Get status updates for this task (NIP-22 replies - kind 1111 events with 'e' tag referencing the task)
 	const { events: statusUpdates } = useSubscribe(
 		task
 			? [
 					{
-						kinds: [1],
+						kinds: [1111],
 						"#e": [task.id],
 					},
 				]
@@ -61,12 +61,12 @@ export function TaskUpdates({
 
 	if (!task) {
 		return (
-			<div className="min-h-screen bg-slate-50 flex items-center justify-center">
+			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
-					<h2 className="text-lg font-semibold text-slate-900 mb-2">
+					<h2 className="text-lg font-semibold text-foreground mb-2">
 						Task not found
 					</h2>
-					<p className="text-slate-600 mb-4">
+					<p className="text-muted-foreground mb-4">
 						This task may have been deleted or moved.
 					</p>
 					<Button onClick={onBack} variant="outline">
@@ -80,14 +80,14 @@ export function TaskUpdates({
 
 	const header = embedded ? (
 		// Simplified header for embedded mode
-		<div className="bg-white border-b border-slate-200 px-4 py-3">
+		<div className="bg-card border-b border-border px-4 py-3">
 			<div className="flex items-start justify-between">
 				<div className="min-w-0 flex-1">
-					<h2 className="text-lg font-semibold text-slate-900 truncate mb-1">
+					<h2 className="text-lg font-semibold text-foreground truncate mb-1">
 						{getTaskTitle(task)}
 					</h2>
 					<div className="flex items-center gap-2">
-						<span className="text-xs text-slate-500">
+						<span className="text-xs text-muted-foreground">
 							{formatAbsoluteTime(task.created_at!)}
 						</span>
 						<Badge variant="outline" className="text-xs">
@@ -107,23 +107,23 @@ export function TaskUpdates({
 		</div>
 	) : (
 		// Full header for standalone mode
-		<div className="bg-white border-b border-slate-200/60 backdrop-blur-xl bg-white/95 sticky top-0 z-50">
+		<div className="bg-card/95 border-b border-border backdrop-blur-xl sticky top-0 z-50">
 			<div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
 				<div className="flex items-center gap-2 sm:gap-3">
 					<Button
 						variant="ghost"
 						size="icon"
 						onClick={onBack}
-						className="w-8 h-8 sm:w-9 sm:h-9 text-slate-700 hover:bg-slate-100"
+						className="w-8 h-8 sm:w-9 sm:h-9"
 					>
 						<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
 					</Button>
 					<div className="min-w-0 flex-1">
-						<h1 className="text-lg sm:text-xl font-semibold text-slate-900 truncate">
+						<h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">
 							{getTaskTitle(task)}
 						</h1>
 						<div className="flex items-center gap-2 mt-0.5">
-							<span className="text-xs text-slate-500">
+							<span className="text-xs text-muted-foreground">
 								{formatAbsoluteTime(task.created_at!)}
 							</span>
 						</div>
@@ -142,8 +142,8 @@ export function TaskUpdates({
 		<div
 			className={
 				embedded
-					? "h-full bg-white flex flex-col"
-					: "h-screen bg-slate-50 flex flex-col relative"
+					? "h-full bg-card flex flex-col"
+					: "h-screen bg-background flex flex-col relative"
 			}
 		>
 			{/* Header */}

@@ -1,7 +1,7 @@
-import type { ToolDefinition, ToolContext } from "./types";
+import path from "node:path";
 import { NDKArticle } from "@nostr-dev-kit/ndk";
 import { logger } from "../../logger";
-import path from "node:path";
+import type { ToolContext, ToolDefinition } from "./types";
 
 export const updateSpecTool: ToolDefinition = {
 	name: "update_spec",
@@ -31,11 +31,19 @@ export const updateSpecTool: ToolDefinition = {
 	],
 	execute: async (params, context?: ToolContext) => {
 		try {
-			if (!context?.ndk || !context?.agent) {
+			if (!context) {
 				return {
 					success: false,
 					output: "",
 					error: "Missing required context for update_spec tool",
+				};
+			}
+
+			if (!context.agent) {
+				return {
+					success: false,
+					output: "",
+					error: "Missing agent in context for update_spec tool",
 				};
 			}
 
@@ -76,13 +84,16 @@ export const updateSpecTool: ToolDefinition = {
 			const now = Math.floor(Date.now() / 1000);
 			specEvent.tags.push(["published_at", String(now)]);
 
-			// Get project event to tag it
-			const projectEventTag = await getProjectEventTag(ndk, projectName);
-			if (projectEventTag) {
-				specEvent.tags.push(projectEventTag);
-			} else {
-				logger.warn(`Could not find project event to tag for ${projectName}`);
+			// Add project reference - MUST always include the project reference
+			if (!context) {
+				return {
+					success: false,
+					output: "",
+					error: "Missing required context for update_spec tool",
+				};
 			}
+
+			specEvent.tag(context.projectEvent);
 
 			// Sign and publish
 			await specEvent.sign(agent.getSigner());
@@ -94,7 +105,7 @@ export const updateSpecTool: ToolDefinition = {
 
 			// Encode the event reference
 			const encodedRef = `nostr:${specEvent.encode()}`;
-			
+
 			return {
 				success: true,
 				output: `Successfully updated ${dTag} specification with changelog: "${params.changelog}"\n\n${encodedRef}`,
@@ -112,42 +123,3 @@ export const updateSpecTool: ToolDefinition = {
 		}
 	},
 };
-
-async function getProjectEventTag(
-	ndk: any,
-	projectName: string,
-): Promise<string[] | null> {
-	try {
-		// Try to load project metadata to get the naddr
-		const fs = await import("node:fs/promises");
-		const metadataPath = path.join(process.cwd(), ".tenex", "metadata.json");
-
-		try {
-			const metadataContent = await fs.readFile(metadataPath, "utf-8");
-			const metadata = JSON.parse(metadataContent);
-
-			if (metadata.naddr) {
-				// Parse the naddr to get the project reference
-				// Format: naddr1...
-				// We need to decode this to get the kind:pubkey:identifier format
-				const { nip19 } = await import("nostr-tools");
-				const decoded = nip19.decode(metadata.naddr);
-
-				if (decoded.type === "naddr" && decoded.data) {
-					const { kind, pubkey, identifier } = decoded.data;
-					return ["a", `${kind}:${pubkey}:${identifier}`];
-				}
-			}
-		} catch (err) {
-			// Metadata file might not exist
-			logger.debug("Could not read project metadata file");
-		}
-
-		// If we can't get from metadata, we'll skip the project tag
-		// The spec will still be published and associated with the author
-		return null;
-	} catch (error) {
-		logger.error(`Failed to get project event tag: ${error}`);
-		return null;
-	}
-}

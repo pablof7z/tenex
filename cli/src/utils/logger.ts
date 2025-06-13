@@ -10,8 +10,8 @@ import {
 	logger as sharedLogger,
 } from "@tenex/shared/logger";
 
-// Configure logger for CLI (use labels instead of emojis)
-configureLogger({ useEmoji: false, useLabels: true });
+// Configure logger for CLI (use emojis with colors)
+configureLogger({ useEmoji: true, useLabels: false });
 
 // Re-export functions for backward compatibility
 export const logInfo = sharedLogInfo;

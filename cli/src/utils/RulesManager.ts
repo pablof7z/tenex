@@ -106,8 +106,12 @@ export class RulesManager {
 		const descTag = event.tags.find((tag) => tag[0] === "description");
 		const versionTag = event.tags.find((tag) => tag[0] === "ver");
 
+		if (!event.id) {
+			throw new Error("Event ID is required for caching rule");
+		}
+
 		const rule: CachedRule = {
-			eventId: event.id!,
+			eventId: event.id,
 			title: titleTag?.[1] || "Untitled Rule",
 			description: descTag?.[1] || "",
 			content: event.content,
@@ -115,7 +119,7 @@ export class RulesManager {
 			fetchedAt: Date.now(),
 		};
 
-		this.rulesCache.set(event.id!, rule);
+		this.rulesCache.set(event.id, rule);
 
 		// Save to disk
 		const rulePath = path.join(this.rulesDir, `${event.id}.json`);
@@ -153,7 +157,10 @@ export class RulesManager {
 				mapping.agentNames.includes(agentName);
 
 			if (appliesToAgent && this.rulesCache.has(mapping.ruleEventId)) {
-				applicableRules.push(this.rulesCache.get(mapping.ruleEventId)!);
+				const rule = this.rulesCache.get(mapping.ruleEventId);
+				if (rule) {
+					applicableRules.push(rule);
+				}
 			}
 		}
 

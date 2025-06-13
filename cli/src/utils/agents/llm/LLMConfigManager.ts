@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { LLMConfigs } from "@tenex/types/llm";
 import { logger } from "../../logger";
 import type { LLMConfig } from "../types";
 
@@ -48,7 +49,7 @@ export class LLMConfigManager {
 	 * Finds the key in llms.json that corresponds to the given LLM config
 	 */
 	private findConfigKey(
-		llmsConfig: any,
+		llmsConfig: LLMConfigs,
 		targetConfig: LLMConfig,
 	): string | null {
 		// Check if it's the default config

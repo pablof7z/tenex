@@ -3,11 +3,11 @@ export interface LoggerConfig {
     useLabels?: boolean;
 }
 export declare function configureLogger(config: Partial<LoggerConfig>): void;
-export declare function logError(message: string, error?: any): void;
-export declare function logInfo(message: string, ...args: any[]): void;
+export declare function logError(message: string, error?: unknown): void;
+export declare function logInfo(message: string, ...args: unknown[]): void;
 export declare function logSuccess(message: string): void;
-export declare function logWarning(message: string, ...args: any[]): void;
-export declare function logDebug(message: string, ...args: any[]): void;
+export declare function logWarning(message: string, ...args: unknown[]): void;
+export declare function logDebug(message: string, ...args: unknown[]): void;
 export declare const logger: {
     info: typeof logInfo;
     error: typeof logError;
