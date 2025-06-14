@@ -1,17 +1,17 @@
 {
-	"nsec": "nsec18al4ej0c7kzn63mnu4fw5t39du0tsz92q8x6t0xrfwd6p2uuetus50s5f6",
-	"npub": "npub1gkefx58pwthyccx5r6u4wc23knlwse7rsm5wg0f0w68gsj8mkxasmudced",
-	"balance": 0,
-	"relays": [
-		"wss://relay.damus.io",
-		"wss://nos.lol",
-		"wss://relay.nostr.band",
-		"wss://nostr.mutinywallet.com"
-	],
-	"mints": [
-		"https://mint.coinos.io",
-		"https://mint.lnvoltz.com",
-		"https://mint.chorus.community"
-	],
-	"mintInfoCache": {}
+    "nsec": "nsec18al4ej0c7kzn63mnu4fw5t39du0tsz92q8x6t0xrfwd6p2uuetus50s5f6",
+    "npub": "npub1gkefx58pwthyccx5r6u4wc23knlwse7rsm5wg0f0w68gsj8mkxasmudced",
+    "balance": 0,
+    "relays": [
+        "wss://relay.damus.io",
+        "wss://nos.lol",
+        "wss://relay.nostr.band",
+        "wss://nostr.mutinywallet.com"
+    ],
+    "mints": [
+        "https://mint.coinos.io",
+        "https://mint.lnvoltz.com",
+        "https://mint.chorus.community"
+    ],
+    "mintInfoCache": {}
 }

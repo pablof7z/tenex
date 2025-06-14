@@ -37,3 +37,4 @@ bun.lock
 
 mcp/tenex-mcp
 .roo/mcp.json
+tenexd/config.json

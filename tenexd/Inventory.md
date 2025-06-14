@@ -17,7 +17,7 @@ src/
 ```
 src/
 ├── config/
-│   └── config.ts           # Configuration management including projects_path, taskCommand, chatCommand, aiConfigPath, and tenexCommand settings
+│   └── config.ts           # Configuration management including projects_path, chatCommand, tenexCommand, whitelisted pubkeys, and AI configurations
 ├── projects/
 │   └── eventHandler.ts     # Universal project event handler that starts "tenex run" processes for any event with project a-tag, also handles NDKAgent events (kind 4199)
 ├── nostr/

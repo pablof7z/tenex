@@ -8,77 +8,139 @@
 
 TENEX is a context-first development environment that fundamentally reimagines how software is built in the age of AI. Rather than treating code as the primary interface, TENEX positions **context** as the central building block, orchestrating multiple AI agents to collaborate on software development through a decentralized protocol.
 
+The system has evolved into a sophisticated multi-agent orchestration platform featuring living documentation, agent learning capabilities, and rich communication features that enable AI agents to not just write code, but to understand, maintain, evolve, and learn from complex software projects.
+
 ### Core Philosophy
 
 "Orchestrate the orchestrators" - TENEX doesn't just use AI to write code; it creates an environment where multiple specialized AI agents can understand, maintain, and evolve complex software projects through shared context and structured communication.
 
 ## System Architecture
 
-TENEX consists of four interconnected components that work together:
+TENEX consists of five interconnected components that work together:
 
-### 1. Main Application (Next.js Frontend/Backend)
+### 1. Web Client (`web-client/`)
 
-The web interface and API that provides:
+A Vite-based React application (not Next.js) providing the user interface:
 
-- **Project Management**: Create, configure, and manage software projects
-- **Context Editing**: Define and maintain project specifications, rules, and context
+- **Project Management**: Create, configure, and manage software projects with templates
+- **Living Documentation**: View and navigate project specifications stored as Nostr events
 - **Task Orchestration**: Create, assign, and track development tasks
 - **Voice-to-Task**: Convert spoken ideas into structured development tasks
-- **Real-time Collaboration**: View live updates from AI agents and human developers
+- **Real-time Collaboration**: View live updates with typing indicators and rich text
+- **Agent Management**: Configure and monitor multiple AI agents
+- **Rich Communication**: Parse and display Nostr entity references
 
 **Key Technologies**:
-- Next.js 15 with App Router
-- TypeScript + React
-- Tailwind CSS + shadcn/ui
-- Zustand for state management
-- NDK (Nostr Development Kit) for protocol integration
+- Vite + React + TypeScript
+- Tailwind CSS v4 + shadcn/ui
+- Jotai for state management (not Zustand)
+- @nostr-dev-kit/ndk-hooks for Nostr integration
+- Whisper API for voice transcription
 
 **Architecture Patterns**:
-- Server Components for initial data loading
-- Client-side state for real-time updates
-- API routes for file system operations
-- Event-driven updates via Nostr subscriptions
+- Component-based architecture with hooks
+- Real-time subscriptions via NDK hooks
+- Optimistic updates for better UX
+- Entity parsing for rich content display
 
 ### 2. CLI Tool (`cli/`)
 
-A command-line interface for local development operations:
+A command-line interface for local development operations with sophisticated agent orchestration:
 
 - **Project Initialization**: Set up new TENEX projects locally (`tenex project init`)
-- **Project Listener**: Run project listener that monitors all events (`tenex run`)
-- **Agent Management**: Install, configure, and publish AI agents
+- **Agent Orchestration**: Run multi-agent system with `tenex run`
+- **Agent Management**: Configure multiple agents with individual identities
 - **Status Broadcasting**: Publishes project online status (kind 24010) every 60 seconds
-- **Local Execution**: Run development commands without web dependency
-- **Conversation Persistence**: Stores agent conversations and tracks processed events
+- **Conversation Management**: Persistent storage with token optimization
+- **Tool System**: Extensible tool registry for agent capabilities
 
-**Project Mode**: The CLI runs in project mode (`tenex run`) where it:
-- Fetches the project event from Nostr
-- Displays agent configurations and LLM settings
-- Subscribes to all events tagging the project (filtering last 5 minutes on startup)
-- Publishes periodic status pings (kind 24010)
-- Handles various event types (tasks, chats, status updates)
-- Maintains conversation history in `.tenex/conversations/`
-- Tracks processed events to avoid duplicate processing
-- Cleans up conversations older than 30 days on startup
+**Enhanced Agent Features**:
+- **Agent Tools**: 
+  - `read_specs` - Access living documentation
+  - `update_spec` - Update documentation (default agent only)
+  - `remember_lesson` - Record learnings from mistakes
+  - Claude Code tools for file operations
+- **Conversation Persistence**:
+  - 30-day retention with automatic cleanup
+  - Token usage tracking and optimization
+  - Context window management
+  - Event deduplication
+- **Multi-Agent Support**:
+  - Agent-specific LLM configurations
+  - Individual tool registries per agent
+  - Participant tracking in conversations
+  - P-tag based agent summoning
+
+**Project Mode Operations**:
+- Fetches project and agent configurations from Nostr
+- Displays all available agents and their capabilities
+- Subscribes to project events with 5-minute lookback
+- Handles tasks, chats, and status updates
+- Manages typing indicators with prompt visibility
+- Tracks LLM usage and costs in event metadata
 
 ### 3. MCP Server (`mcp/`)
 
-Model Context Protocol server that enables AI agents to:
+Model Context Protocol server that enables AI agents to interact with the system:
 
-- **Publish Status Updates**: Real-time progress updates to Nostr with agent identification
-- **Git Operations**: Commit changes with context, reset to previous states
-- **Context Access**: Read and understand project rules and specifications
-- **Multi-Agent Support**: Manages multiple agent identities from `agents.json`
+- **Publish Status Updates**: Real-time progress updates with agent identification
+- **Git Operations**: Advanced git integration with context preservation
+- **Learning System**: Remember lessons from mistakes and wrong assumptions
+- **Multi-Agent Support**: Manages agent identities and configurations
+
+**Core Tools**:
+- `publish_task_status_update` - Progress updates with confidence levels
+- `publish` - General Nostr event publishing
+- `git_reset_to_commit` - Time travel in git history
+- `git_commit_details` - Inspect commit information
+- `git_validate_commit` - Verify commit existence
+- `remember_lesson` - Record learnings (via MCP integration)
+
+**Agent Loader**:
+- Fetches agent configurations from NDKAgent events (kind 4199)
+- Parses agent metadata (name, role, instructions, version)
+- Configures agent-specific settings and capabilities
+- Integrates with project's agent registry
+
+### 4. Shared Libraries (`shared/`)
+
+Common code and type definitions used across all components:
+
+- **Event Types**: Standardized event kinds and interfaces
+- **Project Types**: Project and template interfaces  
+- **LLM Types**: Configuration interfaces for AI models
+- **Utilities**: File system, logging, and Nostr helpers
+
+### 5. TENEX Daemon (`tenexd/`)
+
+A background service that monitors Nostr for events and manages project processes:
+
+- **Event Monitoring**: Listens for all events from whitelisted pubkeys
+- **Process Management**: Starts `tenex run` when ANY event with project "a" tag is received
+- **LLM Configuration**: Initializes project llms.json from daemon's AI settings if missing
+- **Project Discovery**: Automatically initializes projects from Nostr if not found locally
+- **Agent Configuration**: Creates agent configurations from NDKAgent events (kind 4199)
 
 **Key Features**:
-- Automatic git commits with task context
-- Commit hash tracking in Nostr events
-- Status updates with confidence levels and agent names
-- Integration with project agents via `--config-file` parameter
-- Agent-specific nsec management for each AI persona
+- Whitelist-based security for event processing
+- One `tenex run` process per project
+- Automatic llms.json initialization from daemon's AI configurations
+- Process deduplication (won't start if already running)
+- Real-time project process management
 
-### 4. Context Caching & Optimization
+### 6. iOS Client (`ios-client/`)
 
-The CLI now includes advanced context management features:
+Native iOS application for mobile access to TENEX:
+
+- **SwiftUI Interface**: Modern, responsive design
+- **NDK Integration**: Full Nostr protocol support
+- **Project Management**: Create and manage projects on mobile
+- **Task Tracking**: Monitor agent progress
+- **Real-time Updates**: Live status from agents
+
+## Advanced Features
+
+### Context Management & Optimization
 
 **Context Caching**: 
 - Anthropic prompt caching reduces costs by 90% for cached tokens
@@ -100,28 +162,24 @@ The CLI now includes advanced context management features:
 }
 ```
 
-**Conversation Persistence**:
-- Conversations stored in `.tenex/conversations/` directory
-- Automatic event deduplication prevents reprocessing
-- 30-day retention with automatic cleanup
-- Conversations resume seamlessly after CLI restart
+### Living Documentation System
 
-### 5. TENEX Daemon (`tenexd/`)
+Documentation is now stored as Nostr events (NDKArticle kind 30023):
 
-A background service that monitors Nostr for events and manages project processes:
+- **Version Control**: Each update creates a new event with timestamp
+- **Change Tracking**: Summary tags describe what changed
+- **Agent Access**: Agents can read/write documentation
+- **Web Viewer**: DocsPage component for browsing specs
+- **Decentralized**: Documentation lives on Nostr, not just files
 
-- **Event Monitoring**: Listens for all events from whitelisted pubkeys
-- **Process Management**: Starts `tenex run` when ANY event with project "a" tag is received
-- **LLM Configuration**: Initializes project llms.json from daemon's AI settings if missing
-- **Project Discovery**: Automatically initializes projects from Nostr if not found locally
-- **Agent Configuration**: Creates agent configurations from NDKAgent events (kind 4199)
+### Agent Learning System
 
-**Key Features**:
-- Whitelist-based security for event processing
-- One `tenex run` process per project
-- Automatic llms.json initialization from daemon's AI configurations
-- Process deduplication (won't start if already running)
-- Real-time project process management
+Agents can record lessons learned (kind 4124 events):
+
+- **Mistake Recognition**: Agents detect when assumptions were wrong
+- **Lesson Recording**: Structured storage of learnings
+- **Knowledge Sharing**: Other agents can access lesson history
+- **Continuous Improvement**: System gets smarter over time
 
 ## How It All Works Together
 
@@ -163,7 +221,6 @@ Any Event (from whitelisted pubkey) → tenexd receives
 
 Projects maintain context through:
 
-- **`.tenex/rules/` directory**: Structured rules and specifications
 - **`.tenex/agents.json`**: Maps agent names to their nsec keys
 - **`.tenex/llms.json`**: Contains LLM configurations for the project
 - **`.tenex/agents/` directory**: Agent-specific configurations from NDKAgent events
@@ -178,28 +235,41 @@ Projects maintain context through:
 ### Context-First Development
 
 Traditional development: `Code → Documentation → Understanding`
-TENEX approach: `Context → Understanding → Code`
+TENEX v4 approach: `Context → Agents → Understanding → Code → Learning`
 
-Context includes:
-- Business requirements
-- Technical constraints
-- Architectural decisions
-- Domain knowledge
-- Workflow patterns
+Context now includes:
+- Business requirements and constraints
+- Living documentation as Nostr events
+- Agent configurations and capabilities
+- Conversation history and learnings
+- Real-time collaboration state
+- Rich text with entity references
 
 ### Decentralized Collaboration
 
-All project activity flows through Nostr:
-- **Projects**: Project events (kind 31933) with structured tags
-- **Tasks**: NDKEvent (kind 1934)
-- **Updates**: Text notes with task references
-- **Agents**: Each project maintains multiple agent identities in `.tenex/agents.json`
-  - `default`: Primary agent used by default
-  - Additional agents (e.g., `code`, `planner`, `debugger`) created as needed
-  - Each agent publishes its own kind:0 profile event (e.g., "code @ ProjectName")
-- **Templates**: Template events (kind 30717) for project templates
-- **Project Status**: Status events (kind 24010) published by `tenex run` to indicate project is online
-- **Agent Events**: NDKAgent events (kind 4199) define agent configurations
+All project activity flows through Nostr with enhanced event types:
+
+**Core Events**:
+- **Projects** (31933): Project definitions with agent configurations
+- **Tasks** (1934): Development tasks with structured metadata
+- **Chats** (11/1111): Direct messages and threaded conversations
+- **Status Updates** (1): General progress messages
+
+**Agent Events**:
+- **Agent Config** (4199): NDKAgent definitions with role/instructions
+- **Agent Lessons** (4124): Recorded learnings from mistakes
+- **Typing Indicators** (24111/24112): Real-time typing status
+- **Project Status** (24010): Online/offline presence
+
+**Documentation Events**:
+- **Specifications** (30023): Living documentation as NDKArticle
+- **Templates** (30717): Project templates with configurations
+
+**Rich Features**:
+- Entity references (nostr:nevent1..., nostr:naddr1...)
+- LLM metadata tags (model, tokens, cost)
+- System/user prompt visibility in typing indicators
+- Multi-agent participant tracking
 
 #### Project Event Structure (kind 31933)
 
@@ -242,13 +312,50 @@ Agent configuration events:
 - **version tag**: Configuration version number
 - **a tag**: Project reference (31933:pubkey:identifier)
 
+#### Specification Event Structure (kind 30023)
+
+Living documentation events (NDKArticle):
+- **d tag**: Document identifier (e.g., "SPEC", "ARCHITECTURE")
+- **title tag**: Human-readable document title
+- **summary tag**: Description of latest changes
+- **published_at tag**: Unix timestamp of publication
+- **a tag**: Project reference
+- **content**: Full markdown documentation
+
+#### Agent Lesson Event Structure (kind 4124)
+
+Learning events from agent mistakes:
+- **e tag**: References the NDKAgent event ID
+- **title tag**: Short lesson summary
+- **content**: Detailed lesson learned
+
+#### Typing Indicator Events (kinds 24111/24112)
+
+Real-time typing status:
+- **e tag**: Conversation/thread ID
+- **a tag**: Project reference
+- **system-prompt tag**: LLM system prompt (24111 only)
+- **prompt tag**: User prompt being processed (24111 only)
+- **content**: Status message or empty (24112)
+
 ### AI Agent Orchestration
 
-Multiple specialized agents work together:
-- **Code Agent**: Implements features
-- **Debug Agent**: Fixes issues
-- **Architect Agent**: Designs systems
-- **Orchestrator Agent**: Coordinates work
+Enhanced multi-agent system with sophisticated capabilities:
+
+**Agent Types**:
+- **Default Agent**: Primary orchestrator with full tool access
+- **Code Agent**: Feature implementation specialist
+- **Debug Agent**: Issue resolution and testing
+- **Planner Agent**: Architecture and design
+- **Custom Agents**: Project-specific roles
+
+**Orchestration Features**:
+- **Tool Specialization**: Agent-specific tool registries
+- **Conversation Tracking**: Multi-agent participant management
+- **P-tag Summoning**: Explicit agent invocation via mentions
+- **Anti-Chatter Logic**: Prevents unnecessary agent-to-agent messages
+- **Learning System**: Agents share lessons across sessions
+- **Cost Optimization**: Token caching and context management
 
 ## Data Flow
 
@@ -313,30 +420,53 @@ When extending TENEX:
 ## Current Implementation Details
 
 ### Project Creation
-- Uses `tenex project init <path>` command via CLI
-- Accepts `--project-naddr` parameter for bech32-encoded project events
-- Creates `.tenex/` directory with:
-  - `agents.json`: Contains 'default' agent nsec
-  - `metadata.json`: Project metadata
-  - `agents/`: Directory containing agent definitions fetched from Nostr (auto-populated from project's "agent" tags)
-- Automatically fetches and saves all NDKAgent events (kind 4199) referenced in project
-- Backend command configurable: `npx tenex` (default) or `bun ./cli/bin/tenex.ts` (dev)
+- Uses `tenex project init <path> <naddr>` command
+- Initializes `.tenex/` directory structure:
+  - `agents.json`: Agent nsec mappings with optional file references
+  - `metadata.json`: Project metadata and naddr
+  - `llms.json`: LLM configurations (auto-created by tenexd)
+  - `agents/`: Cached NDKAgent event definitions
+  - `conversations/`: Persistent conversation storage
+- Fetches all referenced NDKAgent events automatically
+- Creates default agent with project-specific identity
 
 ### Project Execution
-- Uses `tenex run` command with no arguments
-- Automatically loads project from current directory
-- Fetches project event from Nostr using metadata.json
-- Displays all agent configurations from project event
-- Shows available LLM configurations from llms.json
-- Listens for all events tagging the project
-- Publishes kind 24010 status events every 60 seconds
-- Handles multiple event types: tasks, chats, status updates
+- `tenex run` starts the agent orchestration system
+- Features:
+  - Multi-agent conversation handling
+  - Tool execution with context
+  - Typing indicators with prompt visibility
+  - Token usage and cost tracking
+  - Event deduplication
+  - 30-day conversation retention
+  - Automatic context optimization
+  - Rich text parsing and display
+
+### Configuration Management
+- **Agent Configuration**: Dual format support (legacy string or object)
+- **LLM Configuration**: Per-agent settings with caching options
+- **Tool Registry**: Extensible, priority-based tool system
 
 ## Development Roadmap
 
-1. **Template System**: Expanding project templates with predefined contexts
-2. **Agent Capabilities**: Enhancing MCP tools for better AI integration
-3. **Context Intelligence**: Improving how agents understand and use context
+### Completed Features (v4.0)
+1. **Living Documentation**: Specs as Nostr events with versioning
+2. **Agent Learning**: Lesson recording and knowledge persistence
+3. **Multi-Agent Orchestration**: Sophisticated conversation management
+4. **Rich Communication**: Entity parsing and typing indicators
+5. **Cost Optimization**: Token caching and context management
+
+### In Progress
+1. **Template Expansion**: More sophisticated project templates
+2. **Cross-Project Learning**: Agents sharing lessons between projects
+3. **Enhanced Tool System**: More specialized agent tools
+
+### Future Enhancements
+1. **Visual Development**: Flowchart to code generation
+2. **Testing Orchestration**: AI-driven test generation
+3. **Deployment Automation**: CI/CD with agent oversight
+4. **Knowledge Graphs**: Semantic code understanding
+5. **Swarm Intelligence**: Emergent multi-agent behaviors
 
 ## Technical Constraints
 
@@ -347,5 +477,5 @@ When extending TENEX:
 
 ---
 
-*Last Updated: January 11, 2025*
-*Version: 3.2.0*
+*Last Updated: January 12, 2025*
+*Version: 4.0.0*

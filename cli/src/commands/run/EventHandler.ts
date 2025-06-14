@@ -1,403 +1,372 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
-import {
-	NDKEvent as NDKEventClass,
-	NDKPrivateKeySigner,
-} from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { logInfo } from "@tenex/shared/logger";
+import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
 import { toKebabCase } from "../../../../shared/src/projects";
+import type { Agent } from "../../utils/agents/Agent";
 import { AgentManager } from "../../utils/agents/AgentManager";
+import { formatError } from "../../utils/errors";
 import { AgentEventHandler } from "./AgentEventHandler";
 import type { ProjectInfo } from "./ProjectLoader";
-import { EVENT_KINDS, getEventKindName } from "./constants";
+import { getEventKindName } from "./constants";
 
 export class EventHandler {
-	private agentManager: AgentManager;
-	private agentEventHandler: AgentEventHandler;
+    private agentManager: AgentManager;
+    private agentEventHandler: AgentEventHandler;
 
-	constructor(
-		private projectInfo: ProjectInfo,
-		private ndk: NDK,
-	) {
-		this.agentManager = new AgentManager(projectInfo.projectPath, projectInfo);
-		this.agentEventHandler = new AgentEventHandler();
-	}
+    constructor(
+        private projectInfo: ProjectInfo,
+        private ndk: NDK
+    ) {
+        this.agentManager = new AgentManager(projectInfo.projectPath, projectInfo);
+        this.agentEventHandler = new AgentEventHandler();
+    }
 
-	async initialize(): Promise<void> {
-		this.agentManager.setNDK(this.ndk);
-		await this.agentManager.initialize();
-	}
+    async initialize(): Promise<void> {
+        this.agentManager.setNDK(this.ndk);
+        await this.agentManager.initialize();
+    }
 
-	async handleEvent(event: NDKEvent): Promise<void> {
-		// Ignore kind 24010 (project status), 24111 (typing indicator), and 24112 (typing stop) events
-		if (
-			event.kind === EVENT_KINDS.PROJECT_STATUS ||
-			event.kind === EVENT_KINDS.TYPING_INDICATOR ||
-			event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP
-		) {
-			return;
-		}
+    getAllAgents(): Map<string, Agent> {
+        return this.agentManager.getAllAgents();
+    }
 
-		console.log(chalk.gray("\n📥 Event received:", event.id));
+    async handleEvent(event: NDKEvent): Promise<void> {
+        // Ignore kind 24010 (project status), 24111 (typing indicator), and 24112 (typing stop) events
+        if (
+            event.kind === EVENT_KINDS.PROJECT_STATUS ||
+            event.kind === EVENT_KINDS.TYPING_INDICATOR ||
+            event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP
+        ) {
+            return;
+        }
 
-		const timestamp = new Date().toLocaleTimeString();
-		const eventKindName = getEventKindName(event.kind);
+        console.log(chalk.gray("\n📥 Event received:", event.id));
 
-		console.log(
-			chalk.gray(`\n[${timestamp}] `) + chalk.cyan(`${eventKindName} received`),
-		);
-		console.log(chalk.gray("From:    ") + chalk.white(event.author.npub));
-		console.log(chalk.gray("Event:   ") + chalk.gray(event.encode()));
+        const timestamp = new Date().toLocaleTimeString();
+        const eventKindName = getEventKindName(event.kind);
 
-		switch (event.kind) {
-			case EVENT_KINDS.TEXT_NOTE:
-				this.handleStatusUpdate(event);
-				break;
+        console.log(chalk.gray(`\n[${timestamp}] `) + chalk.cyan(`${eventKindName} received`));
+        console.log(chalk.gray("From:    ") + chalk.white(event.author.npub));
+        console.log(chalk.gray("Event:   ") + chalk.gray(event.encode()));
 
-			case EVENT_KINDS.CHAT:
-			case EVENT_KINDS.THREAD_REPLY:
-				await this.handleChatMessage(event);
-				break;
+        switch (event.kind) {
+            case EVENT_KINDS.TEXT_NOTE:
+                this.handleStatusUpdate(event);
+                break;
 
-			case EVENT_KINDS.TASK:
-				await this.handleTask(event);
-				break;
+            case EVENT_KINDS.CHAT:
+            case EVENT_KINDS.THREAD_REPLY:
+                await this.handleChatMessage(event);
+                break;
 
-			case EVENT_KINDS.PROJECT_STATUS:
-				this.handleProjectStatus(event);
-				break;
+            case EVENT_KINDS.TASK:
+                await this.handleTask(event);
+                break;
 
-			case EVENT_KINDS.AGENT_CONFIG:
-				await this.agentEventHandler.handleAgentEvent(event, this.projectInfo);
-				break;
+            case EVENT_KINDS.PROJECT_STATUS:
+                this.handleProjectStatus(event);
+                break;
 
-			case EVENT_KINDS.PROJECT:
-				await this.handleProjectEvent(event);
-				break;
+            case EVENT_KINDS.AGENT_CONFIG:
+                await this.agentEventHandler.handleAgentEvent(event, this.projectInfo);
+                break;
 
-			default:
-				this.handleDefaultEvent(event);
-		}
-	}
+            case EVENT_KINDS.PROJECT:
+                await this.handleProjectEvent(event);
+                break;
 
-	private handleStatusUpdate(event: NDKEvent): void {
-		console.log(
-			chalk.gray("Content: ") +
-				chalk.white(
-					event.content.substring(0, 100) +
-						(event.content.length > 100 ? "..." : ""),
-				),
-		);
-	}
+            default:
+                this.handleDefaultEvent(event);
+        }
+    }
 
-	private async handleChatMessage(event: NDKEvent): Promise<void> {
-		console.log(
-			chalk.gray("Message: ") +
-				chalk.white(
-					event.content.substring(0, 100) +
-						(event.content.length > 100 ? "..." : ""),
-				),
-		);
+    private handleStatusUpdate(event: NDKEvent): void {
+        console.log(
+            chalk.gray("Content: ") +
+                chalk.white(
+                    event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
+                )
+        );
+    }
 
-		// Extract p-tags to identify mentioned agents
-		const pTags = event.tags.filter((tag) => tag[0] === "p");
-		const mentionedPubkeys = pTags.map((tag) => tag[1]);
+    private async handleChatMessage(event: NDKEvent): Promise<void> {
+        console.log(
+            chalk.gray("Message: ") +
+                chalk.white(
+                    event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
+                )
+        );
 
-		if (mentionedPubkeys.length > 0) {
-			console.log(
-				chalk.gray("P-tags:  ") +
-					chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`),
-			);
-		}
+        // Extract p-tags to identify mentioned agents
+        const pTags = event.tags.filter((tag) => tag[0] === "p");
+        const mentionedPubkeys = pTags.map((tag) => tag[1]);
 
-		// Pass p-tags to the agent manager
-		await this.agentManager.handleChatEvent(
-			event,
-			this.ndk,
-			undefined,
-			undefined,
-			mentionedPubkeys,
-		);
-	}
+        if (mentionedPubkeys.length > 0) {
+            console.log(
+                chalk.gray("P-tags:  ") + chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`)
+            );
+        }
 
-	private async handleTask(event: NDKEvent): Promise<void> {
-		const title =
-			event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled";
-		console.log(chalk.gray("Task:    ") + chalk.yellow(title));
-		console.log(
-			chalk.gray("Content: ") +
-				chalk.white(
-					event.content.substring(0, 100) +
-						(event.content.length > 100 ? "..." : ""),
-				),
-		);
+        // Pass p-tags to the agent manager
+        await this.agentManager.handleChatEvent(
+            event,
+            this.ndk,
+            undefined,
+            undefined,
+            mentionedPubkeys
+        );
+    }
 
-		// Extract p-tags to identify mentioned agents
-		const pTags = event.tags.filter((tag) => tag[0] === "p");
-		const mentionedPubkeys = pTags.map((tag) => tag[1]);
+    private async handleTask(event: NDKEvent): Promise<void> {
+        const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled";
+        console.log(chalk.gray("Task:    ") + chalk.yellow(title));
+        console.log(
+            chalk.gray("Content: ") +
+                chalk.white(
+                    event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
+                )
+        );
 
-		if (mentionedPubkeys.length > 0) {
-			console.log(
-				chalk.gray("P-tags:  ") +
-					chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`),
-			);
-		}
+        // Extract p-tags to identify mentioned agents
+        const pTags = event.tags.filter((tag) => tag[0] === "p");
+        const mentionedPubkeys = pTags.map((tag) => tag[1]);
 
-		await this.agentManager.handleTaskEvent(
-			event,
-			this.ndk,
-			undefined,
-			undefined,
-			mentionedPubkeys,
-		);
-	}
+        if (mentionedPubkeys.length > 0) {
+            console.log(
+                chalk.gray("P-tags:  ") + chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`)
+            );
+        }
 
-	private handleProjectStatus(event: NDKEvent): void {
-		if (event.author.pubkey !== this.ndk.activeUser?.pubkey) {
-			console.log(
-				chalk.gray("Status:  ") + chalk.green("Another instance is online"),
-			);
-		}
-	}
+        await this.agentManager.handleTaskEvent(
+            event,
+            this.ndk,
+            undefined,
+            undefined,
+            mentionedPubkeys
+        );
+    }
 
-	private handleDefaultEvent(event: NDKEvent): void {
-		if (event.content) {
-			console.log(
-				chalk.gray("Content: ") +
-					chalk.white(
-						event.content.substring(0, 100) +
-							(event.content.length > 100 ? "..." : ""),
-					),
-			);
-		}
-	}
+    private handleProjectStatus(event: NDKEvent): void {
+        if (event.author.pubkey !== this.ndk.activeUser?.pubkey) {
+            console.log(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
+        }
+    }
 
-	private async handleProjectEvent(event: NDKEvent): Promise<void> {
-		// Check if this is actually our project event
-		const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
-		if (
-			dTag !== this.projectInfo.projectId ||
-			event.author.pubkey !== this.projectInfo.projectPubkey
-		) {
-			return;
-		}
+    private handleDefaultEvent(event: NDKEvent): void {
+        if (event.content) {
+            console.log(
+                chalk.gray("Content: ") +
+                    chalk.white(
+                        event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
+                    )
+            );
+        }
+    }
 
-		console.log(chalk.blue("\n📋 Project event update received"));
-		console.log(
-			chalk.gray("Title:   ") +
-				chalk.yellow(
-					event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled",
-				),
-		);
+    private async handleProjectEvent(event: NDKEvent): Promise<void> {
+        if (!this.isOurProjectEvent(event)) {
+            return;
+        }
 
-		// Extract agent event IDs from the updated project event
-		const agentEventIds = event.tags
-			.filter((tag) => tag[0] === "agent" && tag[1])
-			.map((tag) => tag[1]);
+        this.logProjectUpdate(event);
+        const agentEventIds = this.extractAgentEventIds(event);
 
-		if (agentEventIds.length > 0) {
-			console.log(
-				chalk.gray("Agents:  ") +
-					chalk.cyan(`${agentEventIds.length} agent(s) defined`),
-			);
+        if (agentEventIds.length > 0) {
+            logInfo(`Processing ${agentEventIds.length} agent(s)`);
+            await this.fetchAndSaveAgents(agentEventIds);
+        }
 
-			// Fetch and save any new agent definitions
-			await this.fetchAndSaveAgents(agentEventIds);
-		}
+        // TODO: Update title, description, etc. in metadata.json if changed
+    }
 
-		// Update project metadata if needed
-		// TODO: Update title, description, etc. in metadata.json if changed
-	}
+    private isOurProjectEvent(event: NDKEvent): boolean {
+        const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+        return (
+            dTag === this.projectInfo.projectId &&
+            event.author.pubkey === this.projectInfo.projectPubkey
+        );
+    }
 
-	private async fetchAndSaveAgents(agentEventIds: string[]): Promise<void> {
-		const agentsDir = path.join(
-			this.projectInfo.projectPath,
-			".tenex",
-			"agents",
-		);
+    private logProjectUpdate(event: NDKEvent): void {
+        const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled";
+        logInfo(`📋 Project event update received: ${title}`);
+    }
 
-		// Ensure agents directory exists
-		try {
-			await fs.access(agentsDir);
-		} catch {
-			await fs.mkdir(agentsDir, { recursive: true });
-		}
+    private extractAgentEventIds(event: NDKEvent): string[] {
+        return event.tags
+            .filter((tag) => tag[0] === "agent" && tag[1])
+            .map((tag) => tag[1])
+            .filter((id): id is string => Boolean(id));
+    }
 
-		for (const agentEventId of agentEventIds) {
-			const agentConfigPath = path.join(agentsDir, `${agentEventId}.json`);
+    private async fetchAndSaveAgents(agentEventIds: string[]): Promise<void> {
+        const agentsDir = path.join(this.projectInfo.projectPath, ".tenex", "agents");
 
-			// Check if we already have this agent definition
-			try {
-				await fs.access(agentConfigPath);
-				continue; // Already have it
-			} catch {
-				// Need to fetch it
-			}
+        // Ensure agents directory exists
+        try {
+            await fs.access(agentsDir);
+        } catch {
+            await fs.mkdir(agentsDir, { recursive: true });
+        }
 
-			try {
-				const agentEvent = await this.ndk.fetchEvent(agentEventId);
+        for (const agentEventId of agentEventIds) {
+            const agentConfigPath = path.join(agentsDir, `${agentEventId}.json`);
 
-				if (agentEvent && agentEvent.kind === EVENT_KINDS.AGENT_CONFIG) {
-					const agentName = agentEvent.tagValue("title") || "unnamed";
-					const agentConfig = {
-						eventId: agentEventId,
-						name: agentName,
-						description: agentEvent.tagValue("description"),
-						role: agentEvent.tagValue("role"),
-						instructions: agentEvent.tagValue("instructions"),
-						version: Number.parseInt(agentEvent.tagValue("version") || "1"),
-						publishedAt: agentEvent.created_at,
-						publisher: agentEvent.pubkey,
-					};
+            // Check if we already have this agent definition
+            try {
+                await fs.access(agentConfigPath);
+                continue; // Already have it
+            } catch {
+                // Need to fetch it
+            }
 
-					await fs.writeFile(
-						agentConfigPath,
-						JSON.stringify(agentConfig, null, 2),
-					);
-					console.log(
-						chalk.green(`✅ Saved new agent definition: ${agentName}`),
-					);
+            try {
+                const agentEvent = await this.ndk.fetchEvent(agentEventId);
 
-					// Ensure this agent has an nsec in agents.json
-					await this.ensureAgentNsec(agentName, agentEventId);
-				}
-			} catch (err) {
-				const errorMessage = err instanceof Error ? err.message : String(err);
-				console.log(
-					chalk.red(`Failed to fetch agent ${agentEventId}: ${errorMessage}`),
-				);
-			}
-		}
-	}
+                if (agentEvent && agentEvent.kind === EVENT_KINDS.AGENT_CONFIG) {
+                    const agentName = agentEvent.tagValue("title") || "unnamed";
+                    const agentConfig = {
+                        eventId: agentEventId,
+                        name: agentName,
+                        description: agentEvent.tagValue("description"),
+                        role: agentEvent.tagValue("role"),
+                        instructions: agentEvent.tagValue("instructions"),
+                        version: (() => {
+                            const versionStr = agentEvent.tagValue("version");
+                            if (!versionStr) return 1;
+                            const parsed = Number.parseInt(versionStr, 10);
+                            return Number.isNaN(parsed) ? 1 : parsed;
+                        })(),
+                        publishedAt: agentEvent.created_at,
+                        publisher: agentEvent.pubkey,
+                    };
 
-	private async ensureAgentNsec(
-		agentName: string,
-		agentEventId: string,
-	): Promise<void> {
-		const agentsJsonPath = path.join(
-			this.projectInfo.projectPath,
-			".tenex",
-			"agents.json",
-		);
-		const agentKey = toKebabCase(agentName);
+                    await fs.writeFile(agentConfigPath, JSON.stringify(agentConfig, null, 2));
+                    console.log(chalk.green(`✅ Saved new agent definition: ${agentName}`));
 
-		try {
-			const content = await fs.readFile(agentsJsonPath, "utf-8");
-			const agents = JSON.parse(content);
+                    // Ensure this agent has an nsec in agents.json
+                    await this.ensureAgentNsec(agentName, agentEventId);
+                }
+            } catch (err) {
+                const errorMessage = formatError(err);
+                console.log(chalk.red(`Failed to fetch agent ${agentEventId}: ${errorMessage}`));
+            }
+        }
+    }
 
-			// Check if agent already has an nsec
-			const agentEntry = agents[agentKey];
+    private async ensureAgentNsec(agentName: string, agentEventId: string): Promise<void> {
+        const agentsJsonPath = path.join(this.projectInfo.projectPath, ".tenex", "agents.json");
+        const agentKey = toKebabCase(agentName);
 
-			if (!agentEntry) {
-				// Generate new nsec for this agent
-				const signer = NDKPrivateKeySigner.generate();
-				if (!signer.privateKey) {
-					throw new Error("Failed to generate private key for agent");
-				}
-				agents[agentKey] = {
-					nsec: signer.privateKey,
-					file: `${agentEventId}.json`,
-				};
+        try {
+            const content = await fs.readFile(agentsJsonPath, "utf-8");
+            const agents = JSON.parse(content);
 
-				await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
-				console.log(
-					chalk.green(
-						`✅ Generated nsec for agent: ${agentName} (as '${agentKey}')`,
-					),
-				);
+            // Check if agent already has an nsec
+            const agentEntry = agents[agentKey];
 
-				// Publish kind:0 profile for the new agent
-				try {
-					const projectTitle = this.projectInfo.title;
-					const fullAgentName = `${agentKey} @ ${projectTitle}`;
-					const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fullAgentName)}`;
+            if (!agentEntry) {
+                // Generate new nsec for this agent
+                const signer = NDKPrivateKeySigner.generate();
+                if (!signer.privateKey) {
+                    throw new Error("Failed to generate private key for agent");
+                }
+                agents[agentKey] = {
+                    nsec: signer.privateKey,
+                    file: `${agentEventId}.json`,
+                };
 
-					const profileEvent = new NDKEventClass(this.ndk, {
-						kind: 0,
-						pubkey: signer.pubkey,
-						content: JSON.stringify({
-							name: fullAgentName,
-							display_name: fullAgentName,
-							about: `${agentKey} AI agent for ${projectTitle} project`,
-							picture: avatarUrl,
-							created_at: Math.floor(Date.now() / 1000),
-						}),
-						tags: [],
-					});
+                await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
+                console.log(
+                    chalk.green(`✅ Generated nsec for agent: ${agentName} (as '${agentKey}')`)
+                );
 
-					await profileEvent.sign(signer);
-					await profileEvent.publish();
+                // Publish kind:0 profile for the new agent
+                try {
+                    const projectTitle = this.projectInfo.title;
+                    const fullAgentName = `${agentKey} @ ${projectTitle}`;
+                    const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fullAgentName)}`;
 
-					console.log(
-						chalk.green(`✅ Published kind:0 profile for ${agentName} agent`),
-					);
+                    const profileEvent = new NDKEvent(this.ndk, {
+                        kind: 0,
+                        pubkey: signer.pubkey,
+                        content: JSON.stringify({
+                            name: fullAgentName,
+                            display_name: fullAgentName,
+                            about: `${agentKey} AI agent for ${projectTitle} project`,
+                            picture: avatarUrl,
+                            created_at: Math.floor(Date.now() / 1000),
+                        }),
+                        tags: [],
+                    });
 
-					// Publish kind 3199 agent request to the project owner
-					try {
-						const agentRequestEvent = new NDKEventClass(this.ndk, {
-							kind: EVENT_KINDS.AGENT_REQUEST,
-							pubkey: signer.pubkey,
-							content: `Agent '${fullAgentName}' requesting to join project '${projectTitle}'`,
-							tags: [
-								["p", this.projectInfo.projectPubkey], // Project owner
-								["agent-name", agentKey],
-								["agent-event", agentEventId], // Reference to the NDKAgent event
-							],
-						});
+                    await profileEvent.sign(signer);
+                    await profileEvent.publish();
 
-						// Tag the project properly
-						agentRequestEvent.tag(this.projectInfo.projectEvent);
+                    console.log(chalk.green(`✅ Published kind:0 profile for ${agentName} agent`));
 
-						await agentRequestEvent.sign(signer);
-						await agentRequestEvent.publish();
+                    // Publish kind 3199 agent request to the project owner
+                    try {
+                        const agentRequestEvent = new NDKEvent(this.ndk, {
+                            kind: EVENT_KINDS.AGENT_REQUEST,
+                            tags: [
+                                ["agent-name", agentKey],
+                                ["e", agentEventId], // Reference to the NDKAgent event
+                            ],
+                        });
 
-						console.log(
-							chalk.green(
-								`✅ Published kind:3199 agent request for ${agentName}`,
-							),
-						);
-					} catch (err) {
-						const errorMessage =
-							err instanceof Error ? err.message : String(err);
-						console.log(
-							chalk.yellow(
-								`⚠️  Failed to publish agent request for ${agentName}: ${errorMessage}`,
-							),
-						);
-					}
-				} catch (err) {
-					const errorMessage = err instanceof Error ? err.message : String(err);
-					console.log(
-						chalk.yellow(
-							`⚠️  Failed to publish profile for ${agentName}: ${errorMessage}`,
-						),
-					);
-				}
-			} else {
-				// Check if we need to update the file reference
-				if (typeof agentEntry === "string") {
-					// Old format - convert to new format
-					agents[agentKey] = {
-						nsec: agentEntry,
-						file: `${agentEventId}.json`,
-					};
-					await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
-					console.log(
-						chalk.green(`✅ Updated agent ${agentName} to new format`),
-					);
-				} else if (!agentEntry.file) {
-					// New format but missing file reference
-					agentEntry.file = `${agentEventId}.json`;
-					await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
-					console.log(
-						chalk.green(`✅ Added file reference for agent ${agentName}`),
-					);
-				}
-			}
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : String(err);
-			console.log(chalk.red(`Failed to update agents.json: ${errorMessage}`));
-		}
-	}
+                        // Tag the project properly
+                        agentRequestEvent.tag(this.projectInfo.projectEvent);
+
+                        // Tag the author of the project (the owner)
+                        agentRequestEvent.tag(this.projectInfo.projectEvent.author);
+
+                        await agentRequestEvent.sign(signer);
+                        await agentRequestEvent.publish();
+
+                        console.log(
+                            chalk.green(`✅ Published kind:3199 agent request for ${agentName}`)
+                        );
+                    } catch (err) {
+                        const errorMessage = formatError(err);
+                        console.log(
+                            chalk.yellow(
+                                `⚠️  Failed to publish agent request for ${agentName}: ${errorMessage}`
+                            )
+                        );
+                    }
+                } catch (err) {
+                    const errorMessage = formatError(err);
+                    console.log(
+                        chalk.yellow(
+                            `⚠️  Failed to publish profile for ${agentName}: ${errorMessage}`
+                        )
+                    );
+                }
+            } else {
+                // Check if we need to update the file reference
+                if (typeof agentEntry === "string") {
+                    // Old format - convert to new format
+                    agents[agentKey] = {
+                        nsec: agentEntry,
+                        file: `${agentEventId}.json`,
+                    };
+                    await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
+                    console.log(chalk.green(`✅ Updated agent ${agentName} to new format`));
+                } else if (!agentEntry.file) {
+                    // New format but missing file reference
+                    agentEntry.file = `${agentEventId}.json`;
+                    await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
+                    console.log(chalk.green(`✅ Added file reference for agent ${agentName}`));
+                }
+            }
+        } catch (err) {
+            const errorMessage = formatError(err);
+            console.log(chalk.red(`Failed to update agents.json: ${errorMessage}`));
+        }
+    }
 }

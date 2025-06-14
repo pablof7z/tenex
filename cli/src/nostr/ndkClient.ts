@@ -2,28 +2,13 @@
  * TENEX CLI: NDK Utilities
  * Provides singleton NDK instance management
  */
-import NDK from "@nostr-dev-kit/ndk";
+import { getNDK as getSharedNDK } from "@tenex/shared/node";
 
-let ndkInstance: NDK | null = null;
-
-export async function getNDK(): Promise<NDK> {
-	if (!ndkInstance) {
-		ndkInstance = new NDK({
-			explicitRelayUrls: [
-				"wss://relay.nostr.band",
-				"wss://relay.damus.io",
-				"wss://relay.primal.net",
-			],
-		});
-		await ndkInstance.connect();
-	}
-	return ndkInstance;
+export async function getNDK() {
+    return await getSharedNDK();
 }
 
 export async function shutdownNDK(): Promise<void> {
-	if (ndkInstance) {
-		// NDK doesn't have a built-in disconnect method, but we can
-		// stop all subscriptions and clear the instance
-		ndkInstance = null;
-	}
+    // The shared NDK instance handles shutdown
+    // This is kept for backward compatibility but delegates to shared implementation
 }

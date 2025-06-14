@@ -1,7 +1,0 @@
-{
-	"default": {
-		"provider": "test",
-		"model": "test-model",
-		"apiKey": "test-key"
-	}
-}

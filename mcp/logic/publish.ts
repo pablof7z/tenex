@@ -4,6 +4,7 @@ import path from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { NDKEvent, type NDKTag } from "@nostr-dev-kit/ndk";
 import { z } from "zod";
+import { EVENT_KINDS } from "@tenex/types";
 import { getConfig } from "../config.js";
 import { createCommit, hasUncommittedChanges } from "../lib/git.js";
 import { log } from "../lib/utils/log.js";
@@ -32,9 +33,7 @@ export async function publishTaskStatusUpdate(
         // Check for uncommitted changes
         const hasChanges = await hasUncommittedChanges();
         if (hasChanges) {
-            log(
-                `INFO: Found uncommitted changes, creating commit with title: "${title}"`
-            );
+            log(`INFO: Found uncommitted changes, creating commit with title: "${title}"`);
             const hash = await createCommit(title);
             if (hash) {
                 commitHash = hash;
@@ -44,21 +43,12 @@ export async function publishTaskStatusUpdate(
             log("INFO: No uncommitted changes found, skipping git commit");
         }
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : String(error);
-        log(
-            `WARN: Git operation failed: ${errorMessage}. Continuing with nostr publishing.`
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        log(`WARN: Git operation failed: ${errorMessage}. Continuing with nostr publishing.`);
         // Continue with nostr publishing even if git operations fail
     }
 
-    return await publishToNostr(
-        content,
-        taskId,
-        confidenceLevel,
-        commitHash,
-        agentName
-    );
+    return await publishToNostr(content, taskId, confidenceLevel, commitHash, agentName);
 }
 
 /**
@@ -81,9 +71,7 @@ async function publishToNostr(
         `INFO: Publishing note with content type: ${typeof content}, value: "${content ? content.substring(0, 50) : "undefined"}..."`
     );
 
-    const taskFilePath = taskId
-        ? path.join(os.homedir(), ".tenex", "tasks", taskId)
-        : undefined;
+    const taskFilePath = taskId ? path.join(os.homedir(), ".tenex", "tasks", taskId) : undefined;
     let previousEventId: string | undefined = undefined;
 
     try {
@@ -95,18 +83,14 @@ async function publishToNostr(
 
         // Ensure signer is available
         if (!ndk.signer) {
-            throw new Error(
-                "No signer available for publishing. Ensure NSEC is provided."
-            );
+            throw new Error("No signer available for publishing. Ensure NSEC is provided.");
         }
 
         // If taskId is provided, try to read the previous event ID
         if (taskFilePath) {
             try {
                 previousEventId = await fs.readFile(taskFilePath, "utf-8");
-                log(
-                    `INFO: Found previous event ID ${previousEventId} for task ${taskId}`
-                );
+                log(`INFO: Found previous event ID ${previousEventId} for task ${taskId}`);
             } catch (error: unknown) {
                 // Check if it's a Node.js file system error
                 if (
@@ -115,17 +99,11 @@ async function publishToNostr(
                     "code" in error &&
                     error.code === "ENOENT"
                 ) {
-                    log(
-                        `INFO: No previous event file found for task ${taskId}.`
-                    );
+                    log(`INFO: No previous event file found for task ${taskId}.`);
                 } else if (error instanceof Error) {
-                    log(
-                        `WARN: Error reading task file ${taskFilePath}: ${error.message}`
-                    );
+                    log(`WARN: Error reading task file ${taskFilePath}: ${error.message}`);
                 } else {
-                    log(
-                        `WARN: Unknown error reading task file ${taskFilePath}: ${String(error)}`
-                    );
+                    log(`WARN: Unknown error reading task file ${taskFilePath}: ${String(error)}`);
                 }
             }
         }
@@ -144,10 +122,7 @@ async function publishToNostr(
         // Add confidence level tag if provided
         if (confidenceLevel !== undefined) {
             // Ensure confidence level is within valid range
-            const normalizedConfidence = Math.max(
-                1,
-                Math.min(10, confidenceLevel)
-            );
+            const normalizedConfidence = Math.max(1, Math.min(10, confidenceLevel));
             tags.push(["confidence", normalizedConfidence.toString()]);
             log(`INFO: Adding confidence level tag: ${normalizedConfidence}`);
         }
@@ -166,7 +141,7 @@ async function publishToNostr(
 
         // Create the event
         const event = new NDKEvent(ndk, {
-            kind: 1, // Standard short text note
+            kind: EVENT_KINDS.TEXT_NOTE, // Standard short text note
             content,
             tags,
         });
@@ -176,9 +151,7 @@ async function publishToNostr(
 
         // Publish the already signed event
         const publishedRelays = await event.publish();
-        log(
-            `INFO: Published event ${event.id} to ${publishedRelays.size} relays.`
-        );
+        log(`INFO: Published event ${event.id} to ${publishedRelays.size} relays.`);
 
         if (publishedRelays.size === 0) {
             log("WARN: Event was not published to any relays.");
@@ -194,22 +167,15 @@ async function publishToNostr(
                 const dir = path.dirname(taskFilePath);
                 await fs.mkdir(dir, { recursive: true }); // Ensure directory exists
                 await fs.writeFile(taskFilePath, event.id, "utf-8");
-                log(
-                    `INFO: Saved current event ID ${event.id} to ${taskFilePath}`
-                );
+                log(`INFO: Saved current event ID ${event.id} to ${taskFilePath}`);
             } catch (error: unknown) {
-                const message =
-                    error instanceof Error ? error.message : String(error);
-                log(
-                    `ERROR: Failed to write task file ${taskFilePath}: ${message}`
-                );
+                const message = error instanceof Error ? error.message : String(error);
+                log(`ERROR: Failed to write task file ${taskFilePath}: ${message}`);
                 // Decide how to handle this error - maybe add to the return message?
             }
         }
 
-        const commitInfo = commitHash
-            ? ` (with git commit: ${commitHash})`
-            : "";
+        const commitInfo = commitHash ? ` (with git commit: ${commitHash})` : "";
         return {
             content: [
                 {
@@ -219,8 +185,7 @@ async function publishToNostr(
             ],
         };
     } catch (error: unknown) {
-        const errorMessage =
-            error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         log(`ERROR: Failed to publish: ${errorMessage}`);
         // Rethrow or handle as needed for MCP response
         throw new Error(`Failed to publish: ${errorMessage}`);
@@ -259,7 +224,7 @@ export async function publishTypingIndicator(
 
         // Create the event
         const event = new NDKEvent(ndk, {
-            kind: isTyping ? 24111 : 24112,
+            kind: isTyping ? EVENT_KINDS.TYPING_INDICATOR : EVENT_KINDS.TYPING_INDICATOR_STOP,
             content: isTyping ? "Typing..." : "",
             tags,
         });
@@ -281,8 +246,7 @@ export async function publishTypingIndicator(
             ],
         };
     } catch (error: unknown) {
-        const errorMessage =
-            error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         log(`ERROR: Failed to publish typing indicator: ${errorMessage}`);
         throw new Error(`Failed to publish typing indicator: ${errorMessage}`);
     }
@@ -298,11 +262,7 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
         "publish_task_status_update",
         "Publish a task status update to Nostr",
         {
-            update: z
-                .string()
-                .describe(
-                    "The update to publish (do not include the task ID here)"
-                ),
+            update: z.string().describe("The update to publish (do not include the task ID here)"),
             taskId: z.string().describe("Task ID being worked on"),
             confidence_level: z
                 .number()
@@ -313,9 +273,7 @@ export function addPublishTaskStatusUpdateCommand(server: McpServer) {
                 ),
             title: z
                 .string()
-                .describe(
-                    "Short title for the status update (used as git commit message)"
-                ),
+                .describe("Short title for the status update (used as git commit message)"),
             agent_name: z
                 .string()
                 .describe(
@@ -358,14 +316,10 @@ export function addPublishTypingIndicatorCommand(server: McpServer) {
         "publish_typing_indicator",
         "Publish a typing indicator to Nostr",
         {
-            threadId: z
-                .string()
-                .describe("The thread/conversation ID to e-tag"),
+            threadId: z.string().describe("The thread/conversation ID to e-tag"),
             isTyping: z
                 .boolean()
-                .describe(
-                    "Whether the agent is typing (true) or stopped typing (false)"
-                ),
+                .describe("Whether the agent is typing (true) or stopped typing (false)"),
         },
         async (
             {
@@ -378,6 +332,41 @@ export function addPublishTypingIndicatorCommand(server: McpServer) {
             _extra: unknown
         ) => {
             return await publishTypingIndicator(threadId, isTyping);
+        }
+    );
+}
+
+/**
+ * Publish a general note to Nostr
+ * @param content The content of the note to publish
+ * @returns Publication results
+ */
+export async function publish(
+    content: string
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+    return await publishToNostr(content);
+}
+
+/**
+ * Register the publish command with the MCP server
+ * @param server The MCP server instance
+ */
+export function addPublishCommand(server: McpServer) {
+    server.tool(
+        "publish",
+        "Publish a note to Nostr not related to a task",
+        {
+            content: z.string().describe("The content of the note you want to publish"),
+        },
+        async (
+            {
+                content,
+            }: {
+                content: string;
+            },
+            _extra: unknown
+        ) => {
+            return await publish(content);
         }
     );
 }

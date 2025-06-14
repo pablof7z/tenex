@@ -38,8 +38,7 @@ export async function hasUncommittedChanges(): Promise<boolean> {
         // If there are any files in the status, there are uncommitted changes
         return status.files.length > 0;
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to check git status: ${errorMessage}`);
     }
 }
@@ -74,8 +73,7 @@ export async function createCommit(message: string): Promise<string | null> {
         // Return the short commit hash
         return result.commit.substring(0, 8);
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to create commit: ${errorMessage}`);
     }
 }
@@ -104,8 +102,7 @@ export async function getLatestCommitHash(): Promise<string | null> {
         // Return the short commit hash (first 8 characters)
         return log.latest?.hash.substring(0, 8) || null;
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to get latest commit hash: ${errorMessage}`);
     }
 }
@@ -115,9 +112,7 @@ export async function getLatestCommitHash(): Promise<string | null> {
  * @param commitHash - The commit hash to validate (can be full or short hash)
  * @returns Promise<boolean> - true if commit exists, false otherwise
  */
-export async function validateCommitExists(
-    commitHash: string
-): Promise<boolean> {
+export async function validateCommitExists(commitHash: string): Promise<boolean> {
     try {
         const gitInstance = initGit();
 
@@ -140,8 +135,7 @@ export async function validateCommitExists(
             return false;
         }
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to validate commit: ${errorMessage}`);
     }
 }
@@ -151,9 +145,7 @@ export async function validateCommitExists(
  * @param commitHash - The commit hash to get details for (can be full or short hash)
  * @returns Promise<CommitDetails> - Detailed commit information
  */
-export async function getCommitDetails(
-    commitHash: string
-): Promise<CommitDetails> {
+export async function getCommitDetails(commitHash: string): Promise<CommitDetails> {
     try {
         const gitInstance = initGit();
 
@@ -176,9 +168,7 @@ export async function getCommitDetails(
             "--no-patch",
         ]);
 
-        const lines = result
-            .split("\n")
-            .filter((line) => line.trim().length > 0);
+        const lines = result.split("\n").filter((line) => line.trim().length > 0);
         if (lines.length === 0) {
             throw new Error(`No commit details found for ${commitHash}`);
         }
@@ -207,8 +197,7 @@ export async function getCommitDetails(
             date: date.trim(),
         };
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         throw new Error(`Failed to get commit details: ${errorMessage}`);
     }
 }
@@ -249,10 +238,7 @@ export async function resetToCommit(
         // Perform the reset
         await gitInstance.reset([`--${resetType}`, commitHash]);
     } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-        throw new Error(
-            `Failed to reset to commit ${commitHash}: ${errorMessage}`
-        );
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to reset to commit ${commitHash}: ${errorMessage}`);
     }
 }

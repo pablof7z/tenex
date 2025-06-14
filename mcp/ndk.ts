@@ -1,8 +1,4 @@
-import NDK, {
-    NDKPrivateKeySigner,
-    type NDKRelay,
-    type NDKSigner,
-} from "@nostr-dev-kit/ndk";
+import NDK, { NDKPrivateKeySigner, type NDKRelay, type NDKSigner } from "@nostr-dev-kit/ndk";
 import type { ConfigData } from "./config"; // Simplified config
 import { log } from "./lib/utils/log.js"; // Corrected log import path
 
@@ -28,15 +24,9 @@ export async function initNDK(config: ConfigData) {
     log(`INFO: Using relays: ${config.relays.join(", ")}`);
 
     // Configure logging for relay events
-    ndk.pool.on("relay:connect", (r: NDKRelay) =>
-        log(`INFO: Connected to ${r.url}`)
-    );
-    ndk.pool.on("relay:disconnect", (r: NDKRelay) =>
-        log(`INFO: Disconnected from ${r.url}`)
-    );
-    ndk.pool.on("relay:connecting", (r: NDKRelay) =>
-        log(`INFO: Connecting to ${r.url}`)
-    );
+    ndk.pool.on("relay:connect", (r: NDKRelay) => log(`INFO: Connected to ${r.url}`));
+    ndk.pool.on("relay:disconnect", (r: NDKRelay) => log(`INFO: Disconnected from ${r.url}`));
+    ndk.pool.on("relay:connecting", (r: NDKRelay) => log(`INFO: Connecting to ${r.url}`));
 
     // Set up signer from private key
     try {

@@ -1,5 +1,5 @@
 {
-    "name": "tenex-mcp",
+    "name": "@tenex/mcp",
     "version": "0.5.0",
     "description": "Model Context Protocol server for TENEX",
     "module": "index.ts",
@@ -39,6 +39,7 @@
         "commander": "^13.1.0",
         "inquirer": "^12.5.0",
         "simple-git": "^3.25.0",
-        "yaml": "^2.7.0"
+        "yaml": "^2.7.0",
+        "@tenex/types": "file:../packages/types"
     }
 }

@@ -1,10 +1,10 @@
 import { exec } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { NDKPrivateKeySigner, } from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { nip19 } from "nostr-tools";
-import { fetchAndSaveAgentDefinitions as fetchAgentDefs, publishAgentProfile, } from "./agents/index.js";
+import { fetchAndSaveAgentDefinitions as fetchAgentDefs, publishAgentProfile, toKebabCase, updateAgentConfig, } from "./agents/index.js";
 import { logError, logInfo, logSuccess, logWarning } from "./logger.js";
 import { getNDK } from "./nostr.js";
 import { getErrorMessage } from "@tenex/types/utils";
@@ -27,7 +27,7 @@ export async function checkProjectExists(projectsPath, projectIdentifier) {
         exists = true;
     }
     catch (err) {
-        if (err instanceof Error && 'code' in err && err.code !== "ENOENT") {
+        if (err instanceof Error && "code" in err && err.code !== "ENOENT") {
             throw err;
         }
     }
@@ -208,7 +208,7 @@ async function createProjectDirectory(projectPath, repoUrl) {
         logInfo(`Using existing project directory: ${projectPath}`);
     }
     catch (err) {
-        if (err instanceof Error && 'code' in err && err.code !== "ENOENT")
+        if (err instanceof Error && "code" in err && err.code !== "ENOENT")
             throw err;
     }
     if (!projectExists) {
@@ -226,7 +226,7 @@ async function createProjectDirectory(projectPath, repoUrl) {
             if (err instanceof Error) {
                 errorMessage = err.message;
             }
-            else if (err && typeof err === 'object' && 'stderr' in err) {
+            else if (err && typeof err === "object" && "stderr" in err) {
                 errorMessage = String(err.stderr);
             }
             logError(`Failed to clone repository: ${errorMessage}`);
@@ -261,7 +261,7 @@ async function createTenexDirectory(tenexDir) {
         logInfo(".tenex directory found from template. Updating configuration...");
     }
     catch (err) {
-        if (err instanceof Error && 'code' in err && err.code !== "ENOENT")
+        if (err instanceof Error && "code" in err && err.code !== "ENOENT")
             throw err;
     }
     if (!tenexExists) {
@@ -282,7 +282,7 @@ async function getGitRemoteUrl(projectPath) {
 async function publishAgentProfiles(agentsConfig, projectTitle) {
     for (const [agentKey, agentData] of Object.entries(agentsConfig)) {
         try {
-            const nsec = typeof agentData === 'string' ? agentData : agentData.nsec;
+            const nsec = typeof agentData === "string" ? agentData : agentData.nsec;
             await publishAgentProfile(nsec, agentKey, projectTitle, agentKey === "default");
             logSuccess(`✅ Published kind:0 profile for agent '${agentKey}' with avatar`);
         }
@@ -318,3 +318,4 @@ ${projectDescription}
         await writeFile(readmePath, `# ${projectTitle}\n\n${projectDescription}`);
     }
 }
+//# sourceMappingURL=projects.js.map

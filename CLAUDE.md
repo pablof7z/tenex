@@ -21,20 +21,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **IMPORTANT**: When working through the TENEX CLI as an AI agent:
 - Use the `read_specs` tool at the start of conversations to access SPEC.md and other project documentation
 - Use the `update_spec` tool to update SPEC.md when changes occur (only available to the default agent)
+- Use the `remember_lesson` tool when you realize a mistake or wrong assumption
 - These tools provide access to the living documentation stored as Nostr events
+
+**NEW AGENT CAPABILITIES**:
+1. **Living Documentation**: All specs are now Nostr events (kind 30023)
+2. **Agent Learning**: Record lessons with `remember_lesson` tool
+3. **Rich Text**: Messages can contain Nostr entity references
+4. **Typing Indicators**: Your prompts are visible during processing
+5. **Cost Tracking**: Token usage and costs are tracked in events
 
 ## Project Overview
 
-TENEX is a context-first development environment that orchestrates AI assistants to manage software development. It consists of:
-- **Web Client** (`web-client/`): Vite-based React app with TypeScript and Tailwind CSS
-- **CLI Tool** (`cli/`): Command-line interface for project and agent management  
-- **MCP Server** (`mcp/`): Model Context Protocol server for AI agent integration
-- **Shared Libraries** (`shared/`): Common code between components
-- **tenexd** (`tenexd/`): Daemon service for Nostr protocol operations
+TENEX is a context-first development environment that orchestrates multiple AI agents to build software collaboratively. It consists of:
+- **Web Client** (`web-client/`): Vite React app with living documentation viewer
+- **CLI Tool** (`cli/`): Advanced agent orchestration with tool system
+- **MCP Server** (`mcp/`): Model Context Protocol server with git integration
+- **Shared Libraries** (`shared/`): Common types and utilities
+- **tenexd** (`tenexd/`): Daemon for automatic project management
+- **iOS Client** (`ios-client/`): Native mobile application
 
-The system is built on the Nostr protocol for decentralized collaboration.
+The system features living documentation, agent learning, rich communication, and sophisticated multi-agent orchestration through the Nostr protocol.
 
-**For detailed architecture and how components work together, see `/SPEC.md`**
+**For the complete system architecture, see `/SPEC.md` and `/SYSTEM_MAP.md`**
 
 ## Common Development Commands
 
@@ -90,24 +99,29 @@ biome format . --write   # Auto-format code with Biome
 - **Nostr Integration**: NDK via `@nostr-dev-kit/ndk-hooks`
 
 ### Component Organization
-- **Pages**: `AgentsPage.tsx`, `ChatsPage.tsx`, `SettingsPage.tsx`
-- **Common Components**: `components/common/` (EmptyState, ErrorState, etc.)
-- **Settings Components**: `components/settings/` (AgentsSettings, MetadataSettings, etc.)
-- **UI Components**: `components/ui/` (shadcn/ui library)
+- **Pages**: `AgentsPage.tsx`, `ChatsPage.tsx`, `SettingsPage.tsx`, `DocsPage.tsx`
+- **Common Components**: `components/common/` (EmptyState, ErrorState, MessageWithEntities, NostrEntityCard)
+- **Settings Components**: `components/settings/` (AgentsSettings, MetadataSettings, RulesSettings)
+- **UI Components**: `components/ui/` (shadcn/ui library with hover-card)
 - **Selectors**: AgentSelector, InstructionSelector, TemplateSelector
+- **Hooks**: `useAgentLessons`, `useProjectAgents`, `useProjectStatus`
 
 ### CLI Commands
-- `tenex init` - Initialize CLI with profile configuration
 - `tenex project init <path> <naddr>` - Initialize a new project from Nostr event
-- `tenex run` - Start project listener (no arguments needed)
-- `tenex agent publish` - Publish an agent to Nostr
-- `tenex rules` - Manage project rules
+- `tenex run` - Start multi-agent orchestration system
+
+### CLI Agent Tools
+- `read_specs` - Access living documentation from Nostr
+- `update_spec` - Update project specifications (default agent only)
+- `remember_lesson` - Record learnings from mistakes
+- Claude Code tools - File operations, bash commands, etc.
 
 ### MCP Server Features
-- **Multi-Agent Support**: Manages multiple AI agent identities per project
-- **Git Integration**: Automatic commits with task context
-- **Status Updates**: Publishes real-time updates to Nostr
-- **Tools**: `publish_task_status_update`, `publish`, git operations
+- **Multi-Agent Support**: Manages agent identities and configurations
+- **Git Integration**: Advanced operations with context preservation
+- **Status Updates**: Real-time progress with confidence levels
+- **Agent Loader**: Fetches configurations from NDKAgent events
+- **Tools**: `publish_task_status_update`, `publish`, `git_reset_to_commit`, `git_commit_details`, `git_validate_commit`
 
 ## Important Development Patterns
 
@@ -139,22 +153,29 @@ Always use the Button component with proper variants:
 - See `web-client/BUTTON_STYLE_GUIDE.md` for full guide
 
 ### Agent Management
-Projects maintain agents in `.tenex/agents.json`:
+Projects maintain agents in `.tenex/agents.json` with enhanced format:
 ```json
 {
-  "default": "nsec1...",
-  "claude-code": "nsec1...",
-  "planner": "nsec1..."
+  "default": {
+    "nsec": "nsec1...",
+    "file": "abc123.json"  // Reference to NDKAgent event file
+  },
+  "code": "nsec1...",  // Legacy format still supported
+  "planner": {
+    "nsec": "nsec1...",
+    "file": "def456.json"
+  }
 }
 ```
 
-Agent definitions from NDKAgent events (kind 4199) are automatically fetched and stored in `.tenex/agents/` during project initialization:
-```
-.tenex/agents/
-├── {agent-event-id-1}.json
-├── {agent-event-id-2}.json
-└── {agent-event-id-3}.json
-```
+Agent features:
+- **Individual Tool Registries**: Each agent has specialized tools
+- **Conversation Persistence**: 30-day retention with optimization
+- **Learning System**: Agents record lessons from mistakes
+- **Cost Tracking**: Token usage tracked in event metadata
+- **Typing Indicators**: Real-time status with prompt visibility
+
+Agent definitions from NDKAgent events (kind 4199) are automatically fetched and cached in `.tenex/agents/` during initialization.
 
 ## Key Technologies
 
@@ -172,9 +193,15 @@ Agent definitions from NDKAgent events (kind 4199) are automatically fetched and
 
 1. **File Paths**: All tools require absolute paths (not relative)
 2. **Nostr Events**: 
-   - Projects: kind 31933 (with tags: d, title, repo, hashtags)
-   - Templates: kind 30717 (with tags: d, title, uri, agent)
-   - Tasks: kind 1934
+   - Projects: kind 31933 (NDKArticle with d, title, repo, agent tags)
+   - Templates: kind 30717 (with d, title, uri, agent tags)
+   - Tasks: kind 1934 (with title tag and structured metadata)
+   - Specifications: kind 30023 (NDKArticle for living docs)
+   - Agent Config: kind 4199 (NDKAgent with role, instructions)
+   - Agent Lessons: kind 4124 (learnings with e-tag to agent)
+   - Typing Indicators: kinds 24111/24112 (with prompt visibility)
+   - Project Status: kind 24010 (online pings every 60s)
+   - Chats: kinds 11/1111 (with rich text support)
 3. **Testing**: Always test changes when possible
 4. **Git Operations**: Never commit unless explicitly asked by the user
 5. **Code Style**:
@@ -182,18 +209,31 @@ Agent definitions from NDKAgent events (kind 4199) are automatically fetched and
    - Follow existing patterns in the codebase
    - Never add comments unless explicitly asked
    - Prefer editing existing files over creating new ones
+6. **Agent Best Practices**:
+   - Use `read_specs` at conversation start
+   - Update specs when requirements change
+   - Record lessons when realizing mistakes
+   - Collaborate via p-tags when needed
 
 ## Project Structure Notes
 
-- Voice transcription features use OpenAI Whisper API
-- MCP server enables AI agents to publish Nostr events and perform git operations
-- When using `tenex run --claude`, the MCP server is configured with `--config-file` pointing to `agents.json`
-- Task execution uses backend-specific commands:
-  - `--roo`: VS Code integration with roo-executor
-  - `--claude`: Claude CLI with MCP server
-  - `--goose`: Not yet implemented
+- **Living Documentation**: Specs stored as NDKArticle events (kind 30023)
+- **Agent Tools**: Available via tool registry in CLI agent system
+- **Conversation Storage**: `.tenex/conversations/` with 30-day retention
+- **Rich Communication**: Support for Nostr entity references in messages
+- **Token Optimization**: Automatic caching and context window management
+- **Multi-Agent System**: Sophisticated orchestration with participant tracking
+- **Cost Tracking**: LLM usage and costs tracked in event metadata
 
-When working on this codebase, always check the `.tenex/rules/` directory for the latest context-specific guidelines and requirements.
+### Key Directories
+- `.tenex/agents/`: Cached NDKAgent event definitions
+- `.tenex/conversations/`: Persistent conversation history
+- `web-client/src/utils/`: Entity parsing and utilities
+- `cli/src/utils/agents/tools/`: Agent tool implementations
+
+When working on this codebase, always:
+1. Use `read_specs` tool to access current documentation
+2. Update living documentation when making changes
 
 ### Documentation Maintenance
 

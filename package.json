@@ -1,0 +1,22 @@
+{
+    "name": "tenex",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": ["packages/*", "cli", "web-client", "mcp", "shared", "tenexd"],
+    "scripts": {
+        "build": "bun run build:types && bun run build:shared && bun run build:all",
+        "build:types": "cd packages/types && bun run build",
+        "build:shared": "cd shared && bun run build",
+        "build:all": "bun workspaces foreach run build",
+        "dev": "bun workspaces foreach --parallel run dev",
+        "lint": "biome check .",
+        "format": "biome format . --write",
+        "test": "bun workspaces foreach run test",
+        "clean": "bun workspaces foreach run clean",
+        "typecheck": "bun workspaces foreach run typecheck"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "typescript": "^5.8.3"
+    }
+}

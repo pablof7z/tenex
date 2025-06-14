@@ -35,15 +35,6 @@ bun install
 bun run dev
 ```
 
-### Prerequisites
-
-1. **Roocode**: TENEX depends on [Roocode](https://roocode.com) being installed on your system. Make sure you have Roocode properly configured before proceeding.
-
-2. **VS Code Extension**: Install the Roo Executor extension from the VS Code marketplace:
-   - [Roo Executor Extension](https://marketplace.visualstudio.com/items?itemName=pablof7z.roo-executor)
-
-![screenshot](./images/screenshot.png)
-
 ### Author
 
 [@pablof7z](https://njump.me/f7z.io)

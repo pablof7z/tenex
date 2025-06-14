@@ -1,4 +1,5 @@
 import NDK, { type NDKEvent } from "@nostr-dev-kit/ndk";
+import { EVENT_KINDS } from "@tenex/types";
 import type { ConfigData } from "./config";
 import { log } from "./lib/utils/log.js";
 
@@ -41,8 +42,10 @@ export async function fetchAgentConfiguration(
             return null;
         }
 
-        if (event.kind !== 4199) {
-            log(`WARN: Event ${eventId} is not an NDKAgent event (kind 4199)`);
+        if (event.kind !== EVENT_KINDS.AGENT_CONFIG) {
+            log(
+                `WARN: Event ${eventId} is not an NDKAgent event (kind ${EVENT_KINDS.AGENT_CONFIG})`
+            );
             return null;
         }
 
@@ -88,17 +91,12 @@ function parseAgentEvent(event: NDKEvent): AgentDefinition {
  * @param config The configuration object to update
  * @returns The updated configuration
  */
-export async function loadAgentConfiguration(
-    config: ConfigData
-): Promise<ConfigData> {
+export async function loadAgentConfiguration(config: ConfigData): Promise<ConfigData> {
     if (!config.agentEventId) {
         return config;
     }
 
-    const agentDef = await fetchAgentConfiguration(
-        config.agentEventId,
-        config.relays
-    );
+    const agentDef = await fetchAgentConfiguration(config.agentEventId, config.relays);
 
     if (agentDef) {
         config.agentName = agentDef.name;

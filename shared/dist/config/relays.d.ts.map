@@ -1,0 +1,1 @@
+{"version":3,"file":"relays.d.ts","sourceRoot":"","sources":["../../src/config/relays.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,eAAO,MAAM,cAAc,wGAKjB,CAAC;AAEX,eAAO,MAAM,eAAe,8HAAqD,CAAC;AAElF,MAAM,MAAM,QAAQ,GAAG,CAAC,OAAO,cAAc,CAAC,CAAC,MAAM,CAAC,GAAG,CAAC,OAAO,eAAe,CAAC,CAAC,MAAM,CAAC,CAAC;AAE1F;;GAEG;AACH,wBAAgB,YAAY,CAAC,QAAQ,UAAQ,GAAG,SAAS,MAAM,EAAE,CAEhE"}

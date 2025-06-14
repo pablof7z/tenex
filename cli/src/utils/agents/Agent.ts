@@ -11,209 +11,144 @@ import type { ToolRegistry } from "./tools/ToolRegistry";
 import type { AgentConfig, AgentResponse, LLMConfig } from "./types";
 
 export class Agent {
-	private core: AgentCore;
-	private conversationManager: AgentConversationManager;
-	private responseGenerator: AgentResponseGenerator;
+    private core: AgentCore;
+    private conversationManager: AgentConversationManager;
+    private responseGenerator: AgentResponseGenerator;
 
-	constructor(
-		name: string,
-		nsec: string,
-		config: AgentConfig,
-		storage?: ConversationStorage,
-		projectName?: string,
-		toolRegistry?: ToolRegistry,
-		agentEventId?: string,
-	) {
-		this.core = new AgentCore(
-			name,
-			nsec,
-			config,
-			projectName,
-			toolRegistry,
-			agentEventId,
-		);
-		this.conversationManager = new AgentConversationManager(this.core, storage);
-		this.responseGenerator = new AgentResponseGenerator(
-			this.core,
-			this.conversationManager,
-		);
-	}
+    constructor(
+        name: string,
+        nsec: string,
+        config: AgentConfig,
+        storage?: ConversationStorage,
+        projectName?: string,
+        toolRegistry?: ToolRegistry,
+        agentEventId?: string
+    ) {
+        this.core = new AgentCore(name, nsec, config, projectName, toolRegistry, agentEventId);
+        this.conversationManager = new AgentConversationManager(this.core, storage);
+        this.responseGenerator = new AgentResponseGenerator(this.core, this.conversationManager);
+    }
 
-	// Delegation methods to core
-	getName(): string {
-		return this.core.getName();
-	}
+    // Delegation methods to core
+    getName(): string {
+        return this.core.getName();
+    }
 
-	getNsec(): string {
-		return this.core.getNsec();
-	}
+    getNsec(): string {
+        return this.core.getNsec();
+    }
 
-	getSigner() {
-		return this.core.getSigner();
-	}
+    getSigner() {
+        return this.core.getSigner();
+    }
 
-	getPubkey(): string {
-		return this.core.getPubkey();
-	}
+    getPubkey(): string {
+        return this.core.getPubkey();
+    }
 
-	getConfig(): AgentConfig {
-		return this.core.getConfig();
-	}
+    getConfig(): AgentConfig {
+        return this.core.getConfig();
+    }
 
-	setDefaultLLMConfig(config: LLMConfig): void {
-		this.core.setDefaultLLMConfig(config);
-	}
+    setDefaultLLMConfig(config: LLMConfig): void {
+        this.core.setDefaultLLMConfig(config);
+    }
 
-	getDefaultLLMConfig(): LLMConfig | undefined {
-		return this.core.getDefaultLLMConfig();
-	}
+    getDefaultLLMConfig(): LLMConfig | undefined {
+        return this.core.getDefaultLLMConfig();
+    }
 
-	setToolRegistry(toolRegistry: ToolRegistry): void {
-		this.core.setToolRegistry(toolRegistry);
-	}
+    setToolRegistry(toolRegistry: ToolRegistry): void {
+        this.core.setToolRegistry(toolRegistry);
+    }
 
-	getToolRegistry(): ToolRegistry | undefined {
-		return this.core.getToolRegistry();
-	}
+    getToolRegistry(): ToolRegistry | undefined {
+        return this.core.getToolRegistry();
+    }
 
-	getAgentEventId(): string | undefined {
-		return this.core.getAgentEventId();
-	}
+    getAgentEventId(): string | undefined {
+        return this.core.getAgentEventId();
+    }
 
-	setNDK(ndk: NDK): void {
-		this.core.setNDK(ndk);
-	}
+    setNDK(ndk: NDK): void {
+        this.core.setNDK(ndk);
+    }
 
-	setAgentManager(agentManager: AgentManager): void {
-		this.core.setAgentManager(agentManager);
-	}
+    setAgentManager(agentManager: AgentManager): void {
+        this.core.setAgentManager(agentManager);
+    }
 
-	getAgentManager(): AgentManager | undefined {
-		return this.core.getAgentManager();
-	}
+    getAgentManager(): AgentManager | undefined {
+        return this.core.getAgentManager();
+    }
 
-	getSystemPrompt(
-		additionalRules?: string,
-		environmentContext?: string,
-	): string {
-		return this.core.getSystemPrompt(additionalRules, environmentContext);
-	}
+    // Delegation methods to conversation manager
 
-	// Delegation methods to conversation manager
-	async createConversation(
-		conversationId: string,
-		additionalRules?: string,
-		environmentContext?: string,
-	): Promise<Conversation> {
-		return this.conversationManager.createConversation(
-			conversationId,
-			additionalRules,
-			environmentContext,
-		);
-	}
+    getConversation(conversationId: string): Conversation | undefined {
+        return this.conversationManager.getConversation(conversationId);
+    }
 
-	getConversation(conversationId: string): Conversation | undefined {
-		return this.conversationManager.getConversation(conversationId);
-	}
+    /**
+     * Create conversation with full system prompt context
+     */
+    async getOrCreateConversationWithContext(
+        conversationId: string,
+        context: Partial<SystemPromptContext>
+    ): Promise<Conversation> {
+        return this.conversationManager.getOrCreateConversationWithContext(conversationId, context);
+    }
 
-	async getOrCreateConversation(
-		conversationId: string,
-		additionalRules?: string,
-		environmentContext?: string,
-	): Promise<Conversation> {
-		return this.conversationManager.getOrCreateConversation(
-			conversationId,
-			additionalRules,
-			environmentContext,
-		);
-	}
+    getAllConversations(): Map<string, Conversation> {
+        return this.conversationManager.getAllConversations();
+    }
 
-	/**
-	 * Create conversation with full system prompt context
-	 */
-	async getOrCreateConversationWithContext(
-		conversationId: string,
-		context: Partial<SystemPromptContext>,
-	): Promise<Conversation> {
-		return this.conversationManager.getOrCreateConversationWithContext(
-			conversationId,
-			context,
-		);
-	}
+    removeConversation(conversationId: string): boolean {
+        return this.conversationManager.removeConversation(conversationId);
+    }
 
-	getAllConversations(): Map<string, Conversation> {
-		return this.conversationManager.getAllConversations();
-	}
+    extractConversationId(event: NDKEvent): string {
+        return this.conversationManager.extractConversationId(event);
+    }
 
-	removeConversation(conversationId: string): boolean {
-		return this.conversationManager.removeConversation(conversationId);
-	}
+    static async loadFromConfig(
+        name: string,
+        nsec: string,
+        projectPath: string,
+        storage?: ConversationStorage,
+        configFile?: string,
+        projectName?: string,
+        toolRegistry?: ToolRegistry
+    ): Promise<Agent> {
+        const { config, agentEventId } = await loadAgentConfig(
+            name,
+            nsec,
+            projectPath,
+            storage,
+            configFile,
+            projectName,
+            toolRegistry
+        );
+        return new Agent(name, nsec, config, storage, projectName, toolRegistry, agentEventId);
+    }
 
-	extractConversationId(event: NDKEvent): string {
-		return this.conversationManager.extractConversationId(event);
-	}
+    async saveConfig(projectPath: string): Promise<void> {
+        await saveAgentConfig(this.getName(), this.getConfig(), projectPath);
+    }
 
-	static async loadFromConfig(
-		name: string,
-		nsec: string,
-		projectPath: string,
-		storage?: ConversationStorage,
-		configFile?: string,
-		projectName?: string,
-		toolRegistry?: ToolRegistry,
-	): Promise<Agent> {
-		const { config, agentEventId } = await loadAgentConfig(
-			name,
-			nsec,
-			projectPath,
-			storage,
-			configFile,
-			projectName,
-			toolRegistry,
-		);
-		return new Agent(
-			name,
-			nsec,
-			config,
-			storage,
-			projectName,
-			toolRegistry,
-			agentEventId,
-		);
-	}
-
-	async saveConfig(projectPath: string): Promise<void> {
-		await saveAgentConfig(this.getName(), this.getConfig(), projectPath);
-	}
-
-	// Delegation methods to response generator
-	async generateResponse(
-		conversationId: string,
-		llmConfig?: LLMConfig,
-		projectPath?: string,
-		isFromAgent = false,
-		typingIndicatorCallback?: (message: string) => Promise<void>,
-	): Promise<AgentResponse> {
-		return this.responseGenerator.generateResponse(
-			conversationId,
-			llmConfig,
-			projectPath,
-			isFromAgent,
-			typingIndicatorCallback,
-		);
-	}
-
-	async generateResponseForEvent(
-		event: NDKEvent,
-		llmConfig?: LLMConfig,
-		projectPath?: string,
-		isFromAgent = false,
-	): Promise<AgentResponse> {
-		return this.responseGenerator.generateResponseForEvent(
-			event,
-			llmConfig,
-			projectPath,
-			isFromAgent,
-		);
-	}
+    // Delegation methods to response generator
+    async generateResponse(
+        conversationId: string,
+        llmConfig?: LLMConfig,
+        projectPath?: string,
+        isFromAgent = false,
+        typingIndicatorCallback?: (message: string) => Promise<void>
+    ): Promise<AgentResponse> {
+        return this.responseGenerator.generateResponse(
+            conversationId,
+            llmConfig,
+            projectPath,
+            isFromAgent,
+            typingIndicatorCallback
+        );
+    }
 }

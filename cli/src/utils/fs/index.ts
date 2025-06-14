@@ -46,12 +46,12 @@ export let fs: FileSystem = new FileSystem();
  * Replace the global file system instance (useful for testing)
  */
 export function setFileSystem(fileSystem: FileSystem): void {
-	fs = fileSystem;
+    fs = fileSystem;
 }
 
 /**
  * Reset to the default file system implementation
  */
 export function resetFileSystem(): void {
-	fs = new FileSystem();
+    fs = new FileSystem();
 }

@@ -6,6 +6,7 @@ import {
     addGitValidateCommitCommand,
 } from "../logic/git-reset.js";
 import {
+    addPublishCommand,
     addPublishTaskStatusUpdateCommand,
     addPublishTypingIndicatorCommand,
 } from "../logic/publish.js";
@@ -26,6 +27,7 @@ const mcpServer = new McpServer({
 export async function startMcpServer(): Promise<void> {
     try {
         // Register publish commands
+        addPublishCommand(mcpServer);
         addPublishTaskStatusUpdateCommand(mcpServer);
         addPublishTypingIndicatorCommand(mcpServer);
 

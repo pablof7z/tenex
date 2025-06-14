@@ -1,10 +1,11 @@
-import type { NDK } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 import { ToolRegistry } from "./ToolRegistry";
 import { addTaskTool } from "./addTask";
 import { claudeCodeTool } from "./claudeCode";
 import { exampleTools } from "./examples";
 import { readSpecsTool } from "./readSpecs";
 import { rememberLessonTool } from "./rememberLesson";
+import { shellTool } from "./shell";
 import type { ToolDefinition } from "./types";
 import { updateSpecTool } from "./updateSpec";
 
@@ -13,131 +14,130 @@ import { updateSpecTool } from "./updateSpec";
  * Handles default tools, agent-specific tools, and tool registration
  */
 export class ToolManager {
-	private defaultRegistry: ToolRegistry;
-	private agentRegistries: Map<string, ToolRegistry>;
+    private defaultRegistry: ToolRegistry;
+    private agentRegistries: Map<string, ToolRegistry>;
 
-	constructor() {
-		this.defaultRegistry = new ToolRegistry();
-		this.agentRegistries = new Map();
-		this.registerDefaultTools();
-	}
+    constructor() {
+        this.defaultRegistry = new ToolRegistry();
+        this.agentRegistries = new Map();
+        this.registerDefaultTools();
+    }
 
-	/**
-	 * Register default tools available to all agents
-	 */
-	private registerDefaultTools(): void {
-		// Register Claude Code tool first (highest priority)
-		this.defaultRegistry.register(claudeCodeTool);
+    /**
+     * Register default tools available to all agents
+     */
+    private registerDefaultTools(): void {
+        // Register Claude Code tool first (highest priority)
+        this.defaultRegistry.register(claudeCodeTool);
 
-		// Register spec tools
-		this.defaultRegistry.register(updateSpecTool);
-		this.defaultRegistry.register(readSpecsTool);
+        // Register spec tools
+        this.defaultRegistry.register(updateSpecTool);
+        this.defaultRegistry.register(readSpecsTool);
 
-		// Register task tools
-		this.defaultRegistry.register(addTaskTool);
+        // Register task tools
+        this.defaultRegistry.register(addTaskTool);
 
-		// Register example tools
-		for (const tool of exampleTools) {
-			this.defaultRegistry.register(tool);
-		}
-	}
+        // Register shell tool
+        this.defaultRegistry.register(shellTool);
 
-	/**
-	 * Create a tool registry for a specific agent
-	 * Copies all default tools and allows for agent-specific additions
-	 */
-	createAgentRegistry(agentName: string): ToolRegistry {
-		const agentRegistry = new ToolRegistry();
+        // Register example tools
+        for (const tool of exampleTools) {
+            this.defaultRegistry.register(tool);
+        }
+    }
 
-		// Copy all default tools to the agent registry
-		for (const tool of this.defaultRegistry.getAllTools()) {
-			agentRegistry.register(tool);
-		}
+    /**
+     * Create a tool registry for a specific agent
+     * Copies all default tools and allows for agent-specific additions
+     */
+    createAgentRegistry(agentName: string): ToolRegistry {
+        const agentRegistry = new ToolRegistry();
 
-		// Store the registry for future reference
-		this.agentRegistries.set(agentName, agentRegistry);
+        // Copy all default tools to the agent registry
+        for (const tool of this.defaultRegistry.getAllTools()) {
+            agentRegistry.register(tool);
+        }
 
-		return agentRegistry;
-	}
+        // Store the registry for future reference
+        this.agentRegistries.set(agentName, agentRegistry);
 
-	/**
-	 * Get the tool registry for a specific agent
-	 */
-	getAgentRegistry(agentName: string): ToolRegistry | undefined {
-		return this.agentRegistries.get(agentName);
-	}
+        return agentRegistry;
+    }
 
-	/**
-	 * Register a tool for all agents (adds to default registry)
-	 */
-	registerGlobalTool(tool: ToolDefinition): void {
-		// Add to default registry
-		this.defaultRegistry.register(tool);
+    /**
+     * Get the tool registry for a specific agent
+     */
+    getAgentRegistry(agentName: string): ToolRegistry | undefined {
+        return this.agentRegistries.get(agentName);
+    }
 
-		// Update all existing agent registries
-		for (const [_, agentRegistry] of this.agentRegistries) {
-			agentRegistry.register(tool);
-		}
-	}
+    /**
+     * Register a tool for all agents (adds to default registry)
+     */
+    registerGlobalTool(tool: ToolDefinition): void {
+        // Add to default registry
+        this.defaultRegistry.register(tool);
 
-	/**
-	 * Unregister a tool from all agents
-	 */
-	unregisterGlobalTool(toolName: string): void {
-		// Remove from default registry
-		this.defaultRegistry.unregister(toolName);
+        // Update all existing agent registries
+        for (const [_, agentRegistry] of this.agentRegistries) {
+            agentRegistry.register(tool);
+        }
+    }
 
-		// Remove from all existing agent registries
-		for (const [_, agentRegistry] of this.agentRegistries) {
-			agentRegistry.unregister(toolName);
-		}
-	}
+    /**
+     * Unregister a tool from all agents
+     */
+    unregisterGlobalTool(toolName: string): void {
+        // Remove from default registry
+        this.defaultRegistry.unregister(toolName);
 
-	/**
-	 * Register a tool for a specific agent only
-	 */
-	registerAgentTool(agentName: string, tool: ToolDefinition): void {
-		const agentRegistry = this.agentRegistries.get(agentName);
-		if (agentRegistry) {
-			agentRegistry.register(tool);
-		}
-	}
+        // Remove from all existing agent registries
+        for (const [_, agentRegistry] of this.agentRegistries) {
+            agentRegistry.unregister(toolName);
+        }
+    }
 
-	/**
-	 * Enable remember_lesson tool for agents with event IDs
-	 * This tool requires NDK and agent event ID
-	 */
-	enableRememberLessonTool(
-		agentName: string,
-		agentEventId: string,
-		ndk: NDK,
-	): void {
-		const agentRegistry = this.agentRegistries.get(agentName);
-		if (agentRegistry && agentEventId && ndk) {
-			agentRegistry.register(rememberLessonTool);
-		}
-	}
+    /**
+     * Register a tool for a specific agent only
+     */
+    registerAgentTool(agentName: string, tool: ToolDefinition): void {
+        const agentRegistry = this.agentRegistries.get(agentName);
+        if (agentRegistry) {
+            agentRegistry.register(tool);
+        }
+    }
 
-	/**
-	 * Get the default tool registry
-	 */
-	getDefaultRegistry(): ToolRegistry {
-		return this.defaultRegistry;
-	}
+    /**
+     * Enable remember_lesson tool for agents with event IDs
+     * This tool requires NDK and agent event ID
+     */
+    enableRememberLessonTool(agentName: string, agentEventId: string, ndk: NDK): void {
+        const agentRegistry = this.agentRegistries.get(agentName);
+        if (agentRegistry && agentEventId && ndk) {
+            agentRegistry.register(rememberLessonTool);
+        }
+    }
 
-	/**
-	 * Get all registered agent names
-	 */
-	getRegisteredAgents(): string[] {
-		return Array.from(this.agentRegistries.keys());
-	}
+    /**
+     * Get the default tool registry
+     */
+    getDefaultRegistry(): ToolRegistry {
+        return this.defaultRegistry;
+    }
 
-	/**
-	 * Clear all registries (useful for testing)
-	 */
-	clear(): void {
-		this.defaultRegistry = new ToolRegistry();
-		this.agentRegistries.clear();
-		this.registerDefaultTools();
-	}
+    /**
+     * Get all registered agent names
+     */
+    getRegisteredAgents(): string[] {
+        return Array.from(this.agentRegistries.keys());
+    }
+
+    /**
+     * Clear all registries (useful for testing)
+     */
+    clear(): void {
+        this.defaultRegistry = new ToolRegistry();
+        this.agentRegistries.clear();
+        this.registerDefaultTools();
+    }
 }
