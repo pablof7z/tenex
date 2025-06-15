@@ -8,7 +8,7 @@ export interface AnthropicTool {
     description: string;
     input_schema: {
         type: "object";
-        properties: Record<string, any>;
+        properties: Record<string, unknown>;
         required?: string[];
     };
 }
@@ -17,7 +17,7 @@ export interface AnthropicToolUse {
     type: "tool_use";
     id: string;
     name: string;
-    input: Record<string, any>;
+    input: Record<string, unknown>;
 }
 
 export interface AnthropicTextBlock {
@@ -31,7 +31,7 @@ export type AnthropicContentBlock = AnthropicTextBlock | AnthropicToolUse;
 export interface OpenAIFunction {
     name: string;
     description: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
 }
 
 export interface OpenAITool {
@@ -52,7 +52,7 @@ export interface OpenAIToolCall {
 export interface GoogleFunctionDeclaration {
     name: string;
     description: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
 }
 
 export interface GoogleTool {

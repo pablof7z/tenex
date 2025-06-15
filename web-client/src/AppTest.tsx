@@ -9,9 +9,9 @@ const DEFAULT_RELAYS = [
     "wss://relay.nostr.band",
     "wss://nos.lol",
 ];
-import { themeAtom } from "./lib/store";
 import { Toaster } from "sonner";
 import { LoginScreen } from "./components/auth/LoginScreen";
+import { themeAtom } from "./lib/store";
 
 function TestContent() {
     return (

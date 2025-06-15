@@ -144,6 +144,7 @@ export function ProjectSidebar({
                                                 event.publish();
                                             }}
                                             className="hover:opacity-80 transition-opacity"
+                                            type="button"
                                         >
                                             <Circle className="w-2 h-2 text-gray-400 fill-gray-400" />
                                         </button>

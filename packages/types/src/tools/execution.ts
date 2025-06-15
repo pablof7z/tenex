@@ -6,8 +6,8 @@
  * Tool execution context
  */
 export interface ToolContext {
-    agent?: any; // Agent instance - using any to avoid circular dependency
-    ndk?: any; // NDK instance
+    agent?: unknown; // Agent instance - using unknown to avoid circular dependency
+    ndk?: unknown; // NDK instance
     projectInfo?: {
         path: string;
         name?: string;
@@ -26,7 +26,7 @@ export interface ToolContext {
 export interface ToolResult {
     success: boolean;
     content?: string;
-    data?: any;
+    data?: unknown;
     error?: ToolError;
     metadata?: ToolResultMetadata;
 }
@@ -37,7 +37,7 @@ export interface ToolResult {
 export interface ToolError {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
     recoverable?: boolean;
 }
 
@@ -49,7 +49,7 @@ export interface ToolResultMetadata {
     tokensUsed?: number;
     cost?: number;
     cacheHit?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 /**
@@ -57,7 +57,7 @@ export interface ToolResultMetadata {
  */
 export interface ToolRequest {
     toolName: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
     context?: ToolContext;
     requestId?: string;
     timestamp?: number;

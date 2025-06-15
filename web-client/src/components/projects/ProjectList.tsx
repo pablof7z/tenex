@@ -1,10 +1,11 @@
 import { type NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { LocalStorageUtils, StringUtils } from "@tenex/shared";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { LocalStorageUtils, StringUtils } from "@tenex/shared";
-import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
 import { useNavigation } from "../../contexts/NavigationContext";
+import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { SearchIconButton } from "../common/SearchBar";
 import { CreateProjectDialog } from "../dialogs/CreateProjectDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -18,8 +19,6 @@ import {
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-type ProjectListProps = {}
-
 // Remove props - navigation is handled by context
 
 // Create seen tracker for status updates
@@ -31,11 +30,12 @@ const markProjectStatusUpdatesSeen = (_projectId: string, projectStatusUpdates: 
     statusUpdateTracker.markMultipleSeen(updateIds);
 };
 
-export function ProjectList({}: ProjectListProps) {
+export function ProjectList() {
     const currentUser = useNDKCurrentUser();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const { goToProject, goToSettings, goToAgentRequests } = useNavigation();
     const pendingAgentRequests = usePendingAgentRequests();
+    const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
 
     const { events: projects } = useSubscribe<NDKProject>(
         currentUser
@@ -88,16 +88,16 @@ export function ProjectList({}: ProjectListProps) {
         const unreadMap = new Map<string, number>();
 
         // Initialize with project creation dates
-        projects.forEach((project) => {
+        for (const project of projects) {
             const projectId = project.tagId();
             activityMap.set(projectId, project.created_at || 0);
-        });
+        }
 
         // Get seen status updates from localStorage
         // const seenUpdates = statusUpdateTracker.getAllSeen();
 
         // Map status updates to projects and track unseen ones
-        statusUpdates.forEach((update) => {
+        for (const update of statusUpdates) {
             // Find which task this update belongs to
             const taskId = update.tags?.find((tag) => tag[0] === "e" && tag[3] === "task")?.[1];
             if (taskId) {
@@ -131,7 +131,7 @@ export function ProjectList({}: ProjectListProps) {
                     }
                 }
             }
-        });
+        }
 
         return {
             projectActivityMap: activityMap,
@@ -158,22 +158,6 @@ export function ProjectList({}: ProjectListProps) {
             </div>
         );
     }
-
-    // TODO: Replace with useTimeFormat hook for consistency
-    const formatRelativeTime = (timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return "now";
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    };
 
     const getInitials = (title: string) => {
         return StringUtils.getInitials(title);
@@ -344,6 +328,12 @@ export function ProjectList({}: ProjectListProps) {
                                     key={project.tagId()}
                                     className="group flex items-center p-2.5 sm:p-3 mx-0.5 sm:mx-1 rounded-lg sm:rounded-xl bg-card/50 hover:bg-card/80 cursor-pointer transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] border border-border/40 hover:border-border"
                                     onClick={handleProjectClick}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handleProjectClick();
+                                        }
+                                    }}
                                 >
                                     {/* Avatar */}
                                     <div className="relative">

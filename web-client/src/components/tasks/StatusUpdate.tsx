@@ -1,18 +1,18 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNDKCurrentPubkey, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Brain, Cpu, DollarSign, GitCommit } from "lucide-react";
-import { memo, useState, useMemo, type ReactNode } from "react";
+import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { findNostrEntities } from "../../utils/nostrEntityParser";
+import { NostrEntityCard } from "../common/NostrEntityCard";
 import { LLMMetadataDialog } from "../dialogs/LLMMetadataDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
-import { findNostrEntities } from "../../utils/nostrEntityParser";
-import { NostrEntityCard } from "../common/NostrEntityCard";
 
 interface StatusUpdateProps {
     event: NDKEvent;
@@ -33,14 +33,14 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 
         // Replace nostr: links with markdown links that will be rendered as entity cards
         let processedText = event.content;
-        entities.forEach((entity) => {
+        for (const entity of entities) {
             const nostrLink = `nostr:${entity.bech32}`;
             // Replace with a placeholder that won't be processed by markdown
             processedText = processedText.replace(
                 nostrLink,
                 `[NOSTR_ENTITY:${entity.bech32}:${entity.type}]`
             );
-        });
+        }
 
         return { content: processedText, hasEntities: true, entities };
     }, [event.content]);
@@ -84,9 +84,10 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                     const entityRegex = /\[NOSTR_ENTITY:([^:]+):([^\]]+)\]/g;
                     const parts = [];
                     let lastIndex = 0;
-                    let match;
+                    let match: RegExpExecArray | null;
 
-                    while ((match = entityRegex.exec(children)) !== null) {
+                    match = entityRegex.exec(children);
+                    while (match !== null) {
                         // Add text before the entity
                         if (match.index > lastIndex) {
                             parts.push(children.slice(lastIndex, match.index));
@@ -106,6 +107,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                         }
 
                         lastIndex = match.index + match[0].length;
+                        match = entityRegex.exec(children);
                     }
 
                     // Add remaining text
@@ -114,16 +116,22 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                     }
 
                     return parts.length > 0 ? parts : children;
-                } else if (Array.isArray(children)) {
+                }
+                if (Array.isArray(children)) {
                     return children.map((child, idx) => {
                         const processed = processChildren(child);
                         return typeof processed === "string" || !processed ? (
                             processed
                         ) : (
-                            <span key={idx}>{processed}</span>
+                            <span
+                                key={`child-${idx}-${typeof child === "string" ? child.slice(0, 10) : ""}`}
+                            >
+                                {processed}
+                            </span>
                         );
                     });
-                } else if (
+                }
+                if (
                     children &&
                     typeof children === "object" &&
                     "props" in children &&
@@ -228,11 +236,11 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
     // Get p-tagged users
     const pTaggedPubkeys = useMemo(() => {
         const pubkeys: string[] = [];
-        event.tags.forEach((tag) => {
+        for (const tag of event.tags) {
             if (tag[0] === "p" && tag[1]) {
                 pubkeys.push(tag[1]);
             }
-        });
+        }
         return pubkeys;
     }, [event.tags]);
 
@@ -342,6 +350,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                         {/* LLM Metadata Icon - shown when metadata exists */}
                         {getLLMMetadata() && (
                             <button
+                                type="button"
                                 onClick={() => setShowMetadataDialog(true)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
                                 title="View LLM metadata"

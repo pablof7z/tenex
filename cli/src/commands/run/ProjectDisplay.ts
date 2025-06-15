@@ -1,7 +1,9 @@
 import path from "node:path";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
-import { fileSystem } from "@tenex/shared/node";
+import * as fileSystem from "@tenex/shared/fs";
+import { logError, logInfo, logWarning } from "@tenex/shared/logger";
 import { EVENT_KINDS } from "@tenex/types/events";
+import type { LLMConfigs } from "@tenex/types/llm";
 import chalk from "chalk";
 import type { ProjectInfo } from "./ProjectLoader";
 
@@ -13,20 +15,22 @@ export class ProjectDisplay {
         await this.displayAgentConfigurations(projectInfo.projectEvent, projectInfo.projectPath);
         await this.displayLLMSettings(projectInfo.projectPath);
         // Note: Documentation display moved to after subscription EOSE
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
     }
 
     private displayBasicInfo(projectInfo: ProjectInfo): void {
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.cyan("📦 Project Information"));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.gray("Title:      ") + chalk.white(projectInfo.title));
-        console.log(chalk.gray("Repository: ") + chalk.white(projectInfo.repository));
-        console.log(chalk.gray("Path:       ") + chalk.white(projectInfo.projectPath));
-        console.log(
-            chalk.gray("Event ID:   ") +
-                chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`)
-        );
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan("📦 Project Information"));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.gray("Title:      ") + chalk.white(projectInfo.title));
+        logInfo(chalk.gray("Repository: ") + chalk.white(projectInfo.repository));
+        logInfo(chalk.gray("Path:       ") + chalk.white(projectInfo.projectPath));
+        if (projectInfo.projectEvent.id) {
+            logInfo(
+                chalk.gray("Event ID:   ") +
+                    chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`)
+            );
+        }
     }
 
     private async displayAgentConfigurations(
@@ -36,12 +40,12 @@ export class ProjectDisplay {
         const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
         if (agentTags.length === 0) return;
 
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.cyan("🤖 Agent Configurations"));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan("🤖 Agent Configurations"));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
         const agentsDir = path.join(projectPath, ".tenex", "agents");
-        await fs.mkdir(agentsDir, { recursive: true });
+        await fileSystem.ensureDirectory(agentsDir);
 
         for (const tag of agentTags) {
             await this.displayAndCacheAgent(tag[1], agentsDir);
@@ -53,7 +57,7 @@ export class ProjectDisplay {
             const agentEvent = await this.ndk.fetchEvent(eventId);
 
             if (!agentEvent || agentEvent.kind !== EVENT_KINDS.AGENT_CONFIG) {
-                console.log(chalk.red(`Failed to fetch agent event: ${eventId}`));
+                logInfo(chalk.red(`Failed to fetch agent event: ${eventId}`));
                 return;
             }
 
@@ -61,10 +65,10 @@ export class ProjectDisplay {
             const description = agentEvent.tags.find((t) => t[0] === "description")?.[1] || "";
             const role = agentEvent.tags.find((t) => t[0] === "role")?.[1] || "";
 
-            console.log(chalk.gray("\nAgent:       ") + chalk.yellow(agentName));
-            console.log(chalk.gray("Description: ") + chalk.white(description));
+            logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agentName));
+            logInfo(chalk.gray("Description: ") + chalk.white(description));
             if (role) {
-                console.log(chalk.gray("Role:        ") + chalk.white(role));
+                logInfo(chalk.gray("Role:        ") + chalk.white(role));
             }
 
             const agentDefinition = {
@@ -78,10 +82,10 @@ export class ProjectDisplay {
             };
 
             const agentFile = path.join(agentsDir, `${eventId}.json`);
-            await fs.writeFile(agentFile, JSON.stringify(agentDefinition, null, 2));
-            console.log(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
+            await fileSystem.writeJsonFile(agentFile, agentDefinition);
+            logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
         } catch (_err) {
-            console.log(chalk.red(`Failed to fetch agent configuration: ${eventId}`));
+            logInfo(chalk.red(`Failed to fetch agent configuration: ${eventId}`));
         }
     }
 
@@ -89,14 +93,13 @@ export class ProjectDisplay {
         const llmsPath = path.join(projectPath, ".tenex", "llms.json");
 
         try {
-            const llmsContent = await fs.readFile(llmsPath, "utf-8");
-            const llms = JSON.parse(llmsContent);
+            const llms = await fileSystem.readJsonFile<LLMConfigs>(llmsPath);
 
             const defaultConfig = llms.default;
             llms.default = undefined;
 
             const configNames = Object.keys(llms).filter(
-                (name) => name !== undefined && llms[name] && typeof llms[name] === "object"
+                (name) => name !== "default" && llms[name] && typeof llms[name] === "object"
             );
 
             if (configNames.length === 0) {
@@ -104,22 +107,25 @@ export class ProjectDisplay {
                 return;
             }
 
-            console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-            console.log(chalk.cyan("🤖 Available LLM Configurations"));
-            console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+            logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+            logInfo(chalk.cyan("🤖 Available LLM Configurations"));
+            logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
             for (const name of configNames) {
-                const config = llms[name];
+                const configValue = llms[name];
+                if (typeof configValue !== "object" || !configValue) continue;
+
+                const config = configValue;
                 const isDefault = name === defaultConfig;
-                console.log(
+                logInfo(
                     chalk.gray("\nName:       ") +
                         chalk.yellow(name) +
                         (isDefault ? chalk.green(" (default)") : "")
                 );
-                console.log(chalk.gray("Provider:   ") + chalk.white(config.provider));
-                console.log(chalk.gray("Model:      ") + chalk.white(config.model));
+                logInfo(chalk.gray("Provider:   ") + chalk.white(config.provider));
+                logInfo(chalk.gray("Model:      ") + chalk.white(config.model));
                 if (config.baseURL) {
-                    console.log(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
+                    logInfo(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
                 }
             }
         } catch (_err) {
@@ -134,22 +140,20 @@ export class ProjectDisplay {
             return;
         }
 
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.cyan("📋 Living Documentation (NDKArticle Events)"));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan("📋 Living Documentation (NDKArticle Events)"));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
         for (const spec of specs) {
             const lastUpdated = new Date(spec.lastUpdated * 1000).toLocaleDateString();
-            console.log(chalk.gray("\nDocument:    ") + chalk.yellow(spec.id));
-            console.log(chalk.gray("Title:       ") + chalk.white(spec.title));
-            console.log(chalk.gray("Last Updated:") + chalk.white(lastUpdated));
+            logInfo(chalk.gray("\nDocument:    ") + chalk.yellow(spec.id));
+            logInfo(chalk.gray("Title:       ") + chalk.white(spec.title));
+            logInfo(chalk.gray("Last Updated:") + chalk.white(lastUpdated));
             if (spec.summary) {
-                console.log(chalk.gray("Summary:     ") + chalk.white(spec.summary));
+                logInfo(chalk.gray("Summary:     ") + chalk.white(spec.summary));
             }
             if (spec.contentSize) {
-                console.log(
-                    chalk.gray("Size:        ") + chalk.gray(`${spec.contentSize} characters`)
-                );
+                logInfo(chalk.gray("Size:        ") + chalk.gray(`${spec.contentSize} characters`));
             }
         }
     }

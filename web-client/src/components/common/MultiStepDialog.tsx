@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 
-export interface MultiStepDialogStep<T = any> {
+export interface MultiStepDialogStep<T = unknown> {
     id: T;
     title: string;
     component: ReactNode;
@@ -11,7 +11,7 @@ export interface MultiStepDialogStep<T = any> {
     isOptional?: boolean;
 }
 
-export interface MultiStepDialogProps<T = any> {
+export interface MultiStepDialogProps<T = unknown> {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
@@ -27,7 +27,7 @@ export interface MultiStepDialogProps<T = any> {
     maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
 }
 
-export function MultiStepDialog<T = any>({
+export function MultiStepDialog<T = unknown>({
     open,
     onOpenChange,
     title,

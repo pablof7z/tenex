@@ -2,8 +2,9 @@ import type { NDKArticle, NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ArrowLeft, Calendar, Clock, Edit3, Hash } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button } from "../ui/button";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 
 interface DocumentationViewProps {
     project: NDKProject;
@@ -12,22 +13,18 @@ interface DocumentationViewProps {
 }
 
 export function DocumentationView({ project, article, onBack }: DocumentationViewProps) {
+    const { formatDateOnly, formatTimeOnly } = useTimeFormat({
+        use24Hour: true,
+    });
+
     const formatDate = (timestamp?: number) => {
         if (!timestamp) return "Unknown date";
-        return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-        });
+        return formatDateOnly(timestamp);
     };
 
     const formatTime = (timestamp?: number) => {
         if (!timestamp) return "";
-        return new Date(timestamp * 1000).toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-        });
+        return formatTimeOnly(timestamp);
     };
 
     const getReadingTime = (content?: string) => {
@@ -108,9 +105,9 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                         <div className="flex flex-wrap gap-2 mb-6 sm:mb-8">
                             {article.tags
                                 .filter((tag) => tag[0] === "t" && tag[1])
-                                .map((tag, index) => (
+                                .map((tag) => (
                                     <Badge
-                                        key={index}
+                                        key={`tag-${tag[1]}`}
                                         variant="secondary"
                                         className="flex items-center gap-1"
                                     >

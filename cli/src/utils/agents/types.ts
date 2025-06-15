@@ -45,4 +45,8 @@ export interface AgentResponse {
     content: string;
     confidence?: number;
     metadata?: AgentResponseMetadata;
+    renderInChat?: {
+        type: string;
+        data: unknown;
+    };
 }

@@ -87,7 +87,7 @@ export function useScrollManagement(messageCount: number) {
             return () => clearTimeout(timer);
         }
         return undefined;
-    }, [messageCount > 0, scrollToBottom]);
+    }, [messageCount, scrollToBottom]);
 
     return {
         messagesEndRef,

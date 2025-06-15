@@ -1,19 +1,20 @@
-import { useState } from "react";
-import { useEvent } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKArticle, NDKTask } from "@nostr-dev-kit/ndk";
-import { Card } from "../ui/card";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "../ui/drawer";
-import { FileText, ExternalLink } from "lucide-react";
+import { useEvent } from "@nostr-dev-kit/ndk-hooks";
+import { useSetAtom } from "jotai";
+import { ExternalLink, FileText } from "lucide-react";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { selectedTaskAtom } from "../../lib/store";
 import type { NostrEntity } from "../../utils/nostrEntityParser";
 import {
     getEntityDisplayInfo,
     isAddressPointer,
     isTaskEntity,
 } from "../../utils/nostrEntityParser";
-import ReactMarkdown from "react-markdown";
 import { TaskCard } from "../tasks/TaskCard";
-import { useSetAtom } from "jotai";
-import { selectedTaskAtom } from "../../lib/store";
+import { Card } from "../ui/card";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "../ui/drawer";
 
 interface NostrEntityCardProps {
     entity: NostrEntity;
@@ -25,6 +26,7 @@ export function NostrEntityCard({ entity, className, onTaskClick }: NostrEntityC
     const [drawerOpen, setDrawerOpen] = useState(false);
     const displayInfo = getEntityDisplayInfo(entity);
     const setSelectedTask = useSetAtom(selectedTaskAtom);
+    const { formatAbsoluteTime } = useTimeFormat();
 
     // Fetch the event
     const event = useEvent(entity.bech32);
@@ -63,7 +65,7 @@ export function NostrEntityCard({ entity, className, onTaskClick }: NostrEntityC
                 ? `${entity.data.identifier?.toUpperCase()} Specification`
                 : "Specification");
         const summaryTag = event.tags.find((tag: string[]) => tag[0] === "summary");
-        if (summaryTag && summaryTag[1]) {
+        if (summaryTag?.[1]) {
             articleSummary = summaryTag[1];
         }
     }
@@ -108,7 +110,7 @@ export function NostrEntityCard({ entity, className, onTaskClick }: NostrEntityC
                                 </div>
                                 <div>
                                     <span className="font-medium">Published:</span>{" "}
-                                    {new Date((event.created_at || 0) * 1000).toLocaleString()}
+                                    {formatAbsoluteTime(event.created_at || 0)}
                                 </div>
                                 {event.tags.find((tag: string[]) => tag[0] === "summary") && (
                                     <div>

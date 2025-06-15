@@ -58,9 +58,9 @@ export function InstructionPreviewDialog({
                                     Tags
                                 </h4>
                                 <div className="flex flex-wrap gap-1">
-                                    {instruction.hashtags.map((tag, index) => (
+                                    {instruction.hashtags.map((tag) => (
                                         <Badge
-                                            key={index}
+                                            key={`tag-${tag}`}
                                             variant="outline"
                                             className="text-xs h-5 px-2"
                                         >

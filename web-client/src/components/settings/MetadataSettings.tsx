@@ -151,10 +151,14 @@ export function MetadataSettings({
             {/* Form Fields */}
             <div className="space-y-4">
                 <div className="bg-white rounded-lg p-4">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label
+                        htmlFor="project-name"
+                        className="block text-sm font-medium text-slate-700 mb-2"
+                    >
                         Project Name
                     </label>
                     <Input
+                        id="project-name"
                         placeholder="Enter project name"
                         value={formData.name}
                         onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -162,10 +166,14 @@ export function MetadataSettings({
                 </div>
 
                 <div className="bg-white rounded-lg p-4">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label
+                        htmlFor="project-description"
+                        className="block text-sm font-medium text-slate-700 mb-2"
+                    >
                         Description
                     </label>
                     <Textarea
+                        id="project-description"
                         placeholder="Describe your project..."
                         value={formData.description}
                         onChange={(e) =>
@@ -179,8 +187,14 @@ export function MetadataSettings({
                 </div>
 
                 <div className="bg-white rounded-lg p-4">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Tags</label>
+                    <label
+                        htmlFor="project-tags"
+                        className="block text-sm font-medium text-slate-700 mb-2"
+                    >
+                        Tags
+                    </label>
                     <Input
+                        id="project-tags"
                         placeholder="react, typescript, web3 (comma separated)"
                         value={formData.hashtags}
                         onChange={(e) =>
@@ -191,10 +205,14 @@ export function MetadataSettings({
                 </div>
 
                 <div className="bg-white rounded-lg p-4">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label
+                        htmlFor="repo-url"
+                        className="block text-sm font-medium text-slate-700 mb-2"
+                    >
                         Repository URL
                     </label>
                     <Input
+                        id="repo-url"
                         placeholder="https://github.com/username/repo"
                         value={formData.repoUrl}
                         onChange={(e) =>

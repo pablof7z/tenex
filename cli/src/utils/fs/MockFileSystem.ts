@@ -305,6 +305,14 @@ export class MockFileSystem implements IFileSystem {
         return this.existsSync(filePath);
     }
 
+    async access(filePath: string, _mode?: number): Promise<void> {
+        const expandedPath = this.expandHome(filePath);
+        if (!this.existsSync(expandedPath)) {
+            throw new Error(`ENOENT: no such file or directory, access '${expandedPath}'`);
+        }
+        // For mock purposes, we don't check actual permissions
+    }
+
     async mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void> {
         this.mkdirSync(dirPath, options);
     }

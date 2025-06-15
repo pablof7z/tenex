@@ -76,6 +76,7 @@ export function ProjectTabs({
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                         }`}
                         onClick={() => onTabChange("tasks")}
+                        type="button"
                     >
                         Tasks ({taskCount})
                     </button>
@@ -86,6 +87,7 @@ export function ProjectTabs({
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                         }`}
                         onClick={() => onTabChange("threads")}
+                        type="button"
                     >
                         Threads ({threadCount})
                     </button>
@@ -96,6 +98,7 @@ export function ProjectTabs({
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                         }`}
                         onClick={() => onTabChange("docs")}
+                        type="button"
                     >
                         Docs ({docCount})
                     </button>

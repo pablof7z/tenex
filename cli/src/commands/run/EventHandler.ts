@@ -1,14 +1,14 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logInfo } from "@tenex/shared/logger";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
-import { toKebabCase } from "../../../../shared/src/projects";
+// toKebabCase utility function
 import type { Agent } from "../../utils/agents/Agent";
 import { AgentManager } from "../../utils/agents/AgentManager";
 import { formatError } from "../../utils/errors";
+import { fs } from "../../utils/fs";
 import { AgentEventHandler } from "./AgentEventHandler";
 import type { ProjectInfo } from "./ProjectLoader";
 import { getEventKindName } from "./constants";
@@ -44,14 +44,20 @@ export class EventHandler {
             return;
         }
 
-        console.log(chalk.gray("\n📥 Event received:", event.id));
+        // Handle LLM config change events separately (only from project owner)
+        if (event.kind === EVENT_KINDS.LLM_CONFIG_CHANGE) {
+            await this.handleLLMConfigChange(event);
+            return;
+        }
+
+        logInfo(chalk.gray("\n📥 Event received:", event.id));
 
         const timestamp = new Date().toLocaleTimeString();
         const eventKindName = getEventKindName(event.kind);
 
-        console.log(chalk.gray(`\n[${timestamp}] `) + chalk.cyan(`${eventKindName} received`));
-        console.log(chalk.gray("From:    ") + chalk.white(event.author.npub));
-        console.log(chalk.gray("Event:   ") + chalk.gray(event.encode()));
+        logInfo(chalk.gray(`\n[${timestamp}] `) + chalk.cyan(`${eventKindName} received`));
+        logInfo(chalk.gray("From:    ") + chalk.white(event.author.npub));
+        logInfo(chalk.gray("Event:   ") + chalk.gray(event.encode()));
 
         switch (event.kind) {
             case EVENT_KINDS.TEXT_NOTE:
@@ -85,7 +91,7 @@ export class EventHandler {
     }
 
     private handleStatusUpdate(event: NDKEvent): void {
-        console.log(
+        logInfo(
             chalk.gray("Content: ") +
                 chalk.white(
                     event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
@@ -94,7 +100,7 @@ export class EventHandler {
     }
 
     private async handleChatMessage(event: NDKEvent): Promise<void> {
-        console.log(
+        logInfo(
             chalk.gray("Message: ") +
                 chalk.white(
                     event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
@@ -106,7 +112,7 @@ export class EventHandler {
         const mentionedPubkeys = pTags.map((tag) => tag[1]);
 
         if (mentionedPubkeys.length > 0) {
-            console.log(
+            logInfo(
                 chalk.gray("P-tags:  ") + chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`)
             );
         }
@@ -117,14 +123,14 @@ export class EventHandler {
             this.ndk,
             undefined,
             undefined,
-            mentionedPubkeys
+            mentionedPubkeys.filter((pk): pk is string => pk !== undefined)
         );
     }
 
     private async handleTask(event: NDKEvent): Promise<void> {
         const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled";
-        console.log(chalk.gray("Task:    ") + chalk.yellow(title));
-        console.log(
+        logInfo(chalk.gray("Task:    ") + chalk.yellow(title));
+        logInfo(
             chalk.gray("Content: ") +
                 chalk.white(
                     event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
@@ -136,7 +142,7 @@ export class EventHandler {
         const mentionedPubkeys = pTags.map((tag) => tag[1]);
 
         if (mentionedPubkeys.length > 0) {
-            console.log(
+            logInfo(
                 chalk.gray("P-tags:  ") + chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`)
             );
         }
@@ -146,19 +152,19 @@ export class EventHandler {
             this.ndk,
             undefined,
             undefined,
-            mentionedPubkeys
+            mentionedPubkeys.filter((pk): pk is string => pk !== undefined)
         );
     }
 
     private handleProjectStatus(event: NDKEvent): void {
         if (event.author.pubkey !== this.ndk.activeUser?.pubkey) {
-            console.log(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
+            logInfo(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
         }
     }
 
     private handleDefaultEvent(event: NDKEvent): void {
         if (event.content) {
-            console.log(
+            logInfo(
                 chalk.gray("Content: ") +
                     chalk.white(
                         event.content.substring(0, 100) + (event.content.length > 100 ? "..." : "")
@@ -246,21 +252,86 @@ export class EventHandler {
                     };
 
                     await fs.writeFile(agentConfigPath, JSON.stringify(agentConfig, null, 2));
-                    console.log(chalk.green(`✅ Saved new agent definition: ${agentName}`));
+                    logInfo(chalk.green(`✅ Saved new agent definition: ${agentName}`));
 
                     // Ensure this agent has an nsec in agents.json
                     await this.ensureAgentNsec(agentName, agentEventId);
                 }
             } catch (err) {
                 const errorMessage = formatError(err);
-                console.log(chalk.red(`Failed to fetch agent ${agentEventId}: ${errorMessage}`));
+                logInfo(chalk.red(`Failed to fetch agent ${agentEventId}: ${errorMessage}`));
             }
         }
     }
 
+    private async handleLLMConfigChange(event: NDKEvent): Promise<void> {
+        // Only accept from project owner
+        if (event.author.pubkey !== this.projectInfo.projectPubkey) {
+            logInfo(chalk.yellow("⚠️  Ignoring LLM config change from non-project owner"));
+            return;
+        }
+
+        const timestamp = new Date().toLocaleTimeString();
+        logInfo(chalk.gray(`\n[${timestamp}] `) + chalk.magenta("LLM Config Change requested"));
+
+        // Extract target agent pubkey from p-tag
+        const pTag = event.tags.find((tag) => tag[0] === "p");
+        if (!pTag || !pTag[1]) {
+            logInfo(chalk.red("❌ No agent pubkey specified in p-tag"));
+            return;
+        }
+
+        const targetAgentPubkey = pTag[1];
+
+        // Extract new model configuration from model tag
+        const modelTag = event.tags.find((tag) => tag[0] === "model");
+        if (!modelTag || !modelTag[1]) {
+            logInfo(chalk.red("❌ No model configuration specified in model tag"));
+            return;
+        }
+
+        const newModelConfig = modelTag[1];
+
+        // Find the agent by pubkey
+        const agent = this.agentManager.getAgentByPubkeySync(targetAgentPubkey);
+        if (!agent) {
+            logInfo(chalk.red(`❌ No agent found with pubkey: ${targetAgentPubkey}`));
+            logInfo(
+                chalk.yellow(
+                    "Tip: The agent might not be loaded yet. Make sure it has participated in the conversation."
+                )
+            );
+            return;
+        }
+
+        logInfo(chalk.gray("Agent:   ") + chalk.white(agent.getName()));
+        logInfo(chalk.gray("Model:   ") + chalk.white(newModelConfig));
+
+        // Update the agent's LLM configuration
+        try {
+            await this.agentManager.updateAgentLLMConfig(agent.getName(), newModelConfig);
+            logInfo(
+                chalk.green(`✅ Updated LLM config for ${agent.getName()} to ${newModelConfig}`)
+            );
+
+            // Notify the agent about the change
+            agent.notifyLLMConfigChange(newModelConfig);
+        } catch (err) {
+            const errorMessage = formatError(err);
+            logInfo(chalk.red(`❌ Failed to update LLM config: ${errorMessage}`));
+        }
+    }
+
+    private toKebabCase(str: string): string {
+        return str
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+    }
+
     private async ensureAgentNsec(agentName: string, agentEventId: string): Promise<void> {
         const agentsJsonPath = path.join(this.projectInfo.projectPath, ".tenex", "agents.json");
-        const agentKey = toKebabCase(agentName);
+        const agentKey = this.toKebabCase(agentName);
 
         try {
             const content = await fs.readFile(agentsJsonPath, "utf-8");
@@ -281,7 +352,7 @@ export class EventHandler {
                 };
 
                 await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
-                console.log(
+                logInfo(
                     chalk.green(`✅ Generated nsec for agent: ${agentName} (as '${agentKey}')`)
                 );
 
@@ -307,7 +378,7 @@ export class EventHandler {
                     await profileEvent.sign(signer);
                     await profileEvent.publish();
 
-                    console.log(chalk.green(`✅ Published kind:0 profile for ${agentName} agent`));
+                    logInfo(chalk.green(`✅ Published kind:0 profile for ${agentName} agent`));
 
                     // Publish kind 3199 agent request to the project owner
                     try {
@@ -328,12 +399,12 @@ export class EventHandler {
                         await agentRequestEvent.sign(signer);
                         await agentRequestEvent.publish();
 
-                        console.log(
+                        logInfo(
                             chalk.green(`✅ Published kind:3199 agent request for ${agentName}`)
                         );
                     } catch (err) {
                         const errorMessage = formatError(err);
-                        console.log(
+                        logInfo(
                             chalk.yellow(
                                 `⚠️  Failed to publish agent request for ${agentName}: ${errorMessage}`
                             )
@@ -341,7 +412,7 @@ export class EventHandler {
                     }
                 } catch (err) {
                     const errorMessage = formatError(err);
-                    console.log(
+                    logInfo(
                         chalk.yellow(
                             `⚠️  Failed to publish profile for ${agentName}: ${errorMessage}`
                         )
@@ -356,17 +427,27 @@ export class EventHandler {
                         file: `${agentEventId}.json`,
                     };
                     await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
-                    console.log(chalk.green(`✅ Updated agent ${agentName} to new format`));
+                    logInfo(chalk.green(`✅ Updated agent ${agentName} to new format`));
                 } else if (!agentEntry.file) {
                     // New format but missing file reference
                     agentEntry.file = `${agentEventId}.json`;
                     await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
-                    console.log(chalk.green(`✅ Added file reference for agent ${agentName}`));
+                    logInfo(chalk.green(`✅ Added file reference for agent ${agentName}`));
                 }
             }
         } catch (err) {
             const errorMessage = formatError(err);
-            console.log(chalk.red(`Failed to update agents.json: ${errorMessage}`));
+            logInfo(chalk.red(`Failed to update agents.json: ${errorMessage}`));
         }
+    }
+
+    async cleanup(): Promise<void> {
+        // Cleanup agent manager resources
+        if (this.agentManager) {
+            // Any specific agent manager cleanup needed
+        }
+
+        // Any other cleanup tasks
+        logInfo("EventHandler cleanup completed");
     }
 }

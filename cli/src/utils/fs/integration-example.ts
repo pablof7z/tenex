@@ -1,6 +1,7 @@
 /**
  * Example of integrating the file system abstraction with dependency injection
  */
+import { logger } from "@tenex/shared";
 import type { IFileSystem } from "./FileSystem";
 import { fs as defaultFs } from "./index";
 
@@ -22,7 +23,7 @@ export class ConfigurationManager {
         try {
             return await this.fs.readJSON<T>(this.configPath);
         } catch (error) {
-            console.error(`Failed to load config from ${this.configPath}:`, error);
+            logger.error(`Failed to load config from ${this.configPath}:`, error);
             return defaults;
         }
     }
@@ -105,7 +106,7 @@ export class ProjectManager {
                     const config = await this.fs.readJSON(configPath);
                     projects.push({ name: entry, path: projectPath, config });
                 } catch (error) {
-                    console.warn(`Failed to load project config for ${entry}:`, error);
+                    logger.warn(`Failed to load project config for ${entry}:`, error);
                 }
             }
         }
@@ -176,11 +177,11 @@ export async function testExample() {
 
     const defaultConfig = { version: "1.0.0", theme: "dark" };
     const config = await configManager.load(defaultConfig);
-    console.log("Loaded config:", config);
+    logger.info("Loaded config:", config);
 
     await configManager.update((cfg) => ({ ...cfg, theme: "light" }));
     const updated = await configManager.load(defaultConfig);
-    console.log("Updated config:", updated);
+    logger.info("Updated config:", updated);
 
     // Test ProjectManager
     const projectManager = new ProjectManager("/projects", mockFs);
@@ -189,7 +190,7 @@ export async function testExample() {
     await projectManager.createProject("my-api", "express");
 
     const projects = await projectManager.listProjects();
-    console.log("Projects:", projects);
+    logger.info("Projects:", projects);
 
     // Test AgentManager
     const agentManager = new AgentManager("/projects/my-app", mockFs);
@@ -198,11 +199,11 @@ export async function testExample() {
     await agentManager.addAgent("planner", "nsec2...");
 
     const agents = await agentManager.getAgents();
-    console.log("Agents:", agents);
+    logger.info("Agents:", agents);
 
     // Verify all files were created
     const allFiles = mockFs.getAllFiles();
-    console.log("All created files:", allFiles);
+    logger.info("All created files:", allFiles);
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
+import { logger } from "@tenex/shared";
 import type { AgentManager } from "./AgentManager";
 import type { Conversation } from "./Conversation";
 import type { ConversationStorage } from "./ConversationStorage";
@@ -150,5 +151,15 @@ export class Agent {
             isFromAgent,
             typingIndicatorCallback
         );
+    }
+
+    /**
+     * Notify the agent that its LLM configuration has changed
+     * This allows the agent to update any cached configuration
+     */
+    notifyLLMConfigChange(newConfigName: string): void {
+        logger.info(`Agent ${this.getName()} notified of LLM config change to: ${newConfigName}`);
+        // The actual config will be loaded from AgentConfigurationManager
+        // when the agent generates its next response
     }
 }

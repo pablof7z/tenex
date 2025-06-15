@@ -3,6 +3,7 @@ import { ToolRegistry } from "./ToolRegistry";
 import { addTaskTool } from "./addTask";
 import { claudeCodeTool } from "./claudeCode";
 import { exampleTools } from "./examples";
+import { findAgentTool } from "./findAgent";
 import { readSpecsTool } from "./readSpecs";
 import { rememberLessonTool } from "./rememberLesson";
 import { shellTool } from "./shell";
@@ -115,6 +116,19 @@ export class ToolManager {
         const agentRegistry = this.agentRegistries.get(agentName);
         if (agentRegistry && agentEventId && ndk) {
             agentRegistry.register(rememberLessonTool);
+        }
+    }
+
+    /**
+     * Enable find_agent tool for the default agent only
+     * This tool allows the default agent to search for and suggest other agents
+     */
+    enableFindAgentTool(agentName: string): void {
+        if (agentName === "default") {
+            const agentRegistry = this.agentRegistries.get(agentName);
+            if (agentRegistry) {
+                agentRegistry.register(findAgentTool);
+            }
         }
     }
 

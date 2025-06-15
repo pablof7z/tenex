@@ -1,7 +1,7 @@
 import path from "node:path";
+import { getErrorMessage } from "@tenex/types/utils";
 import { readJsonFile, writeJsonFile } from "../fs/filesystem.js";
 import { logError, logInfo } from "../logger.js";
-import { getErrorMessage } from "@tenex/types/utils";
 
 /**
  * Configuration loading utilities to eliminate duplicated patterns
@@ -143,22 +143,33 @@ export class ConfigLoader<T extends Record<string, unknown>> {
     /**
      * Deep merge two objects
      */
-    private deepMerge(target: T, source: Partial<T>): T {
-        const result = { ...target };
+    private deepMerge<U extends Record<string, unknown>>(target: U, source: Partial<U>): U {
+        const result: Record<string, unknown> = { ...target };
 
         for (const key in source) {
+            const sourceValue = source[key];
+            if (sourceValue === undefined) continue;
+
             if (
-                source[key] !== null &&
-                typeof source[key] === "object" &&
-                !Array.isArray(source[key])
+                sourceValue !== null &&
+                typeof sourceValue === "object" &&
+                !Array.isArray(sourceValue)
             ) {
-                result[key] = this.deepMerge(target[key] || {}, source[key]);
+                const targetValue = target[key];
+                if (targetValue && typeof targetValue === "object" && !Array.isArray(targetValue)) {
+                    result[key] = this.deepMerge(
+                        targetValue as Record<string, unknown>,
+                        sourceValue as Record<string, unknown>
+                    );
+                } else {
+                    result[key] = sourceValue;
+                }
             } else {
-                result[key] = source[key];
+                result[key] = sourceValue;
             }
         }
 
-        return result;
+        return result as U;
     }
 }
 

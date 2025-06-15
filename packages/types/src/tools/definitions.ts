@@ -10,13 +10,13 @@ export interface JSONSchema {
     properties?: Record<string, JSONSchema>;
     items?: JSONSchema;
     required?: string[];
-    enum?: any[];
+    enum?: unknown[];
     description?: string;
-    default?: any;
+    default?: unknown;
     minimum?: number;
     maximum?: number;
     pattern?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 /**
@@ -27,8 +27,8 @@ export interface ToolParameter {
     type: string;
     description: string;
     required?: boolean;
-    default?: any;
-    enum?: any[];
+    default?: unknown;
+    enum?: unknown[];
     schema?: JSONSchema;
 }
 
@@ -52,7 +52,7 @@ export interface ToolDefinition {
  * Tool with execution function
  */
 export interface ExecutableTool extends ToolDefinition {
-    execute: (params: Record<string, any>, context?: any) => Promise<any> | any;
+    execute: (params: Record<string, unknown>, context?: unknown) => Promise<unknown> | unknown;
 }
 
 /**

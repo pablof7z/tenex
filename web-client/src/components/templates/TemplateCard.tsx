@@ -1,11 +1,11 @@
-import { memo } from "react";
 import type { NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
-import { Clock, ExternalLink, GitBranch } from "lucide-react";
 import { StringUtils } from "@tenex/shared";
+import { Clock, ExternalLink, GitBranch } from "lucide-react";
+import { memo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { SelectableCard } from "../common/SelectableCard";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Button } from "../ui/button";
-import { SelectableCard } from "../common/SelectableCard";
 
 interface TemplateCardProps {
     template: NDKProjectTemplate;

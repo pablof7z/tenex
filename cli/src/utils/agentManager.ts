@@ -1,10 +1,7 @@
 import path from "node:path";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import {
-    type AgentSignerResult,
-    getOrCreateAgentSigner as getSharedAgentSigner,
-} from "@tenex/shared/node";
+import { getAgentSigner as getAgentSignerFromAgents, readAgentsJson } from "./agents";
 
 export async function getAgentSigner(
     projectPath: string,
@@ -15,20 +12,25 @@ export async function getAgentSigner(
     isNew: boolean;
     configFile?: string;
 }> {
-    const result = await getSharedAgentSigner(projectPath, agentSlug);
+    // Try to get existing agent
+    const result = await getAgentSignerFromAgents(projectPath, agentSlug);
 
-    // Log if new agent was created
-    if (result.isNew) {
-        logger.info(`Created new agent '${agentSlug}'`);
+    // Get the nsec from agents.json
+    const agents = await readAgentsJson(projectPath);
+    const agentConfig = agents[agentSlug];
+
+    if (!agentConfig) {
+        throw new Error(`Agent "${agentSlug}" not found in agents.json`);
     }
 
-    // The shared function returns signer as 'any' to avoid import issues
-    // Cast it back to NDKPrivateKeySigner since we know that's what it is
+    const nsec = typeof agentConfig === "string" ? agentConfig : agentConfig.nsec;
+    const configFile = typeof agentConfig === "object" ? agentConfig.file : undefined;
+
     return {
-        signer: result.signer as NDKPrivateKeySigner,
-        nsec: result.nsec,
-        isNew: result.isNew,
-        configFile: result.configFile,
+        signer: result.signer,
+        nsec,
+        isNew: false, // Since we're reading from existing agents.json
+        configFile,
     };
 }
 

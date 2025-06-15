@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { logDebug, logError, logInfo } from "@tenex/shared/logger";
 import type { ToolContext } from "../types";
 import type { ClaudeCodeMessage } from "./types";
 
@@ -27,10 +28,10 @@ export class ClaudeCodeOutputParser {
                     messages.push(message);
                     // Process message asynchronously without blocking
                     this.processMessage(message).catch((error) => {
-                        console.error("Error processing message:", error);
+                        logError(`Error processing message: ${error}`);
                     });
                 } catch (_error) {
-                    console.error("Failed to parse JSON line:", line);
+                    logError(`Failed to parse JSON line: ${line}`);
                 }
             }
         }
@@ -56,7 +57,7 @@ export class ClaudeCodeOutputParser {
                 this.handleResult(message);
                 break;
             default:
-                console.log(chalk.gray(`[Unknown message type: ${message.type}]`));
+                logDebug(chalk.gray(`[Unknown message type: ${message.type}]`));
         }
     }
 
@@ -66,7 +67,7 @@ export class ClaudeCodeOutputParser {
                 if (content.type === "text" && content.text) {
                     this.messageCount++;
                     const formattedText = this.formatText(content.text);
-                    console.log(chalk.cyan("\n🤖 Claude:"), formattedText);
+                    logInfo(chalk.cyan("\n🤖 Claude:") + " " + formattedText);
 
                     // Send typing indicator with Claude Code's actual output
                     if (this.toolContext?.updateTypingIndicator) {
@@ -96,13 +97,13 @@ export class ClaudeCodeOutputParser {
                     .filter(Boolean)
                     .join(", ");
 
-                console.log(chalk.gray(`   [Tokens: ${tokens}]`));
+                logDebug(chalk.gray(`   [Tokens: ${tokens}]`));
             }
         }
     }
 
     private async handleToolUse(message: ClaudeCodeMessage) {
-        console.log(chalk.yellow("\n🔧 Tool Use Detected"));
+        logInfo(chalk.yellow("\n🔧 Tool Use Detected"));
 
         // Send typing indicator for tool use
         if (this.toolContext?.updateTypingIndicator && message.tool_use) {
@@ -115,10 +116,10 @@ export class ClaudeCodeOutputParser {
         const duration = Date.now() - this.startTime;
         const seconds = (duration / 1000).toFixed(1);
 
-        console.log(chalk.green("\n\n✅ Task Complete"));
+        logInfo(chalk.green("\n\n✅ Task Complete"));
 
         if (message.result) {
-            console.log(chalk.white("\nSummary:"), this.formatText(message.result));
+            logInfo(chalk.white("\nSummary:") + " " + this.formatText(message.result));
         }
 
         // Show statistics
@@ -145,10 +146,10 @@ export class ClaudeCodeOutputParser {
             stats.push(`Total Tokens: ${totalTokens.toLocaleString()}`);
         }
 
-        console.log(chalk.gray(`\n[${stats.join(" | ")}]`));
+        logDebug(chalk.gray(`\n[${stats.join(" | ")}]`));
 
         if (message.is_error) {
-            console.log(chalk.red("\n❌ Error occurred during execution"));
+            logError(chalk.red("\n❌ Error occurred during execution"));
         }
     }
 

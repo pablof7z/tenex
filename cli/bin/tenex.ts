@@ -1,24 +1,21 @@
+#!/usr/bin/env bun
+
 // CLI entry point for TENEX
 import { Command } from "commander";
-import { runDebugSystemPrompt } from "../src/commands/debug";
-import { runProjectInit } from "../src/commands/project/init";
-import { runTask } from "../src/commands/run";
+import { daemonCommand } from "../src/commands/daemon";
+import { runDebugSystemPrompt } from "../src/commands/debug/index";
+import { projectCommand } from "../src/commands/project/index";
 
 const program = new Command();
 
 program.name("tenex").description("TENEX Command Line Interface").version("0.1.0");
 
-const project = program.command("project").description("Project commands");
+// Add main commands
+program.addCommand(daemonCommand);
+program.addCommand(projectCommand);
 
-project
-    .command("init <path> <naddr>")
-    .description("Initialize a new TENEX project from NDKProject naddr")
-    .action((path, naddr) => runProjectInit({ path, naddr }));
-
-program.command("run").description("Start TENEX project listener").action(runTask);
-
+// Add debug command
 const debug = program.command("debug").description("Debug commands");
-
 debug
     .command("system-prompt")
     .description("Show the system prompt for an agent")

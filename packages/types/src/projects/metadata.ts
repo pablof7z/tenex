@@ -2,6 +2,9 @@
  * Project metadata types
  */
 
+import type { AgentsJson } from "../agents/config";
+import type { LLMConfigs } from "../llm/config";
+
 /**
  * Project metadata stored in .tenex/metadata.json
  */
@@ -44,8 +47,8 @@ export interface ProjectInitOptions {
  * Project configuration
  */
 export interface ProjectConfig {
-    agents: Record<string, any>; // AgentsJson
-    llms: Record<string, any>; // LLMConfigs
+    agents: AgentsJson;
+    llms: LLMConfigs;
     metadata: ProjectMetadata;
     rules?: ProjectRules;
 }

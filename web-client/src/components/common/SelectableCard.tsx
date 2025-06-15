@@ -94,8 +94,12 @@ export function SelectableCard<T>({
 
                     {tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                            {tags.map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs h-5 px-2">
+                            {tags.map((tag) => (
+                                <Badge
+                                    key={`tag-${tag}`}
+                                    variant="outline"
+                                    className="text-xs h-5 px-2"
+                                >
                                     {tag}
                                 </Badge>
                             ))}

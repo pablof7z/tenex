@@ -1,2 +1,14 @@
-import { EVENT_KINDS } from "@tenex/types/events";
+// Event kind numbers from SPEC.md
+const AGENT_LESSON = 4124;
+const PROJECT_STATUS = 24010;
+const TYPING_INDICATOR_START = 24111;
+const TYPING_INDICATOR_END = 24112;
+
+const EVENT_KINDS = {
+    AGENT_LESSON,
+    PROJECT_STATUS,
+    TYPING_INDICATOR_START,
+    TYPING_INDICATOR_END,
+};
+
 console.log(EVENT_KINDS);

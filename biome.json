@@ -39,7 +39,8 @@
             ".next",
             "coverage",
             "*.config.js",
-            "*.config.ts"
+            "*.config.ts",
+            "web-client/public/worker.js"
         ]
     }
 }

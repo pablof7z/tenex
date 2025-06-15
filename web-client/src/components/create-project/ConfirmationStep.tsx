@@ -24,8 +24,12 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
                         <div>
                             <span className="font-medium">Tags:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
-                                {formData.hashtags.split(",").map((tag, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
+                                {formData.hashtags.split(",").map((tag) => (
+                                    <Badge
+                                        key={`tag-${tag.trim()}`}
+                                        variant="outline"
+                                        className="text-xs"
+                                    >
                                         {tag.trim()}
                                     </Badge>
                                 ))}
@@ -73,7 +77,11 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
                             <span className="font-medium">Agents:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
                                 {formData.selectedAgents.map((agent, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
+                                    <Badge
+                                        key={`agent-${agent.pubkey || agent.name || index}`}
+                                        variant="outline"
+                                        className="text-xs"
+                                    >
                                         {agent.name || "Unnamed Agent"}
                                     </Badge>
                                 ))}
@@ -85,7 +93,11 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
                             <span className="font-medium">Instructions:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
                                 {formData.selectedInstructions.map((instruction, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs">
+                                    <Badge
+                                        key={`instruction-${instruction.id || instruction.title || index}`}
+                                        variant="secondary"
+                                        className="text-xs"
+                                    >
                                         {instruction.title || "Untitled"}
                                         {instruction.assignedAgents &&
                                             instruction.assignedAgents.length > 0 &&

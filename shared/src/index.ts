@@ -1,11 +1,11 @@
-// Main exports for @tenex/shared package
-export * from "./config/index.js";
-export * from "./logger.js";
-export * from "./nostr.js";
-export * from "./types/index.js";
+// Main exports for @tenex/shared package - browser-safe only
 export * from "./utils/business.js";
+export * from "./types/index.js";
+export * from "./logger.js";
+export * from "./config/relays.js"; // Only export relays, not the full config module
 
-// Node.js specific exports - don't import these in browser environments
-// export * from "./projects.js"; // Contains fs imports
-// export * from "./agents/index.js"; // May contain fs imports
-// export * from "./fs/index.js"; // Contains Node.js fs module
+// Node.js specific exports are not included in the main export
+// Import them directly from subpaths if needed:
+// import { ProjectService } from "@tenex/shared/projects"
+// import { FileSystem } from "@tenex/shared/fs"
+// import { ConfigLoader } from "@tenex/shared/config"

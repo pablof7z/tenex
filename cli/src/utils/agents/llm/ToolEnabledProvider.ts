@@ -8,6 +8,7 @@ import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } f
 
 export class ToolEnabledProvider implements LLMProvider {
     private executor: ToolExecutor;
+    private lastRenderInChat?: { type: string; data: unknown };
 
     constructor(
         private baseProvider: LLMProvider,
@@ -15,6 +16,14 @@ export class ToolEnabledProvider implements LLMProvider {
         private providerType: "anthropic" | "openai" | "openrouter" = "anthropic"
     ) {
         this.executor = new ToolExecutor(toolRegistry);
+    }
+
+    getLastRenderInChat(): { type: string; data: unknown } | undefined {
+        return this.lastRenderInChat;
+    }
+
+    clearRenderInChat(): void {
+        this.lastRenderInChat = undefined;
     }
 
     async generateResponse(
@@ -69,11 +78,15 @@ export class ToolEnabledProvider implements LLMProvider {
 
         logger.debug("[ToolEnabledProvider] Initial response content:", response.content);
 
-        // Check if the response contains tool calls
+        // Check for native tool calls first (OpenAI-style function calling)
+        const hasNativeToolCalls = (response as any).tool_calls && (response as any).tool_calls.length > 0;
+        
+        // Check if the response contains text-based tool calls
         const toolCalls = parseToolCalls(response.content);
-        logger.debug(`[ToolEnabledProvider] Parsed ${toolCalls.length} tool calls:`, toolCalls);
+        logger.debug(`[ToolEnabledProvider] Parsed ${toolCalls.length} text-based tool calls:`, toolCalls);
+        logger.debug(`[ToolEnabledProvider] Has native tool calls: ${hasNativeToolCalls}`);
 
-        if (toolCalls.length === 0) {
+        if (toolCalls.length === 0 && !hasNativeToolCalls) {
             // No tool calls, return the response as-is
             logger.debug("[ToolEnabledProvider] No tool calls found, returning response as-is");
             return response;
@@ -86,20 +99,50 @@ export class ToolEnabledProvider implements LLMProvider {
             projectEvent: context?.projectEvent,
         };
 
+        // Prepare tool calls for execution
+        let allToolCalls = toolCalls;
+        if (hasNativeToolCalls) {
+            // Convert native tool calls to our format
+            const nativeToolCalls = (response as any).tool_calls.map((tc: any) => ({
+                id: tc.id,
+                name: tc.function.name,
+                arguments: typeof tc.function.arguments === 'string' 
+                    ? JSON.parse(tc.function.arguments) 
+                    : tc.function.arguments,
+            }));
+            allToolCalls = nativeToolCalls;
+        }
+
         // Execute the tools
         logger.debug("[ToolEnabledProvider] Executing tools with context:", {
             agentName: toolContext.agentName,
             projectName: toolContext.projectName,
+            toolCount: allToolCalls.length,
         });
-        const toolResponses = await this.executor.executeTools(toolCalls, toolContext);
+        const toolResponses = await this.executor.executeTools(allToolCalls, toolContext);
         logger.debug(
             "[ToolEnabledProvider] Tool execution results:",
             toolResponses.map((r) => ({
                 id: r.tool_call_id,
                 outputLength: r.output?.length,
                 hasOutput: !!r.output,
+                hasRenderInChat: !!r.renderInChat,
             }))
         );
+
+        // Check if any tool returned renderInChat data
+        this.clearRenderInChat();
+        for (const toolResponse of toolResponses) {
+            if (toolResponse.renderInChat) {
+                // Store the first renderInChat data found
+                this.lastRenderInChat = toolResponse.renderInChat;
+                logger.debug(
+                    "[ToolEnabledProvider] Found renderInChat data:",
+                    this.lastRenderInChat
+                );
+                break;
+            }
+        }
 
         // Remove tool calls from the content
         const cleanedContent = removeToolCalls(response.content);
@@ -108,23 +151,42 @@ export class ToolEnabledProvider implements LLMProvider {
             cleanedContent
         );
 
-        // Add the assistant's message with tool calls (ensure non-empty content)
-        enhancedMessages.push({
-            role: "assistant",
-            content: cleanedContent || "I used the following tools:",
-            tool_calls: toolCalls,
-        });
-
-        // Add tool responses
-        for (const toolResponse of toolResponses) {
+        // Handle text-based tool calls differently from native tool calls
+        if (hasNativeToolCalls) {
+            // Native function calling - prepare for second LLM call
+            // Add the assistant's message with native tool calls
             enhancedMessages.push({
-                role: "tool",
-                content: toolResponse.output,
-                tool_call_id: toolResponse.tool_call_id,
+                role: "assistant",
+                content: response.content,
+                tool_calls: (response as any).tool_calls,
             });
-        }
 
-        // Always send tool responses back to LLM for processing
+            // Add tool responses
+            for (const toolResponse of toolResponses) {
+                enhancedMessages.push({
+                    role: "tool",
+                    content: toolResponse.output,
+                    tool_call_id: toolResponse.tool_call_id,
+                });
+            }
+        } else {
+            // Text-based tool calls - embed results directly
+            let finalContent = cleanedContent;
+            
+            // Add tool results to the content
+            for (const toolResponse of toolResponses) {
+                const toolCall = allToolCalls.find(tc => tc.id === toolResponse.tool_call_id);
+                if (toolCall) {
+                    finalContent += `\n\n**Tool: ${toolCall.name}**\n${toolResponse.output}`;
+                }
+            }
+            
+            // Return immediately with embedded results
+            return {
+                ...response,
+                content: finalContent,
+            };
+        }
 
         // Get the final response after tool execution
         logger.debug("[ToolEnabledProvider] Getting final response after tool execution");

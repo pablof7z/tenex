@@ -84,7 +84,13 @@ export class MessageBuilder {
         return this;
     }
 
-    withToolCalls(toolCalls: Array<{ id: string; type: string; function: { name: string; arguments: string } }>): this {
+    withToolCalls(
+        toolCalls: Array<{
+            id: string;
+            type: string;
+            function: { name: string; arguments: string };
+        }>
+    ): this {
         this.message.tool_calls = toolCalls;
         return this;
     }

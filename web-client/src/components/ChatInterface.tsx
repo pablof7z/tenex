@@ -1,3 +1,4 @@
+import { type NDKKind, NDKTask } from "@nostr-dev-kit/ndk";
 import {
     NDKEvent,
     type NDKProject,
@@ -5,24 +6,28 @@ import {
     useNDK,
     useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { NDKTask, type NDKKind } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS } from "@tenex/types/events";
+// Event kind numbers from SPEC.md
+const TYPING_INDICATOR_START = 24111;
+const TYPING_INDICATOR_END = 24112;
+const TASK = 1934; // NDKTask.kind
+import { useAtom } from "jotai";
 import { ArrowDown, Send } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
-import { useProjectAgents } from "../hooks/useProjectAgents";
 import { useMentionAutocomplete } from "../hooks/useMentionAutocomplete";
+import { useProjectAgents } from "../hooks/useProjectAgents";
+import { useProjectLLMConfigs } from "../hooks/useProjectLLMConfigs";
 import { useScrollManagement } from "../hooks/useScrollManagement";
+import { selectedTaskAtom } from "../lib/store";
 import { BackendButtons } from "./BackendButtons";
 import { ChatDebugDialog } from "./chat/ChatDebugDialog";
 import { ChatHeader } from "./chat/ChatHeader";
 import { ChatInputArea } from "./chat/ChatInputArea";
 import { ChatTypingIndicator } from "./chat/ChatTypingIndicator";
+import { AgentDiscoveryCard } from "./common/AgentDiscoveryCard";
 import { CommandExecutionCard } from "./common/CommandExecutionCard";
 import { StatusUpdate } from "./tasks/StatusUpdate";
 import { TaskCard } from "./tasks/TaskCard";
 import { Button } from "./ui/button";
-import { useAtom } from "jotai";
-import { selectedTaskAtom } from "../lib/store";
 
 interface ChatInterfaceProps {
     statusUpdates?: NDKEvent[];
@@ -54,7 +59,7 @@ const MessageList = memo(
             <div className="space-y-1">
                 {messages.map((event) => {
                     // Check if this is a task event
-                    if (event.kind === EVENT_KINDS.TASK) {
+                    if (event.kind === TASK) {
                         // For tasks, we'll render them as a special message with the task card
                         const task = event as NDKTask;
                         const taskComplexity = task.tags?.find(
@@ -71,12 +76,32 @@ const MessageList = memo(
                         );
                     }
 
+                    // Check for render-type tag
+                    const renderType = event.tagValue("render-type");
+
+                    // If render-type is "agent_discovery", render the discovery card
+                    if (renderType === "agent_discovery") {
+                        return (
+                            <div key={event.id}>
+                                <AgentDiscoveryCard event={event} />
+                            </div>
+                        );
+                    }
+
                     // For all other events, render as status update
                     return (
                         <div
                             key={event.id}
                             onClick={() => onMessageClick?.(event)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onMessageClick?.(event);
+                                }
+                            }}
                             className={onMessageClick ? "cursor-pointer" : ""}
+                            tabIndex={onMessageClick ? 0 : undefined}
+                            role={onMessageClick ? "button" : undefined}
                         >
                             <StatusUpdate event={event} />
                         </div>
@@ -115,6 +140,19 @@ export function ChatInterface({
 
     // Get project agents for @mentions
     const projectAgents = useProjectAgents(project?.tagId());
+
+    // Get project directory and LLM configurations
+    // Extract just the d-tag from the project's tagId (format: 31933:pubkey:d-tag)
+    const projectTagId = project?.tagId();
+    const projectDir = projectTagId ? projectTagId.split(":")[2] : undefined;
+    const availableLLMConfigs = useProjectLLMConfigs(projectDir);
+
+    // console.log("[ChatInterface] Project debug:", {
+    //     project,
+    //     projectTagId,
+    //     projectDir,
+    //     availableLLMConfigs,
+    // });
 
     // Use mention autocomplete hook
     const {
@@ -173,10 +211,7 @@ export function ChatInterface({
         currentThreadEvent || taskId
             ? [
                   {
-                      kinds: [
-                          EVENT_KINDS.TYPING_INDICATOR as NDKKind,
-                          EVENT_KINDS.TYPING_INDICATOR_STOP as NDKKind,
-                      ],
+                      kinds: [TYPING_INDICATOR_START as NDKKind, TYPING_INDICATOR_END as NDKKind],
                       "#e": currentThreadEvent ? [currentThreadEvent.id] : taskId ? [taskId] : [],
                       since: Math.floor(Date.now() / 1000) - 60, // Only show indicators from last minute
                   },
@@ -199,10 +234,10 @@ export function ChatInterface({
         );
 
         for (const event of sortedEvents) {
-            if (event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP) {
+            if (event.kind === TYPING_INDICATOR_END) {
                 // Stop typing event - remove the indicator
                 indicatorsByPubkey.delete(event.pubkey);
-            } else if (event.kind === EVENT_KINDS.TYPING_INDICATOR) {
+            } else if (event.kind === TYPING_INDICATOR_START) {
                 // Start typing event - add/update the indicator
                 indicatorsByPubkey.set(event.pubkey, event);
             }
@@ -212,8 +247,7 @@ export function ChatInterface({
         const thirtySecondsAgo = Math.floor(Date.now() / 1000) - 30;
         const active = Array.from(indicatorsByPubkey.values()).filter(
             (event) =>
-                (event.created_at ?? 0) > thirtySecondsAgo &&
-                event.kind === EVENT_KINDS.TYPING_INDICATOR
+                (event.created_at ?? 0) > thirtySecondsAgo && event.kind === TYPING_INDICATOR_START
         );
 
         return active;
@@ -247,24 +281,24 @@ export function ChatInterface({
         const participantSet = new Set<string>();
 
         // Add participants from messages
-        threadMessages.forEach((message) => {
+        for (const message of threadMessages) {
             participantSet.add(message.pubkey);
 
             // Also add any p-tagged participants from the original thread event
             if (message === currentThreadEvent) {
-                message.tags?.forEach((tag) => {
+                for (const tag of message.tags || []) {
                     if (tag[0] === "p" && tag[1]) {
                         participantSet.add(tag[1]);
                     }
-                });
+                }
             }
-        });
+        }
 
         // If no messages yet but we have initial agent pubkeys, include them
         if (threadMessages.length === 0 && initialAgentPubkeys.length > 0) {
-            initialAgentPubkeys.forEach((pubkey) => {
+            for (const pubkey of initialAgentPubkeys) {
                 participantSet.add(pubkey);
-            });
+            }
         }
 
         return Array.from(participantSet);
@@ -283,7 +317,7 @@ export function ChatInterface({
     } = useScrollManagement(messageCount);
 
     // Send message
-    const handleSendMessage = async () => {
+    const handleSendMessage = useCallback(async () => {
         if (!messageInput.trim() || !ndk?.signer || isSending) return;
 
         // For task mode, require taskId
@@ -309,9 +343,9 @@ export function ChatInterface({
                     event.tags.push(["a", project?.tagId()]);
 
                     // Add mentioned agents to the reply (explicit p-tags)
-                    mentionedAgents.forEach((agent) => {
+                    for (const agent of mentionedAgents) {
                         event.tags.push(["p", agent.pubkey]);
-                    });
+                    }
                 } else if (!kind11Event) {
                     // This is the first message, create a new thread (kind 11)
                     event = new NDKEvent(ndk);
@@ -325,21 +359,21 @@ export function ChatInterface({
                     // Add initial agents as p-tags
                     if (initialAgentPubkeys.length > 0) {
                         const projectAgentsMap = new Map(projectAgents.map((a) => [a.pubkey, a]));
-                        initialAgentPubkeys.forEach((pubkey) => {
+                        for (const pubkey of initialAgentPubkeys) {
                             const agent = projectAgentsMap.get(pubkey);
                             if (agent) {
                                 event.tags.push(["p", pubkey]);
                             }
-                        });
+                        }
                     }
 
                     // Add mentioned agents to the initial message
-                    mentionedAgents.forEach((agent) => {
+                    for (const agent of mentionedAgents) {
                         // Don't add duplicate p-tags
                         if (!event.tags.some((tag) => tag[0] === "p" && tag[1] === agent.pubkey)) {
                             event.tags.push(["p", agent.pubkey]);
                         }
-                    });
+                    }
 
                     await event.sign();
 
@@ -359,9 +393,9 @@ export function ChatInterface({
                 } else {
                     // We have a kind11Event but it might not have reply() yet
                     // This shouldn't happen in normal flow, but let's handle it
-                    console.warn(
-                        "Thread event exists but doesn't support reply(). Waiting for thread to be properly loaded."
-                    );
+                    // console.warn(
+                    //     "Thread event exists but doesn't support reply(). Waiting for thread to be properly loaded."
+                    // );
                     return;
                 }
             } else {
@@ -377,11 +411,25 @@ export function ChatInterface({
                 scrollToBottom(true); // Force scroll after sending
             }, 100);
         } catch (error) {
-            console.error("Failed to send message:", error);
+            // console.error("Failed to send message:", error);
         } finally {
             setIsSending(false);
         }
-    };
+    }, [
+        messageInput,
+        ndk,
+        isSending,
+        isThreadMode,
+        taskId,
+        currentThreadEvent,
+        kind11Event,
+        project,
+        threadTitle,
+        initialAgentPubkeys,
+        projectAgents,
+        scrollToBottom,
+        extractMentions,
+    ]);
 
     const handleKeyPress = useCallback(
         (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -414,6 +462,11 @@ export function ChatInterface({
                     title={effectiveThreadTitle}
                     subtitle="Thread discussion"
                     participants={threadParticipants}
+                    messages={threadMessages}
+                    projectPubkey={project?.pubkey}
+                    projectId={projectTagId}
+                    projectEvent={project}
+                    availableModels={availableLLMConfigs}
                     onBack={onBack}
                 />
             )}

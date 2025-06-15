@@ -1,16 +1,39 @@
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { ArrowLeft } from "lucide-react";
+import { ParticipantAvatarsWithModels } from "../common/ParticipantAvatarsWithModels";
 import { Button } from "../ui/button";
-import { ParticipantAvatars } from "../common/ParticipantAvatars";
 
 interface ChatHeaderProps {
     title: string;
     subtitle?: string;
     participants?: string[];
+    messages?: NDKEvent[];
+    projectPubkey?: string;
+    projectId?: string;
+    projectEvent?: NDKEvent;
+    availableModels?: string[];
     onBack?: () => void;
 }
 
-export function ChatHeader({ title, subtitle, participants, onBack }: ChatHeaderProps) {
+export function ChatHeader({
+    title,
+    subtitle,
+    participants,
+    messages,
+    projectPubkey,
+    projectId,
+    projectEvent,
+    availableModels,
+    onBack,
+}: ChatHeaderProps) {
     if (!onBack) return null;
+
+    // console.log("[ChatHeader] Props:", {
+    //     hasMessages: !!messages,
+    //     messagesLength: messages?.length,
+    //     projectPubkey,
+    //     availableModels,
+    // });
 
     return (
         <div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
@@ -34,7 +57,16 @@ export function ChatHeader({ title, subtitle, participants, onBack }: ChatHeader
                     </div>
                 </div>
                 {participants && participants.length > 0 && (
-                    <ParticipantAvatars participants={participants} maxVisible={4} size="sm" />
+                    <ParticipantAvatarsWithModels
+                        participants={participants}
+                        messages={messages || []}
+                        projectPubkey={projectPubkey || ""}
+                        projectId={projectId}
+                        projectEvent={projectEvent}
+                        availableModels={availableModels}
+                        maxVisible={4}
+                        size="sm"
+                    />
                 )}
             </div>
         </div>

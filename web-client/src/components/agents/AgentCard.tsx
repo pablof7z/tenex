@@ -1,5 +1,5 @@
-import { memo } from "react";
 import { Bot } from "lucide-react";
+import { memo } from "react";
 import type { NDKAgent } from "../../events/agent";
 import { ProfileDisplay } from "../ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";
@@ -41,7 +41,9 @@ export const AgentCard = memo(function AgentCard({
                     {agent.version && <span>v{agent.version}</span>}
                 </div>
             )}
-            renderTags={(agent) => agent.tags.filter((tag) => tag[0] === "t" && tag[1]).map((tag) => tag[1] as string)}
+            renderTags={(agent) =>
+                agent.tags.filter((tag) => tag[0] === "t" && tag[1]).map((tag) => tag[1] as string)
+            }
         />
     );
 });

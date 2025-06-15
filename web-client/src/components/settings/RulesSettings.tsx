@@ -63,7 +63,10 @@ export function RulesSettings({ project, editedProject, onProjectChanged }: Rule
     }, [agentEvents]);
 
     // Extract rule IDs - memoize to prevent recreating array
-    const ruleIds = useMemo(() => ruleTags.map((tag) => tag[1]).filter((id): id is string => id !== undefined), [ruleTags]);
+    const ruleIds = useMemo(
+        () => ruleTags.map((tag) => tag[1]).filter((id): id is string => id !== undefined),
+        [ruleTags]
+    );
 
     // Memoize the rule IDs key to prevent unnecessary re-subscriptions
     const ruleIdsKey = useMemo(() => ruleIds.join(","), [ruleIds]);
@@ -113,13 +116,13 @@ export function RulesSettings({ project, editedProject, onProjectChanged }: Rule
 
             // Update the edited project
             editedProject.tags = editedProject.tags.filter((tag) => tag[0] !== "rule");
-            updatedRules.forEach((pr) => {
+            for (const pr of updatedRules) {
                 if (pr.assignedAgents.length > 0) {
                     editedProject.tags.push(["rule", pr.id, ...pr.assignedAgents]);
                 } else {
                     editedProject.tags.push(["rule", pr.id]);
                 }
-            });
+            }
 
             onProjectChanged();
         }
@@ -132,13 +135,13 @@ export function RulesSettings({ project, editedProject, onProjectChanged }: Rule
 
         // Update the edited project
         editedProject.tags = editedProject.tags.filter((tag) => tag[0] !== "rule");
-        updatedRules.forEach((pr) => {
+        for (const pr of updatedRules) {
             if (pr.assignedAgents.length > 0) {
                 editedProject.tags.push(["rule", pr.id, ...pr.assignedAgents]);
             } else {
                 editedProject.tags.push(["rule", pr.id]);
             }
-        });
+        }
 
         onProjectChanged();
     };
@@ -151,13 +154,13 @@ export function RulesSettings({ project, editedProject, onProjectChanged }: Rule
 
         // Update the edited project
         editedProject.tags = editedProject.tags.filter((tag) => tag[0] !== "rule");
-        updatedRules.forEach((pr) => {
+        for (const pr of updatedRules) {
             if (pr.assignedAgents.length > 0) {
                 editedProject.tags.push(["rule", pr.id, ...pr.assignedAgents]);
             } else {
                 editedProject.tags.push(["rule", pr.id]);
             }
-        });
+        }
 
         onProjectChanged();
     };
@@ -303,7 +306,16 @@ function RuleCard({
 
     return (
         <div className="bg-white rounded-lg border border-slate-200">
-            <div className="p-4 cursor-pointer hover:bg-slate-50" onClick={onToggleExpanded}>
+            <div
+                className="p-4 cursor-pointer hover:bg-slate-50"
+                onClick={onToggleExpanded}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onToggleExpanded();
+                    }
+                }}
+            >
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">

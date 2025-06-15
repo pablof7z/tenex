@@ -28,7 +28,10 @@ export class AgentResponseProcessor {
         event: NDKEvent,
         conversationId: string,
         agents: Map<string, Agent>,
-        buildSystemPromptContextFn: (agentName: string, isAgentToAgent: boolean) => Promise<Partial<SystemPromptContext>>
+        buildSystemPromptContextFn: (
+            agentName: string,
+            isAgentToAgent: boolean
+        ) => Promise<Partial<SystemPromptContext>>
     ): Promise<void> {
         for (const agentName of agentNames) {
             const agent = agents.get(agentName);

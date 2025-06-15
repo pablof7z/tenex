@@ -32,12 +32,20 @@ export class ToolExecutor {
             // Execute the tool
             const result = await tool.execute(toolCall.arguments, context);
 
-            return {
+            // Check if the result has a renderInChat property
+            const response: ToolResponse = {
                 tool_call_id: toolCall.id,
                 output: result.success
                     ? result.output
                     : `Error: ${result.error || "Unknown error"}`,
             };
+
+            // Pass through renderInChat if present
+            if (result.success && "renderInChat" in result && result.renderInChat) {
+                response.renderInChat = result.renderInChat;
+            }
+
+            return response;
         } catch (error) {
             return {
                 tool_call_id: toolCall.id,

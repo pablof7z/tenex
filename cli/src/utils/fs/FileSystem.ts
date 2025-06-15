@@ -27,6 +27,7 @@ export interface IFileSystem {
     readFile(filePath: string, options?: { encoding?: null; flag?: string }): Promise<Buffer>;
     writeFile(filePath: string, data: string | Buffer, encoding?: BufferEncoding): Promise<void>;
     exists(filePath: string): Promise<boolean>;
+    access(filePath: string, mode?: number): Promise<void>;
     mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void>;
     readdir(dirPath: string): Promise<string[]>;
     stat(filePath: string): Promise<Stats>;
@@ -156,6 +157,11 @@ export class FileSystem implements IFileSystem {
         } catch {
             return false;
         }
+    }
+
+    async access(filePath: string, mode?: number): Promise<void> {
+        const expandedPath = this.expandHome(filePath);
+        await fsPromises.access(expandedPath, mode);
     }
 
     async mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void> {

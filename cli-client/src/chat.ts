@@ -1,5 +1,6 @@
+import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { TenexNDK } from "./ndk-setup.js";
+import { logger } from "@tenex/shared";
 import {
     type ChatSession,
     EVENT_KINDS,
@@ -10,10 +11,10 @@ import {
 } from "./types.js";
 
 export class TenexChat {
-    private ndk: TenexNDK;
+    private ndk: NDK;
     private session: ChatSession;
 
-    constructor(ndk: TenexNDK, project: TenexProject) {
+    constructor(ndk: NDK, project: TenexProject) {
         this.ndk = ndk;
         this.session = {
             project,
@@ -36,7 +37,8 @@ export class TenexChat {
         return new Promise((resolve) => {
             const agents: ProjectAgent[] = [];
 
-            this.ndk.subscribe(filters, (event) => {
+            const sub = this.ndk.subscribe(filters);
+            sub.on("event", (event) => {
                 for (const tag of event.tags) {
                     if (tag[0] === "p" && tag.length >= 3) {
                         const existingAgent = agents.find((a) => a.pubkey === tag[1]);
@@ -50,9 +52,8 @@ export class TenexChat {
                 }
 
                 this.session.agents = agents;
-                console.log(
-                    `🤖 Discovered ${agents.length} agents:`,
-                    agents.map((a) => a.name).join(", ")
+                logger.info(
+                    `🤖 Discovered ${agents.length} agents: ${agents.map((a) => a.name).join(", ")}`
                 );
                 resolve(agents);
             });
@@ -68,7 +69,7 @@ export class TenexChat {
         content: string,
         mentionedAgents: string[] = []
     ): Promise<ThreadEvent> {
-        const event = new NDKEvent(this.ndk.ndk);
+        const event = new NDKEvent(this.ndk);
         event.kind = EVENT_KINDS.CHAT;
         event.content = content;
 
@@ -84,7 +85,8 @@ export class TenexChat {
             event.tags.push(["p", pubkey]);
         }
 
-        await this.ndk.publishEvent(event);
+        await event.sign();
+        await event.publish();
 
         const threadEvent: ThreadEvent = {
             id: event.id!,
@@ -97,7 +99,7 @@ export class TenexChat {
         };
 
         this.session.currentThread = threadEvent;
-        console.log(`🧵 Created thread: "${title}"`);
+        logger.info(`🧵 Created thread: "${title}"`);
 
         return threadEvent;
     }
@@ -107,7 +109,7 @@ export class TenexChat {
             throw new Error("No active thread to reply to");
         }
 
-        const event = new NDKEvent(this.ndk.ndk);
+        const event = new NDKEvent(this.ndk);
         event.kind = EVENT_KINDS.THREAD_REPLY;
         event.content = content;
 
@@ -123,8 +125,9 @@ export class TenexChat {
             event.tags.push(["p", pubkey]);
         }
 
-        await this.ndk.publishEvent(event);
-        console.log("💬 Replied to thread");
+        await event.sign();
+        await event.publish();
+        logger.info("💬 Replied to thread");
     }
 
     private resolveMentions(mentionedAgents: string[]): string[] {
@@ -137,7 +140,7 @@ export class TenexChat {
             if (agent) {
                 pubkeys.push(agent.pubkey);
             } else {
-                console.warn(`⚠️  Agent "${agentName}" not found`);
+                logger.warn(`⚠️  Agent "${agentName}" not found`);
             }
         }
 
@@ -167,8 +170,9 @@ export class TenexChat {
             },
         ];
 
-        await this.ndk.subscribe(filters, onMessage);
-        console.log(`👂 Listening for replies to thread: ${threadId}`);
+        const sub = this.ndk.subscribe(filters);
+        sub.on("event", onMessage);
+        logger.info(`👂 Listening for replies to thread: ${threadId}`);
     }
 
     async subscribeToTypingIndicators(
@@ -183,7 +187,8 @@ export class TenexChat {
             },
         ];
 
-        await this.ndk.subscribe(filters, (event) => {
+        const sub = this.ndk.subscribe(filters);
+        sub.on("event", (event) => {
             const agentName =
                 this.session.agents.find((a) => a.pubkey === event.pubkey)?.name || "Unknown";
             const systemPrompt = event.tags.find((tag) => tag[0] === "system-prompt")?.[1];
@@ -210,7 +215,7 @@ export class TenexChat {
             onTyping(indicator);
         });
 
-        console.log(`⌨️  Listening for typing indicators in thread: ${threadId}`);
+        logger.info(`⌨️  Listening for typing indicators in thread: ${threadId}`);
     }
 
     getSession(): ChatSession {

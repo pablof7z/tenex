@@ -49,7 +49,11 @@ export function useInstructions(options?: {
 
             if (search) {
                 const content = instruction.content || "";
-                const tags = instruction.getMatchingTags("t").map((tag) => tag[1]).filter((t): t is string => t !== undefined) || [];
+                const tags =
+                    instruction
+                        .getMatchingTags("t")
+                        .map((tag) => tag[1])
+                        .filter((t): t is string => t !== undefined) || [];
 
                 if (
                     !title.toLowerCase().includes(search.toLowerCase()) &&

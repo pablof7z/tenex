@@ -25,7 +25,7 @@ export interface ConversationMetadata {
     lastActivity: number;
     status?: "active" | "completed" | "archived";
     tags?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface ConversationState {

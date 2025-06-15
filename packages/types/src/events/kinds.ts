@@ -20,6 +20,7 @@ export const EVENT_KINDS = {
 
     // Status and typing
     PROJECT_STATUS: 24010,
+    LLM_CONFIG_CHANGE: 24101,
     TYPING_INDICATOR: 24111,
     TYPING_INDICATOR_STOP: 24112,
 

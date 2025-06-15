@@ -30,6 +30,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# build artifacts
+**/dist/
+packages/types/src/**/*.js
+packages/types/src/**/*.js.map
+packages/types/src/**/*.d.ts
+packages/types/src/**/*.d.ts.map
+
 .DS_Store
 bun.lock
 

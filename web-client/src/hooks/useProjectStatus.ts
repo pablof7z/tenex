@@ -2,11 +2,12 @@ import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useSetAtom } from "jotai";
 import { useEffect } from "react";
-import { onlineProjectStatusAtom } from "../lib/store";
+import { onlineProjectStatusAtom, projectLLMConfigsAtom } from "../lib/store";
 
 // Custom hook to track online project status from kind 24010 events
 export function useProjectStatus() {
     const setOnlineProjectStatus = useSetAtom(onlineProjectStatusAtom);
+    const setProjectLLMConfigs = useSetAtom(projectLLMConfigsAtom);
 
     // Set up periodic cleanup of stale entries
     useEffect(() => {
@@ -49,7 +50,7 @@ export function useProjectStatus() {
             const newStatus = new Map(prevStatus);
 
             // Process status events to determine which projects are online
-            statusEvents.forEach((event) => {
+            for (const event of statusEvents) {
                 // Find the "a" tag to get project info
                 const aTag = event.tags?.find((tag) => tag[0] === "a");
                 if (aTag?.[1]) {
@@ -58,11 +59,13 @@ export function useProjectStatus() {
                     const parts = aTag[1].split(":");
                     if (parts.length >= 3) {
                         const projectDir = parts[2];
-                        // Update timestamp for this project
-                        newStatus.set(projectDir || "", event.created_at || Date.now() / 1000);
+                        if (projectDir) {
+                            // Update timestamp for this project
+                            newStatus.set(projectDir, event.created_at || Date.now() / 1000);
+                        }
                     }
                 }
-            });
+            }
 
             // Clean up old entries (older than 90 seconds)
             const now = Date.now() / 1000;
@@ -74,5 +77,52 @@ export function useProjectStatus() {
 
             return newStatus;
         });
-    }, [statusEvents, setOnlineProjectStatus]);
+
+        // Also update LLM configurations
+        setProjectLLMConfigs((prevConfigs) => {
+            const newConfigs = new Map(prevConfigs);
+
+            for (const event of statusEvents) {
+                // Find the "a" tag to get project info
+                const aTag = event.tags?.find((tag) => tag[0] === "a");
+                if (aTag?.[1]) {
+                    const parts = aTag[1].split(":");
+                    if (parts.length >= 3) {
+                        const projectDir = parts[2];
+
+                        // Parse content to get LLM configurations
+                        if (projectDir) {
+                            try {
+                                const content = JSON.parse(event.content);
+                                if (content.llmConfigs && Array.isArray(content.llmConfigs)) {
+                                    newConfigs.set(projectDir, content.llmConfigs);
+                                }
+                            } catch (e) {
+                                console.error("[useProjectStatus] Failed to parse content:", e);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Clean up configs for offline projects
+            const now = Date.now() / 1000;
+            for (const [projectDir] of newConfigs.entries()) {
+                const statusEvent = statusEvents.find((e) => {
+                    const aTag = e.tags?.find((tag) => tag[0] === "a");
+                    if (aTag?.[1]) {
+                        const parts = aTag[1].split(":");
+                        return parts.length >= 3 && parts[2] === projectDir;
+                    }
+                    return false;
+                });
+
+                if (!statusEvent || (statusEvent.created_at && now - statusEvent.created_at > 90)) {
+                    newConfigs.delete(projectDir);
+                }
+            }
+
+            return newConfigs;
+        });
+    }, [statusEvents, setOnlineProjectStatus, setProjectLLMConfigs]);
 }

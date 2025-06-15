@@ -1,12 +1,19 @@
 import { type NDKEvent, type NDKKind, NDKList } from "@nostr-dev-kit/ndk";
-import { useNDKCurrentUser, useNDKSessionSigners, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, Bot, CheckCircle2 } from "lucide-react";
+import {
+    useNDK,
+    useNDKCurrentUser,
+    useNDKSessionSigners,
+    useSubscribe,
+} from "@nostr-dev-kit/ndk-hooks";
+import { ArrowLeft, Bot, CheckCircle2, Copy, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "./common/EmptyState";
 import { ErrorState } from "./common/ErrorState";
 import { Button } from "./ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface AgentRequest {
     id: string;
@@ -23,11 +30,14 @@ interface AgentRequestsPageProps {
 }
 
 export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
+    const { ndk } = useNDK();
     const user = useNDKCurrentUser();
     const signers = useNDKSessionSigners();
     const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<NDKEvent | null>(null);
+    const [copiedEvent, setCopiedEvent] = useState<string | null>(null);
 
     // Fetch existing agent list (kind 13199)
     const { events: agentLists } = useSubscribe<NDKList>(
@@ -107,8 +117,18 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
         });
     };
 
+    const handleCopyNevent = async (event: NDKEvent) => {
+        try {
+            await navigator.clipboard.writeText(event.encode());
+            setCopiedEvent(event.id);
+            setTimeout(() => setCopiedEvent(null), 2000);
+        } catch (err) {
+            console.error("Failed to copy nevent:", err);
+        }
+    };
+
     const handleSaveAgents = async () => {
-        if (!user || selectedAgents.size === 0) return;
+        if (!user || !ndk || selectedAgents.size === 0) return;
 
         const signer = signers.get(user.pubkey);
         if (!signer) return;
@@ -118,7 +138,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
 
         try {
             // Create new agent list event
-            const newAgentList = new NDKList();
+            const newAgentList = new NDKList(ndk);
             newAgentList.kind = 13199 as NDKKind;
             newAgentList.tags = [];
 
@@ -243,6 +263,28 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
                                                     )}
                                                 </CardDescription>
                                             </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setSelectedEvent(request.event)}
+                                                    title="View raw event"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleCopyNevent(request.event)}
+                                                    title="Copy nevent"
+                                                >
+                                                    {copiedEvent === request.id ? (
+                                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                                    ) : (
+                                                        <Copy className="w-4 h-4" />
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </CardHeader>
                                 </Card>
@@ -281,12 +323,54 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
                                         <span className="text-sm text-gray-600 font-mono">
                                             {request.agentPubkey.slice(0, 8)}...
                                         </span>
+                                        <div className="ml-auto flex gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setSelectedEvent(request.event)}
+                                                title="View raw event"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleCopyNevent(request.event)}
+                                                title="Copy nevent"
+                                            >
+                                                {copiedEvent === request.id ? (
+                                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4" />
+                                                )}
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Raw Event Dialog */}
+            <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+                <DialogContent className="max-w-2xl max-h-[80vh]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Eye className="w-5 h-5" />
+                            Raw Event Data
+                        </DialogTitle>
+                        <DialogDescription>
+                            Complete Nostr event data for this agent request
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-[60vh] pr-4">
+                        <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs font-mono">
+                            {selectedEvent && JSON.stringify(selectedEvent.rawEvent(), null, 2)}
+                        </pre>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

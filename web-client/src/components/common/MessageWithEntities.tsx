@@ -22,9 +22,9 @@ export function MessageWithEntities({ content, className }: MessageWithEntitiesP
 
     // Create a map of entity positions
     const entityMap = new Map<string, (typeof entities)[0]>();
-    entities.forEach((entity) => {
+    for (const entity of entities) {
         entityMap.set(`nostr:${entity.bech32}`, entity);
-    });
+    }
 
     // Replace entities with placeholders and collect parts
     const processedContent = replaceNostrEntities(content, (entity) => {
@@ -34,9 +34,10 @@ export function MessageWithEntities({ content, className }: MessageWithEntitiesP
 
     // Split by placeholders and reconstruct with components
     const regex = /__ENTITY_([\w]+)__/g;
-    let match;
+    let match: RegExpExecArray | null;
 
-    while ((match = regex.exec(processedContent)) !== null) {
+    match = regex.exec(processedContent);
+    while (match !== null) {
         // Add text before the entity
         if (match.index > lastIndex) {
             const textBefore = processedContent.slice(lastIndex, match.index);
@@ -53,6 +54,7 @@ export function MessageWithEntities({ content, className }: MessageWithEntitiesP
         }
 
         lastIndex = match.index + match[0].length;
+        match = regex.exec(processedContent);
     }
 
     // Add any remaining text

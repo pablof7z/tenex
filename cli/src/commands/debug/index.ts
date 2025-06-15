@@ -16,7 +16,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         const ndk = await getNDK();
 
         logInfo(`🔍 Debug: Loading system prompt for agent '${options.agent}'`);
-        console.log(chalk.cyan("\n📡 Connecting and loading project...\n"));
+        logInfo(chalk.cyan("\n📡 Connecting and loading project...\n"));
 
         // Load project using real code path
         const projectLoader = new ProjectLoader(ndk);
@@ -75,21 +75,21 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         const systemPrompt = systemMessage?.content || "No system prompt found";
 
         // Display the result
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.cyan(`🤖 System Prompt for Agent: ${options.agent}`));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(chalk.gray("Agent Pubkey: ") + chalk.white(agent.getPubkey()));
-        console.log(chalk.gray("Project: ") + chalk.white(projectInfo.title));
-        console.log(
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan(`🤖 System Prompt for Agent: ${options.agent}`));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.gray("Agent Pubkey: ") + chalk.white(agent.getPubkey()));
+        logInfo(chalk.gray("Project: ") + chalk.white(projectInfo.title));
+        logInfo(
             chalk.gray("Specs Loaded: ") +
                 chalk.white(projectInfo.specCache.getAllSpecMetadata().length)
         );
         const toolRegistry = agent.getToolRegistry();
         const toolCount = toolRegistry ? toolRegistry.getAllTools().length : 0;
-        console.log(chalk.gray("Tools Available: ") + chalk.white(toolCount));
-        console.log(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        console.log(`\n${systemPrompt}`);
-        console.log(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.gray("Tools Available: ") + chalk.white(toolCount));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(`\n${systemPrompt}`);
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
         logInfo(`✅ System prompt generated successfully (${systemPrompt.length} characters)`);
 

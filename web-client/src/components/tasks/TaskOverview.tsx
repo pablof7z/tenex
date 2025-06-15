@@ -1,8 +1,9 @@
 import type { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { ProfileUtils, StatusUtils, TaskUtils } from "@tenex/shared";
 import { AlertCircle, CheckCircle2, Circle, Clock } from "lucide-react";
 import { useMemo } from "react";
-import { TaskUtils, StatusUtils, ProfileUtils } from "@tenex/shared";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 
 interface TaskOverviewProps {
     task: NDKTask;
@@ -33,7 +34,11 @@ export function TaskOverview({ task, statusUpdates, onClick }: TaskOverviewProps
         const agentTag = latestUpdate.tagValue("agent");
 
         const getAgentName = () => {
-            return ProfileUtils.getDisplayName(profile || null, latestUpdate.pubkey, agentTag || undefined);
+            return ProfileUtils.getDisplayName(
+                profile || null,
+                latestUpdate.pubkey,
+                agentTag || undefined
+            );
         };
 
         return <span className="text-xs text-muted-foreground">{getAgentName()}</span>;
@@ -80,26 +85,18 @@ export function TaskOverview({ task, statusUpdates, onClick }: TaskOverviewProps
         return StatusUtils.getStatusColor(status);
     };
 
-    // TODO: Replace with useTimeFormat hook
-    const formatRelativeTime = (timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return "now";
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    };
+    const { formatRelativeTime } = useTimeFormat();
 
     return (
         <div
             className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${getStatusColor()}`}
             onClick={onClick}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onClick?.();
+                }
+            }}
         >
             <div className="flex items-start gap-3">
                 <div className="mt-0.5">{getStatusIcon()}</div>

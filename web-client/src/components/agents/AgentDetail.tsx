@@ -1,5 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Brain, Sparkles, Tag, User } from "lucide-react";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 import type { NDKAgent } from "../../lib/ndk-setup";
 import { Badge } from "../ui/badge";
 
@@ -9,6 +10,8 @@ interface AgentDetailProps {
 }
 
 export function AgentDetail({ agent, lessons }: AgentDetailProps) {
+    const { formatDateOnly } = useTimeFormat();
+
     return (
         <div className="max-w-3xl mx-auto p-8">
             <div className="bg-card rounded-xl shadow-sm border border-border p-8">
@@ -111,9 +114,9 @@ export function AgentDetail({ agent, lessons }: AgentDetailProps) {
                                                     <time
                                                         className="text-xs text-muted-foreground whitespace-nowrap"
                                                         dateTime={timestamp.toISOString()}
-                                                        title={timestamp.toLocaleString()}
+                                                        title={timestamp.toISOString()}
                                                     >
-                                                        {timestamp.toLocaleDateString()}
+                                                        {formatDateOnly(timestamp.getTime() / 1000)}
                                                     </time>
                                                 )}
                                             </div>

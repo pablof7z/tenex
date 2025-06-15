@@ -1,6 +1,7 @@
 import { NDKProject, NDKTask, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Clock, MessageCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTimeFormat } from "../hooks/useTimeFormat";
 import { ChatInterface } from "./ChatInterface";
 import { SearchIconButton } from "./common/SearchBar";
 import { Badge } from "./ui/badge";
@@ -13,6 +14,7 @@ interface ChatsPageProps {
 export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
     const currentUser = useNDKCurrentUser();
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
 
     // Get all user's projects
     const { events: projects } = useSubscribe<NDKProject>(
@@ -100,18 +102,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
     };
 
     const formatTimestamp = (timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return "now";
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        return formatRelativeTime(timestamp);
     };
 
     const handleReplyToTask = (taskId: string) => {

@@ -44,7 +44,9 @@ export function AgentSelector({ selectedAgents, onAgentsChange }: AgentSelectorP
                 />
             )}
             getItemId={(agent) => agent.id || ""}
-            getItemTags={(agent) => agent.tags.filter((tag) => tag[0] === "t" && tag[1]).map((tag) => tag[1] as string)}
+            getItemTags={(agent) =>
+                agent.tags.filter((tag) => tag[0] === "t" && tag[1]).map((tag) => tag[1] as string)
+            }
             searchFilter={(agent, searchTerm) => {
                 const searchLower = searchTerm.toLowerCase();
                 return (

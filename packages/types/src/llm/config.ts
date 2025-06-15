@@ -67,6 +67,6 @@ export type LLMConfig =
  * LLM configuration map for projects
  */
 export interface LLMConfigs {
-    default: string; // Reference to config name
-    [configName: string]: string | LLMConfig; // Config name or full config
+    default?: string | LLMConfig; // Reference to config name or full config (optional)
+    [configName: string]: string | LLMConfig | undefined; // Config name or full config
 }

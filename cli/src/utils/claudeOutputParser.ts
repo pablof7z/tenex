@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import chalk from "chalk";
+import { logger } from "@tenex/shared";
 
 interface ClaudeMessage {
     type: string;
@@ -51,7 +52,7 @@ export class ClaudeOutputParser extends EventEmitter {
                     const data = JSON.parse(line) as ClaudeMessage;
                     this.handleMessage(data);
                 } catch (_err) {
-                    console.error(chalk.red(`Failed to parse JSON: ${line}`));
+                    logger.error(chalk.red(`Failed to parse JSON: ${line}`));
                 }
             }
         }
@@ -69,22 +70,22 @@ export class ClaudeOutputParser extends EventEmitter {
                 this.handleUserMessage(data);
                 break;
             default:
-                console.log(chalk.gray(`Unknown message type: ${data.type}`));
+                logger.debug(chalk.gray(`Unknown message type: ${data.type}`));
         }
     }
 
     private handleSystemMessage(data: ClaudeMessage): void {
         if (data.subtype === "init") {
             this.sessionId = data.session_id || null;
-            console.log(chalk.blue.bold("\n📋 Claude Session Initialized"));
-            console.log(chalk.gray(`Session ID: ${this.sessionId}`));
-            console.log(chalk.gray(`Model: ${data.model || "unknown"}`));
-            console.log(chalk.gray(`Working Directory: ${data.cwd || "unknown"}`));
+            logger.info(chalk.blue.bold("\n📋 Claude Session Initialized"));
+            logger.info(chalk.gray(`Session ID: ${this.sessionId}`));
+            logger.info(chalk.gray(`Model: ${data.model || "unknown"}`));
+            logger.info(chalk.gray(`Working Directory: ${data.cwd || "unknown"}`));
 
             if (data.mcp_servers && Array.isArray(data.mcp_servers)) {
                 const connectedServers = data.mcp_servers.filter((s) => s.status === "connected");
                 if (connectedServers.length > 0) {
-                    console.log(
+                    logger.info(
                         chalk.green(
                             `✓ MCP Servers: ${connectedServers.map((s) => s.name).join(", ")}`
                         )
@@ -93,7 +94,7 @@ export class ClaudeOutputParser extends EventEmitter {
             }
 
             this.emit("sessionInit", { sessionId: this.sessionId, data });
-            console.log("");
+            logger.info("");
         }
     }
 
@@ -104,24 +105,24 @@ export class ClaudeOutputParser extends EventEmitter {
 
         for (const item of content) {
             if (item.type === "text" && item.text) {
-                console.log(chalk.cyan("\n🤖 Claude:"));
-                console.log(this.formatText(item.text));
+                logger.info(chalk.cyan("\n🤖 Claude:"));
+                logger.info(this.formatText(item.text));
             } else if (item.type === "tool_use") {
                 this.currentToolUse = {
                     id: item.id || "",
                     name: item.name || "unknown",
                 };
-                console.log(chalk.yellow(`\n🔧 Using tool: ${item.name}`));
+                logger.info(chalk.yellow(`\n🔧 Using tool: ${item.name}`));
                 if (item.input && Object.keys(item.input).length > 0) {
-                    console.log(chalk.gray("Input:"));
-                    console.log(chalk.gray(this.formatJson(item.input)));
+                    logger.info(chalk.gray("Input:"));
+                    logger.info(chalk.gray(this.formatJson(item.input)));
                 }
             }
         }
 
         if (data.message.usage) {
             const usage = data.message.usage;
-            console.log(
+            logger.info(
                 chalk.gray(`\n📊 Tokens: in=${usage.input_tokens}, out=${usage.output_tokens}`)
             );
         }
@@ -136,16 +137,16 @@ export class ClaudeOutputParser extends EventEmitter {
         for (const item of content) {
             if (item.type === "tool_result") {
                 const result = item as unknown as ToolResult;
-                console.log(chalk.green("\n✓ Tool result:"));
+                logger.info(chalk.green("\n✓ Tool result:"));
 
                 const contentLines = result.content.split("\n");
                 const maxLines = 20;
 
                 if (contentLines.length <= maxLines) {
-                    console.log(chalk.gray(result.content));
+                    logger.info(chalk.gray(result.content));
                 } else {
-                    console.log(chalk.gray(contentLines.slice(0, maxLines).join("\n")));
-                    console.log(chalk.gray(`... (${contentLines.length - maxLines} more lines)`));
+                    logger.info(chalk.gray(contentLines.slice(0, maxLines).join("\n")));
+                    logger.info(chalk.gray(`... (${contentLines.length - maxLines} more lines)`));
                 }
             }
         }
@@ -175,7 +176,7 @@ export class ClaudeOutputParser extends EventEmitter {
                 const data = JSON.parse(this.buffer) as ClaudeMessage;
                 this.handleMessage(data);
             } catch (_err) {
-                console.error(chalk.red(`Failed to parse remaining buffer: ${this.buffer}`));
+                logger.error(chalk.red(`Failed to parse remaining buffer: ${this.buffer}`));
             }
             this.buffer = "";
         }

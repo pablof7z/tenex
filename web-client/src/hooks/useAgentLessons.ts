@@ -1,10 +1,8 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { atom, useAtom } from "jotai";
 import { useEffect, useRef } from "react";
-import { EVENT_KINDS } from "@tenex/types/events";
 import { toast } from "sonner";
-import type { NDKKind } from "@nostr-dev-kit/ndk";
 
 // Atom to store the latest lesson event for display
 export const latestLessonAtom = atom<NDKEvent | null>(null);
@@ -19,7 +17,7 @@ export function useAgentLessons() {
 
     // Subscribe to all agent lesson events
     const { events: lessons, eose } = useSubscribe(
-        [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], limit: 50 }],
+        [{ kinds: [4124 as NDKKind], limit: 50 }],
         {},
         []
     );
@@ -30,7 +28,11 @@ export function useAgentLessons() {
         if (eose && !initialLoadComplete.current) {
             initialLoadComplete.current = true;
             // Mark all initial lessons as seen
-            lessons?.forEach((lesson) => seenLessons.current.add(lesson.id));
+            if (lessons) {
+                for (const lesson of lessons) {
+                    seenLessons.current.add(lesson.id);
+                }
+            }
         }
     }, [eose, lessons]);
 
@@ -55,14 +57,14 @@ export function useAgentLessons() {
                             "Unknown Agent";
 
                         // Show toast notification
-                        toast.success(`Agent learned something!`, {
+                        toast.success("Agent learned something!", {
                             description: `${agentName}: ${title}`,
                             duration: 5000,
                         });
                     });
                 } else {
                     // Show toast without agent name
-                    toast.success(`Agent learned something!`, {
+                    toast.success("Agent learned something!", {
                         description: title,
                         duration: 5000,
                     });
@@ -85,9 +87,7 @@ export function useAgentLessons() {
  */
 export function useAgentLessonsByEventId(agentEventId: string | undefined) {
     const { events: lessons } = useSubscribe(
-        agentEventId
-            ? [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], "#e": [agentEventId] }]
-            : false,
+        agentEventId ? [{ kinds: [4124 as NDKKind], "#e": [agentEventId] }] : false,
         {},
         [agentEventId]
     );

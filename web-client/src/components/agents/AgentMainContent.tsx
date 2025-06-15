@@ -1,9 +1,9 @@
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Bot } from "lucide-react";
 import type { NDKAgent } from "../../lib/ndk-setup";
 import { AgentDetail } from "./AgentDetail";
 import { AgentForm } from "./AgentForm";
 import { AgentHeader } from "./AgentHeader";
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 interface AgentMainContentProps {
     selectedAgent: NDKAgent | null;

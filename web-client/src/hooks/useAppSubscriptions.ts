@@ -54,9 +54,10 @@ export function useAppSubscriptions() {
             const latestList = agentLists[0];
             if (!latestList) return;
 
-            latestList.tags
-                .filter((tag) => tag[0] === "p" && tag[1])
-                .forEach((tag) => approvedSet.add(tag[1] as string));
+            const pTags = latestList.tags.filter((tag) => tag[0] === "p" && tag[1]);
+            for (const tag of pTags) {
+                approvedSet.add(tag[1] as string);
+            }
 
             setApprovedAgents(approvedSet);
         }
@@ -88,9 +89,10 @@ export function useAppSubscriptions() {
             if (agentLists && agentLists.length > 0) {
                 const latestList = agentLists[0];
                 if (latestList) {
-                    latestList.tags
-                        .filter((tag) => tag[0] === "p" && tag[1])
-                        .forEach((tag) => approved.add(tag[1] as string));
+                    const pTags = latestList.tags.filter((tag) => tag[0] === "p" && tag[1]);
+                    for (const tag of pTags) {
+                        approved.add(tag[1] as string);
+                    }
                 }
             }
             return agentRequests.filter((event) => !approved.has(event.pubkey)).length;

@@ -8,6 +8,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
+    exclude: [
+      'node_modules/**',
+      'tests/**', // Exclude Playwright tests
+      'dist/**',
+      'build/**',
+      '.idea/**',
+      '.git/**',
+      '.cache/**'
+    ],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [

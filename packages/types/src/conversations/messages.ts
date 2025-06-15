@@ -13,7 +13,14 @@ export interface ConversationMessage {
         isAgent?: boolean;
     };
     metadata?: MessageMetadata;
-    toolCalls?: any[]; // Tool calls if any
+    toolCalls?: Array<{
+        id: string;
+        type: string;
+        function: {
+            name: string;
+            arguments: string;
+        };
+    }>; // Tool calls if any
     parent?: string; // Parent message ID for threading
 }
 
@@ -29,7 +36,7 @@ export interface MessageMetadata {
     duration?: number;
     cacheHit?: boolean;
     eventId?: string; // Nostr event ID if published
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface ConversationParticipant {

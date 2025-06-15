@@ -1,6 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { type ReactNode, createContext, useContext } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface NavigationContextType {
     navigate: ReturnType<typeof useNavigate>;

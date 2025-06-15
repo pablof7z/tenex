@@ -1,17 +1,6 @@
 import path from "node:path";
 import type { ProjectMetadata } from "@tenex/types/projects";
-import { ensureDirectory, directoryExists, readJsonFile, writeJsonFile } from "./filesystem.js";
-
-// Re-export commonly used filesystem utilities for backward compatibility
-export {
-    ensureDirectory,
-    directoryExists,
-    readJsonFile,
-    writeJsonFile,
-    fileExists,
-    readTextFile,
-    writeTextFile,
-} from "./filesystem.js";
+import { directoryExists, ensureDirectory, readJsonFile, writeJsonFile } from "./filesystem.js";
 
 /**
  * Get paths for common .tenex files

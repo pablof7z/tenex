@@ -1,6 +1,6 @@
-import { memo, useRef } from "react";
 import type { NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { Archive, MoreVertical, Trash2 } from "lucide-react";
+import { memo, useRef } from "react";
 import { useSwipeGesture } from "../../hooks/useSwipeGesture";
 import { Badge } from "../ui/badge";
 
@@ -84,9 +84,10 @@ export const SwipeTaskItem = memo(function SwipeTaskItem({
                 }}
                 {...handlers}
             >
-                <div
-                    className="group flex items-center p-2.5 sm:p-3 cursor-pointer transition-all duration-200 ease-out border border-transparent bg-card hover:bg-accent hover:shadow-sm active:scale-[0.98]"
+                <button
+                    className="group flex items-center p-2.5 sm:p-3 cursor-pointer transition-all duration-200 ease-out border border-transparent bg-card hover:bg-accent hover:shadow-sm active:scale-[0.98] w-full text-left"
                     onClick={onTaskClick}
+                    type="button"
                 >
                     {/* Task Status Indicator */}
                     <div className="mr-3 sm:mr-4 flex-shrink-0">
@@ -116,7 +117,7 @@ export const SwipeTaskItem = memo(function SwipeTaskItem({
                             </div>
                         </div>
                     </div>
-                </div>
+                </button>
             </div>
         </div>
     );

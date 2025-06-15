@@ -1,14 +1,36 @@
 /**
- * TENEX CLI: NDK Utilities
- * Provides singleton NDK instance management
+ * TENEX CLI: NDK Singleton
+ * Manages a single NDK instance for the CLI
  */
-import { getNDK as getSharedNDK } from "@tenex/shared/node";
+import NDK from "@nostr-dev-kit/ndk";
+import { getRelayUrls } from "@tenex/shared";
 
-export async function getNDK() {
-    return await getSharedNDK();
+let ndkInstance: NDK | null = null;
+
+export async function getNDK(): Promise<NDK> {
+    if (!ndkInstance) {
+        const relays = getRelayUrls();
+
+        ndkInstance = new NDK({
+            explicitRelayUrls: [...relays],
+            enableOutboxModel: true,
+            autoConnectUserRelays: true,
+            autoFetchUserMutelist: true,
+        });
+
+        await ndkInstance.connect();
+    }
+    return ndkInstance;
 }
 
 export async function shutdownNDK(): Promise<void> {
-    // The shared NDK instance handles shutdown
-    // This is kept for backward compatibility but delegates to shared implementation
+    if (ndkInstance) {
+        // Disconnect all relays
+        if (ndkInstance.pool?.relays) {
+            for (const relay of ndkInstance.pool.relays.values()) {
+                relay.disconnect();
+            }
+        }
+        ndkInstance = null;
+    }
 }

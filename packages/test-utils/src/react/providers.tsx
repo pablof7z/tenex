@@ -1,6 +1,6 @@
-import React from "react";
 import { Provider as JotaiProvider } from "jotai";
 import { createStore } from "jotai";
+import React from "react";
 import type { ReactNode } from "react";
 import { createMockNDK } from "../nostr/mocks";
 

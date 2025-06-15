@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Card } from "../ui/card";
 import { Terminal } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "../../lib/utils";
+import { Card } from "../ui/card";
 
 interface CommandData {
     type: "command_start" | "stdout" | "stderr" | "command_complete" | "command_error";
@@ -39,7 +40,7 @@ export function CommandExecutionCard({ projectId, conversationId }: CommandExecu
     // Subscribe to command execution events
     const { events } = useSubscribe([
         {
-            kinds: [24200 as any],
+            kinds: [24200 as NDKKind],
             "#a": [projectId],
             ...(conversationId ? { "#e": [conversationId] } : {}),
         },
@@ -69,10 +70,10 @@ export function CommandExecutionCard({ projectId, conversationId }: CommandExecu
                     // Update existing execution
                     setExecutions((prev) => {
                         const next = new Map(prev);
-                        
+
                         // Find the execution this event belongs to
                         let targetExec = null;
-                        
+
                         if (data.executionId) {
                             // Use executionId if available
                             targetExec = next.get(data.executionId);

@@ -10,29 +10,28 @@ const DEFAULT_RELAYS = [
     "wss://relay.nostr.band",
     "wss://nos.lol",
 ];
+import { Toaster } from "sonner";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import {
-    RootPage,
-    ProjectListPage,
-    ProjectDetailPage,
-    TaskUpdatesPage,
-    ProjectSettingsPage,
-    ChatInterfacePage,
-    DocumentationViewPage,
-    SettingsPageWrapper,
-    AgentsPageWrapper,
-    InstructionsPageWrapper,
     AgentRequestsPageWrapper,
+    AgentsPageWrapper,
+    ChatInterfacePage,
     ChatsPageWrapper,
     DocsPageWrapper,
+    DocumentationViewPage,
+    InstructionsPageWrapper,
+    ProjectDetailPage,
+    ProjectListPage,
+    ProjectSettingsPage,
+    RootPage,
+    SettingsPageWrapper,
+    TaskUpdatesPage,
 } from "./components/routes/RouteComponents";
 import { NavigationProvider } from "./contexts/NavigationContext";
 import { themeAtom } from "./lib/store";
-import { Toaster } from "sonner";
 
 function AppContent() {
-    console.log("AppContent rendering");
     const sessionStorage = useRef(new NDKSessionLocalStorage());
     const cache = useRef<NDKCacheSQLiteWASM | null>(null);
     const theme = useAtomValue(themeAtom);
@@ -109,7 +108,6 @@ function AppContent() {
 }
 
 function App() {
-    console.log("App rendering");
     return (
         <BrowserRouter>
             <AppContent />

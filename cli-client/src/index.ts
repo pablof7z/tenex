@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { Command } from "commander";
+import { logger } from "@tenex/shared";
 import { TenexCLI } from "./cli.js";
 
 const program = new Command();
@@ -22,7 +23,7 @@ program
     .command("help")
     .description("Show usage information")
     .action(() => {
-        console.log(`
+        logger.info(`
 🚀 TENEX CLI Client
 
 Usage:

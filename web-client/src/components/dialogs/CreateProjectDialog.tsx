@@ -118,13 +118,13 @@ export function CreateProjectDialog({
             }
 
             if (formData.selectedAgents && formData.selectedAgents.length > 0) {
-                formData.selectedAgents.forEach((agent) => {
+                for (const agent of formData.selectedAgents) {
                     project.tags.push(["agent", agent.id]);
-                });
+                }
             }
 
             if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
-                formData.selectedInstructions.forEach((instruction) => {
+                for (const instruction of formData.selectedInstructions) {
                     if (instruction.assignedAgents && instruction.assignedAgents.length > 0) {
                         // Add rule tag with agent names
                         project.tags.push(["rule", instruction.id, ...instruction.assignedAgents]);
@@ -132,7 +132,7 @@ export function CreateProjectDialog({
                         // Add rule tag for all agents
                         project.tags.push(["rule", instruction.id]);
                     }
-                });
+                }
             }
 
             // No need to sign explicitly - publish() will sign with the current user's key

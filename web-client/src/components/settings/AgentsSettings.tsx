@@ -49,11 +49,10 @@ export function AgentsSettings({ project, editedProject, onProjectChanged }: Age
 
     // Update projectAgents when agent events are loaded
     useEffect(() => {
-        const agents: ProjectAgent[] = agentIds
-            .map((id) => {
-                const agent = agentEvents.find((e) => e.id === id);
-                return { id, agent };
-            });
+        const agents: ProjectAgent[] = agentIds.map((id) => {
+            const agent = agentEvents.find((e) => e.id === id);
+            return { id, agent };
+        });
         setProjectAgents(agents);
     }, [agentEvents, agentIds]);
 
@@ -70,9 +69,9 @@ export function AgentsSettings({ project, editedProject, onProjectChanged }: Age
 
             // Update the edited project
             editedProject.tags = editedProject.tags.filter((tag) => tag[0] !== "agent");
-            updatedAgents.forEach((pa) => {
+            for (const pa of updatedAgents) {
                 editedProject.tags.push(["agent", pa.id]);
-            });
+            }
 
             onProjectChanged();
         }
@@ -85,9 +84,9 @@ export function AgentsSettings({ project, editedProject, onProjectChanged }: Age
 
         // Update the edited project
         editedProject.tags = editedProject.tags.filter((tag) => tag[0] !== "agent");
-        updatedAgents.forEach((pa) => {
+        for (const pa of updatedAgents) {
             editedProject.tags.push(["agent", pa.id]);
-        });
+        }
 
         onProjectChanged();
     };

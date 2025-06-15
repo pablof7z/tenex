@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { DesktopLayout } from "../DesktopLayout";
-import { ProjectList } from "../projects/ProjectList";
-import { BottomTabBar } from "../navigation/BottomTabBar";
 import { useNavigation } from "../../contexts/NavigationContext";
+import { DesktopLayout } from "../DesktopLayout";
+import { BottomTabBar } from "../navigation/BottomTabBar";
+import { ProjectList } from "../projects/ProjectList";
 
 export function ResponsiveLayout() {
     const [isDesktop, setIsDesktop] = useState(false);

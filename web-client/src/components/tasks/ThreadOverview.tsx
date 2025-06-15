@@ -2,6 +2,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Clock, MessageCircle, Users } from "lucide-react";
 import { useMemo } from "react";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 
 interface ThreadOverviewProps {
     thread: NDKEvent;
@@ -10,6 +11,8 @@ interface ThreadOverviewProps {
 }
 
 export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps) {
+    const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
+
     // Get thread title
     const getThreadTitle = () => {
         const titleTag = thread.tags?.find((tag) => tag[0] === "title")?.[1];
@@ -36,7 +39,9 @@ export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps
     const participants = useMemo(() => {
         const participantSet = new Set<string>();
         participantSet.add(thread.pubkey);
-        threadReplies.forEach((reply) => participantSet.add(reply.pubkey));
+        for (const reply of threadReplies) {
+            participantSet.add(reply.pubkey);
+        }
         return Array.from(participantSet);
     }, [thread.pubkey, threadReplies]);
 
@@ -55,21 +60,6 @@ export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps
         };
 
         return <span className="text-xs font-medium text-foreground">{getAuthorName()}</span>;
-    };
-
-    const formatRelativeTime = (timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return "now";
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     };
 
     // Determine thread activity level
@@ -97,6 +87,12 @@ export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps
         <div
             className={`bg-card p-3 border-b cursor-pointer transition-all hover:shadow-sm ${getActivityColor()}`}
             onClick={onClick}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onClick?.();
+                }
+            }}
         >
             <div className="flex items-start gap-3">
                 <div className="mt-0.5">

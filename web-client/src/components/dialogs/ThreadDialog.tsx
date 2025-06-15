@@ -70,9 +70,9 @@ export function ThreadDialog({ open, onOpenChange, project, onThreadStart }: Thr
 
                     {/* Agent Selection */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                        <div className="text-sm font-medium text-foreground">
                             Tag Agents (Optional)
-                        </label>
+                        </div>
                         <p className="text-xs text-muted-foreground mb-2">
                             Select agents to be notified of this thread
                         </p>

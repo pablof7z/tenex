@@ -42,12 +42,14 @@ export class NDKLLMRule extends NDKEvent {
     }
 
     get hashtags(): string[] {
-        return this.getMatchingTags("t").map((tag) => tag[1]).filter(Boolean) as string[];
+        return this.getMatchingTags("t")
+            .map((tag) => tag[1])
+            .filter(Boolean) as string[];
     }
 
     set hashtags(tags: string[]) {
         // Remove all existing t tags
-        this.tags = this.tags.filter(tag => tag[0] !== "t");
+        this.tags = this.tags.filter((tag) => tag[0] !== "t");
         // Add new t tags
         for (const tag of tags) {
             this.tags.push(["t", tag]);

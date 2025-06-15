@@ -1,8 +1,9 @@
+import type NDK from "@nostr-dev-kit/ndk";
+import { NDKEvent, type NDKFilter, NDKProject, NDKProjectTemplate } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { NDKEvent, type NDKFilter, NDKProject, NDKProjectTemplate } from "@nostr-dev-kit/ndk";
-import type { TenexNDK } from "./ndk-setup.js";
+import { logger } from "@tenex/shared";
 import { NDKAgent } from "./events/agent.js";
 import { NDKLLMRule } from "./events/instruction.js";
 
@@ -24,11 +25,11 @@ interface InstructionWithAgents extends NDKLLMRule {
 const TEMPLATE_KIND = 30717;
 
 export class ProjectCreator {
-    constructor(private ndk: TenexNDK) {}
+    constructor(private ndk: NDK) {}
 
     async create(): Promise<void> {
-        console.log(chalk.blue.bold("\n🚀 Create New TENEX Project"));
-        console.log(chalk.gray("Follow the steps to create your project\n"));
+        logger.info(chalk.blue.bold("\n🚀 Create New TENEX Project"));
+        logger.info(chalk.gray("Follow the steps to create your project\n"));
 
         const formData: ProjectFormData = {
             name: "",
@@ -55,7 +56,7 @@ export class ProjectCreator {
     }
 
     private async getProjectDetails(formData: ProjectFormData): Promise<void> {
-        console.log(chalk.yellow("\n📝 Step 1: Project Details"));
+        logger.info(chalk.yellow("\n📝 Step 1: Project Details"));
 
         const answers = await inquirer.prompt([
             {
@@ -94,7 +95,7 @@ export class ProjectCreator {
     }
 
     private async selectTemplate(formData: ProjectFormData): Promise<void> {
-        console.log(chalk.yellow("\n📋 Step 2: Choose Template (optional)"));
+        logger.info(chalk.yellow("\n📋 Step 2: Choose Template (optional)"));
 
         const { useTemplate } = await inquirer.prompt([
             {
@@ -111,16 +112,16 @@ export class ProjectCreator {
 
         try {
             const filters: NDKFilter[] = [{ kinds: [TEMPLATE_KIND], limit: 100 }];
-            const templateEvents = await this.ndk.ndk.fetchEvents(filters);
+            const templateEvents = await this.ndk.fetchEvents(filters);
             spinner.stop();
 
             if (templateEvents.size === 0) {
-                console.log(chalk.yellow("No templates found. Continuing without template."));
+                logger.info(chalk.yellow("No templates found. Continuing without template."));
                 return;
             }
 
             const templates = Array.from(templateEvents).map((event) => {
-                const template = new NDKProjectTemplate(this.ndk.ndk, event);
+                const template = new NDKProjectTemplate(this.ndk, event);
                 const title = template.tagValue("title") || "Untitled Template";
                 const description = template.tagValue("description") || "";
                 return {
@@ -141,22 +142,22 @@ export class ProjectCreator {
             formData.selectedTemplate = selectedTemplate;
         } catch (error) {
             spinner.fail(chalk.red("Failed to fetch templates"));
-            console.error(error);
+            logger.error(error);
         }
     }
 
     private async selectAgents(formData: ProjectFormData): Promise<void> {
-        console.log(chalk.yellow("\n🤖 Step 3: Select Agents"));
+        logger.info(chalk.yellow("\n🤖 Step 3: Select Agents"));
 
         const spinner = ora("Fetching available agents...").start();
 
         try {
             const filters: NDKFilter[] = [{ kinds: [NDKAgent.kind], limit: 100 }];
-            const agentEvents = await this.ndk.ndk.fetchEvents(filters);
+            const agentEvents = await this.ndk.fetchEvents(filters);
             spinner.stop();
 
             if (agentEvents.size === 0) {
-                console.log(chalk.yellow("No agents found. You can add agents later."));
+                logger.info(chalk.yellow("No agents found. You can add agents later."));
                 return;
             }
 
@@ -182,22 +183,22 @@ export class ProjectCreator {
             formData.selectedAgents = selectedAgents;
         } catch (error) {
             spinner.fail(chalk.red("Failed to fetch agents"));
-            console.error(error);
+            logger.error(error);
         }
     }
 
     private async selectInstructions(formData: ProjectFormData): Promise<void> {
-        console.log(chalk.yellow("\n📚 Step 4: Select Instructions"));
+        logger.info(chalk.yellow("\n📚 Step 4: Select Instructions"));
 
         const spinner = ora("Fetching available instructions...").start();
 
         try {
             const filters: NDKFilter[] = [{ kinds: [NDKLLMRule.kind], limit: 100 }];
-            const instructionEvents = await this.ndk.ndk.fetchEvents(filters);
+            const instructionEvents = await this.ndk.fetchEvents(filters);
             spinner.stop();
 
             if (instructionEvents.size === 0) {
-                console.log(chalk.yellow("No instructions found. You can add instructions later."));
+                logger.info(chalk.yellow("No instructions found. You can add instructions later."));
                 return;
             }
 
@@ -272,29 +273,29 @@ export class ProjectCreator {
             formData.selectedInstructions = instructionsWithAgents;
         } catch (error) {
             spinner.fail(chalk.red("Failed to fetch instructions"));
-            console.error(error);
+            logger.error(error);
         }
     }
 
     private async confirmAndCreate(formData: ProjectFormData): Promise<void> {
-        console.log(chalk.yellow("\n✅ Step 5: Confirm & Create"));
+        logger.info(chalk.yellow("\n✅ Step 5: Confirm & Create"));
 
         // Display summary
-        console.log(chalk.blue("\n📊 Project Summary:"));
-        console.log(`Name: ${chalk.white(formData.name)}`);
-        console.log(`Description: ${chalk.white(formData.description || "None")}`);
-        console.log(`Hashtags: ${chalk.white(formData.hashtags || "None")}`);
-        console.log(`Repository: ${chalk.white(formData.repoUrl || "None")}`);
-        console.log(`Image: ${chalk.white(formData.imageUrl || "None")}`);
+        logger.info(chalk.blue("\n📊 Project Summary:"));
+        logger.info(`Name: ${chalk.white(formData.name)}`);
+        logger.info(`Description: ${chalk.white(formData.description || "None")}`);
+        logger.info(`Hashtags: ${chalk.white(formData.hashtags || "None")}`);
+        logger.info(`Repository: ${chalk.white(formData.repoUrl || "None")}`);
+        logger.info(`Image: ${chalk.white(formData.imageUrl || "None")}`);
 
         if (formData.selectedTemplate) {
-            console.log(
+            logger.info(
                 `Template: ${chalk.white(formData.selectedTemplate.tagValue("title") || "Selected")}`
             );
         }
 
         if (formData.selectedAgents && formData.selectedAgents.length > 0) {
-            console.log(
+            logger.info(
                 `Agents (${formData.selectedAgents.length}): ${chalk.white(
                     formData.selectedAgents.map((a) => a.name).join(", ")
                 )}`
@@ -302,11 +303,9 @@ export class ProjectCreator {
         }
 
         if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
-            console.log(
+            logger.info(
                 `Instructions (${formData.selectedInstructions.length}): ${chalk.white(
-                    formData.selectedInstructions
-                        .map((i) => i.title || "Untitled")
-                        .join(", ")
+                    formData.selectedInstructions.map((i) => i.title || "Untitled").join(", ")
                 )}`
             );
         }
@@ -321,18 +320,19 @@ export class ProjectCreator {
         ]);
 
         if (!confirm) {
-            console.log(chalk.gray("Project creation cancelled."));
+            logger.info(chalk.gray("Project creation cancelled."));
             return;
         }
 
         const spinner = ora("Creating project...").start();
 
         try {
-            const project = new NDKProject(this.ndk.ndk);
+            const project = new NDKProject(this.ndk);
 
             // Set basic project properties
             project.title = formData.name.trim();
-            project.content = formData.description.trim() || `A new TENEX project: ${formData.name}`;
+            project.content =
+                formData.description.trim() || `A new TENEX project: ${formData.name}`;
 
             // Add hashtags
             if (formData.hashtags.trim()) {
@@ -381,11 +381,11 @@ export class ProjectCreator {
             await project.publish();
 
             spinner.succeed(chalk.green("Project created successfully!"));
-            console.log(chalk.gray(`\nProject ID: ${project.dTag}`));
-            console.log(chalk.gray(`NADDR: ${project.encode()}`));
+            logger.info(chalk.gray(`\nProject ID: ${project.dTag}`));
+            logger.info(chalk.gray(`NADDR: ${project.encode()}`));
         } catch (error) {
             spinner.fail(chalk.red("Failed to create project"));
-            console.error(error);
+            logger.error(error);
         }
     }
 }

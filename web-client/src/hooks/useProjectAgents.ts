@@ -38,14 +38,14 @@ export function useProjectAgents(projectTagId: string | undefined) {
 
         // Extract agents from p-tags
         const agentList: ProjectAgent[] = [];
-        latestEvent.tags.forEach((tag) => {
+        for (const tag of latestEvent.tags) {
             if (tag[0] === "p" && tag.length >= 3 && tag[1] && tag[2]) {
                 agentList.push({
                     pubkey: tag[1],
                     name: tag[2],
                 });
             }
-        });
+        }
 
         return agentList;
     }, [statusEvents]);

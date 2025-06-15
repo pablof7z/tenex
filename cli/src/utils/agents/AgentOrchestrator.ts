@@ -1,6 +1,7 @@
 import path from "node:path";
 import { type NDK, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { fileSystem, logger } from "@tenex/shared/node";
+import * as fileSystem from "@tenex/shared/fs";
+import { logger } from "@tenex/shared/node";
 import type { LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
 import type { ProjectInfo } from "../../commands/run/ProjectLoader";
 import { getAgentSigner } from "../agentManager";
@@ -114,6 +115,9 @@ export class AgentOrchestrator {
             this.toolManager.enableRememberLessonTool(name, agentEventId, this.ndk);
         }
 
+        // Enable find_agent tool for the default agent only
+        this.toolManager.enableFindAgentTool(name);
+
         return agent;
     }
 
@@ -141,6 +145,19 @@ export class AgentOrchestrator {
         }
 
         return agent;
+    }
+
+    /**
+     * Get agent by public key (synchronous version for already loaded agents)
+     */
+    getAgentByPubkeySync(pubkey: string): Agent | undefined {
+        // Check loaded agents only
+        for (const agent of this.agents.values()) {
+            if (agent.getPubkey() === pubkey) {
+                return agent;
+            }
+        }
+        return undefined;
     }
 
     /**

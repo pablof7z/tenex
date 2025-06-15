@@ -2,7 +2,7 @@
     "name": "tenex",
     "version": "1.0.0",
     "private": true,
-    "workspaces": ["packages/*", "cli", "web-client", "mcp", "shared", "tenexd"],
+    "workspaces": ["packages/*", "cli", "web-client", "mcp", "shared"],
     "scripts": {
         "build": "bun run build:types && bun run build:shared && bun run build:all",
         "build:types": "cd packages/types && bun run build",

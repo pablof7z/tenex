@@ -3,7 +3,16 @@ import type { NDKFilter } from "@nostr-dev-kit/ndk";
 /**
  * Matches an event against a filter
  */
-export function eventMatchesFilter(event: { kind?: number; pubkey?: string; id?: string; created_at?: number; tags?: Array<string[]> }, filter: NDKFilter): boolean {
+export function eventMatchesFilter(
+    event: {
+        kind?: number;
+        pubkey?: string;
+        id?: string;
+        created_at?: number;
+        tags?: Array<string[]>;
+    },
+    filter: NDKFilter
+): boolean {
     // Check kinds
     if (filter.kinds && !filter.kinds.includes(event.kind)) {
         return false;

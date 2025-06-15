@@ -597,9 +597,11 @@ export class AgentEventHandler {
                 );
 
                 // Only publish if agent has something meaningful to say
+                // OR if the response contains renderInChat data (e.g., agent discovery results)
                 if (
-                    !response.content.toLowerCase().includes("nothing to add") &&
-                    response.content.trim().length > 0
+                    response.renderInChat ||
+                    (!response.content.toLowerCase().includes("nothing to add") &&
+                        response.content.trim().length > 0)
                 ) {
                     // Add agent as participant in conversation
                     const conversation = agent.getConversation(conversationId);
@@ -781,7 +783,21 @@ export class AgentEventHandler {
         try {
             // Create reply event with proper reply tags
             const responseEvent = originalEvent.reply();
-            responseEvent.content = response.content;
+
+            // Check if we have renderInChat data
+            if (response.renderInChat) {
+                // For renderInChat responses, we encode the data in a special format
+                const renderData = {
+                    type: response.renderInChat.type,
+                    data: response.renderInChat.data,
+                    content: response.content, // Include original content
+                };
+                responseEvent.content = JSON.stringify(renderData);
+                // Add a tag to indicate this is a special render type
+                responseEvent.tags.push(["render-type", response.renderInChat.type]);
+            } else {
+                responseEvent.content = response.content;
+            }
 
             // Remove all p-tags that NDK's .reply() generated
             responseEvent.tags = responseEvent.tags.filter((tag) => tag[0] !== "p");

@@ -27,7 +27,10 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
                 <div className="space-y-8">
                     {/* Title */}
                     <div className="space-y-2">
-                        <label htmlFor="agent-name" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <label
+                            htmlFor="agent-name"
+                            className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                        >
                             <Bot className="w-4 h-4 text-blue-600" />
                             Agent Name
                             <span className="text-red-500">*</span>
@@ -43,7 +46,10 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <label htmlFor="agent-description" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <label
+                            htmlFor="agent-description"
+                            className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                        >
                             <FileText className="w-4 h-4 text-purple-600" />
                             Description
                         </label>
@@ -59,7 +65,10 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
 
                     {/* Role */}
                     <div className="space-y-2">
-                        <label htmlFor="agent-role" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <label
+                            htmlFor="agent-role"
+                            className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                        >
                             <User className="w-4 h-4 text-green-600" />
                             Role/Specialty
                         </label>
@@ -74,7 +83,10 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
 
                     {/* Tags */}
                     <div className="space-y-2">
-                        <label htmlFor="agent-tags" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <label
+                            htmlFor="agent-tags"
+                            className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                        >
                             <Tag className="w-4 h-4 text-orange-600" />
                             Tags
                         </label>
@@ -122,7 +134,10 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
 
                     {/* Instructions */}
                     <div className="space-y-2">
-                        <label htmlFor="agent-instructions" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <label
+                            htmlFor="agent-instructions"
+                            className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                        >
                             <Sparkles className="w-4 h-4 text-indigo-600" />
                             Detailed Instructions
                         </label>

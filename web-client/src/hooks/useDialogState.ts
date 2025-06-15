@@ -110,14 +110,17 @@ export function useFormDialogState<T extends Record<string, unknown>>(
     // Array field helpers
     const addToArrayField = useCallback(
         <K extends keyof T>(field: K, item: T[K] extends (infer U)[] ? U : never) => {
-            dialogState.updateField(field, [...(dialogState.data[field] as any[]), item] as T[K]);
+            dialogState.updateField(field, [
+                ...(dialogState.data[field] as unknown[]),
+                item,
+            ] as T[K]);
         },
         [dialogState]
     );
 
     const removeFromArrayField = useCallback(
         <K extends keyof T>(field: K, index: number) => {
-            const array = dialogState.data[field] as any[];
+            const array = dialogState.data[field] as unknown[];
             dialogState.updateField(field, array.filter((_, i) => i !== index) as T[K]);
         },
         [dialogState]
@@ -125,7 +128,7 @@ export function useFormDialogState<T extends Record<string, unknown>>(
 
     const removeFromArrayFieldByValue = useCallback(
         <K extends keyof T>(field: K, value: T[K] extends (infer U)[] ? U : never) => {
-            const array = dialogState.data[field] as any[];
+            const array = dialogState.data[field] as unknown[];
             dialogState.updateField(field, array.filter((item) => item !== value) as T[K]);
         },
         [dialogState]

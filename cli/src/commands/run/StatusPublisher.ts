@@ -4,9 +4,9 @@ import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logWarning } from "@tenex/shared/logger";
 import chalk from "chalk";
 import { formatError } from "../../utils/errors";
+import { fs } from "../../utils/fs";
 import type { ProjectInfo } from "./ProjectLoader";
 import { STATUS_INTERVAL_MS, STATUS_KIND } from "./constants";
-import { fs } from "../../utils/fs";
 
 export class StatusPublisher {
     private statusInterval?: NodeJS.Timeout;
@@ -60,9 +60,10 @@ export class StatusPublisher {
             const llmsContent = await fs.readFile(llmsPath, "utf-8");
             const llms = JSON.parse(llmsContent);
 
-            // Filter out the 'default' key and only return actual config names
+            // Filter out the 'default' key and return all config names
+            // Include both object configs and string references
             const configNames = Object.keys(llms).filter(
-                (name) => name !== "default" && llms[name] && typeof llms[name] === "object"
+                (name) => name !== "default" && llms[name] !== undefined && llms[name] !== null
             );
 
             return configNames;

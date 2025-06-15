@@ -1,4 +1,4 @@
-import type { NDK, NDKEvent, NDKUser, NDKSigner, NDKFilter } from "@nostr-dev-kit/ndk";
+import type { NDK, NDKEvent, NDKFilter, NDKSigner, NDKUser } from "@nostr-dev-kit/ndk";
 import { vi } from "vitest";
 
 /**

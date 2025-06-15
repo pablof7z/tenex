@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
-import { fileSystem, logError, logInfo } from "@tenex/shared/node";
+import * as fileSystem from "@tenex/shared/fs";
+import { logError, logInfo } from "@tenex/shared/node";
 
 export interface RuleMapping {
     ruleEventId: string;

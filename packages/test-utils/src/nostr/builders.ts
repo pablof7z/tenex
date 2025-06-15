@@ -57,16 +57,16 @@ export class EventBuilder {
     }
 
     build(): NostrEvent {
-        if (!this.event.id) this.event.id = "test-event-" + Math.random().toString(36).slice(2);
+        if (!this.event.id) this.event.id = `test-event-${Math.random().toString(36).slice(2)}`;
         if (!this.event.pubkey)
-            this.event.pubkey = "test-pubkey-" + Math.random().toString(36).slice(2);
+            this.event.pubkey = `test-pubkey-${Math.random().toString(36).slice(2)}`;
         if (this.event.kind === undefined) this.event.kind = 1;
-        if (!this.event.sig) this.event.sig = "test-sig-" + Math.random().toString(36).slice(2);
+        if (!this.event.sig) this.event.sig = `test-sig-${Math.random().toString(36).slice(2)}`;
 
         return this.event as NostrEvent;
     }
 
-    buildNDKEvent(ndk?: any): NDKEvent {
+    buildNDKEvent(ndk?: unknown): NDKEvent {
         const rawEvent = this.build();
         const ndkEvent = new NDKEvent(ndk);
         Object.assign(ndkEvent, rawEvent);

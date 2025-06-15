@@ -1,5 +1,5 @@
-import { memo } from "react";
 import { Bot, Check, ChevronDown, Eye, Users } from "lucide-react";
+import { memo } from "react";
 import type { NDKAgent } from "../../events/agent";
 import type { NDKLLMRule } from "../../types/template";
 import { ProfileDisplay } from "../ProfileDisplay";

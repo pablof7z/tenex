@@ -1,7 +1,8 @@
-import { memo } from "react";
 import type { NDKTask } from "@nostr-dev-kit/ndk";
-import { Circle } from "lucide-react";
 import { StringUtils, TaskUtils } from "@tenex/shared";
+import { Circle } from "lucide-react";
+import { memo } from "react";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { Card } from "../ui/card";
 
 interface TaskCardProps {
@@ -12,6 +13,8 @@ interface TaskCardProps {
 
 export const TaskCard = memo(
     function TaskCard({ task, onClick, className }: TaskCardProps) {
+        const { formatDateOnly } = useTimeFormat();
+
         // Get task title
         const getTaskTitle = () => {
             return TaskUtils.getTaskTitle(task);
@@ -54,8 +57,7 @@ export const TaskCard = memo(
                                 </span>
                             )}
                             <span className="text-muted-foreground">
-                                Created{" "}
-                                {new Date((task.created_at || 0) * 1000).toLocaleDateString()}
+                                Created {formatDateOnly(task.created_at || 0)}
                             </span>
                         </div>
                     </div>

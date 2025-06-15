@@ -1,5 +1,6 @@
 import path from "node:path";
-import { fileSystem, logger } from "@tenex/shared/node";
+import * as fileSystem from "@tenex/shared/fs";
+import { logger } from "@tenex/shared/node";
 import type { LLMConfigs } from "@tenex/types/llm";
 import type { LLMConfig } from "../types";
 

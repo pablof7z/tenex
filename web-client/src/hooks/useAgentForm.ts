@@ -1,7 +1,7 @@
-import { useCallback } from "react";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { useCallback } from "react";
 import { NDKAgent } from "../lib/ndk-setup";
-import { useFormDialogState, type FormValidators } from "./useDialogState";
+import { type FormValidators, useFormDialogState } from "./useDialogState";
 
 interface AgentFormData extends Record<string, unknown> {
     title: string;
@@ -22,10 +22,12 @@ const initialFormData: AgentFormData = {
 };
 
 const validators: FormValidators<AgentFormData> = {
-    title: (value) => (typeof value === 'string' && !value.trim() ? "Title is required" : null),
-    description: (value) => (typeof value === 'string' && !value.trim() ? "Description is required" : null),
-    role: (value) => (typeof value === 'string' && !value.trim() ? "Role is required" : null),
-    instructions: (value) => (typeof value === 'string' && !value.trim() ? "Instructions are required" : null),
+    title: (value) => (typeof value === "string" && !value.trim() ? "Title is required" : null),
+    description: (value) =>
+        typeof value === "string" && !value.trim() ? "Description is required" : null,
+    role: (value) => (typeof value === "string" && !value.trim() ? "Role is required" : null),
+    instructions: (value) =>
+        typeof value === "string" && !value.trim() ? "Instructions are required" : null,
 };
 
 export function useAgentForm() {
@@ -68,9 +70,9 @@ export function useAgentForm() {
             newAgent.content = formState.data.instructions;
 
             // Add technology tags
-            formState.data.tags.forEach((tag) => {
+            for (const tag of formState.data.tags) {
                 newAgent.tags.push(["t", tag]);
-            });
+            }
 
             if (!isCreatingNew && selectedAgent) {
                 // When editing, increment version

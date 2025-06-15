@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Mock } from "bun:test";
 import { ToolEnabledProvider } from "../../llm/ToolEnabledProvider";
-import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, LLMConfig, ProviderTool } from "../../llm/types";
+import type {
+    LLMConfig,
+    LLMContext,
+    LLMMessage,
+    LLMProvider,
+    LLMResponse,
+    ProviderTool,
+} from "../../llm/types";
 import { ToolRegistry } from "../ToolRegistry";
 import type { ToolDefinition, ToolResult } from "../types";
 
 type MockedLLMProvider = {
-    generateResponse: Mock<(
-        messages: LLMMessage[],
-        config: LLMConfig,
-        context?: LLMContext,
-        tools?: ProviderTool[]
-    ) => Promise<LLMResponse>>;
+    generateResponse: Mock<
+        (
+            messages: LLMMessage[],
+            config: LLMConfig,
+            context?: LLMContext,
+            tools?: ProviderTool[]
+        ) => Promise<LLMResponse>
+    >;
 };
 
 // Mock LLM Provider
@@ -47,7 +56,11 @@ describe("ToolEnabledProvider", () => {
     beforeEach(() => {
         mockProvider = createMockProvider();
         toolRegistry = new ToolRegistry();
-        toolEnabledProvider = new ToolEnabledProvider(mockProvider as LLMProvider, toolRegistry, "openrouter");
+        toolEnabledProvider = new ToolEnabledProvider(
+            mockProvider as LLMProvider,
+            toolRegistry,
+            "openrouter"
+        );
     });
 
     describe("generateResponse with text-based tool calls", () => {

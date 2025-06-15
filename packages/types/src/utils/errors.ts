@@ -9,7 +9,7 @@ export class TenexError extends Error {
     constructor(
         message: string,
         public code: string,
-        public context?: any,
+        public context?: unknown,
         public cause?: Error
     ) {
         super(message);
@@ -21,28 +21,28 @@ export class TenexError extends Error {
  * Specific error types
  */
 export class AgentError extends TenexError {
-    constructor(message: string, code: string, context?: any) {
+    constructor(message: string, code: string, context?: unknown) {
         super(message, code, context);
         this.name = "AgentError";
     }
 }
 
 export class ConfigurationError extends TenexError {
-    constructor(message: string, code: string, context?: any) {
+    constructor(message: string, code: string, context?: unknown) {
         super(message, code, context);
         this.name = "ConfigurationError";
     }
 }
 
 export class NostrError extends TenexError {
-    constructor(message: string, code: string, context?: any) {
+    constructor(message: string, code: string, context?: unknown) {
         super(message, code, context);
         this.name = "NostrError";
     }
 }
 
 export class ToolExecutionError extends TenexError {
-    constructor(message: string, code: string, context?: any) {
+    constructor(message: string, code: string, context?: unknown) {
         super(message, code, context);
         this.name = "ToolExecutionError";
     }

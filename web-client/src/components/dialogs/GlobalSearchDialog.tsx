@@ -1,5 +1,5 @@
-import { NDKProject, NDKTask, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKProject, NDKTask, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { FileText, FolderOpen, MessageCircle, Search, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -66,13 +66,13 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
     );
 
     // Helper functions
-    const getTaskTitle = (task: NDKTask) => {
+    const getTaskTitle = useCallback((task: NDKTask) => {
         const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
         if (titleTag) return titleTag;
 
         const firstLine = task.content?.split("\n")[0] || "Untitled Task";
         return firstLine.length > 40 ? `${firstLine.slice(0, 40)}...` : firstLine;
-    };
+    }, []);
 
     const getProjectForTask = useCallback(
         (task: NDKTask) => {
@@ -212,6 +212,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                                                         key={project.tagId()}
                                                         onClick={() => handleProjectClick(project)}
                                                         className="w-full p-3 bg-card hover:bg-accent rounded-lg transition-colors text-left"
+                                                        type="button"
                                                     >
                                                         <div className="flex items-start gap-3">
                                                             <FolderOpen className="w-4 h-4 text-muted-foreground mt-0.5" />
@@ -250,6 +251,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                                                             key={task.id}
                                                             onClick={() => handleTaskClick(task)}
                                                             className="w-full p-3 bg-card hover:bg-accent rounded-lg transition-colors text-left"
+                                                            type="button"
                                                         >
                                                             <div className="flex items-start gap-3">
                                                                 <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
@@ -298,6 +300,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                                                                 handleUpdateClick(update)
                                                             }
                                                             className="w-full p-3 bg-card hover:bg-accent rounded-lg transition-colors text-left"
+                                                            type="button"
                                                         >
                                                             <div className="flex items-start gap-3">
                                                                 <MessageCircle className="w-4 h-4 text-muted-foreground mt-0.5" />

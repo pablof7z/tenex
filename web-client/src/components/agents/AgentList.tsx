@@ -40,22 +40,15 @@ export function AgentList({
                                 agent.description || `${agent.content?.slice(0, 100)}...`;
 
                             return (
-                                <div
+                                <button
                                     key={agent.id}
-                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                    className={`p-3 rounded-lg cursor-pointer transition-colors w-full text-left ${
                                         selectedAgent?.id === agent.id
                                             ? "bg-primary/10 border border-primary/20"
                                             : "hover:bg-accent"
                                     }`}
                                     onClick={() => onAgentSelect(agent)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            onAgentSelect(agent);
-                                        }
-                                    }}
-                                    role="button"
-                                    tabIndex={0}
+                                    type="button"
                                 >
                                     <div className="flex items-center justify-between mb-1">
                                         <h3 className="font-medium text-sm text-foreground">
@@ -70,7 +63,7 @@ export function AgentList({
                                             {description}
                                         </p>
                                     )}
-                                </div>
+                                </button>
                             );
                         })}
                     </div>

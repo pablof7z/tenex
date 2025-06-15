@@ -5,6 +5,7 @@ import { FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useProject } from "../hooks/useProject";
+import { useTimeFormat } from "../hooks/useTimeFormat";
 import { EmptyState } from "./common/EmptyState";
 import { LoadingState } from "./common/LoadingState";
 import { Button } from "./ui/button";
@@ -30,6 +31,7 @@ export function DocsPage({ onBack }: DocsPageProps) {
     const { projectId } = useParams();
     const project = useProject(projectId);
     const [selectedDoc, setSelectedDoc] = useState<SpecDocument | null>(null);
+    const { formatAbsoluteTime } = useTimeFormat();
 
     // First, fetch the default agent event to get its pubkey
     const agentFilter = useMemo(() => {
@@ -183,9 +185,7 @@ export function DocsPage({ onBack }: DocsPageProps) {
                                                         </div>
                                                         <div className="text-xs text-muted-foreground">
                                                             Published{" "}
-                                                            {new Date(
-                                                                doc.publishedAt * 1000
-                                                            ).toLocaleString()}
+                                                            {formatAbsoluteTime(doc.publishedAt)}
                                                         </div>
                                                     </div>
                                                 </HoverCardContent>

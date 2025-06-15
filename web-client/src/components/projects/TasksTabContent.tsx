@@ -1,4 +1,4 @@
-import type { NDKTask, NDKProject } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../ui/button";

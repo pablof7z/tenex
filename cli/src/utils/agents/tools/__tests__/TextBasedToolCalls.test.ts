@@ -1,18 +1,27 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Mock } from "bun:test";
 import { ToolEnabledProvider } from "../../llm/ToolEnabledProvider";
-import type { LLMProvider, LLMResponse, LLMMessage, LLMConfig, LLMContext, ProviderTool } from "../../llm/types";
+import type {
+    LLMConfig,
+    LLMContext,
+    LLMMessage,
+    LLMProvider,
+    LLMResponse,
+    ProviderTool,
+} from "../../llm/types";
 import { ToolParser } from "../ToolParser";
 import { ToolRegistry } from "../ToolRegistry";
 import type { ToolDefinition } from "../types";
 
 type MockedLLMProvider = {
-    generateResponse: Mock<(
-        messages: LLMMessage[],
-        config: LLMConfig,
-        context?: LLMContext,
-        tools?: ProviderTool[]
-    ) => Promise<LLMResponse>>;
+    generateResponse: Mock<
+        (
+            messages: LLMMessage[],
+            config: LLMConfig,
+            context?: LLMContext,
+            tools?: ProviderTool[]
+        ) => Promise<LLMResponse>
+    >;
 };
 
 describe("Text-based Tool Call Handling", () => {
@@ -67,7 +76,11 @@ After tool call.`;
         beforeEach(() => {
             mockProvider = { generateResponse: mock() };
             toolRegistry = new ToolRegistry();
-            toolEnabledProvider = new ToolEnabledProvider(mockProvider as LLMProvider, toolRegistry, "openrouter");
+            toolEnabledProvider = new ToolEnabledProvider(
+                mockProvider as LLMProvider,
+                toolRegistry,
+                "openrouter"
+            );
         });
 
         test("should properly identify and handle text-based tool calls", async () => {

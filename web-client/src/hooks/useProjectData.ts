@@ -80,13 +80,13 @@ export function useProjectData(project: NDKProject | null) {
         const unreadMap = new Map<string, number>();
         const seenUpdates = JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
 
-        statusUpdates.forEach((update) => {
+        for (const update of statusUpdates) {
             const taskId = update.tags?.find((tag) => tag[0] === "e" && tag[3] === "task")?.[1];
             if (taskId && !seenUpdates[update.id]) {
                 const currentUnread = unreadMap.get(taskId) || 0;
                 unreadMap.set(taskId, currentUnread + 1);
             }
-        });
+        }
 
         return unreadMap;
     }, [statusUpdates]);
@@ -96,13 +96,13 @@ export function useProjectData(project: NDKProject | null) {
         const unreadMap = new Map<string, number>();
         const seenThreadReplies = JSON.parse(localStorage.getItem("seenThreadReplies") || "{}");
 
-        threadReplies.forEach((reply) => {
+        for (const reply of threadReplies) {
             const threadId = reply.tags?.find((tag) => tag[0] === "e")?.[1];
             if (threadId && !seenThreadReplies[reply.id]) {
                 const currentUnread = unreadMap.get(threadId) || 0;
                 unreadMap.set(threadId, currentUnread + 1);
             }
-        });
+        }
 
         return unreadMap;
     }, [threadReplies]);
@@ -111,7 +111,7 @@ export function useProjectData(project: NDKProject | null) {
     const threadRecentMessages = useMemo(() => {
         const recentMap = new Map<string, { content: string; timestamp: number }>();
 
-        threadReplies.forEach((reply) => {
+        for (const reply of threadReplies) {
             const threadId = reply.tags?.find((tag) => tag[0] === "e")?.[1];
             if (threadId && reply.created_at) {
                 const existing = recentMap.get(threadId);
@@ -122,7 +122,7 @@ export function useProjectData(project: NDKProject | null) {
                     });
                 }
             }
-        });
+        }
 
         return recentMap;
     }, [threadReplies]);

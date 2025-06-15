@@ -1,21 +1,21 @@
-import { useParams, useLocation } from "react-router-dom";
-import { ProjectList } from "../projects/ProjectList";
-import { ProjectDetail } from "../projects/ProjectDetail";
-import { TaskUpdates } from "../tasks/TaskUpdates";
-import { ProjectSettings } from "../ProjectSettings";
-import { ChatInterface } from "../ChatInterface";
-import { DocumentationView } from "../documentation/DocumentationView";
-import { SettingsPage } from "../SettingsPage";
-import { AgentsPage } from "../AgentsPage";
-import { InstructionsPage } from "../InstructionsPage";
-import { AgentRequestsPage } from "../AgentRequestsPage";
-import { ChatsPage } from "../ChatsPage";
-import { DocsPage } from "../DocsPage";
-import { DesktopLayout } from "../DesktopLayout";
-import { ResponsiveLayout } from "../layout/ResponsiveLayout";
-import { useProject } from "../../hooks/useProject";
-import { useArticle } from "../../hooks/useArticle";
+import { useLocation, useParams } from "react-router-dom";
 import { useNavigation } from "../../contexts/NavigationContext";
+import { useArticle } from "../../hooks/useArticle";
+import { useProject } from "../../hooks/useProject";
+import { AgentRequestsPage } from "../AgentRequestsPage";
+import { AgentsPage } from "../AgentsPage";
+import { ChatInterface } from "../ChatInterface";
+import { ChatsPage } from "../ChatsPage";
+import { DesktopLayout } from "../DesktopLayout";
+import { DocsPage } from "../DocsPage";
+import { InstructionsPage } from "../InstructionsPage";
+import { ProjectSettings } from "../ProjectSettings";
+import { SettingsPage } from "../SettingsPage";
+import { DocumentationView } from "../documentation/DocumentationView";
+import { ResponsiveLayout } from "../layout/ResponsiveLayout";
+import { ProjectDetail } from "../projects/ProjectDetail";
+import { ProjectList } from "../projects/ProjectList";
+import { TaskUpdates } from "../tasks/TaskUpdates";
 
 // Loading component
 function LoadingScreen() {

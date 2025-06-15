@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Mock } from "bun:test";
 import { ToolEnabledProvider } from "../../llm/ToolEnabledProvider";
-import type { LLMMessage, LLMProvider, LLMResponse, LLMConfig, LLMContext, ProviderTool } from "../../llm/types";
+import type {
+    LLMConfig,
+    LLMContext,
+    LLMMessage,
+    LLMProvider,
+    LLMResponse,
+    ProviderTool,
+} from "../../llm/types";
 import { ToolRegistry } from "../ToolRegistry";
 import type { ToolDefinition } from "../types";
 
 type MockedLLMProvider = {
-    generateResponse: Mock<(
-        messages: LLMMessage[],
-        config: LLMConfig,
-        context?: LLMContext,
-        tools?: ProviderTool[]
-    ) => Promise<LLMResponse>>;
+    generateResponse: Mock<
+        (
+            messages: LLMMessage[],
+            config: LLMConfig,
+            context?: LLMContext,
+            tools?: ProviderTool[]
+        ) => Promise<LLMResponse>
+    >;
 };
 
 describe("Tool Execution Integration", () => {
@@ -24,7 +33,11 @@ describe("Tool Execution Integration", () => {
             generateResponse: mock(),
         };
         toolRegistry = new ToolRegistry();
-        toolEnabledProvider = new ToolEnabledProvider(mockProvider as LLMProvider, toolRegistry, "openrouter");
+        toolEnabledProvider = new ToolEnabledProvider(
+            mockProvider as LLMProvider,
+            toolRegistry,
+            "openrouter"
+        );
     });
 
     describe("Text-based tool call execution (like deepseek)", () => {

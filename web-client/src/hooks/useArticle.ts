@@ -16,7 +16,8 @@ export function useArticle(articleIdOrNaddr?: string): NDKArticle | null {
                 if (decoded.type === "note") {
                     // It's an event ID
                     return [{ ids: [decoded.data], kinds: [30023] }];
-                } else if (decoded.type === "nevent") {
+                }
+                if (decoded.type === "nevent") {
                     // It's an nevent
                     return [{ ids: [decoded.data.id], kinds: [30023] }];
                 }

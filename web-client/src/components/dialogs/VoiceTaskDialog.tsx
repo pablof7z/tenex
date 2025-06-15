@@ -35,8 +35,7 @@ export function VoiceTaskDialog({
         if (open && !isRecording && !isTranscribing) {
             startRecording();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open]);
+    }, [open, isRecording, isTranscribing]);
 
     const startRecording = async () => {
         try {
@@ -65,7 +64,9 @@ export function VoiceTaskDialog({
                 const audioBlob = new Blob(audioChunksRef.current, {
                     type: "audio/wav",
                 });
-                stream.getTracks().forEach((track) => track.stop());
+                for (const track of stream.getTracks()) {
+                    track.stop();
+                }
                 transcribeAudio(audioBlob);
             };
 

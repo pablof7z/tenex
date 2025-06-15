@@ -112,7 +112,7 @@ export const LocalStorageUtils = {
                 localStorage.removeItem(storageKey);
             },
         };
-    }
+    },
 
     /**
      * Secure storage for API keys and sensitive data
@@ -135,15 +135,12 @@ export const LocalStorageUtils = {
                 return localStorage.getItem(storageKey) !== null;
             },
         };
-    }
+    },
 
     /**
      * Type-safe preferences storage
      */
-    createPreferencesStorage<T extends Record<string, unknown>>(
-        storageKey: string,
-        defaults: T
-    ) {
+    createPreferencesStorage<T extends Record<string, unknown>>(storageKey: string, defaults: T) {
         return {
             get(): T {
                 try {

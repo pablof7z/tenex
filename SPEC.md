@@ -16,7 +16,7 @@ The system has evolved into a sophisticated multi-agent orchestration platform f
 
 ## System Architecture
 
-TENEX consists of five interconnected components that work together:
+TENEX consists of four interconnected components that work together:
 
 ### 1. Web Client (`web-client/`)
 
@@ -222,7 +222,7 @@ Any Event (from whitelisted pubkey) → tenexd receives
 Projects maintain context through:
 
 - **`.tenex/agents.json`**: Maps agent names to their nsec keys
-- **`.tenex/llms.json`**: Contains LLM configurations for the project
+- **`.tenex/llms.json`**: Contains LLM configurations for the project (auto-created by daemon when needed)
 - **`.tenex/agents/` directory**: Agent-specific configurations from NDKAgent events
   - During initialization: Automatically fetches and saves all agent definitions referenced in project's "agent" tags
   - File format: `{agent-event-id}.json` containing agent metadata (name, description, role, instructions, version)
@@ -419,6 +419,24 @@ When extending TENEX:
 
 ## Current Implementation Details
 
+### Unified CLI Architecture
+
+The CLI now provides a unified interface combining daemon and project management:
+
+**Core Commands**:
+- `tenex daemon` - Starts the event monitoring daemon
+  - Monitors Nostr events from whitelisted pubkeys
+  - Automatically spawns `tenex project run` for active projects
+  - Manages project initialization when needed
+- `tenex project init <path> <naddr>` - Initializes a new project
+- `tenex project run` - Runs the agent orchestration system for a project
+
+**Architecture Benefits**:
+- Single installation and distribution
+- Shared code for project management and Nostr connections
+- Clean separation of concerns with dependency injection
+- Comprehensive testing at all levels (unit, integration, e2e)
+
 ### Project Creation
 - Uses `tenex project init <path> <naddr>` command
 - Initializes `.tenex/` directory structure:
@@ -474,8 +492,10 @@ When extending TENEX:
 - **Nostr Protocol**: All communication must flow through Nostr
 - **Local First**: Projects work offline, sync when connected
 - **Git Integration**: All code changes tracked with meaningful context
+- **Class-Based NDK Wrappers**: Always use NDKAgent and other NDKEvent-extending classes
+- **Testability**: All core components use dependency injection for comprehensive testing
 
 ---
 
-*Last Updated: January 12, 2025*
-*Version: 4.0.0*
+*Last Updated: January 2025*
+*Version: 4.1.0*

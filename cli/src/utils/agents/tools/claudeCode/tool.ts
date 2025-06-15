@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import chalk from "chalk";
+import { logDebug, logError, logInfo } from "@tenex/shared/logger";
 import type { ToolContext, ToolDefinition } from "../types";
 import { ClaudeCodeOutputParser } from "./parser";
 import type { ClaudeCodeOptions } from "./types";
@@ -20,8 +21,8 @@ export const claudeCodeTool: ToolDefinition = {
     execute: async (params, toolContext?: ToolContext) => {
         const { prompt } = params;
 
-        console.log(chalk.blue("\n🚀 Starting Claude Code..."));
-        console.log(chalk.gray(`Prompt: "${prompt.substring(0, 100)}..."`));
+        logInfo(chalk.blue("\n🚀 Starting Claude Code..."));
+        logDebug(chalk.gray(`Prompt: "${prompt.substring(0, 100)}..."`));
 
         try {
             const result = await executeClaudeCode(
@@ -61,12 +62,13 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
         ];
 
         // Show the actual command being run
-        console.log(
-            chalk.gray("Command:"),
-            `claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`
+        logDebug(
+            chalk.gray("Command:") +
+                " " +
+                `claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`
         );
-        console.log(chalk.gray("Working directory:"), options.projectPath || process.cwd());
-        console.log(chalk.yellow("\nExecuting Claude Code...\n"));
+        logDebug(chalk.gray("Working directory:") + " " + (options.projectPath || process.cwd()));
+        logInfo(chalk.yellow("\nExecuting Claude Code...\n"));
 
         const claudeProcess = spawn("claude", args, {
             cwd: options.projectPath || process.cwd(),
@@ -74,7 +76,7 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
             stdio: ["ignore", "pipe", "inherit"], // ignore stdin, pipe stdout, inherit stderr
         });
 
-        console.log(chalk.gray("Claude process PID:"), claudeProcess.pid);
+        logDebug(chalk.gray("Claude process PID:") + " " + claudeProcess.pid);
 
         const parser = new ClaudeCodeOutputParser(toolContext);
         let finalResult = "";
@@ -122,12 +124,10 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
         });
 
         claudeProcess.on("error", (error) => {
-            console.error(chalk.red("Failed to start Claude Code:"), error.message);
+            logError(chalk.red("Failed to start Claude Code:") + " " + error.message);
             if (error.message.includes("ENOENT")) {
-                console.error(chalk.yellow("\nMake sure Claude CLI is installed and in your PATH"));
-                console.error(
-                    chalk.yellow("Install with: npm install -g @anthropic-ai/claude-cli")
-                );
+                logError(chalk.yellow("\nMake sure Claude CLI is installed and in your PATH"));
+                logError(chalk.yellow("Install with: npm install -g @anthropic-ai/claude-cli"));
             }
             reject(new Error(`Failed to start Claude Code: ${error.message}`));
         });

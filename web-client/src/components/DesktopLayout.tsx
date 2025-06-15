@@ -8,8 +8,8 @@ import {
 } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom, useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
-import type { ProjectAgent } from "../hooks/useProjectAgents";
 import { useNavigation } from "../contexts/NavigationContext";
+import type { ProjectAgent } from "../hooks/useProjectAgents";
 import {
     onlineProjectsAtom,
     selectedProjectAtom,

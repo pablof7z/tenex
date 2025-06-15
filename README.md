@@ -8,6 +8,8 @@ If LLMs represent a paradigm-shift in software development, is the text editor s
 
 TENEX is what a code editor might look like if we assume that code is no longer the main point of contact with the software being built, but rather, *context* is most crucial building block to manage.
 
+The point of TENEX is that human time is sacred; whenever a human must intervine, it means the system failed. As such, we want to 
+
 ## Features
 
 TENEX revolutionizes software development by putting context at the center of the development experience. Here's what makes it powerful:

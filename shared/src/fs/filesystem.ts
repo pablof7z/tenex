@@ -3,8 +3,8 @@ import type { Stats } from "node:fs";
 import * as fsPromises from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { logError } from "../logger.js";
 import { getErrorMessage } from "@tenex/types/utils";
+import { logError } from "../logger.js";
 
 /**
  * Unified file system utilities combining patterns from CLI and shared packages

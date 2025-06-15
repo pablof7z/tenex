@@ -1,4 +1,4 @@
-import { renderHook, type RenderHookOptions } from "@testing-library/react";
+import { type RenderHookOptions, renderHook } from "@testing-library/react";
 import { createWrapper } from "./providers";
 
 /**
@@ -26,7 +26,10 @@ export const hookTestScenarios = {
     /**
      * Tests loading states
      */
-    async testLoadingStates(result: { current: unknown; waitForNextUpdate: () => Promise<void> }, expectedStates: unknown[]) {
+    async testLoadingStates(
+        result: { current: unknown; waitForNextUpdate: () => Promise<void> },
+        expectedStates: unknown[]
+    ) {
         const states: unknown[] = [];
 
         // Capture initial state

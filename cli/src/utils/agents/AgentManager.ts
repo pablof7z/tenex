@@ -69,14 +69,27 @@ export class AgentManager {
     }
 
     async initialize(): Promise<void> {
-        // Initialize conversation storage
-        await this.conversationStorage.initialize();
+        try {
+            // Initialize conversation storage
+            await this.conversationStorage.initialize();
 
-        // Initialize configuration manager
-        await this.configManager.initialize();
+            // Initialize configuration manager
+            await this.configManager.initialize();
 
-        // Initialize orchestrator (loads agents)
-        await this.orchestrator.initialize();
+            // Log configuration state after initialization
+            logger.debug(
+                `After initialization - LLM configs: ${Array.from(this.configManager.getAllLLMConfigs().keys()).join(", ")}`
+            );
+            logger.debug(
+                `After initialization - Default LLM: ${this.configManager.getDefaultLLMName()}`
+            );
+
+            // Initialize orchestrator (loads agents)
+            await this.orchestrator.initialize();
+        } catch (error) {
+            logger.error("Failed to initialize AgentManager:", error);
+            throw error;
+        }
 
         // Update event handler with loaded agents
         this.eventHandler.updateAgentsMap(this.orchestrator.getAllAgents());
@@ -97,6 +110,14 @@ export class AgentManager {
 
     getAllLLMConfigs(): Map<string, LLMConfig> {
         return this.configManager.getAllLLMConfigs();
+    }
+
+    async updateAgentLLMConfig(agentName: string, newConfigName: string): Promise<boolean> {
+        return this.configManager.updateAgentLLMConfig(agentName, newConfigName);
+    }
+
+    getAgentByPubkeySync(pubkey: string): Agent | undefined {
+        return this.orchestrator.getAgentByPubkeySync(pubkey);
     }
 
     // Delegate agent management methods to orchestrator

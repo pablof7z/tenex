@@ -1,19 +1,21 @@
+import type NDK from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { TenexNDK } from "./ndk-setup.js";
+import { logger } from "@tenex/shared";
 import { TenexChat } from "./chat.js";
-import type { TenexProject, TypingIndicator } from "./types.js";
 import { ProjectCreator } from "./create-project.js";
+import { getNDK, shutdownNDK } from "./ndk-setup.js";
+import type { TenexProject, TypingIndicator } from "./types.js";
 
 export class TenexCLI {
-    private ndk?: TenexNDK;
+    private ndk?: NDK;
     private chat?: TenexChat;
     private project?: TenexProject;
 
     async start(): Promise<void> {
-        console.log(chalk.blue.bold("🚀 TENEX CLI Client"));
-        console.log(chalk.gray("Connect to TENEX projects via CLI\n"));
+        logger.info(chalk.blue.bold("🚀 TENEX CLI Client"));
+        logger.info(chalk.gray("Connect to TENEX projects via CLI\n"));
 
         await this.authenticate();
         await this.selectMode();
@@ -23,25 +25,24 @@ export class TenexCLI {
         const nsec = process.env.NSEC;
 
         if (!nsec) {
-            console.log(chalk.red("❌ NSEC environment variable not found"));
-            console.log(chalk.gray("Please set your NSEC: export NSEC=nsec1..."));
+            logger.error("❌ NSEC environment variable not found");
+            logger.info(chalk.gray("Please set your NSEC: export NSEC=nsec1..."));
             process.exit(1);
         }
 
         const spinner = ora("Connecting to Nostr network...").start();
 
         try {
-            this.ndk = new TenexNDK({ nsec });
-            await this.ndk.connect();
+            this.ndk = await getNDK({ nsec });
             spinner.succeed(chalk.green("Connected to Nostr network"));
 
-            const user = this.ndk.getCurrentUser();
+            const user = this.ndk.activeUser;
             if (user) {
-                console.log(chalk.gray(`Authenticated as: ${user.npub}`));
+                logger.info(chalk.gray(`Authenticated as: ${user.npub}`));
             }
         } catch (error) {
             spinner.fail(chalk.red("Failed to connect to Nostr"));
-            console.error(error);
+            logger.error(error);
             process.exit(1);
         }
     }
@@ -73,7 +74,7 @@ export class TenexCLI {
                 break;
             }
             case "exit":
-                console.log(chalk.gray("👋 Goodbye!"));
+                logger.info(chalk.gray("👋 Goodbye!"));
                 await this.ndk?.disconnect();
                 process.exit(0);
         }
@@ -120,7 +121,7 @@ export class TenexCLI {
             await this.chat.discoverAgents();
         } catch (error) {
             spinner.fail(chalk.red("Failed to connect to project"));
-            console.error(error);
+            logger.error(error);
             process.exit(1);
         }
     }
@@ -129,7 +130,7 @@ export class TenexCLI {
         const agents = this.chat!.getSession().agents;
 
         if (agents.length === 0) {
-            console.log(chalk.yellow("⚠️  No agents discovered. Continuing anyway..."));
+            logger.info(chalk.yellow("⚠️  No agents discovered. Continuing anyway..."));
         }
 
         while (true) {
@@ -162,7 +163,7 @@ export class TenexCLI {
                     this.showSession();
                     break;
                 case "exit":
-                    console.log(chalk.gray("👋 Goodbye!"));
+                    logger.info(chalk.gray("👋 Goodbye!"));
                     await this.ndk?.disconnect();
                     process.exit(0);
             }
@@ -196,13 +197,13 @@ export class TenexCLI {
             spinner.succeed(chalk.green(`Thread created: ${title}`));
 
             if (mentionedAgents.length > 0) {
-                console.log(chalk.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
+                logger.info(chalk.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
             }
 
             await this.startListening(threadEvent.id);
         } catch (error) {
             spinner.fail(chalk.red("Failed to create thread"));
-            console.error(error);
+            logger.error(error);
         }
     }
 
@@ -224,17 +225,17 @@ export class TenexCLI {
             spinner.succeed(chalk.green("Reply sent"));
 
             if (mentionedAgents.length > 0) {
-                console.log(chalk.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
+                logger.info(chalk.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
             }
         } catch (error) {
             spinner.fail(chalk.red("Failed to send reply"));
-            console.error(error);
+            logger.error(error);
         }
     }
 
     private async startListening(threadId: string): Promise<void> {
-        console.log(chalk.blue("\n👂 Listening for responses..."));
-        console.log(chalk.gray("Press Ctrl+C to stop listening\n"));
+        logger.info(chalk.blue("\n👂 Listening for responses..."));
+        logger.info(chalk.gray("Press Ctrl+C to stop listening\n"));
 
         await this.chat!.subscribeToThread(threadId, (event) => {
             const timestamp = new Date(event.created_at! * 1000).toLocaleTimeString();
@@ -242,8 +243,8 @@ export class TenexCLI {
                 this.chat!.getSession().agents.find((a) => a.pubkey === event.pubkey)?.name ||
                 "Unknown";
 
-            console.log(chalk.green(`\n[${timestamp}] ${agentName}:`));
-            console.log(event.content);
+            logger.info(chalk.green(`\n[${timestamp}] ${agentName}:`));
+            logger.info(event.content);
         });
 
         await this.chat!.subscribeToTypingIndicators(threadId, (indicator: TypingIndicator) => {
@@ -256,14 +257,14 @@ export class TenexCLI {
                     );
                 }
 
-                console.log(typingMsg);
+                logger.info(typingMsg);
             } else {
-                console.log(chalk.gray(`✋ ${indicator.agentName} stopped typing`));
+                logger.info(chalk.gray(`✋ ${indicator.agentName} stopped typing`));
             }
         });
 
         process.on("SIGINT", () => {
-            console.log(chalk.gray("\n👋 Stopped listening"));
+            logger.info(chalk.gray("\n👋 Stopped listening"));
             process.exit(0);
         });
     }
@@ -271,25 +272,25 @@ export class TenexCLI {
     private showSession(): void {
         const session = this.chat!.getSession();
 
-        console.log(chalk.blue("\n📋 Current Session"));
-        console.log(chalk.gray("=".repeat(50)));
-        console.log(`Project: ${session.project.title || session.project.identifier}`);
-        console.log(`NADDR: ${session.project.naddr}`);
-        console.log(`Agents: ${session.agents.map((a) => a.name).join(", ")}`);
+        logger.info(chalk.blue("\n📋 Current Session"));
+        logger.info(chalk.gray("=".repeat(50)));
+        logger.info(`Project: ${session.project.title || session.project.identifier}`);
+        logger.info(`NADDR: ${session.project.naddr}`);
+        logger.info(`Agents: ${session.agents.map((a) => a.name).join(", ")}`);
 
         if (session.currentThread) {
-            console.log(`Current Thread: ${session.currentThread.title}`);
+            logger.info(`Current Thread: ${session.currentThread.title}`);
         }
 
         const typingCount = session.typingIndicators.size;
         if (typingCount > 0) {
-            console.log(
+            logger.info(
                 `Typing: ${Array.from(session.typingIndicators.values())
                     .map((t) => t.agentName)
                     .join(", ")}`
             );
         }
 
-        console.log(chalk.gray(`${"=".repeat(50)}\n`));
+        logger.info(chalk.gray(`${"=".repeat(50)}\n`));
     }
 }

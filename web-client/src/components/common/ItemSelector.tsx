@@ -60,9 +60,11 @@ export function ItemSelector<T>({
 
     const allTags = useMemo(() => {
         const tagSet = new Set<string>();
-        items.forEach((item) => {
-            getItemTags(item).forEach((tag) => tagSet.add(tag));
-        });
+        for (const item of items) {
+            for (const tag of getItemTags(item)) {
+                tagSet.add(tag);
+            }
+        }
         return Array.from(tagSet).sort();
     }, [items, getItemTags]);
 

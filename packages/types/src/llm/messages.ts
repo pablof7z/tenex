@@ -45,7 +45,7 @@ export type LLMMessage =
  * Extended LLM message with event data
  */
 export interface LLMConversationMessage extends BaseLLMMessage {
-    event?: any; // NDKEvent
+    event?: unknown; // NDKEvent
     eventId?: string;
 }
 

@@ -2,36 +2,36 @@
     "name": "@tenex/shared",
     "version": "1.0.0",
     "type": "module",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/shared/src/index.js",
+    "types": "./dist/shared/src/index.d.ts",
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "import": "./dist/shared/src/index.js",
+            "types": "./dist/shared/src/index.d.ts"
         },
         "./node": {
-            "import": "./dist/node.js",
-            "types": "./dist/node.d.ts"
+            "import": "./dist/shared/src/node.js",
+            "types": "./dist/shared/src/node.d.ts"
         },
         "./logger": {
-            "import": "./dist/logger.js",
-            "types": "./dist/logger.d.ts"
+            "import": "./dist/shared/src/logger.js",
+            "types": "./dist/shared/src/logger.d.ts"
         },
         "./projects": {
-            "import": "./dist/projects.js",
-            "types": "./dist/projects.d.ts"
-        },
-        "./agents": {
-            "import": "./dist/agents/index.js",
-            "types": "./dist/agents/index.d.ts"
+            "import": "./dist/shared/src/projects/index.js",
+            "types": "./dist/shared/src/projects/index.d.ts"
         },
         "./fs": {
-            "import": "./dist/fs/index.js",
-            "types": "./dist/fs/index.d.ts"
+            "import": "./dist/shared/src/fs/index.js",
+            "types": "./dist/shared/src/fs/index.d.ts"
         },
         "./types": {
-            "import": "./dist/types/index.js",
-            "types": "./dist/types/index.d.ts"
+            "import": "./dist/shared/src/types/index.js",
+            "types": "./dist/shared/src/types/index.d.ts"
+        },
+        "./utils": {
+            "import": "./dist/shared/src/utils/index.js",
+            "types": "./dist/shared/src/utils/index.d.ts"
         }
     },
     "scripts": {

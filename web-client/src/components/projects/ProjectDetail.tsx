@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
 import { useProjectData } from "../../hooks/useProjectData";
+import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { CreateTaskDialog } from "../dialogs/CreateTaskDialog";
 import { TaskCreationOptionsDialog } from "../dialogs/TaskCreationOptionsDialog";
 import { ThreadDialog } from "../dialogs/ThreadDialog";
@@ -53,26 +54,14 @@ export function ProjectDetail({
         threadRecentMessages,
     } = useProjectData(project);
 
+    const { formatAutoTime } = useTimeFormat({
+        includeTime: true,
+        use24Hour: true,
+    });
+
     // Utility functions
     const formatTime = (timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        const now = new Date();
-        const diffHours = Math.abs(now.getTime() - date.getTime()) / 36e5;
-
-        if (diffHours < 24) {
-            return date.toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-            });
-        }
-        if (diffHours < 24 * 7) {
-            return date.toLocaleDateString("en-US", { weekday: "short" });
-        }
-        return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-        });
+        return formatAutoTime(timestamp);
     };
 
     const getTaskTitle = (task: NDKTask) => {
@@ -117,9 +106,9 @@ export function ProjectDetail({
             return updateTaskId === taskId;
         });
 
-        taskStatusUpdates.forEach((update) => {
+        for (const update of taskStatusUpdates) {
             seenUpdates[update.id] = true;
-        });
+        }
 
         localStorage.setItem("seenStatusUpdates", JSON.stringify(seenUpdates));
     };

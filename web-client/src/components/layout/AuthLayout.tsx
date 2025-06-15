@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { Outlet, Navigate } from "react-router-dom";
 import { useNDKCurrentPubkey } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
-import { BottomTabBar } from "../navigation/BottomTabBar";
+import { useEffect, useState } from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import { useNavigation } from "../../contexts/NavigationContext";
+import { useAgentLessons } from "../../hooks/useAgentLessons";
 import { useAppSubscriptions } from "../../hooks/useAppSubscriptions";
 import { useBackendStatus } from "../../hooks/useBackendStatus";
 import { useProjectStatus } from "../../hooks/useProjectStatus";
-import { useAgentLessons } from "../../hooks/useAgentLessons";
-import { useNavigation } from "../../contexts/NavigationContext";
 import { themeAtom } from "../../lib/store";
+import { BottomTabBar } from "../navigation/BottomTabBar";
 
 export function AuthLayout() {
     const currentPubkey = useNDKCurrentPubkey();

@@ -54,6 +54,12 @@ export class AgentResponseGenerator {
             throw new Error("No LLM configuration available");
         }
 
+        this.agentCore
+            .getLogger()
+            .info(
+                `🤖 Agent '${this.agentCore.getName()}' using LLM: ${config.provider}/${config.model}`
+            );
+
         try {
             // Prepare messages for LLM
             const messages = this.prepareMessagesForLLM(conversation, config, isFromAgent);
@@ -102,7 +108,22 @@ export class AgentResponseGenerator {
             await this.saveResponseToConversation(conversation, response);
 
             // Return structured response
-            return this.createAgentResponse(response, config, messages);
+            const agentResponse = this.createAgentResponse(response, config, messages);
+
+            // Check if provider has renderInChat data (from tool execution)
+            if (
+                provider instanceof (await import("../llm/ToolEnabledProvider")).ToolEnabledProvider
+            ) {
+                const renderInChat = provider.getLastRenderInChat();
+                if (renderInChat) {
+                    agentResponse.renderInChat = renderInChat;
+                    this.agentCore
+                        .getLogger()
+                        .debug("Added renderInChat data to agent response:", renderInChat);
+                }
+            }
+
+            return agentResponse;
         } catch (error: unknown) {
             // Log detailed error information
             const errorMessage = error instanceof Error ? error.message : String(error);

@@ -135,22 +135,22 @@ export function ProjectColumn({
         }> = [];
 
         // Add tasks
-        projectTasks.forEach((task) => {
+        for (const task of projectTasks) {
             items.push({
                 type: "task",
                 item: task,
                 createdAt: task.created_at || 0,
             });
-        });
+        }
 
         // Add threads
-        projectThreads.forEach((thread) => {
+        for (const thread of projectThreads) {
             items.push({
                 type: "thread",
                 item: thread,
                 createdAt: thread.created_at || 0,
             });
-        });
+        }
 
         // Sort by creation time, most recent first
         return items.sort((a, b) => b.createdAt - a.createdAt);
@@ -177,6 +177,13 @@ export function ProjectColumn({
                                     e.stopPropagation();
                                     onProjectClick?.(project);
                                 }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onProjectClick?.(project);
+                                    }
+                                }}
                             >
                                 {title}
                             </h3>
@@ -191,6 +198,7 @@ export function ProjectColumn({
                                     <Circle className="w-2 h-2 text-green-500 fill-green-500" />
                                 ) : (
                                     <button
+                                        type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (!ndk) return;

@@ -48,6 +48,10 @@ export interface ToolCall {
 export interface ToolResponse {
     tool_call_id: string;
     output: string;
+    renderInChat?: {
+        type: string;
+        data: unknown;
+    };
 }
 
 // JSON Schema types for tool parameters

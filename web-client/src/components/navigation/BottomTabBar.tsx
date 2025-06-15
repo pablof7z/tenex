@@ -35,6 +35,7 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
                                     ? "text-primary bg-primary/10"
                                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                             }`}
+                            type="button"
                         >
                             <Icon className={`w-5 h-5 mb-1 ${isActive ? "text-primary" : ""}`} />
                             <span

@@ -1,7 +1,8 @@
 import path from "node:path";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKProject } from "@nostr-dev-kit/ndk";
-import { fileSystem, logError, logInfo } from "@tenex/shared/node";
+import * as fileSystem from "@tenex/shared/fs";
+import { logError, logInfo } from "@tenex/shared/node";
 import { type RuleMapping, RulesManager } from "../../utils/RulesManager";
 import { DefaultSpecCache, type SpecCache } from "../../utils/agents/prompts/SpecCache";
 
@@ -58,7 +59,7 @@ export class ProjectLoader {
         const metadataPath = path.join(projectPath, ".tenex", "metadata.json");
 
         try {
-            const metadata = await fileSystem.readJsonFile(metadataPath);
+            const metadata = await fileSystem.readJsonFile<ProjectMetadata>(metadataPath);
 
             if (!metadata.projectNaddr) {
                 throw new Error("Project metadata missing naddr");

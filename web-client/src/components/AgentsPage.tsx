@@ -1,12 +1,11 @@
+import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useState } from "react";
+import { useAgentActions } from "../hooks/useAgentActions";
+import { useAgentForm } from "../hooks/useAgentForm";
 import { NDKAgent } from "../lib/ndk-setup";
 import { AgentList } from "./agents/AgentList";
 import { AgentMainContent } from "./agents/AgentMainContent";
-import { useAgentForm } from "../hooks/useAgentForm";
-import { useAgentActions } from "../hooks/useAgentActions";
-import { EVENT_KINDS } from "@tenex/types/events";
-import type { NDKKind } from "@nostr-dev-kit/ndk";
 
 interface AgentsPageProps {
     onBack: () => void;
@@ -32,9 +31,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
 
     // Fetch lessons for selected agent (kind 4124)
     const { events: lessons } = useSubscribe(
-        selectedAgent
-            ? [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], "#e": [selectedAgent.id] }]
-            : false,
+        selectedAgent ? [{ kinds: [4124 as NDKKind], "#e": [selectedAgent.id] }] : false,
         {},
         [selectedAgent?.id]
     );

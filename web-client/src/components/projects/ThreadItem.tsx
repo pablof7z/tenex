@@ -20,9 +20,10 @@ export function ThreadItem({
 }: ThreadItemProps) {
     return (
         <div className="overflow-hidden rounded-lg sm:rounded-xl mx-0.5 sm:mx-1 bg-card border border-border">
-            <div
-                className="group flex items-center p-2.5 sm:p-3 cursor-pointer transition-all duration-200 ease-out border border-transparent bg-card hover:bg-accent hover:shadow-sm active:scale-[0.98]"
+            <button
+                className="group flex items-center p-2.5 sm:p-3 cursor-pointer transition-all duration-200 ease-out border border-transparent bg-card hover:bg-accent hover:shadow-sm active:scale-[0.98] w-full text-left"
                 onClick={onThreadClick}
+                type="button"
             >
                 {/* Thread Icon */}
                 <div className="mr-3 sm:mr-4 flex-shrink-0">
@@ -63,7 +64,7 @@ export function ThreadItem({
                         </p>
                     )}
                 </div>
-            </div>
+            </button>
         </div>
     );
 }

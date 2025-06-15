@@ -35,10 +35,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TENEX is a context-first development environment that orchestrates multiple AI agents to build software collaboratively. It consists of:
 - **Web Client** (`web-client/`): Vite React app with living documentation viewer
-- **CLI Tool** (`cli/`): Advanced agent orchestration with tool system
+- **CLI Tool** (`cli/`): Unified CLI with daemon mode and agent orchestration
 - **MCP Server** (`mcp/`): Model Context Protocol server with git integration
 - **Shared Libraries** (`shared/`): Common types and utilities
-- **tenexd** (`tenexd/`): Daemon for automatic project management
 - **iOS Client** (`ios-client/`): Native mobile application
 
 The system features living documentation, agent learning, rich communication, and sophisticated multi-agent orchestration through the Nostr protocol.
@@ -107,8 +106,9 @@ biome format . --write   # Auto-format code with Biome
 - **Hooks**: `useAgentLessons`, `useProjectAgents`, `useProjectStatus`
 
 ### CLI Commands
+- `tenex daemon` - Start the event monitoring daemon for whitelisted pubkeys
 - `tenex project init <path> <naddr>` - Initialize a new project from Nostr event
-- `tenex run` - Start multi-agent orchestration system
+- `tenex project run` - Start multi-agent orchestration system for a project
 
 ### CLI Agent Tools
 - `read_specs` - Access living documentation from Nostr
@@ -185,14 +185,16 @@ Agent definitions from NDKAgent events (kind 4199) are automatically fetched and
 - **Styling**: Tailwind CSS v4
 - **UI Components**: shadcn/ui
 - **State**: Jotai (web), Zustand (legacy)
-- **Protocol**: Nostr via NDK
+- **Protocol**: Nostr via NDK with class-based wrappers (NDKAgent, etc.)
 - **Formatter/Linter**: Biome
 - **Voice**: OpenAI Whisper API
+- **Testing**: Vitest for unit/integration, cli-client for e2e
 
 ## Development Best Practices
 
 1. **File Paths**: All tools require absolute paths (not relative)
-2. **Nostr Events**: 
+2. **Architecture**: Use dependency injection and testable patterns
+3. **Nostr Events**: 
    - Projects: kind 31933 (NDKArticle with d, title, repo, agent tags)
    - Templates: kind 30717 (with d, title, uri, agent tags)
    - Tasks: kind 1934 (with title tag and structured metadata)
@@ -202,7 +204,7 @@ Agent definitions from NDKAgent events (kind 4199) are automatically fetched and
    - Typing Indicators: kinds 24111/24112 (with prompt visibility)
    - Project Status: kind 24010 (online pings every 60s)
    - Chats: kinds 11/1111 (with rich text support)
-3. **Testing**: Always test changes when possible
+3. **Testing**: Always test changes when possible (unit, integration, and e2e tests)
 4. **Git Operations**: Never commit unless explicitly asked by the user
 5. **Code Style**:
    - Use Biome for formatting (4 spaces, double quotes)

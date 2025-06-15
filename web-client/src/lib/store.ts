@@ -21,6 +21,9 @@ export const onlineBackendsAtom = atom<Map<string, BackendInfo>>(new Map<string,
 // Map to track online projects from kind 24010 events: projectDir -> timestamp
 export const onlineProjectStatusAtom = atom<Map<string, number>>(new Map());
 
+// Map to track project LLM configurations from kind 24010 events: projectDir -> llmConfigs[]
+export const projectLLMConfigsAtom = atom<Map<string, string[]>>(new Map());
+
 // Derived atom to get all online project directories (combines both sources)
 export const onlineProjectsAtom = atom((get) => {
     const backends = get(onlineBackendsAtom);

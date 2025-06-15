@@ -1,11 +1,11 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { logError, logSuccess, logWarning } from "@tenex/shared/logger";
+import { logError, logInfo, logSuccess, logWarning } from "@tenex/shared/logger";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
-import { toKebabCase } from "../../../../shared/src/projects";
+import { toKebabCase } from "../../utils/agents";
 import { formatError } from "../../utils/errors";
+import { fs } from "../../utils/fs";
 import type { ProjectInfo } from "./ProjectLoader";
 
 export interface AgentDefinition {
@@ -35,8 +35,8 @@ export class AgentEventHandler {
             await this.saveAgentConfiguration(agentDefinition, projectInfo.projectPath);
             await this.ensureAgentHasNsec(agentName, event.id, projectInfo.projectPath);
 
-            console.log(chalk.gray("Agent:   ") + chalk.magenta(agentName));
-            console.log(chalk.gray("Desc:    ") + chalk.white(agentDefinition.description));
+            logInfo(chalk.gray("Agent:   ") + chalk.magenta(agentName));
+            logInfo(chalk.gray("Desc:    ") + chalk.white(agentDefinition.description));
             logSuccess(`Saved agent configuration: ${agentName}`);
         } catch (err) {
             const errorMessage = formatError(err);

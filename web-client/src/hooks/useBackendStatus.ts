@@ -24,7 +24,7 @@ export function useBackendStatus() {
         const newOnlineBackends = new Map<string, BackendInfo>();
 
         // Process status events to determine which backends are online
-        statusEvents.forEach((event) => {
+        for (const event of statusEvents) {
             const backendPubkey = event.pubkey;
             let backendInfo: BackendInfo;
 
@@ -48,7 +48,7 @@ export function useBackendStatus() {
             }
 
             newOnlineBackends.set(backendPubkey, backendInfo);
-        });
+        }
 
         setOnlineBackends(newOnlineBackends);
     }, [statusEvents, setOnlineBackends]);
