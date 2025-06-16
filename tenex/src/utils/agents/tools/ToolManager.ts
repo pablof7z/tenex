@@ -1,14 +1,14 @@
+import { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import { addTaskTool } from "@/utils/agents/tools/addTask";
+import { claudeCodeTool } from "@/utils/agents/tools/claudeCode";
+import { exampleTools } from "@/utils/agents/tools/examples";
+import { findAgentTool } from "@/utils/agents/tools/findAgent";
+import { readSpecsTool } from "@/utils/agents/tools/readSpecs";
+import { rememberLessonTool } from "@/utils/agents/tools/rememberLesson";
+import { shellTool } from "@/utils/agents/tools/shell";
+import type { ToolDefinition } from "@/utils/agents/tools/types";
+import { updateSpecTool } from "@/utils/agents/tools/updateSpec";
 import type NDK from "@nostr-dev-kit/ndk";
-import { ToolRegistry } from "./ToolRegistry";
-import { addTaskTool } from "./addTask";
-import { claudeCodeTool } from "./claudeCode";
-import { exampleTools } from "./examples";
-import { findAgentTool } from "./findAgent";
-import { readSpecsTool } from "./readSpecs";
-import { rememberLessonTool } from "./rememberLesson";
-import { shellTool } from "./shell";
-import type { ToolDefinition } from "./types";
-import { updateSpecTool } from "./updateSpec";
 
 /**
  * Manages tool registries and tool lifecycle for agents

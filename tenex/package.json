@@ -11,13 +11,15 @@
         "test:watch": "bun test --watch"
     },
     "dependencies": {
+        "@inquirer/search": "^3.0.15",
+        "@nostr-dev-kit/ndk": "^2.14.29",
         "@tenex/shared": "file:../shared",
         "@tenex/types": "file:../packages/types",
-        "@nostr-dev-kit/ndk": "^2.14.29",
+        "@types/inquirer": "^9.0.8",
         "chalk": "^5.4.1",
         "commander": "^13.1.0",
         "fs-extra": "^11.2.0",
-        "inquirer": "^9.2.16",
+        "inquirer": "^12.6.3",
         "js-base64": "^3.7.7",
         "jwt-js-decode": "^1.9.0",
         "nostr-tools": "^2.15.0"

@@ -25,10 +25,21 @@ describe("SingleResponderStrategy", () => {
 
         mockAgent = {
             name: "test-agent",
-            processRequest: vi.fn().mockResolvedValue({
+            getConfig: vi.fn().mockReturnValue({
+                role: "test-agent",
+                name: "test-agent",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockResolvedValue({
                 content: "Test response",
                 metadata: { agentName: "test-agent" },
             }),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockConversationStorage = {
@@ -62,7 +73,9 @@ describe("SingleResponderStrategy", () => {
 
     describe("constructor", () => {
         it("should throw error if logger is not provided", () => {
-            expect(() => new SingleResponderStrategy(null as unknown as Logger)).toThrow("Logger is required");
+            expect(() => new SingleResponderStrategy(null as unknown as Logger)).toThrow(
+                "Logger is required"
+            );
         });
     });
 
@@ -101,7 +114,7 @@ describe("SingleResponderStrategy", () => {
 
         it("should handle agent processing errors", async () => {
             const errorMessage = "Processing failed";
-            mockAgent.processRequest = vi.fn().mockRejectedValue(new Error(errorMessage));
+            mockAgent.generateResponse = vi.fn().mockRejectedValue(new Error(errorMessage));
             const agents = new Map([["test-agent", mockAgent]]);
 
             const result = await strategy.execute(
@@ -121,22 +134,20 @@ describe("SingleResponderStrategy", () => {
 
             await strategy.execute(mockTeam, mockEvent, agents, mockConversationStorage);
 
-            expect(mockConversationStorage.createConversation).toHaveBeenCalledWith(
+            expect(mockAgent.getOrCreateConversationWithContext).toHaveBeenCalledWith(
+                "test-task",
                 expect.objectContaining({
-                    projectNaddr: undefined,
-                    taskId: "test-task",
-                    agentName: "test-agent",
-                    metadata: expect.objectContaining({
-                        orchestration: {
-                            team: mockTeam,
-                            strategy: "SINGLE_RESPONDER",
-                        },
+                    agentRole: expect.any(String),
+                    projectName: expect.any(String),
+                    orchestrationMetadata: expect.objectContaining({
+                        team: mockTeam,
+                        strategy: "SINGLE_RESPONDER",
                     }),
                 })
             );
 
-            expect(mockConversationStorage.addMessage).toHaveBeenCalled();
-            expect(mockConversationStorage.updateConversationMetadata).toHaveBeenCalled();
+            expect(mockAgent.generateResponse).toHaveBeenCalled();
+            expect(mockAgent.saveConversationToStorage).toHaveBeenCalled();
         });
 
         it("should log execution steps", async () => {

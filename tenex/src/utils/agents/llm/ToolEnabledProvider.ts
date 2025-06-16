@@ -1,10 +1,16 @@
+import type {
+    LLMContext,
+    LLMMessage,
+    LLMProvider,
+    LLMResponse,
+    ProviderTool,
+} from "@/utils/agents/llm/types";
+import { ToolExecutor } from "@/utils/agents/tools/ToolExecutor";
+import { parseToolCalls, removeToolCalls } from "@/utils/agents/tools/ToolParser";
+import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { ToolCall } from "@/utils/agents/tools/types";
+import type { LLMConfig } from "@/utils/agents/types";
 import { logger } from "@tenex/shared/logger";
-import { ToolExecutor } from "../tools/ToolExecutor";
-import { parseToolCalls, removeToolCalls } from "../tools/ToolParser";
-import type { ToolRegistry } from "../tools/ToolRegistry";
-import type { ToolCall } from "../tools/types";
-import type { LLMConfig } from "../types";
-import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } from "./types";
 
 export class ToolEnabledProvider implements LLMProvider {
     private executor: ToolExecutor;

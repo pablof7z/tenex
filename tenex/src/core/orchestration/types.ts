@@ -1,5 +1,5 @@
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { ProjectInfo } from "../../commands/run/ProjectLoader";
 
 export enum OrchestrationStrategy {
     SINGLE_RESPONDER = "single_responder",
@@ -15,6 +15,18 @@ export interface RequestAnalysis {
     estimatedComplexity: number;
     suggestedStrategy: OrchestrationStrategy;
     reasoning: string;
+}
+
+export interface TeamFormationResult {
+    lead: string;
+    members: string[];
+    reasoning: string;
+}
+
+export interface CombinedAnalysisResponse {
+    analysis: RequestAnalysis;
+    team: TeamFormationResult;
+    taskDefinition?: TaskDefinition;
 }
 
 export interface TaskDefinition {
@@ -59,6 +71,7 @@ export interface EventContext {
     hasPTags: boolean;
     availableAgents: Map<string, AgentDefinition>;
     projectContext: ProjectContext;
+    originalEvent?: NDKEvent;
 }
 
 export interface LLMResponse {
@@ -70,15 +83,15 @@ export interface LLMResponse {
     };
 }
 
-export interface LLMConfig {
+export interface LLMConfigOverrides {
     model?: string;
     temperature?: number;
     maxTokens?: number;
 }
 
 export interface LLMProvider {
-    complete(prompt: string, config?: LLMConfig): Promise<LLMResponse>;
-    stream?(prompt: string, config?: LLMConfig): AsyncGenerator<string>;
+    complete(prompt: string, config?: LLMConfigOverrides): Promise<LLMResponse>;
+    stream?(prompt: string, config?: LLMConfigOverrides): AsyncGenerator<string>;
 }
 
 export interface LogContext {
@@ -95,6 +108,7 @@ export interface Logger {
 export interface OrchestrationConfig {
     orchestrator: {
         llmConfig: string;
+        teamFormationLLMConfig?: string;
         maxTeamSize: number;
         strategies: {
             [key: string]: OrchestrationStrategy;

@@ -116,4 +116,4 @@ The SystemPromptBuilder is integrated into the agent system through:
 
 - `AgentCore.buildSystemPromptWithContext()` - Builds prompts with full context
 - `AgentConversationManager.getOrCreateConversationWithContext()` - Creates conversations with context-aware prompts
-- `AgentEventHandler.buildSystemPromptContext()` - Prepares context for prompt generation
+- `AgentCommunicationHandler.buildSystemPromptContext()` - Prepares context for prompt generation

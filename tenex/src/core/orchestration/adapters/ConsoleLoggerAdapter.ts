@@ -1,5 +1,5 @@
+import type { LogContext, Logger } from "@/core/orchestration/types";
 import { logger as sharedLogger } from "@tenex/shared/logger";
-import type { LogContext, Logger } from "../types";
 
 /**
  * Adapter that implements the orchestration Logger interface

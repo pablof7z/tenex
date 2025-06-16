@@ -1,5 +1,9 @@
-import { DEFAULT_SYSTEM_INSTRUCTIONS } from "../constants";
-import type { PromptSection, PromptSectionBuilder, SystemPromptContext } from "../types";
+import { DEFAULT_SYSTEM_INSTRUCTIONS } from "@/utils/agents/prompts/constants";
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
 
 /**
  * Builds static TENEX system instructions that apply to all agents

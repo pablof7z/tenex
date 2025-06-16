@@ -86,7 +86,7 @@ describe("EventMonitor", () => {
 
         mockProcessManager = {
             isProjectRunning: mock((projectId: string) => {
-                const result = projectId === "already-running" ? true : false;
+                const result = projectId === "already-running";
                 return Promise.resolve(result);
             }),
             spawnProjectRun: mock(() => Promise.resolve()),

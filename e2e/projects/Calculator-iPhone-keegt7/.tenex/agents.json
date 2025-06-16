@@ -1,0 +1,10 @@
+{
+    "requirements": {
+        "nsec": "nsec1cdazsvyhjf2usxj2zmlljktz0qxs3da8f2uwvx2lqf28am3cpemsqtwfaw",
+        "file": "5f6e2382c7c53444204e8938e6d92e69ed511f80b13ae1d41e1c6507c96e3b44"
+    },
+    "christ": {
+        "nsec": "nsec1xqk4mfqc0kmj8jrt04fa5k5k03rszx8yaap7dg6h0jzua030w0rqhssdly",
+        "file": "0d7ccbe3bd89c84599466e6393c7b425d51146908ae1fc37fa4c5d999b0b99f1"
+    }
+}

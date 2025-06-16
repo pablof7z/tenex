@@ -1,4 +1,4 @@
-import type { ToolCall } from "./types";
+import type { ToolCall } from "@/utils/agents/tools/types";
 
 // Parse tool calls from LLM response
 // Supports both XML-style tags and JSON blocks

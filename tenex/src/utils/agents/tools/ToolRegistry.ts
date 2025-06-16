@@ -4,7 +4,7 @@ import type {
     OpenAIToolFormat,
     ToolDefinition,
     ToolParameter,
-} from "./types";
+} from "@/utils/agents/tools/types";
 
 export class ToolRegistry {
     private tools: Map<string, ToolDefinition> = new Map();

@@ -1,5 +1,9 @@
-import { COLLABORATION_GUIDELINES } from "../constants";
-import type { PromptSection, PromptSectionBuilder, SystemPromptContext } from "../types";
+import { COLLABORATION_GUIDELINES } from "@/utils/agents/prompts/constants";
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
 
 /**
  * Builds the team information section listing other available agents

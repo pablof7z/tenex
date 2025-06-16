@@ -1,6 +1,6 @@
+import type { Team } from "@/core/orchestration/types";
+import type { LLMProvider } from "@/utils/agents/llm/types";
 import { logger } from "@tenex/shared/logger";
-import type { LLMProvider } from "../../../utils/agents/llm/types";
-import type { Team } from "../types";
 
 export interface SupervisionTask {
     id: string;

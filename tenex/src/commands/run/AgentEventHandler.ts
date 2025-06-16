@@ -1,12 +1,12 @@
 import path from "node:path";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import { toKebabCase } from "@/utils/agents";
+import { formatError } from "@/utils/errors";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { ensureDirectory, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
 import { logError, logInfo, logSuccess, logWarning } from "@tenex/shared/logger";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
-import { toKebabCase } from "../../utils/agents";
-import { formatError } from "../../utils/errors";
-import { fs } from "../../utils/fs";
-import type { ProjectInfo } from "./ProjectLoader";
 
 export interface AgentDefinition {
     eventId: string;
@@ -78,11 +78,11 @@ export class AgentEventHandler {
         projectPath: string
     ): Promise<void> {
         const agentsDir = path.join(projectPath, ".tenex", "agents");
-        await fs.mkdir(agentsDir, { recursive: true });
+        await ensureDirectory(agentsDir);
 
         // Save with event ID only
         const eventFile = path.join(agentsDir, `${agentDefinition.eventId}.json`);
-        await fs.writeFile(eventFile, JSON.stringify(agentDefinition, null, 2));
+        await writeJsonFile(eventFile, agentDefinition);
     }
 
     private async ensureAgentHasNsec(
@@ -104,12 +104,8 @@ export class AgentEventHandler {
 
         let agents: AgentsJsonConfig = {};
 
-        try {
-            const content = await fs.readFile(agentsPath, "utf-8");
-            agents = JSON.parse(content);
-        } catch (_err) {
-            // File might not exist yet
-        }
+        const existingAgents = await readJsonFile<AgentsJsonConfig>(agentsPath);
+        agents = existingAgents || {};
 
         const agentEntry = agents[agentKey];
 
@@ -121,7 +117,7 @@ export class AgentEventHandler {
                 file: `${eventId}.json`,
             };
 
-            await fs.writeFile(agentsPath, JSON.stringify(agents, null, 2));
+            await writeJsonFile(agentsPath, agents);
             logSuccess(`Generated nsec for agent: ${agentName} (as '${agentKey}')`);
         } else if (typeof agentEntry === "string") {
             // Old format - convert to new format
@@ -130,13 +126,13 @@ export class AgentEventHandler {
                 file: `${eventId}.json`,
             };
 
-            await fs.writeFile(agentsPath, JSON.stringify(agents, null, 2));
+            await writeJsonFile(agentsPath, agents);
             logSuccess(`Updated agent ${agentName} to new format`);
         } else {
             // New format - check if file reference needs updating
             if (!agentEntry.file || agentEntry.file !== `${eventId}.json`) {
                 agentEntry.file = `${eventId}.json`;
-                await fs.writeFile(agentsPath, JSON.stringify(agents, null, 2));
+                await writeJsonFile(agentsPath, agents);
                 logSuccess(`Updated file reference for agent ${agentName}`);
             }
         }

@@ -9,3 +9,4 @@ export * from "./config/relays.js"; // Only export relays, not the full config m
 // import { ProjectService } from "@tenex/shared/projects"
 // import { FileSystem } from "@tenex/shared/fs"
 // import { ConfigLoader } from "@tenex/shared/config"
+// import { LLMConfigService } from "@tenex/shared/services"

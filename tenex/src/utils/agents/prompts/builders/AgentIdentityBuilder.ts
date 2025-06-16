@@ -1,4 +1,8 @@
-import type { PromptSection, PromptSectionBuilder, SystemPromptContext } from "../types";
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
 
 /**
  * Builds the agent identity section including name, role, description, and instructions
@@ -14,7 +18,10 @@ export class AgentIdentityBuilder implements PromptSectionBuilder {
 
         parts.push("## Your Identity");
 
-        // Agent name and role
+        // Agent name
+        parts.push(`Your name: "${agentName}"`);
+
+        // Agent role
         if (agentConfig.role) {
             parts.push(`You are ${agentConfig.role}.`);
         } else {

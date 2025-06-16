@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Focus on "what is" and "where we're going", not "what was"
 4. Refer to @SPEC.md as the source of truth for what TENEX is and how it works
 
+You must ALWAYS read @INVENTORY.md and follow it's instructions.
+
 **IMPORTANT**: When working through the TENEX CLI as an AI agent:
 - Use the `read_specs` tool at the start of conversations to access SPEC.md and other project documentation
 - Use the `update_spec` tool to update SPEC.md when changes occur (only available to the default agent)

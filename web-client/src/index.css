@@ -254,37 +254,6 @@
         }
     }
 
-    /* Safe area utilities for mobile devices */
-    .pb-safe {
-        padding-bottom: env(safe-area-inset-bottom);
-    }
-
-    .pt-safe {
-        padding-top: env(safe-area-inset-top);
-    }
-
-    .pl-safe {
-        padding-left: env(safe-area-inset-left);
-    }
-
-    .pr-safe {
-        padding-right: env(safe-area-inset-right);
-    }
-
-    /* Bottom safe area with minimum padding */
-    .pb-safe-or-4 {
-        padding-bottom: max(1rem, env(safe-area-inset-bottom));
-    }
-
-    .pb-safe-or-6 {
-        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-    }
-
-    /* Tab bar height calculation utilities */
-    .bottom-tab-safe {
-        bottom: max(1rem, env(safe-area-inset-bottom));
-    }
-
     /* Typing indicator animation */
     @keyframes typingBounce {
         0%,

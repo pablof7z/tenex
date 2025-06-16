@@ -1,7 +1,7 @@
 export * from "./types";
-export { ToolRegistry } from "./ToolRegistry";
+export { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 export * from "./ToolParser";
-export { ToolExecutor } from "./ToolExecutor";
-export { ToolEnabledProvider } from "../llm/ToolEnabledProvider";
-export { exampleTools } from "./examples";
-export { addTaskTool } from "./addTask";
+export { ToolExecutor } from "@/utils/agents/tools/ToolExecutor";
+export { ToolEnabledProvider } from "@/utils/agents/llm/ToolEnabledProvider";
+export { exampleTools } from "@/utils/agents/tools/examples";
+export { addTaskTool } from "@/utils/agents/tools/addTask";

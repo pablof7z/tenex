@@ -258,12 +258,7 @@ export function ProjectList() {
             </div>
 
             {/* Project List */}
-            <div
-                className="pb-safe-or-6"
-                style={{
-                    paddingBottom: "max(6rem, calc(env(safe-area-inset-bottom) + 1.5rem))",
-                }}
-            >
+            <div className="pb-6">
                 {projects.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 sm:py-32 px-4 sm:px-6 text-center">
                         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-muted to-accent rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-sm">
@@ -403,12 +398,7 @@ export function ProjectList() {
             </div>
 
             {/* Floating Action Button */}
-            <div
-                className="fixed right-4 sm:right-6 z-40 bottom-tab-safe"
-                style={{
-                    bottom: "max(5rem, calc(env(safe-area-inset-bottom) + 1rem))",
-                }}
-            >
+            <div className="fixed right-4 sm:right-6 z-40 bottom-6">
                 <Button
                     variant="primary"
                     size="icon-lg"

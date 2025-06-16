@@ -1,7 +1,7 @@
 /**
  * Project-related event types
  *
- * Note: For actual NDK event classes like NDKArticle (kind 31933),
+ * Note: For actual NDK event classes like NDKProject (kind 31933),
  * use the NDK library directly. These interfaces are for metadata
  * and content structures only.
  */

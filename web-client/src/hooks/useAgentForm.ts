@@ -87,8 +87,8 @@ export function useAgentForm() {
             try {
                 await newAgent.publish();
                 return true;
-            } catch (error) {
-                console.error("Failed to publish agent:", error);
+            } catch (_error) {
+                // console.error("Failed to publish agent:", error);
                 return false;
             }
         },

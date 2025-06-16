@@ -59,11 +59,8 @@ export class RulesManager {
         const ruleIds = [...new Set(ruleMappings.map((rm) => rm.ruleEventId))];
 
         if (ruleIds.length === 0) {
-            logInfo("No rules to fetch for this project");
             return;
         }
-
-        logInfo(`Fetching ${ruleIds.length} rule(s) from Nostr...`);
 
         // Check cache first
         const uncachedIds: string[] = [];
@@ -77,15 +74,11 @@ export class RulesManager {
         }
 
         if (uncachedIds.length === 0) {
-            logInfo("All rules loaded from cache");
             return;
         }
 
         // Fetch uncached rules from Nostr
-        const filter = {
-            kinds: [1339], // INSTRUCTION_KIND
-            ids: uncachedIds,
-        };
+        const filter = { ids: uncachedIds };
 
         const events = await this.ndk.fetchEvents(filter);
 

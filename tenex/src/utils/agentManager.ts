@@ -1,8 +1,8 @@
 import path from "node:path";
+import { getAgentSigner as getAgentSignerFromAgents, readAgentsJson } from "@/utils/agents";
+import { getPrimaryAgentName } from "@/utils/agents/getPrimaryAgent";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import { getAgentSigner as getAgentSignerFromAgents, readAgentsJson } from "./agents";
-import { getPrimaryAgentName } from "./agents/getPrimaryAgent";
 
 export async function getAgentSigner(
     projectPath: string,

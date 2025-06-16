@@ -1,11 +1,12 @@
 import path from "node:path";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo, logWarning } from "@tenex/shared/logger";
+import type { UnifiedLLMConfig } from "@tenex/types/config";
 import { EVENT_KINDS } from "@tenex/types/events";
 import type { LLMConfigs } from "@tenex/types/llm";
 import chalk from "chalk";
-import type { ProjectInfo } from "./ProjectLoader";
 
 export class ProjectDisplay {
     constructor(private ndk: NDK) {}
@@ -93,14 +94,14 @@ export class ProjectDisplay {
         const llmsPath = path.join(projectPath, ".tenex", "llms.json");
 
         try {
-            const llms = await fileSystem.readJsonFile<LLMConfigs>(llmsPath);
+            const llmsFile = await fileSystem.readJsonFile<UnifiedLLMConfig>(llmsPath);
 
-            const defaultConfig = llms.default;
-            llms.default = undefined;
+            // Handle the new structured format with configurations, defaults, and credentials
+            const configurations = llmsFile.configurations || {};
+            const defaults = llmsFile.defaults || {};
+            const defaultConfig = defaults.default;
 
-            const configNames = Object.keys(llms).filter(
-                (name) => name !== "default" && llms[name] && typeof llms[name] === "object"
-            );
+            const configNames = Object.keys(configurations);
 
             if (configNames.length === 0) {
                 // Don't show the header if there are no configs
@@ -112,10 +113,9 @@ export class ProjectDisplay {
             logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
             for (const name of configNames) {
-                const configValue = llms[name];
-                if (typeof configValue !== "object" || !configValue) continue;
+                const config = configurations[name];
+                if (typeof config !== "object" || !config) continue;
 
-                const config = configValue;
                 const isDefault = name === defaultConfig;
                 logInfo(
                     chalk.gray("\nName:       ") +

@@ -27,7 +27,18 @@ describe("ParallelExecutionStrategy", () => {
 
         mockAgent1 = {
             name: "agent1",
-            processRequest: vi.fn().mockImplementation(
+            getName: vi.fn().mockReturnValue("agent1"),
+            getConfig: vi.fn().mockReturnValue({
+                role: "agent1",
+                name: "agent1",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id-1"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockImplementation(
                 () =>
                     new Promise((resolve) =>
                         setTimeout(
@@ -40,11 +51,23 @@ describe("ParallelExecutionStrategy", () => {
                         )
                     )
             ),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockAgent2 = {
             name: "agent2",
-            processRequest: vi.fn().mockImplementation(
+            getName: vi.fn().mockReturnValue("agent2"),
+            getConfig: vi.fn().mockReturnValue({
+                role: "agent2",
+                name: "agent2",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id-2"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockImplementation(
                 () =>
                     new Promise((resolve) =>
                         setTimeout(
@@ -57,11 +80,23 @@ describe("ParallelExecutionStrategy", () => {
                         )
                     )
             ),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockAgent3 = {
             name: "agent3",
-            processRequest: vi.fn().mockImplementation(
+            getName: vi.fn().mockReturnValue("agent3"),
+            getConfig: vi.fn().mockReturnValue({
+                role: "agent3",
+                name: "agent3",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id-3"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockImplementation(
                 () =>
                     new Promise((resolve) =>
                         setTimeout(
@@ -74,6 +109,7 @@ describe("ParallelExecutionStrategy", () => {
                         )
                     )
             ),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockConversationStorage = {
@@ -136,9 +172,9 @@ describe("ParallelExecutionStrategy", () => {
             expect(result.responses).toHaveLength(3);
 
             // Verify all agents were called
-            expect(mockAgent1.processRequest).toHaveBeenCalledTimes(1);
-            expect(mockAgent2.processRequest).toHaveBeenCalledTimes(1);
-            expect(mockAgent3.processRequest).toHaveBeenCalledTimes(1);
+            expect(mockAgent1.generateResponse).toHaveBeenCalledTimes(1);
+            expect(mockAgent2.generateResponse).toHaveBeenCalledTimes(1);
+            expect(mockAgent3.generateResponse).toHaveBeenCalledTimes(1);
 
             // Verify parallel execution (should take ~150ms, not 300ms)
             expect(totalTime).toBeLessThan(200);
@@ -146,7 +182,7 @@ describe("ParallelExecutionStrategy", () => {
         });
 
         it("should handle partial failures without blocking other agents", async () => {
-            mockAgent2.processRequest = vi.fn().mockRejectedValue(new Error("Agent 2 failed"));
+            mockAgent2.generateResponse = vi.fn().mockRejectedValue(new Error("Agent 2 failed"));
 
             const agents = new Map([
                 ["agent1", mockAgent1],
@@ -168,9 +204,9 @@ describe("ParallelExecutionStrategy", () => {
         });
 
         it("should fail if no agents succeed", async () => {
-            mockAgent1.processRequest = vi.fn().mockRejectedValue(new Error("Agent 1 failed"));
-            mockAgent2.processRequest = vi.fn().mockRejectedValue(new Error("Agent 2 failed"));
-            mockAgent3.processRequest = vi.fn().mockRejectedValue(new Error("Agent 3 failed"));
+            mockAgent1.generateResponse = vi.fn().mockRejectedValue(new Error("Agent 1 failed"));
+            mockAgent2.generateResponse = vi.fn().mockRejectedValue(new Error("Agent 2 failed"));
+            mockAgent3.generateResponse = vi.fn().mockRejectedValue(new Error("Agent 3 failed"));
 
             const agents = new Map([
                 ["agent1", mockAgent1],
@@ -220,20 +256,22 @@ describe("ParallelExecutionStrategy", () => {
 
             await strategy.execute(mockTeam, mockEvent, agents, mockConversationStorage);
 
-            expect(mockConversationStorage.createConversation).toHaveBeenCalledWith(
+            expect(mockAgent1.getOrCreateConversationWithContext).toHaveBeenCalledWith(
+                "test-parallel-task",
                 expect.objectContaining({
-                    taskId: "test-parallel-task",
-                    metadata: expect.objectContaining({
-                        orchestration: {
-                            team: mockTeam,
-                            strategy: "PARALLEL_EXECUTION",
-                        },
+                    agentRole: "agent1",
+                    projectName: "agent1",
+                    orchestrationMetadata: expect.objectContaining({
+                        team: mockTeam,
+                        strategy: "PARALLEL_EXECUTION",
                     }),
                 })
             );
 
-            // Initial request + 3 agent responses = 4 messages
-            expect(mockConversationStorage.addMessage).toHaveBeenCalledTimes(4);
+            // All agents should generate responses
+            expect(mockAgent1.generateResponse).toHaveBeenCalled();
+            expect(mockAgent2.generateResponse).toHaveBeenCalled();
+            expect(mockAgent3.generateResponse).toHaveBeenCalled();
         });
 
         it("should aggregate results and include timing metadata", async () => {
@@ -251,7 +289,7 @@ describe("ParallelExecutionStrategy", () => {
             );
 
             expect(result.metadata).toBeDefined();
-            expect(result.metadata?.conversationId).toBe("test-conversation-id");
+            expect(result.metadata?.conversationId).toBe("test-conversation-id-1");
             expect(result.metadata?.executionTime).toBeGreaterThan(0);
             expect(result.metadata?.parallelExecutions).toHaveLength(3);
             expect(result.metadata?.aggregatedContent).toContain("Agent 1 completed task");

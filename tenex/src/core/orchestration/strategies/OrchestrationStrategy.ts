@@ -1,7 +1,7 @@
+import type { Team } from "@/core/orchestration/types";
+import type { Agent } from "@/utils/agents/Agent";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../../utils/agents/Agent";
-import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
-import type { Team } from "../types";
 
 export interface OrchestrationStrategy {
     execute(

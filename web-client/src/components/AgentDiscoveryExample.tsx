@@ -44,8 +44,8 @@ export function AgentDiscoveryExample({ event }: { event: NDKEvent }) {
 
                 setAgents(fetchedAgents);
                 setLoading(false);
-            } catch (error) {
-                console.error("Error fetching agent events:", error);
+            } catch (_error) {
+                // console.error("Error fetching agent events:", error);
                 setLoading(false);
             }
         }

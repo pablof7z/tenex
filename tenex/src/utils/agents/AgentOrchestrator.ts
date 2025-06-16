@@ -1,15 +1,15 @@
 import path from "node:path";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import { getAgentSigner } from "@/utils/agentManager";
+import { Agent } from "@/utils/agents/Agent";
+import type { AgentConfigurationManager } from "@/utils/agents/AgentConfigurationManager";
+import type { AgentManager } from "@/utils/agents/AgentManager";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import { ToolManager } from "@/utils/agents/tools/ToolManager";
 import { type NDK, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
 import type { LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
-import type { ProjectInfo } from "../../commands/run/ProjectLoader";
-import { getAgentSigner } from "../agentManager";
-import { Agent } from "./Agent";
-import type { AgentConfigurationManager } from "./AgentConfigurationManager";
-import type { AgentManager } from "./AgentManager";
-import type { ConversationStorage } from "./ConversationStorage";
-import { ToolManager } from "./tools/ToolManager";
 
 /**
  * Orchestrates agent lifecycle and agent discovery
@@ -41,6 +41,11 @@ export class AgentOrchestrator {
      */
     setNDK(ndk: NDK): void {
         this.ndk = ndk;
+
+        // Set NDK on all existing agents
+        for (const agent of this.agents.values()) {
+            agent.setNDK(ndk);
+        }
     }
 
     /**
@@ -56,19 +61,9 @@ export class AgentOrchestrator {
     private async loadAgents(): Promise<void> {
         const agentsConfig = await this.configManager.loadAgentsConfig();
 
-        for (const [name, configOrNsec] of Object.entries(agentsConfig)) {
-            let nsec: string;
-            let configFile: string | undefined;
-
-            // Handle both old format (string) and new format (object)
-            if (typeof configOrNsec === "string") {
-                // Old format: just nsec string
-                nsec = configOrNsec;
-            } else {
-                // New format: object with nsec and optional file
-                nsec = configOrNsec.nsec;
-                configFile = configOrNsec.file;
-            }
+        for (const [name, config] of Object.entries(agentsConfig)) {
+            const nsec = config.nsec;
+            const configFile = config.file;
 
             const agent = await this.createAgent(name, nsec, configFile);
 
@@ -173,30 +168,10 @@ export class AgentOrchestrator {
      * Get agent by public key
      */
     async getAgentByPubkey(pubkey: string): Promise<Agent | undefined> {
-        // Check loaded agents first
+        // Check loaded agents
         for (const agent of this.agents.values()) {
             if (agent.getPubkey() === pubkey) {
                 return agent;
-            }
-        }
-
-        // Check agents that might not be loaded yet from agents.json
-        const agentsConfig = await this.configManager.loadAgentsConfig();
-
-        for (const [name, configOrNsec] of Object.entries(agentsConfig)) {
-            let nsec: string;
-
-            // Handle both old format (string) and new format (object)
-            if (typeof configOrNsec === "string") {
-                nsec = configOrNsec;
-            } else {
-                nsec = configOrNsec.nsec;
-            }
-
-            const signer = new NDKPrivateKeySigner(nsec);
-            if (signer.pubkey === pubkey) {
-                // Load and return this agent
-                return await this.getAgent(name);
             }
         }
 
@@ -208,35 +183,14 @@ export class AgentOrchestrator {
      */
     async isEventFromAnyAgent(eventPubkey: string): Promise<boolean> {
         // Check if the event is from any of the loaded agents
-        for (const agent of this.agents.values()) {
-            if (agent.getPubkey() === eventPubkey) {
+        for (const [name, agent] of this.agents.entries()) {
+            const agentPubkey = agent.getPubkey();
+            if (agentPubkey === eventPubkey) {
                 return true;
             }
         }
 
-        // Also check agents that might not be loaded yet from agents.json
-        const agentsConfig = await this.configManager.loadAgentsConfig();
-
-        for (const [name, configOrNsec] of Object.entries(agentsConfig)) {
-            let nsec: string;
-
-            // Handle both old format (string) and new format (object)
-            if (typeof configOrNsec === "string") {
-                nsec = configOrNsec;
-            } else {
-                nsec = configOrNsec.nsec;
-            }
-
-            // Create a temporary signer to get the pubkey
-            const signer = new NDKPrivateKeySigner(nsec);
-            if (signer.pubkey === eventPubkey) {
-                logger.info(
-                    `Event is from agent '${name}' (pubkey: ${eventPubkey.slice(0, 8)}...)`
-                );
-                return true;
-            }
-        }
-
+        logger.info("👤 HUMAN DETECTED: Event is from a human user");
         return false;
     }
 
@@ -260,13 +214,8 @@ export class AgentOrchestrator {
 
         const agentsConfig = await this.configManager.loadAgentsConfig();
 
-        for (const [agentName, configOrNsec] of Object.entries(agentsConfig)) {
-            let configFile: string | undefined;
-
-            // Handle both old format (string) and new format (object)
-            if (typeof configOrNsec === "object" && configOrNsec.file) {
-                configFile = configOrNsec.file;
-            }
+        for (const [agentName, config] of Object.entries(agentsConfig)) {
+            const configFile = config.file;
 
             // Try to load agent configuration
             let description = "";

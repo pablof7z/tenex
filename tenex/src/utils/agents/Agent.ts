@@ -1,15 +1,15 @@
+import type { AgentManager } from "@/utils/agents/AgentManager";
+import type { Conversation } from "@/utils/agents/Conversation";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import { loadAgentConfig, saveAgentConfig } from "@/utils/agents/core/AgentConfigManager";
+import { AgentConversationManager } from "@/utils/agents/core/AgentConversationManager";
+import { AgentCore } from "@/utils/agents/core/AgentCore";
+import { AgentResponseGenerator } from "@/utils/agents/core/AgentResponseGenerator";
+import type { SystemPromptContext } from "@/utils/agents/prompts/types";
+import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { AgentConfig, AgentResponse, LLMConfig } from "@/utils/agents/types";
 import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
-import type { AgentManager } from "./AgentManager";
-import type { Conversation } from "./Conversation";
-import type { ConversationStorage } from "./ConversationStorage";
-import { loadAgentConfig, saveAgentConfig } from "./core/AgentConfigManager";
-import { AgentConversationManager } from "./core/AgentConversationManager";
-import { AgentCore } from "./core/AgentCore";
-import { AgentResponseGenerator } from "./core/AgentResponseGenerator";
-import type { SystemPromptContext } from "./prompts/types";
-import type { ToolRegistry } from "./tools/ToolRegistry";
-import type { AgentConfig, AgentResponse, LLMConfig } from "./types";
 
 export class Agent {
     private core: AgentCore;
@@ -67,6 +67,11 @@ export class Agent {
         return this.core.getToolRegistry();
     }
 
+    getAvailableTools(): any[] {
+        const toolRegistry = this.core.getToolRegistry();
+        return toolRegistry ? toolRegistry.getAllTools() : [];
+    }
+
     getAgentEventId(): string | undefined {
         return this.core.getAgentEventId();
     }
@@ -109,6 +114,10 @@ export class Agent {
 
     extractConversationId(event: NDKEvent): string {
         return this.conversationManager.extractConversationId(event);
+    }
+
+    async saveConversationToStorage(conversation: Conversation): Promise<void> {
+        return this.conversationManager.saveConversationToStorage(conversation);
     }
 
     static async loadFromConfig(

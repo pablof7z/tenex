@@ -10,6 +10,7 @@ import { AgentSelectionStep } from "../create-project/AgentSelectionStep";
 import { ConfirmationStep } from "../create-project/ConfirmationStep";
 import { InstructionSelectionStep } from "../create-project/InstructionSelectionStep";
 import { ProjectDetailsStep } from "../create-project/ProjectDetailsStep";
+import { TelemetrySelectionStep } from "../create-project/TelemetrySelectionStep";
 import { TemplateSelectionStep } from "../create-project/TemplateSelectionStep";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -43,6 +44,8 @@ export function CreateProjectDialog({
             selectedTemplate: undefined,
             selectedAgents: [],
             selectedInstructions: [],
+            telemetryConfig: undefined,
+            enableTelemetry: false,
         });
         setIsCreating(false);
     };
@@ -66,6 +69,8 @@ export function CreateProjectDialog({
         } else if (step === "agents") {
             setStep("instructions");
         } else if (step === "instructions") {
+            setStep("telemetry");
+        } else if (step === "telemetry") {
             setStep("confirm");
         }
     };
@@ -81,8 +86,10 @@ export function CreateProjectDialog({
             }
         } else if (step === "instructions") {
             setStep("agents");
-        } else if (step === "confirm") {
+        } else if (step === "telemetry") {
             setStep("instructions");
+        } else if (step === "confirm") {
+            setStep("telemetry");
         }
     };
 
@@ -135,14 +142,19 @@ export function CreateProjectDialog({
                 }
             }
 
+            // Add telemetry config as metadata if enabled
+            if (formData.enableTelemetry && formData.telemetryConfig) {
+                project.tags.push(["telemetry", "enabled"]);
+            }
+
             // No need to sign explicitly - publish() will sign with the current user's key
             project.publish();
 
             resetForm();
             onOpenChange(false);
             onProjectCreated?.();
-        } catch (error) {
-            console.error("Failed to create project:", error);
+        } catch (_error) {
+            // console.error("Failed to create project:", error);
         } finally {
             setIsCreating(false);
         }
@@ -165,6 +177,8 @@ export function CreateProjectDialog({
                 return "Select Agents";
             case "instructions":
                 return "Select Instructions";
+            case "telemetry":
+                return "Configure Telemetry";
             case "confirm":
                 return "Confirm & Create";
             default:
@@ -210,6 +224,14 @@ export function CreateProjectDialog({
                     />
                 );
 
+            case "telemetry":
+                return (
+                    <TelemetrySelectionStep
+                        formData={formData}
+                        onFormDataChange={handleFormDataChange}
+                    />
+                );
+
             case "confirm":
                 return <ConfirmationStep formData={formData} />;
 
@@ -219,7 +241,10 @@ export function CreateProjectDialog({
     };
 
     const getDialogMaxWidth = () => {
-        return step === "template" || step === "agents" || step === "instructions"
+        return step === "template" ||
+            step === "agents" ||
+            step === "instructions" ||
+            step === "telemetry"
             ? "max-w-4xl"
             : "max-w-lg";
     };

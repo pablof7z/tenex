@@ -1,19 +1,13 @@
-import fs from "node:fs/promises";
 import path from "node:path";
+import { EventMonitor } from "@/core/EventMonitor";
+import { ProcessManager } from "@/core/ProcessManager";
+import { ProjectManager } from "@/core/ProjectManager";
+import { getNDK, initNDK, shutdownNDK } from "@/nostr/ndkClient";
+import { runInteractiveSetup } from "@/utils/setup";
 import { logger } from "@tenex/shared";
-import { loadConfig } from "@tenex/shared";
+import { configurationService } from "@tenex/shared/services";
+import type { GlobalConfig } from "@tenex/types/config";
 import { Command } from "commander";
-import { EventMonitor } from "../core/EventMonitor.js";
-import { ProcessManager } from "../core/ProcessManager.js";
-import { ProjectManager } from "../core/ProjectManager.js";
-import { getNDK, shutdownNDK } from "../nostr/ndkClient.js";
-import { runInteractiveSetup } from "../utils/setup.js";
-
-interface DaemonConfig {
-    whitelistedPubkeys?: string[];
-    llms?: any[]; // LLMConfig[]
-    [key: string]: unknown;
-}
 
 export const daemonCommand = new Command("daemon")
     .description("Start the TENEX daemon to monitor Nostr events")
@@ -23,10 +17,10 @@ export const daemonCommand = new Command("daemon")
         logger.info("Starting TENEX daemon");
 
         // Load configuration
-        let config = await loadDaemonConfig(options.config);
+        let globalConfig = await loadDaemonConfig(options.config);
 
         // Get whitelisted pubkeys
-        let whitelistedPubkeys = getWhitelistedPubkeys(options.whitelist, config);
+        let whitelistedPubkeys = getWhitelistedPubkeys(options.whitelist, globalConfig);
 
         if (whitelistedPubkeys.length === 0) {
             logger.info("No whitelisted pubkeys found. Starting interactive setup...");
@@ -35,14 +29,15 @@ export const daemonCommand = new Command("daemon")
             const setupConfig = await runInteractiveSetup();
 
             // Use the setup configuration
-            config = setupConfig;
+            globalConfig = setupConfig;
             whitelistedPubkeys = setupConfig.whitelistedPubkeys;
         }
 
         logger.info("Whitelisted pubkeys", { count: whitelistedPubkeys.length });
 
-        // Get NDK singleton
-        const ndk = await getNDK();
+        // Initialize NDK and get singleton
+        await initNDK();
+        const ndk = getNDK();
 
         // Initialize core components
         const projectManager = new ProjectManager();
@@ -53,9 +48,8 @@ export const daemonCommand = new Command("daemon")
         setupGracefulShutdown(eventMonitor, processManager);
 
         try {
-            // Start monitoring with LLM configs from daemon configuration
-            const llmConfigs = config.llms || [];
-            await eventMonitor.start(whitelistedPubkeys, llmConfigs);
+            // Start monitoring without passing LLM configs - let projects load from global config with proper default detection
+            await eventMonitor.start(whitelistedPubkeys);
 
             logger.info("TENEX daemon is running. Press Ctrl+C to stop.");
 
@@ -69,49 +63,32 @@ export const daemonCommand = new Command("daemon")
         }
     });
 
-async function loadDaemonConfig(configPath?: string): Promise<DaemonConfig> {
-    if (!configPath) {
-        // Try default locations
-        const defaultPaths = [
-            path.join(process.cwd(), "tenex.config.json"),
-            path.join(process.cwd(), ".tenex", "config.json"),
-            path.join(process.env.HOME || "", ".tenex", "daemon.json"),
-        ];
-
-        for (const defaultPath of defaultPaths) {
-            try {
-                const content = await fs.readFile(defaultPath, "utf-8");
-                logger.info("Loaded config from", { path: defaultPath });
-                return JSON.parse(content);
-            } catch {
-                // Continue to next path
-            }
-        }
-
-        return {};
-    }
-
+async function loadDaemonConfig(configPath?: string): Promise<GlobalConfig> {
     try {
-        const content = await fs.readFile(configPath, "utf-8");
-        return JSON.parse(content);
-    } catch (error) {
-        logger.error("Failed to load config", { error, configPath });
+        // If config path is provided, construct the proper context path
+        const contextPath = configPath ? path.dirname(configPath) : "";
+        const configuration = await configurationService.loadConfiguration(contextPath, true);
+
+        return configuration.config as GlobalConfig;
+    } catch (_error) {
+        // Config doesn't exist yet
         return {};
     }
 }
 
-function getWhitelistedPubkeys(cliOption?: string, config?: DaemonConfig): string[] {
+function getWhitelistedPubkeys(cliOption?: string, config?: GlobalConfig): string[] {
     const pubkeys: Set<string> = new Set();
 
-    // Add from CLI option
+    // If CLI option is provided, ONLY use those pubkeys (don't merge with config)
     if (cliOption) {
         for (const pk of cliOption.split(",")) {
             const trimmed = pk.trim();
             if (trimmed) pubkeys.add(trimmed);
         }
+        return Array.from(pubkeys);
     }
 
-    // Add from config
+    // Otherwise, use config pubkeys
     if (config?.whitelistedPubkeys) {
         if (Array.isArray(config.whitelistedPubkeys)) {
             for (const pk of config.whitelistedPubkeys) {

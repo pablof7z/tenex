@@ -9,7 +9,7 @@ import type {
     LLMResponse,
     ProviderTool,
 } from "../../llm/types";
-import { parseToolCalls, hasToolCalls, removeToolCalls } from "../ToolParser";
+import { hasToolCalls, parseToolCalls, removeToolCalls } from "../ToolParser";
 import { ToolRegistry } from "../ToolRegistry";
 import type { ToolDefinition } from "../types";
 

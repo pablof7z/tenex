@@ -21,7 +21,10 @@ import { initNDK } from "./ndk.js";
         // Directly run the MCP server
         startMcpServer();
     } catch (error) {
-        console.error("Failed to initialize MCP server:", error);
+        // Use stderr for error output in MCP servers
+        process.stderr.write(
+            `Failed to initialize MCP server: ${error instanceof Error ? error.message : String(error)}\n`
+        );
         process.exit(1);
     }
 })();

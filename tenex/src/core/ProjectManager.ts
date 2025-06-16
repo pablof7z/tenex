@@ -1,49 +1,84 @@
 import { exec } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { toKebabCase } from "@/utils/agents";
 import type NDK from "@nostr-dev-kit/ndk";
-import type { NDKArticle } from "@nostr-dev-kit/ndk";
-import { getRelayUrls, logger } from "@tenex/shared";
-import { ProjectService } from "@tenex/shared/projects";
-import type { AgentsJson } from "@tenex/types/agents";
+import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import type { NDKProject } from "@nostr-dev-kit/ndk";
+import { logger } from "@tenex/shared";
+import { configurationService } from "@tenex/shared/services";
+import type { AgentProfile } from "@tenex/types/agents";
+import type {
+    GlobalConfig,
+    ProjectConfig,
+    TenexConfiguration,
+    UnifiedLLMConfig,
+} from "@tenex/types/config";
+import type { LLMConfig } from "@tenex/types/llm";
 import type { Agent, ProjectData } from "@tenex/types/projects";
+import type { TelemetryConfig } from "@tenex/types/telemetry";
 import { nip19 } from "nostr-tools";
 
 const execAsync = promisify(exec);
 
 export interface IProjectManager {
-    initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData>;
+    initializeProject(
+        projectPath: string,
+        naddr: string,
+        ndk: NDK,
+        llmConfigs?: LLMConfig[],
+        telemetryConfigs?: TelemetryConfig[]
+    ): Promise<ProjectData>;
     loadProject(projectPath: string): Promise<ProjectData>;
-    ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string>;
+    ensureProjectExists(
+        identifier: string,
+        naddr: string,
+        ndk: NDK,
+        llmConfigs?: LLMConfig[],
+        telemetryConfigs?: TelemetryConfig[]
+    ): Promise<string>;
 }
 
 export class ProjectManager implements IProjectManager {
-    private projectService: ProjectService;
+    constructor() {}
 
-    constructor() {
-        this.projectService = new ProjectService();
-    }
-
-    async initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData> {
+    async initializeProject(
+        projectPath: string,
+        naddr: string,
+        ndk: NDK,
+        llmConfigs?: LLMConfig[],
+        telemetryConfigs?: TelemetryConfig[]
+    ): Promise<ProjectData> {
         try {
             // Fetch project from Nostr
-            const article = await this.projectService.fetchProject(naddr, ndk);
-            const projectData = this.articleToProjectData(article, naddr);
+            const project = await this.fetchProject(naddr, ndk);
+            const projectData = this.projectToProjectData(project, naddr);
 
             // Clone repository if provided
             if (projectData.repoUrl) {
-                await this.projectService.cloneRepository(projectData.repoUrl, projectPath);
+                await this.cloneRepository(projectData.repoUrl, projectPath);
             }
 
+            // Generate project nsec and create profile
+            const projectNsec = await this.generateNsec();
+            await this.createProjectProfile(projectNsec, projectData, ndk);
+
             // Create project structure
-            await this.projectService.createProjectStructure(projectPath, projectData);
+            await this.createProjectStructure(projectPath, projectData, projectNsec);
 
             // Fetch and save agent definitions
             await this.fetchAndSaveAgentDefinitions(projectPath, projectData, ndk);
 
             // Initialize agents.json with default agent
             await this.initializeAgents(projectPath, projectData);
+
+            // Initialize LLM configuration - use global config if no explicit configs provided
+            await this.initializeLLMConfig(projectPath, llmConfigs);
+
+            // Initialize telemetry configuration - use global config if no explicit configs provided
+            await this.initializeTelemetryConfig(projectPath, telemetryConfigs);
 
             return projectData;
         } catch (error) {
@@ -53,20 +88,18 @@ export class ProjectManager implements IProjectManager {
     }
 
     async loadProject(projectPath: string): Promise<ProjectData> {
-        const metadataPath = path.join(projectPath, ".tenex", "metadata.json");
-
         try {
-            const metadataContent = await fs.readFile(metadataPath, "utf-8");
-            const metadata = JSON.parse(metadataContent);
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const config = configuration.config as ProjectConfig;
 
-            if (!metadata.naddr) {
-                throw new Error("Project metadata missing naddr");
+            if (!config.projectNaddr) {
+                throw new Error("Project configuration missing projectNaddr");
             }
 
             // Decode naddr to get project details
-            const decoded = nip19.decode(metadata.naddr);
+            const decoded = nip19.decode(config.projectNaddr);
             if (decoded.type !== "naddr") {
-                throw new Error("Invalid naddr in metadata");
+                throw new Error("Invalid naddr in configuration");
             }
 
             const addressPointer = decoded.data as nip19.AddressPointer;
@@ -75,14 +108,14 @@ export class ProjectManager implements IProjectManager {
             return {
                 identifier,
                 pubkey,
-                naddr: metadata.naddr,
-                title: metadata.title || "Untitled Project",
-                description: metadata.description,
-                repoUrl: metadata.repoUrl,
-                hashtags: metadata.hashtags || [],
+                naddr: config.projectNaddr,
+                title: config.title || "Untitled Project",
+                description: config.description,
+                repoUrl: config.repoUrl || undefined,
+                hashtags: config.hashtags || [],
                 agentEventIds: [],
-                createdAt: metadata.createdAt,
-                updatedAt: metadata.updatedAt,
+                createdAt: config.createdAt,
+                updatedAt: config.updatedAt,
             };
         } catch (error) {
             logger.error("Failed to load project", { error, projectPath });
@@ -90,46 +123,124 @@ export class ProjectManager implements IProjectManager {
         }
     }
 
-    async ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string> {
+    async ensureProjectExists(
+        identifier: string,
+        naddr: string,
+        ndk: NDK,
+        llmConfigs?: LLMConfig[],
+        telemetryConfigs?: TelemetryConfig[]
+    ): Promise<string> {
         const projectPath = path.join(process.cwd(), "projects", identifier);
 
         // Check if project already exists
         if (await this.projectExists(projectPath)) {
-            logger.info("Project already exists", { projectPath });
             return projectPath;
         }
 
         // Initialize the project
-        logger.info("Initializing new project", { identifier, naddr });
-        await this.initializeProject(projectPath, naddr, ndk);
+        await this.initializeProject(projectPath, naddr, ndk, llmConfigs, telemetryConfigs);
 
         return projectPath;
     }
 
-    private articleToProjectData(article: NDKArticle, naddr: string): ProjectData {
-        const repoTag = article.tagValue("repo");
-        const hashtagTags = article.tags
+    private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
+        // Decode naddr to get project details
+        const decoded = nip19.decode(naddr);
+        if (decoded.type !== "naddr") {
+            throw new Error("Invalid naddr provided");
+        }
+
+        const addressPointer = decoded.data as nip19.AddressPointer;
+        const filter = {
+            kinds: [addressPointer.kind],
+            authors: [addressPointer.pubkey],
+            "#d": [addressPointer.identifier],
+        };
+
+        const event = await ndk.fetchEvent(filter, {
+            closeOnEose: true,
+            groupable: false,
+        });
+
+        if (!event) {
+            throw new Error("Project not found on Nostr");
+        }
+
+        return event as NDKProject;
+    }
+
+    private projectToProjectData(project: NDKProject, naddr: string): ProjectData {
+        const repoTag = project.tagValue("repo");
+        const hashtagTags = project.tags
             .filter((t) => t[0] === "t")
             .map((t) => t[1])
             .filter(Boolean) as string[];
 
-        const agentTags = article.tags
+        const agentTags = project.tags
             .filter((t) => t[0] === "agent")
             .map((t) => t[1])
             .filter(Boolean) as string[];
 
         return {
-            identifier: article.dTag || "",
-            pubkey: article.pubkey,
+            identifier: project.dTag || "",
+            pubkey: project.pubkey,
             naddr,
-            title: article.title || "Untitled Project",
-            description: article.summary || article.content,
+            title: project.title || "Untitled Project",
+            description: project.summary || project.content,
             repoUrl: repoTag,
             hashtags: hashtagTags,
             agentEventIds: agentTags,
-            createdAt: article.created_at,
-            updatedAt: article.created_at,
+            createdAt: project.created_at,
+            updatedAt: project.created_at,
         };
+    }
+
+    private async cloneRepository(repoUrl: string, projectPath: string): Promise<void> {
+        try {
+            await fs.mkdir(path.dirname(projectPath), { recursive: true });
+            const { stdout, stderr } = await execAsync(`git clone "${repoUrl}" "${projectPath}"`);
+            if (stderr) {
+                logger.warn("Git clone warning", { stderr });
+            }
+            logger.info("Cloned repository", { repoUrl, projectPath, stdout });
+        } catch (error) {
+            logger.error("Failed to clone repository", { error, repoUrl });
+            throw error;
+        }
+    }
+
+    private async createProjectStructure(
+        projectPath: string,
+        projectData: ProjectData,
+        projectNsec: string
+    ): Promise<void> {
+        const tenexPath = path.join(projectPath, ".tenex");
+        await fs.mkdir(tenexPath, { recursive: true });
+
+        // Create project config
+        const projectConfig: ProjectConfig = {
+            title: projectData.title,
+            description: projectData.description,
+            repoUrl: projectData.repoUrl || undefined,
+            projectNaddr: projectData.naddr,
+            nsec: projectNsec,
+            hashtags: projectData.hashtags,
+            createdAt: projectData.createdAt,
+            updatedAt: projectData.updatedAt,
+        };
+
+        const config: TenexConfiguration = {
+            config: projectConfig,
+            llms: {
+                configurations: {},
+                defaults: {},
+            },
+            agents: {},
+        };
+
+        await configurationService.saveConfiguration(projectPath, config);
+
+        logger.info("Created project structure with config", { projectPath });
     }
 
     private async fetchAndSaveAgentDefinitions(
@@ -165,8 +276,8 @@ export class ProjectManager implements IProjectManager {
     }
 
     private async initializeAgents(projectPath: string, project: ProjectData): Promise<void> {
-        const agentsPath = path.join(projectPath, ".tenex", "agents.json");
-        const agents: AgentsJson = {};
+        const configuration = await configurationService.loadConfiguration(projectPath);
+        const agents = configuration.agents || {};
 
         // Create agents from agent event IDs
         for (const eventId of project.agentEventIds) {
@@ -191,46 +302,117 @@ export class ProjectManager implements IProjectManager {
             };
         }
 
-        await fs.writeFile(agentsPath, JSON.stringify(agents, null, 2));
+        configuration.agents = agents;
+        await configurationService.saveConfiguration(projectPath, configuration);
     }
 
-    private async loadAgents(projectPath: string, _project: ProjectData): Promise<Agent[]> {
-        const agentsPath = path.join(projectPath, ".tenex", "agents.json");
-        const agentsJson: AgentsJson = JSON.parse(await fs.readFile(agentsPath, "utf-8"));
+    private async initializeLLMConfig(
+        projectPath: string,
+        llmConfigs?: LLMConfig[]
+    ): Promise<void> {
+        const configuration = await configurationService.loadConfiguration(projectPath);
 
-        const agents: Agent[] = [];
-
-        for (const [name, config] of Object.entries(agentsJson)) {
-            const agent: Agent = {
-                name,
-                nsec: config.nsec,
-                eventId: config.file,
-            };
-
-            // Load additional agent data if file reference exists
-            if (config.file) {
-                try {
-                    const agentFile = path.join(
-                        projectPath,
-                        ".tenex",
-                        "agents",
-                        `${config.file}.json`
-                    );
-                    const agentData = JSON.parse(await fs.readFile(agentFile, "utf-8"));
-                    agent.display_name = agentData.name;
-                    agent.description = agentData.description;
-                    agent.role = agentData.role;
-                    agent.instructions = agentData.instructions;
-                    agent.version = agentData.version;
-                } catch (error) {
-                    logger.warn("Failed to load agent data", { error, name });
-                }
-            }
-
-            agents.push(agent);
+        // If configs already exist, don't override
+        if (
+            Object.keys(configuration.llms.configurations).length > 0 ||
+            Object.keys(configuration.llms.defaults).length > 0
+        ) {
+            logger.debug("LLM configuration already exists", { projectPath });
+            return;
         }
 
-        return agents;
+        // Use provided configs or load from global
+        let effectiveConfigs = llmConfigs;
+        let globalCredentials: Record<string, any> | undefined;
+
+        if (!effectiveConfigs || effectiveConfigs.length === 0) {
+            const globalConfig = await this.loadGlobalConfiguration();
+            effectiveConfigs = this.extractLLMConfigsFromUnified(globalConfig.llms);
+            globalCredentials = globalConfig.llms.credentials;
+        }
+
+        if (!effectiveConfigs || effectiveConfigs.length === 0) {
+            logger.info("No LLM configurations available to initialize", { projectPath });
+            return;
+        }
+
+        // Convert LLMConfig[] to UnifiedLLMConfig
+        const unifiedConfig: UnifiedLLMConfig = {
+            configurations: {},
+            defaults: {},
+            credentials: globalCredentials,
+        };
+
+        for (const config of effectiveConfigs) {
+            const key = `${config.provider}-${config.model}`
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, "-");
+            unifiedConfig.configurations[key] = config;
+        }
+
+        // Set default to first config
+        const firstKey = Object.keys(unifiedConfig.configurations)[0];
+        if (firstKey) {
+            unifiedConfig.defaults.default = firstKey;
+        }
+
+        configuration.llms = unifiedConfig;
+        await configurationService.saveConfiguration(projectPath, configuration);
+
+        logger.info("Initialized LLM configuration", {
+            projectPath,
+            configCount: effectiveConfigs.length,
+            defaultKey: unifiedConfig.defaults.default,
+        });
+    }
+
+    private async initializeTelemetryConfig(
+        projectPath: string,
+        telemetryConfigs?: TelemetryConfig[]
+    ): Promise<void> {
+        const configuration = await configurationService.loadConfiguration(projectPath);
+        const projectConfig = configuration.config as ProjectConfig;
+
+        // If telemetry already configured, don't override
+        if (projectConfig.telemetry) {
+            logger.debug("Telemetry configuration already exists", { projectPath });
+            return;
+        }
+
+        // Use provided configs or load from global
+        let effectiveTelemetry: TelemetryConfig | undefined;
+        if (telemetryConfigs && telemetryConfigs.length > 0) {
+            effectiveTelemetry = telemetryConfigs[0];
+        } else {
+            const globalConfig = await this.loadGlobalConfiguration();
+            effectiveTelemetry = (globalConfig.config as GlobalConfig).telemetry;
+        }
+
+        if (effectiveTelemetry) {
+            projectConfig.telemetry = effectiveTelemetry;
+            configuration.config = projectConfig;
+            await configurationService.saveConfiguration(projectPath, configuration);
+            logger.info("Initialized telemetry configuration", { projectPath });
+        }
+    }
+
+    private async loadGlobalConfiguration(): Promise<TenexConfiguration> {
+        try {
+            return await configurationService.loadConfiguration("", true);
+        } catch (error) {
+            logger.debug("Could not load global configuration", { error });
+            return {
+                config: {},
+                llms: {
+                    configurations: {},
+                    defaults: {},
+                },
+            };
+        }
+    }
+
+    private extractLLMConfigsFromUnified(unified: UnifiedLLMConfig): LLMConfig[] {
+        return Object.values(unified.configurations);
     }
 
     private async projectExists(projectPath: string): Promise<boolean> {
@@ -252,6 +434,51 @@ export class ProjectManager implements IProjectManager {
             privateKeyHex.match(/.{1,2}/g)!.map((byte) => Number.parseInt(byte, 16))
         );
         return nip19.nsecEncode(privateKeyBytes);
+    }
+
+    private buildProjectProfile(projectName: string, description?: string): AgentProfile {
+        return {
+            name: toKebabCase(projectName),
+            display_name: `${projectName} Project`,
+            about: description || `TENEX project: ${projectName}`,
+            picture: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}`,
+            banner: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}-banner`,
+            nip05: `${toKebabCase(projectName)}@tenex.bot`,
+            lud16: `${toKebabCase(projectName)}@tenex.bot`,
+            website: "https://tenex.bot",
+        };
+    }
+
+    private async createProjectProfile(
+        projectNsec: string,
+        projectData: ProjectData,
+        ndk: NDK
+    ): Promise<void> {
+        try {
+            const signer = new NDKPrivateKeySigner(projectNsec);
+            const profile = this.buildProjectProfile(projectData.title, projectData.description);
+
+            const profileEvent = new NDKEvent(ndk, {
+                kind: 0,
+                pubkey: signer.pubkey,
+                content: JSON.stringify(profile),
+                tags: [],
+            });
+
+            await profileEvent.sign(signer);
+            await profileEvent.publish();
+
+            logger.info("Created project profile", {
+                projectName: projectData.title,
+                pubkey: signer.pubkey,
+            });
+        } catch (error) {
+            logger.error("Failed to create project profile", {
+                error,
+                projectName: projectData.title,
+            });
+            // Don't throw - profile creation is not critical for project initialization
+        }
     }
 
     private toKebabCase(str: string): string {

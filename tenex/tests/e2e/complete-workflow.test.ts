@@ -7,7 +7,7 @@ import { EVENT_KINDS } from "@tenex/types/events";
 import { nip19 } from "nostr-tools";
 
 const CLI_PATH = path.join(__dirname, "../../bin/tenex.ts");
-const CLI_CLIENT_PATH = path.join(__dirname, "../../../cli-client/dist/index.js");
+const _CLI_CLIENT_PATH = path.join(__dirname, "../../../cli-client/dist/index.js");
 const TEST_DIR = path.join(process.cwd(), "test-e2e-temp");
 
 // Test configuration
@@ -19,7 +19,7 @@ let globalNdk: NDK;
 
 describe("TENEX Complete Workflow E2E Tests", () => {
     let daemonProcess: ChildProcess | null = null;
-    let projectRunProcess: ChildProcess | null = null;
+    const projectRunProcess: ChildProcess | null = null;
     let ownerNsec: string;
     let ownerPubkey: string;
     let ndk: NDK;
@@ -113,9 +113,9 @@ describe("TENEX Complete Workflow E2E Tests", () => {
 
                 // Step 3: Use CLI client to create a chat thread
                 console.log("\n=== Step 3: Creating chat thread via CLI client ===");
-                
+
                 // First, we need to set up the environment for cli-client
-                const cliClientEnv = {
+                const _cliClientEnv = {
                     ...process.env,
                     NSEC: ownerNsec,
                     PROJECT_NADDR: projectNaddr,
@@ -148,7 +148,8 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 console.log("\n=== Step 5: Creating task ===");
                 const taskEvent = new NDKEvent(ndk);
                 taskEvent.kind = EVENT_KINDS.TASK;
-                taskEvent.content = "Implement a basic calculator with add, subtract, multiply, and divide functions";
+                taskEvent.content =
+                    "Implement a basic calculator with add, subtract, multiply, and divide functions";
                 taskEvent.tags.push(
                     ["title", "Implement Calculator"],
                     ["a", `31933:${ownerPubkey}:${projectIdentifier}`]
@@ -192,8 +193,8 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 // Verify agents responded to follow-up
                 const updatedChatEvents = await fetchChatEvents(projectNaddr);
                 const followUpResponses = updatedChatEvents.filter(
-                    (event) => 
-                        event.pubkey !== ownerPubkey && 
+                    (event) =>
+                        event.pubkey !== ownerPubkey &&
                         event.created_at! > followUpEvent.created_at!
                 );
                 expect(followUpResponses.length).toBeGreaterThan(0);
@@ -217,9 +218,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 projectEvent.dTag = projectIdentifier;
                 projectEvent.title = "Multi-Agent Test Project";
                 projectEvent.content = "Testing complex multi-agent scenarios";
-                projectEvent.tags.push(
-                    ["title", "Multi-Agent Test Project"]
-                );
+                projectEvent.tags.push(["title", "Multi-Agent Test Project"]);
 
                 await projectEvent.sign();
                 await projectEvent.publish();
@@ -253,7 +252,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 // Verify multiple agents participated
                 const statusUpdates = await fetchAgentStatusUpdates(projectNaddr);
                 const agentNames = new Set<string>();
-                
+
                 statusUpdates.forEach((event) => {
                     try {
                         const content = JSON.parse(event.content);
@@ -283,9 +282,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 const chatEvent = new NDKEvent(ndk);
                 chatEvent.kind = EVENT_KINDS.CHAT;
                 chatEvent.content = "Hello to a non-existent project";
-                chatEvent.tags.push(
-                    ["a", `31933:${ownerPubkey}:${fakeProjectIdentifier}`]
-                );
+                chatEvent.tags.push(["a", `31933:${ownerPubkey}:${fakeProjectIdentifier}`]);
 
                 await chatEvent.sign();
                 await chatEvent.publish();

@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
+import { ClaudeCodeOutputParser } from "@/utils/agents/tools/claudeCode/ClaudeCodeOutputParser";
+import type { ClaudeCodeOptions } from "@/utils/agents/tools/claudeCode/types";
+import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { logDebug, logError, logInfo } from "@tenex/shared/logger";
 import chalk from "chalk";
-import type { ToolContext, ToolDefinition } from "../types";
-import { ClaudeCodeOutputParser } from "./parser";
-import type { ClaudeCodeOptions } from "./types";
 
 export const claudeCodeTool: ToolDefinition = {
     name: "claude_code",
@@ -63,11 +63,9 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
 
         // Show the actual command being run
         logDebug(
-            chalk.gray("Command:") +
-                " " +
-                `claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`
+            `${chalk.gray("Command:")} claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`
         );
-        logDebug(chalk.gray("Working directory:") + " " + (options.projectPath || process.cwd()));
+        logDebug(`${chalk.gray("Working directory:")} ${options.projectPath || process.cwd()}`);
         logInfo(chalk.yellow("\nExecuting Claude Code...\n"));
 
         const claudeProcess = spawn("claude", args, {
@@ -76,7 +74,7 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
             stdio: ["ignore", "pipe", "inherit"], // ignore stdin, pipe stdout, inherit stderr
         });
 
-        logDebug(chalk.gray("Claude process PID:") + " " + claudeProcess.pid);
+        logDebug(`${chalk.gray("Claude process PID:")} ${claudeProcess.pid}`);
 
         const parser = new ClaudeCodeOutputParser(toolContext);
         let finalResult = "";
@@ -124,7 +122,7 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
         });
 
         claudeProcess.on("error", (error) => {
-            logError(chalk.red("Failed to start Claude Code:") + " " + error.message);
+            logError(`${chalk.red("Failed to start Claude Code:")} ${error.message}`);
             if (error.message.includes("ENOENT")) {
                 logError(chalk.yellow("\nMake sure Claude CLI is installed and in your PATH"));
                 logError(chalk.yellow("Install with: npm install -g @anthropic-ai/claude-cli"));

@@ -1,19 +1,14 @@
 import path from "node:path";
+import { type RuleMapping, RulesManager } from "@/utils/RulesManager";
+import { DefaultSpecCache, type SpecCache } from "@/utils/agents/prompts/SpecCache";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKProject } from "@nostr-dev-kit/ndk";
-import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/node";
-import { type RuleMapping, RulesManager } from "../../utils/RulesManager";
-import { DefaultSpecCache, type SpecCache } from "../../utils/agents/prompts/SpecCache";
-
-export interface ProjectMetadata {
-    projectNaddr: string;
-    title?: string;
-    [key: string]: string | undefined;
-}
+import { configurationService } from "@tenex/shared/services";
+import type { ProjectConfig, TenexConfiguration } from "@tenex/types/config";
 
 export interface ProjectInfo {
-    metadata: ProjectMetadata;
+    config: ProjectConfig;
     projectEvent: NDKProject;
     projectPath: string;
     title: string;
@@ -29,8 +24,9 @@ export class ProjectLoader {
     constructor(private ndk: NDK) {}
 
     async loadProject(projectPath: string): Promise<ProjectInfo> {
-        const metadata = await this.loadMetadata(projectPath);
-        const projectEvent = await this.fetchProjectEvent(metadata.projectNaddr);
+        const configuration = await this.loadConfiguration(projectPath);
+        const config = configuration.config as ProjectConfig;
+        const projectEvent = await this.fetchProjectEvent(config.projectNaddr);
 
         // Initialize rules manager
         const rulesManager = new RulesManager(this.ndk, projectPath);
@@ -47,7 +43,7 @@ export class ProjectLoader {
 
         return this.extractProjectInfo(
             projectEvent,
-            metadata,
+            config,
             projectPath,
             ruleMappings,
             rulesManager,
@@ -55,20 +51,19 @@ export class ProjectLoader {
         );
     }
 
-    private async loadMetadata(projectPath: string): Promise<ProjectMetadata> {
-        const metadataPath = path.join(projectPath, ".tenex", "metadata.json");
-
+    private async loadConfiguration(projectPath: string): Promise<TenexConfiguration> {
         try {
-            const metadata = await fileSystem.readJsonFile<ProjectMetadata>(metadataPath);
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const config = configuration.config as ProjectConfig;
 
-            if (!metadata.projectNaddr) {
-                throw new Error("Project metadata missing naddr");
+            if (!config.projectNaddr) {
+                throw new Error("Project configuration missing projectNaddr");
             }
 
-            return metadata;
+            return configuration;
         } catch (err) {
             if (err instanceof Error && "code" in err && err.code === "ENOENT") {
-                logError("Failed to load project metadata. Is this a TENEX project?");
+                logError("Failed to load project configuration. Is this a TENEX project?");
                 logInfo("Run 'tenex project init' to initialize a project");
             }
             throw err;
@@ -87,7 +82,7 @@ export class ProjectLoader {
 
     private extractProjectInfo(
         projectEvent: NDKProject,
-        metadata: ProjectMetadata,
+        config: ProjectConfig,
         projectPath: string,
         ruleMappings: RuleMapping[],
         rulesManager: RulesManager,
@@ -98,11 +93,11 @@ export class ProjectLoader {
         const dTag = projectEvent.tags.find((tag) => tag[0] === "d");
 
         return {
-            metadata,
+            config,
             projectEvent,
             projectPath,
-            title: titleTag?.[1] || "Untitled Project",
-            repository: repoTag?.[1] || "No repository",
+            title: titleTag?.[1] || config.title || "Untitled Project",
+            repository: repoTag?.[1] || config.repoUrl || "No repository",
             projectId: dTag?.[1] || "",
             projectPubkey: projectEvent.author.pubkey,
             ruleMappings,

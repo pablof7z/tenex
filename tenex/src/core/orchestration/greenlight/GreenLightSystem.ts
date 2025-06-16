@@ -1,5 +1,5 @@
+import type { LLMProvider } from "@/utils/agents/llm/types";
 import { logger } from "@tenex/shared/logger";
-import type { LLMProvider } from "../../../utils/agents/llm/types";
 
 export interface ApprovalRequest {
     id: string;

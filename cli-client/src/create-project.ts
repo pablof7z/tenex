@@ -1,9 +1,9 @@
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, type NDKFilter, NDKProject, NDKProjectTemplate } from "@nostr-dev-kit/ndk";
+import { logger } from "@tenex/shared";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { logger } from "@tenex/shared";
 import { NDKAgent } from "./events/agent.js";
 import { NDKLLMRule } from "./events/instruction.js";
 

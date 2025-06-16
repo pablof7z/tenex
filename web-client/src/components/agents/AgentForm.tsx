@@ -22,9 +22,9 @@ interface AgentFormProps {
 
 export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: AgentFormProps) {
     return (
-        <div className="max-w-3xl mx-auto p-8">
-            <div className="bg-card rounded-xl shadow-sm border border-border p-8">
-                <div className="space-y-8">
+        <div className="max-w-2xl mx-auto p-4 md:p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+                <div className="space-y-6">
                     {/* Title */}
                     <div className="space-y-2">
                         <label
@@ -40,7 +40,7 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
                             value={formData.title}
                             onChange={(e) => onFormChange("title", e.target.value)}
                             placeholder="e.g., Code Reviewer Agent"
-                            className="w-full h-12 px-4 text-base"
+                            className="w-full h-10 px-4 text-base"
                         />
                     </div>
 
@@ -77,7 +77,7 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
                             value={formData.role}
                             onChange={(e) => onFormChange("role", e.target.value)}
                             placeholder="e.g., Senior Software Engineer, UX Designer, DevOps Specialist"
-                            className="w-full h-12 px-4 text-base border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
+                            className="w-full h-10 px-4 text-base border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
                         />
                     </div>
 
@@ -102,7 +102,7 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
                                     }
                                 }}
                                 placeholder="Add a tag and press Enter..."
-                                className="flex-1 h-12 px-4 text-base"
+                                className="flex-1 h-10 px-4 text-base"
                             />
                             <Button
                                 type="button"
@@ -110,7 +110,7 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
                                 size="lg"
                                 onClick={onAddTag}
                                 disabled={!formData.newTag.trim()}
-                                className="h-12 px-4"
+                                className="h-10 px-4"
                             >
                                 <Plus className="w-5 h-5" />
                             </Button>

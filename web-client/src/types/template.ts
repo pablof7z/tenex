@@ -1,4 +1,5 @@
 import type { NDKEvent, NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
+import type { TelemetryConfig } from "@tenex/types/telemetry";
 import type { NDKAgent } from "../events/agent";
 
 export interface NDKLLMRule extends NDKEvent {
@@ -21,6 +22,8 @@ export interface ProjectFormData {
     selectedTemplate?: NDKProjectTemplate;
     selectedAgents?: NDKAgent[];
     selectedInstructions?: InstructionWithAgents[];
+    telemetryConfig?: TelemetryConfig;
+    enableTelemetry?: boolean;
 }
 
 export interface CreateProjectDialogProps {
@@ -29,4 +32,10 @@ export interface CreateProjectDialogProps {
     onProjectCreated?: () => void;
 }
 
-export type CreateProjectStep = "details" | "template" | "agents" | "instructions" | "confirm";
+export type CreateProjectStep =
+    | "details"
+    | "template"
+    | "agents"
+    | "instructions"
+    | "telemetry"
+    | "confirm";

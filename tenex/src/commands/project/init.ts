@@ -2,7 +2,7 @@ import path from "node:path";
 import { logger } from "@tenex/shared";
 import { Command } from "commander";
 import { ProjectManager } from "../../core/ProjectManager.js";
-import { getNDK, shutdownNDK } from "../../nostr/ndkClient.js";
+import { getNDK, initNDK, shutdownNDK } from "../../nostr/ndkClient.js";
 import { formatError } from "../../utils/errors.js";
 
 export const projectInitCommand = new Command("init")
@@ -15,8 +15,9 @@ export const projectInitCommand = new Command("init")
 
             logger.info("Initializing project", { path: resolvedPath, naddr });
 
-            // Get NDK singleton
-            const ndk = await getNDK();
+            // Initialize NDK and get singleton
+            await initNDK();
+            const ndk = getNDK();
 
             const projectManager = new ProjectManager();
             const projectData = await projectManager.initializeProject(resolvedPath, naddr, ndk);

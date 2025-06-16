@@ -1,7 +1,7 @@
+import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 import { EVENT_KINDS } from "@tenex/types/events";
-import type { ToolContext, ToolDefinition } from "./types";
 
 export const addTaskTool: ToolDefinition = {
     name: "add_task",

@@ -89,8 +89,8 @@ export function InstructionsList({
                 )}
             </div>
 
-            <div className="p-2 border-t border-border">
-                <Button variant="outline" size="sm" className="w-full" onClick={onCreateNew}>
+            <div className="p-2">
+                <Button size="lg" className="w-full" onClick={onCreateNew}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add new instruction
                 </Button>

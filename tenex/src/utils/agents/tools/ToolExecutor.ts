@@ -1,5 +1,5 @@
-import type { ToolRegistry } from "./ToolRegistry";
-import type { ToolCall, ToolContext, ToolResponse, ToolResult } from "./types";
+import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { ToolCall, ToolContext, ToolResponse, ToolResult } from "@/utils/agents/tools/types";
 
 export class ToolExecutor {
     constructor(private registry: ToolRegistry) {}

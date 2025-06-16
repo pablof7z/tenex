@@ -1,13 +1,13 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../../utils/agents/Agent";
-import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
-import type { Logger } from "../../../utils/fs";
-import type { Team } from "../types";
 import type {
     AgentResponse,
     OrchestrationStrategy,
     StrategyExecutionResult,
-} from "./OrchestrationStrategy";
+} from "@/core/orchestration/strategies/OrchestrationStrategy";
+import type { Team } from "@/core/orchestration/types";
+import type { Agent } from "@/utils/agents/Agent";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { AgentLogger } from "@tenex/shared/logger";
 
 interface Delegation {
     agent: string;
@@ -15,7 +15,7 @@ interface Delegation {
 }
 
 export class HierarchicalStrategy implements OrchestrationStrategy {
-    constructor(private readonly logger: Logger) {
+    constructor(private readonly logger: AgentLogger) {
         if (!logger) throw new Error("Logger is required");
     }
 
@@ -23,7 +23,7 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
         team: Team,
         event: NDKEvent,
         agents: Map<string, Agent>,
-        conversationStorage: ConversationStorage
+        _conversationStorage: ConversationStorage
     ): Promise<StrategyExecutionResult> {
         this.logger.info(`Executing HierarchicalStrategy for task ${team.taskDefinition.id}`);
 
@@ -40,28 +40,22 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
                 };
             }
 
-            // Create conversation for this task
-            const conversation = await conversationStorage.createConversation({
-                projectNaddr: undefined,
-                taskId: team.taskDefinition.id,
-                agentName: team.lead,
-                metadata: {
-                    orchestration: {
+            // Create conversation through the lead agent
+            const conversationId = team.taskDefinition.id;
+            const conversation = await leadAgent.getOrCreateConversationWithContext(
+                conversationId,
+                {
+                    agentRole: leadAgent.getConfig().role || "Team Lead",
+                    projectName: leadAgent.getConfig().name,
+                    orchestrationMetadata: {
                         team,
                         strategy: "HIERARCHICAL",
                     },
-                },
-            });
+                }
+            );
 
             // Add the incoming request to conversation
-            await conversationStorage.addMessage(conversation.id, {
-                role: "user",
-                content: event.content,
-                timestamp: Date.now(),
-                metadata: {
-                    eventId: event.id,
-                },
-            });
+            conversation.addUserMessage(event.content, event);
 
             const responses: AgentResponse[] = [];
             const startTime = Date.now();
@@ -70,23 +64,19 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
             this.logger.debug(`Lead agent ${team.lead} analyzing request`);
             const analysisRequest = `As the team lead, analyze this request and create a delegation plan for your team members: ${team.members.filter((m) => m !== team.lead).join(", ")}.\n\nRequest: ${event.content}\n\nProvide specific subtasks for each team member.`;
 
-            const analysisResult = await leadAgent.processRequest({
-                content: analysisRequest,
-                conversationId: conversation.id,
-                metadata: {
-                    taskId: team.taskDefinition.id,
-                    strategy: "HIERARCHICAL",
-                    phase: "analysis",
-                },
-            });
+            // Add the analysis request to conversation
+            conversation.addUserMessage(analysisRequest);
+
+            const analysisResult = await leadAgent.generateResponse(
+                conversation.getId(),
+                undefined, // Use default LLM config
+                undefined, // No specific project path
+                false, // Not from agent
+                undefined // No typing indicator callback
+            );
 
             // Add lead analysis to conversation
-            await conversationStorage.addMessage(conversation.id, {
-                role: "assistant",
-                content: analysisResult.content,
-                timestamp: Date.now(),
-                metadata: { ...analysisResult.metadata, agentName: team.lead },
-            });
+            conversation.addAssistantMessage(analysisResult.content);
 
             responses.push({
                 agentName: team.lead,
@@ -116,24 +106,33 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
                 try {
                     this.logger.debug(`Delegating to ${delegation.agent}: ${delegation.task}`);
 
-                    const memberResult = await memberAgent.processRequest({
-                        content: delegation.task,
-                        conversationId: conversation.id,
-                        metadata: {
-                            taskId: team.taskDefinition.id,
-                            strategy: "HIERARCHICAL",
-                            phase: "execution",
-                            leadAgent: team.lead,
-                        },
-                    });
+                    // Each member needs their own conversation context for delegation
+                    const memberConversation = await memberAgent.getOrCreateConversationWithContext(
+                        `${conversation.getId()}-${delegation.agent}`,
+                        {
+                            agentRole: memberAgent.getConfig().role || "Team Member",
+                            projectName: memberAgent.getConfig().name,
+                            orchestrationMetadata: {
+                                team,
+                                strategy: "HIERARCHICAL",
+                                phase: "execution",
+                                leadAgent: team.lead,
+                            },
+                        }
+                    );
+
+                    memberConversation.addUserMessage(delegation.task);
+
+                    const memberResult = await memberAgent.generateResponse(
+                        memberConversation.getId(),
+                        undefined, // Use default LLM config
+                        undefined, // No specific project path
+                        false, // Not from agent
+                        undefined // No typing indicator callback
+                    );
 
                     // Add member response to conversation
-                    await conversationStorage.addMessage(conversation.id, {
-                        role: "assistant",
-                        content: memberResult.content,
-                        timestamp: Date.now(),
-                        metadata: { ...memberResult.metadata, agentName: delegation.agent },
-                    });
+                    conversation.addAssistantMessage(memberResult.content);
 
                     const memberResponse: AgentResponse = {
                         agentName: delegation.agent,
@@ -154,23 +153,19 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
             this.logger.debug("Lead agent reviewing member responses");
             const reviewRequest = `Review and integrate the following responses from your team members:\n\n${memberResponses.map((r) => `${r.agentName}: ${r.response}`).join("\n\n")}\n\nProvide a final integrated response.`;
 
-            const reviewResult = await leadAgent.processRequest({
-                content: reviewRequest,
-                conversationId: conversation.id,
-                metadata: {
-                    taskId: team.taskDefinition.id,
-                    strategy: "HIERARCHICAL",
-                    phase: "review",
-                },
-            });
+            // Add the review request to conversation
+            conversation.addUserMessage(reviewRequest);
+
+            const reviewResult = await leadAgent.generateResponse(
+                conversation.getId(),
+                undefined, // Use default LLM config
+                undefined, // No specific project path
+                false, // Not from agent
+                undefined // No typing indicator callback
+            );
 
             // Add final review to conversation
-            await conversationStorage.addMessage(conversation.id, {
-                role: "assistant",
-                content: reviewResult.content,
-                timestamp: Date.now(),
-                metadata: { ...reviewResult.metadata, agentName: team.lead },
-            });
+            conversation.addAssistantMessage(reviewResult.content);
 
             responses.push({
                 agentName: team.lead,
@@ -179,18 +174,8 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
                 metadata: { phase: "review", ...reviewResult.metadata },
             });
 
-            // Update conversation metadata
-            await conversationStorage.updateConversationMetadata(conversation.id, {
-                completedAt: Date.now(),
-                status: "completed",
-                delegations,
-                memberResponses: memberResponses.map((r) => ({
-                    agent: r.agentName,
-                    response: r.response,
-                })),
-                partialFailures:
-                    partialFailures.length > 0 ? partialFailures.map((e) => e.message) : undefined,
-            });
+            // Save conversation
+            await leadAgent.saveConversationToStorage(conversation);
 
             this.logger.info(
                 `HierarchicalStrategy completed successfully for task ${team.taskDefinition.id}`
@@ -200,7 +185,7 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
                 success: true,
                 responses,
                 metadata: {
-                    conversationId: conversation.id,
+                    conversationId: conversation.getId(),
                     executionTime: Date.now() - startTime,
                     delegations,
                     partialFailures:
@@ -219,7 +204,10 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
         }
     }
 
-    private extractDelegations(analysisResult: { metadata?: { subtasks?: Delegation[] } }, members: string[]): Delegation[] {
+    private extractDelegations(
+        analysisResult: { metadata?: { subtasks?: Delegation[] } },
+        members: string[]
+    ): Delegation[] {
         // Try to extract delegations from metadata if available
         if (analysisResult.metadata?.subtasks) {
             return analysisResult.metadata.subtasks;

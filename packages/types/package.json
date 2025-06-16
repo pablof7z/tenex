@@ -41,6 +41,10 @@
         "./utils": {
             "types": "./dist/utils/index.d.ts",
             "import": "./dist/utils/index.js"
+        },
+        "./telemetry": {
+            "types": "./dist/telemetry/index.d.ts",
+            "import": "./dist/telemetry/index.js"
         }
     },
     "scripts": {

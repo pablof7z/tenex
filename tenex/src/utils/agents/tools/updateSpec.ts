@@ -1,12 +1,14 @@
 import path from "node:path";
-import { NDKArticle } from "@nostr-dev-kit/ndk";
+import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
+import { NDKArticle, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import type { ToolContext, ToolDefinition } from "./types";
+import { configurationService } from "@tenex/shared/services";
+import type { ProjectConfig } from "@tenex/types/config";
 
 export const updateSpecTool: ToolDefinition = {
     name: "update_spec",
     description:
-        "Update or create a specification document (like SPEC.md) as an NDKArticle event. The spec will be signed by the orchestrator agent and tagged to the project. Only agents with orchestration capability can use this tool.",
+        "Update or create a specification document (like SPEC.md) as an NDKArticle event. The spec will be signed by the project's nsec and tagged to the project. Any agent can use this tool to update project specifications.",
     parameters: [
         {
             name: "filename",
@@ -48,30 +50,18 @@ export const updateSpecTool: ToolDefinition = {
 
             const { ndk, agent } = context;
 
-            // Check if agent has orchestration capability to update specs
-            const agentConfig = agent.getConfig();
-            const hasOrchestrationCapability =
-                agentConfig?.capabilities?.includes("orchestration") ||
-                agentConfig?.role?.toLowerCase().includes("orchestrator") ||
-                agentConfig?.isPrimary;
-
-            if (!hasOrchestrationCapability) {
-                return {
-                    success: false,
-                    output: "",
-                    error: "Only agents with orchestration capability can update specifications",
-                };
-            }
-
             // Normalize the filename to create the d tag
             // Remove any path components and extension, then uppercase
-            const baseName = path.basename(params.filename, path.extname(params.filename));
+            const baseName = path.basename(
+                params.filename as string,
+                path.extname(params.filename as string)
+            );
             const dTag = baseName.toUpperCase();
 
             // Create the NDKArticle event
             const specEvent = new NDKArticle(ndk);
             specEvent.kind = 30023; // NDKArticle kind
-            specEvent.content = params.content;
+            specEvent.content = params.content as string;
 
             // Set the d tag for replaceability
             specEvent.tags.push(["d", dTag]);
@@ -80,7 +70,7 @@ export const updateSpecTool: ToolDefinition = {
             specEvent.tags.push(["title", `${dTag} Specification`]);
 
             // Add summary tag with the changelog
-            specEvent.tags.push(["summary", params.changelog]);
+            specEvent.tags.push(["summary", params.changelog as string]);
 
             // Add published_at tag with current timestamp
             const now = Math.floor(Date.now() / 1000);
@@ -97,8 +87,20 @@ export const updateSpecTool: ToolDefinition = {
 
             specEvent.tag(context.projectEvent);
 
-            // Sign and publish
-            await specEvent.sign(agent.getSigner());
+            // Load project nsec from config.json to sign the spec
+            const projectNsec = await loadProjectNsec();
+            if (!projectNsec) {
+                return {
+                    success: false,
+                    output: "",
+                    error: "Project nsec not found in config.json. Please ensure the project was initialized properly.",
+                };
+            }
+
+            const projectSigner = new NDKPrivateKeySigner(projectNsec);
+
+            // Sign and publish with project key
+            await specEvent.sign(projectSigner);
             await specEvent.publish();
 
             logger.info(`Agent ${agent.getName()} updated spec: ${dTag}`);
@@ -122,3 +124,18 @@ export const updateSpecTool: ToolDefinition = {
         }
     },
 };
+
+// Helper function to load project nsec from config.json
+async function loadProjectNsec(): Promise<string | null> {
+    try {
+        // Get project path from agent's working directory
+        const projectPath = process.cwd();
+        const configuration = await configurationService.loadConfiguration(projectPath);
+        const config = configuration.config as ProjectConfig;
+
+        return config.nsec || null;
+    } catch (error) {
+        logger.error("Failed to load project nsec from config", { error });
+        return null;
+    }
+}

@@ -29,7 +29,7 @@ The tool returns a special `renderInChat` property that flows through the system
 2. **ToolExecutor** → Extracts and passes through `renderInChat`
 3. **ToolEnabledProvider** → Stores `renderInChat` for later retrieval
 4. **AgentResponseGenerator** → Adds `renderInChat` to final response
-5. **AgentEventHandler** → Publishes event with special formatting
+5. **AgentCommunicationHandler** → Publishes event with special formatting
 
 ### 4. Event Structure
 

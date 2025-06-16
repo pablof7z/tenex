@@ -1,4 +1,8 @@
-import type { PromptSection, PromptSectionBuilder, SystemPromptContext } from "../types";
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
 
 /**
  * Builds the project context section

@@ -3,8 +3,16 @@
     "compilerOptions": {
         "allowImportingTsExtensions": true,
         "noEmit": true,
-        "rootDir": ".",
+        "rootDir": "..",
         "outDir": "./dist",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./src/*"],
+            "@tenex/types": ["../packages/types/src/index.ts"],
+            "@tenex/types/*": ["../packages/types/src/*"],
+            "@tenex/shared": ["../shared/src/index.ts"],
+            "@tenex/shared/*": ["../shared/src/*"]
+        },
         "noUnusedLocals": false,
         "noUnusedParameters": false
     },

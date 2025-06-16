@@ -86,7 +86,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
     };
 
     return (
-        <div className="h-screen bg-background flex">
+        <div className="h-screen bg-background flex flex-col md:flex-row">
             {/* Left Sidebar - Agents List */}
             <AgentList
                 agents={agents}

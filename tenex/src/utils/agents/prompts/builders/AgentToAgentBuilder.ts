@@ -1,5 +1,9 @@
-import { AGENT_TO_AGENT_INSTRUCTIONS } from "../constants";
-import type { PromptSection, PromptSectionBuilder, SystemPromptContext } from "../types";
+import { AGENT_TO_AGENT_INSTRUCTIONS } from "@/utils/agents/prompts/constants";
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
 
 /**
  * Builds special instructions for agent-to-agent communication

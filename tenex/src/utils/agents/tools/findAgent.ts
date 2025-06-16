@@ -1,6 +1,6 @@
+import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import type { NDKEvent, NDKFilter, NDKKind } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import type { ToolContext, ToolDefinition } from "./types";
 
 interface FindAgentParams {
     capabilities?: string;

@@ -54,6 +54,7 @@ describe("SystemPromptBuilder", () => {
 
             expect(prompt).toContain("## TENEX System Instructions");
             expect(prompt).toContain("## Your Identity");
+            expect(prompt).toContain('Your name: "test-agent"');
             expect(prompt).toContain("You are Test Specialist");
             expect(prompt).toContain("## Project Context");
             expect(prompt).toContain("Test Project");
@@ -73,6 +74,7 @@ describe("SystemPromptBuilder", () => {
             };
 
             const prompt = builder.build(minimalContext);
+            expect(prompt).toContain('Your name: "minimal-agent"');
             expect(prompt).toContain("You are minimal-agent");
             expect(prompt).not.toContain("## Project Context");
             expect(prompt).not.toContain("## Available Agents");

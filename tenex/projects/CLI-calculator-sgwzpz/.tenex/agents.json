@@ -1,0 +1,14 @@
+{
+    "requirements": {
+        "nsec": "nsec1nkacjnqfmfmmzyndncnrmn6kmsxkle3gpk6389uzlfcnc4ems46q2vqpwz",
+        "file": "5f6e2382c7c53444204e8938e6d92e69ed511f80b13ae1d41e1c6507c96e3b44"
+    },
+    "debugger": {
+        "nsec": "nsec12sgkwtfwr7qhuthxnt2gf9rh3e2pkc8pylnxh8t8hdpdhxprg89s6wsxq9",
+        "file": "fb7e4429db055f6fc53bb74e3b8689b997eb5cd47b8e37c44a7821e00fbc4779"
+    },
+    "christ": {
+        "nsec": "nsec1yvtq744j8zdzz23gwxpc3v6v5ylennwc68x65yu6tmnruexx6uxq8d0pp9",
+        "file": "0d7ccbe3bd89c84599466e6393c7b425d51146908ae1fc37fa4c5d999b0b99f1"
+    }
+}

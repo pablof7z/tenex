@@ -49,8 +49,8 @@ export function findNostrEntities(text: string): NostrEntity[] {
                 bech32,
                 data: decoded.data,
             });
-        } catch (error) {
-            console.warn(`Failed to decode Nostr entity: ${bech32}`, error);
+        } catch (_error) {
+            // console.warn(`Failed to decode Nostr entity: ${bech32}`, error);
         }
     }
 

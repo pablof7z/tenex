@@ -1,24 +1,24 @@
-import { default as NDK, NDKArticle } from "@nostr-dev-kit/ndk";
-import { nip19 } from "nostr-tools";
 import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
+import type NDK from "@nostr-dev-kit/ndk";
+import { NDKProject } from "@nostr-dev-kit/ndk";
 import type { ProjectData } from "@tenex/types/projects";
+import { nip19 } from "nostr-tools";
 import { logger } from "../logger.js";
 
 const execAsync = promisify(exec);
 
 export interface IProjectService {
-    fetchProject(naddr: string, ndk: NDK): Promise<NDKArticle>;
+    fetchProject(naddr: string, ndk: NDK): Promise<NDKProject>;
     createProjectStructure(projectPath: string, project: ProjectData): Promise<void>;
     cloneRepository(repoUrl: string, targetPath: string): Promise<void>;
 }
 
 export class ProjectService implements IProjectService {
-    constructor() {}
 
-    async fetchProject(naddr: string, ndk: NDK): Promise<NDKArticle> {
+    async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
         try {
             const decoded = nip19.decode(naddr);
             if (decoded.type !== "naddr") {
@@ -52,8 +52,8 @@ export class ProjectService implements IProjectService {
                 throw new Error(`Project not found: ${naddr}`);
             }
 
-            const article = NDKArticle.from(event);
-            return article;
+            const project = NDKProject.from(event);
+            return project;
         } catch (error) {
             logger.error("Failed to fetch project", { error, naddr });
             throw error;
@@ -67,14 +67,14 @@ export class ProjectService implements IProjectService {
         await fs.mkdir(path.join(tenexDir, "agents"), { recursive: true });
         await fs.mkdir(path.join(tenexDir, "conversations"), { recursive: true });
 
-        const metadataPath = path.join(tenexDir, "metadata.json");
+        const configPath = path.join(tenexDir, "config.json");
         await fs.writeFile(
-            metadataPath,
+            configPath,
             JSON.stringify(
                 {
                     title: project.title,
                     projectNaddr: project.naddr,
-                    createdAt: new Date().toISOString(),
+                    createdAt: Date.now(),
                 },
                 null,
                 2
@@ -88,7 +88,6 @@ export class ProjectService implements IProjectService {
 
         logger.info("Project structure created", { projectPath });
     }
-
 
     async cloneRepository(repoUrl: string, targetPath: string): Promise<void> {
         try {
@@ -110,7 +109,6 @@ export class ProjectService implements IProjectService {
             }
         }
     }
-
 
     private async fileExists(filePath: string): Promise<boolean> {
         try {

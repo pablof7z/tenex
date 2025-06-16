@@ -30,8 +30,8 @@ export function LoginScreen() {
             const signer = new NDKNip07Signer();
             await signer.blockUntilReady();
             login(signer);
-        } catch (error) {
-            console.error("NIP-07 login failed:", error);
+        } catch (_error) {
+            // console.error("NIP-07 login failed:", error);
         } finally {
             setIsLoading(false);
         }
@@ -44,8 +44,8 @@ export function LoginScreen() {
         try {
             const signer = new NDKPrivateKeySigner(nsecInput.trim());
             login(signer);
-        } catch (error) {
-            console.error("Nsec login failed:", error);
+        } catch (_error) {
+            // console.error("Nsec login failed:", error);
         } finally {
             setIsLoading(false);
         }
@@ -56,8 +56,8 @@ export function LoginScreen() {
         try {
             const signer = NDKPrivateKeySigner.generate();
             login(signer);
-        } catch (error) {
-            console.error("Account generation failed:", error);
+        } catch (_error) {
+            // console.error("Account generation failed:", error);
         } finally {
             setIsLoading(false);
         }

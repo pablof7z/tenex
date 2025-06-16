@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
+import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import type { ToolContext, ToolDefinition } from "./types";
 
 export const shellTool: ToolDefinition = {
     name: "shell",

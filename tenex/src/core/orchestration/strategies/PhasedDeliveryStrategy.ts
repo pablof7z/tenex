@@ -1,13 +1,13 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../../utils/agents/Agent";
-import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
-import type { AgentLogger } from "@tenex/shared/logger";
-import type { Team } from "../types";
 import type {
     AgentResponse,
     OrchestrationStrategy,
     StrategyExecutionResult,
-} from "./OrchestrationStrategy";
+} from "@/core/orchestration/strategies/OrchestrationStrategy";
+import type { Team } from "@/core/orchestration/types";
+import type { Agent } from "@/utils/agents/Agent";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { AgentLogger } from "@tenex/shared/logger";
 
 interface Phase {
     name: string;
@@ -25,7 +25,7 @@ export class PhasedDeliveryStrategy implements OrchestrationStrategy {
         team: Team,
         event: NDKEvent,
         agents: Map<string, Agent>,
-        conversationStorage: ConversationStorage
+        _conversationStorage: ConversationStorage
     ): Promise<StrategyExecutionResult> {
         this.logger.info(`Executing PhasedDeliveryStrategy for task ${team.taskDefinition.id}`);
 
@@ -44,14 +44,17 @@ export class PhasedDeliveryStrategy implements OrchestrationStrategy {
 
             // Create conversation through the lead agent
             const conversationId = team.taskDefinition.id;
-            const conversation = await leadAgent.getOrCreateConversationWithContext(conversationId, {
-                agentRole: leadAgent.getConfig().role || "Phase Coordinator",
-                projectName: leadAgent.getConfig().name,
-                orchestrationMetadata: {
-                    team,
-                    strategy: "PHASED_DELIVERY",
-                },
-            });
+            const conversation = await leadAgent.getOrCreateConversationWithContext(
+                conversationId,
+                {
+                    agentRole: leadAgent.getConfig().role || "Phase Coordinator",
+                    projectName: leadAgent.getConfig().name,
+                    orchestrationMetadata: {
+                        team,
+                        strategy: "PHASED_DELIVERY",
+                    },
+                }
+            );
 
             // Add the incoming request to conversation
             conversation.addUserMessage(event.content, event);
@@ -75,7 +78,7 @@ Create a structured phase plan with:
 
             // Add the planning request to conversation
             conversation.addUserMessage(planningRequest);
-            
+
             const planResult = await leadAgent.generateResponse(
                 conversation.getId(),
                 undefined, // Use default LLM config
@@ -136,23 +139,24 @@ Expected deliverables: ${phase.deliverables.join(", ")}
 Please complete your part of this phase.`;
 
                         // Each agent needs their own conversation context for the phase
-                        const phaseConversation = await phaseAgent.getOrCreateConversationWithContext(
-                            `${conversation.getId()}-phase${phaseIndex + 1}-${agentName}`,
-                            {
-                                agentRole: phaseAgent.getConfig().role || "Phase Contributor",
-                                projectName: phaseAgent.getConfig().name,
-                                orchestrationMetadata: {
-                                    team,
-                                    strategy: "PHASED_DELIVERY",
-                                    phase: phase.name,
-                                    phaseIndex: phaseIndex + 1,
-                                    totalPhases: phases.length,
-                                },
-                            }
-                        );
-                        
+                        const phaseConversation =
+                            await phaseAgent.getOrCreateConversationWithContext(
+                                `${conversation.getId()}-phase${phaseIndex + 1}-${agentName}`,
+                                {
+                                    agentRole: phaseAgent.getConfig().role || "Phase Contributor",
+                                    projectName: phaseAgent.getConfig().name,
+                                    orchestrationMetadata: {
+                                        team,
+                                        strategy: "PHASED_DELIVERY",
+                                        phase: phase.name,
+                                        phaseIndex: phaseIndex + 1,
+                                        totalPhases: phases.length,
+                                    },
+                                }
+                            );
+
                         phaseConversation.addUserMessage(phaseTask);
-                        
+
                         const phaseResult = await phaseAgent.generateResponse(
                             phaseConversation.getId(),
                             undefined, // Use default LLM config
@@ -180,8 +184,12 @@ Please complete your part of this phase.`;
                         phaseResponses.push(phaseResponse);
                         responses.push(phaseResponse);
                     } catch (error) {
-                        this.logger.error(`Agent ${agentName} failed in phase ${phase.name}: ${error}`);
-                        partialFailures.push(error instanceof Error ? error : new Error(String(error)));
+                        this.logger.error(
+                            `Agent ${agentName} failed in phase ${phase.name}: ${error}`
+                        );
+                        partialFailures.push(
+                            error instanceof Error ? error : new Error(String(error))
+                        );
                     }
                 }
 
@@ -200,7 +208,7 @@ ${phaseResponses.map((r) => `${r.agentName}: ${r.response}`).join("\n\n")}
 Confirm if the phase deliverables have been met and we can proceed to the next phase.`;
 
                     conversation.addUserMessage(phaseReviewRequest);
-                    
+
                     const phaseReview = await leadAgent.generateResponse(
                         conversation.getId(),
                         undefined,
@@ -237,7 +245,7 @@ Original request: ${event.content}
 Provide a comprehensive final response that integrates all phase deliverables.`;
 
             conversation.addUserMessage(integrationRequest);
-            
+
             const finalResult = await leadAgent.generateResponse(
                 conversation.getId(),
                 undefined,
@@ -317,7 +325,11 @@ Provide a comprehensive final response that integrates all phase deliverables.`;
                 name: "Integration & Enhancement",
                 description: "Integrate components and add advanced features",
                 agents: members.slice(Math.ceil(members.length / 3)),
-                deliverables: ["Component integration", "Advanced features", "Performance optimization"],
+                deliverables: [
+                    "Component integration",
+                    "Advanced features",
+                    "Performance optimization",
+                ],
             },
             {
                 name: "Testing & Finalization",

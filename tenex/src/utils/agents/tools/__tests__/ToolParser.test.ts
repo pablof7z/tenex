@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseToolCalls, removeToolCalls, hasToolCalls } from "../ToolParser";
+import { hasToolCalls, parseToolCalls, removeToolCalls } from "../ToolParser";
 
 describe("ToolParser", () => {
     describe("parseToolCalls", () => {

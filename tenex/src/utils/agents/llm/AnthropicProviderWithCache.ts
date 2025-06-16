@@ -1,6 +1,12 @@
+import type {
+    LLMContext,
+    LLMMessage,
+    LLMProvider,
+    LLMResponse,
+    ProviderTool,
+} from "@/utils/agents/llm/types";
+import type { LLMConfig } from "@/utils/agents/types";
 import { logger } from "@tenex/shared/logger";
-import type { LLMConfig } from "../types";
-import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } from "./types";
 
 export class AnthropicProviderWithCache implements LLMProvider {
     async generateResponse(

@@ -4,6 +4,7 @@
 
 import type { AgentsJson } from "../agents/config";
 import type { LLMConfigs } from "../llm/config";
+import type { TelemetryConfigs } from "../telemetry/config";
 
 /**
  * Project metadata stored in .tenex/metadata.json
@@ -49,6 +50,7 @@ export interface ProjectInitOptions {
 export interface ProjectConfig {
     agents: AgentsJson;
     llms: LLMConfigs;
+    telemetry?: TelemetryConfigs;
     metadata: ProjectMetadata;
     rules?: ProjectRules;
 }

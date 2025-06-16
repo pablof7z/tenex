@@ -5535,8 +5535,8 @@ var require_lastValueFrom = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.lastValueFrom = undefined;
   var EmptyError_1 = require_EmptyError();
-  function lastValueFrom(source, config3) {
-    var hasConfig = typeof config3 === "object";
+  function lastValueFrom(source, config4) {
+    var hasConfig = typeof config4 === "object";
     return new Promise(function(resolve, reject) {
       var _hasValue = false;
       var _value;
@@ -5550,7 +5550,7 @@ var require_lastValueFrom = __commonJS((exports) => {
           if (_hasValue) {
             resolve(_value);
           } else if (hasConfig) {
-            resolve(config3.defaultValue);
+            resolve(config4.defaultValue);
           } else {
             reject(new EmptyError_1.EmptyError);
           }
@@ -5567,8 +5567,8 @@ var require_firstValueFrom = __commonJS((exports) => {
   exports.firstValueFrom = undefined;
   var EmptyError_1 = require_EmptyError();
   var Subscriber_1 = require_Subscriber();
-  function firstValueFrom(source, config3) {
-    var hasConfig = typeof config3 === "object";
+  function firstValueFrom(source, config4) {
+    var hasConfig = typeof config4 === "object";
     return new Promise(function(resolve, reject) {
       var subscriber = new Subscriber_1.SafeSubscriber({
         next: function(value) {
@@ -5578,7 +5578,7 @@ var require_firstValueFrom = __commonJS((exports) => {
         error: reject,
         complete: function() {
           if (hasConfig) {
-            resolve(config3.defaultValue);
+            resolve(config4.defaultValue);
           } else {
             reject(new EmptyError_1.EmptyError);
           }
@@ -5664,8 +5664,8 @@ var require_timeout = __commonJS((exports) => {
       this.info = info;
     };
   });
-  function timeout(config3, schedulerArg) {
-    var _a2 = isDate_1.isValidDate(config3) ? { first: config3 } : typeof config3 === "number" ? { each: config3 } : config3, first = _a2.first, each = _a2.each, _b = _a2.with, _with = _b === undefined ? timeoutErrorFactory : _b, _c = _a2.scheduler, scheduler = _c === undefined ? schedulerArg !== null && schedulerArg !== undefined ? schedulerArg : async_1.asyncScheduler : _c, _d = _a2.meta, meta = _d === undefined ? null : _d;
+  function timeout(config4, schedulerArg) {
+    var _a2 = isDate_1.isValidDate(config4) ? { first: config4 } : typeof config4 === "number" ? { each: config4 } : config4, first = _a2.first, each = _a2.each, _b = _a2.with, _with = _b === undefined ? timeoutErrorFactory : _b, _c = _a2.scheduler, scheduler = _c === undefined ? schedulerArg !== null && schedulerArg !== undefined ? schedulerArg : async_1.asyncScheduler : _c, _d = _a2.meta, meta = _d === undefined ? null : _d;
     if (first == null && each == null) {
       throw new TypeError("No timeout provided.");
     }
@@ -6182,12 +6182,12 @@ var require_connectable = __commonJS((exports) => {
     },
     resetOnDisconnect: true
   };
-  function connectable(source, config3) {
-    if (config3 === undefined) {
-      config3 = DEFAULT_CONFIG;
+  function connectable(source, config4) {
+    if (config4 === undefined) {
+      config4 = DEFAULT_CONFIG;
     }
     var connection = null;
-    var { connector, resetOnDisconnect: _a2 } = config3, resetOnDisconnect = _a2 === undefined ? true : _a2;
+    var { connector, resetOnDisconnect: _a2 } = config4, resetOnDisconnect = _a2 === undefined ? true : _a2;
     var subject = connector();
     var result = new Observable_1.Observable(function(subscriber) {
       return subject.subscribe(subscriber);
@@ -7662,11 +7662,11 @@ var require_connect = __commonJS((exports) => {
       return new Subject_1.Subject;
     }
   };
-  function connect(selector, config3) {
-    if (config3 === undefined) {
-      config3 = DEFAULT_CONFIG;
+  function connect(selector, config4) {
+    if (config4 === undefined) {
+      config4 = DEFAULT_CONFIG;
     }
-    var connector = config3.connector;
+    var connector = config4.connector;
     return lift_1.operate(function(source, subscriber) {
       var subject = connector();
       innerFrom_1.innerFrom(selector(fromSubscribable_1.fromSubscribable(subject))).subscribe(subscriber);
@@ -9005,15 +9005,15 @@ var require_retry = __commonJS((exports) => {
     if (configOrCount === undefined) {
       configOrCount = Infinity;
     }
-    var config3;
+    var config4;
     if (configOrCount && typeof configOrCount === "object") {
-      config3 = configOrCount;
+      config4 = configOrCount;
     } else {
-      config3 = {
+      config4 = {
         count: configOrCount
       };
     }
-    var _a2 = config3.count, count = _a2 === undefined ? Infinity : _a2, delay = config3.delay, _b = config3.resetOnSuccess, resetOnSuccess = _b === undefined ? false : _b;
+    var _a2 = config4.count, count = _a2 === undefined ? Infinity : _a2, delay = config4.delay, _b = config4.resetOnSuccess, resetOnSuccess = _b === undefined ? false : _b;
     return count <= 0 ? identity_1.identity : lift_1.operate(function(source, subscriber) {
       var soFar = 0;
       var innerSub;
@@ -9667,9 +9667,9 @@ var require_throttle = __commonJS((exports) => {
   var lift_1 = require_lift();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
   var innerFrom_1 = require_innerFrom();
-  function throttle(durationSelector, config3) {
+  function throttle(durationSelector, config4) {
     return lift_1.operate(function(source, subscriber) {
-      var _a2 = config3 !== null && config3 !== undefined ? config3 : {}, _b = _a2.leading, leading = _b === undefined ? true : _b, _c = _a2.trailing, trailing = _c === undefined ? false : _c;
+      var _a2 = config4 !== null && config4 !== undefined ? config4 : {}, _b = _a2.leading, leading = _b === undefined ? true : _b, _c = _a2.trailing, trailing = _c === undefined ? false : _c;
       var hasValue = false;
       var sendValue = null;
       var throttled = null;
@@ -9718,14 +9718,14 @@ var require_throttleTime = __commonJS((exports) => {
   var async_1 = require_async();
   var throttle_1 = require_throttle();
   var timer_1 = require_timer();
-  function throttleTime(duration, scheduler, config3) {
+  function throttleTime(duration, scheduler, config4) {
     if (scheduler === undefined) {
       scheduler = async_1.asyncScheduler;
     }
     var duration$ = timer_1.timer(duration, scheduler);
     return throttle_1.throttle(function() {
       return duration$;
-    }, config3);
+    }, config4);
   }
   exports.throttleTime = throttleTime;
 });
@@ -31072,7 +31072,7 @@ var {
 } = import__.default;
 // ../packages/types/src/tools/definitions.js
 var ToolCategory;
-(function(ToolCategory2) {
+((ToolCategory2) => {
   ToolCategory2["FileSystem"] = "filesystem";
   ToolCategory2["Git"] = "git";
   ToolCategory2["Nostr"] = "nostr";
@@ -32905,11 +32905,11 @@ class ListPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    events3.normalizedUpKey.pipe(import_rxjs3.takeUntil(events3.line)).forEach(this.onUpKey.bind(this));
-    events3.normalizedDownKey.pipe(import_rxjs3.takeUntil(events3.line)).forEach(this.onDownKey.bind(this));
-    events3.numberKey.pipe(import_rxjs3.takeUntil(events3.line)).forEach(this.onNumberKey.bind(this));
-    events3.line.pipe(import_rxjs3.take(1), import_rxjs3.map(this.getCurrentValue.bind(this)), import_rxjs3.flatMap((value) => import_run_async2.default(this.opt.filter)(value, this.answers).catch((error) => error))).forEach(this.onSubmit.bind(this));
+    const events4 = observe(this.rl);
+    events4.normalizedUpKey.pipe(import_rxjs3.takeUntil(events4.line)).forEach(this.onUpKey.bind(this));
+    events4.normalizedDownKey.pipe(import_rxjs3.takeUntil(events4.line)).forEach(this.onDownKey.bind(this));
+    events4.numberKey.pipe(import_rxjs3.takeUntil(events4.line)).forEach(this.onNumberKey.bind(this));
+    events4.line.pipe(import_rxjs3.take(1), import_rxjs3.map(this.getCurrentValue.bind(this)), import_rxjs3.flatMap((value) => import_run_async2.default(this.opt.filter)(value, this.answers).catch((error) => error))).forEach(this.onSubmit.bind(this));
     this.render();
     return this;
   }
@@ -33004,12 +33004,12 @@ var import_rxjs4 = __toESM(require_cjs(), 1);
 class InputPrompt extends Prompt {
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    const submit = events3.line.pipe(import_rxjs4.map(this.filterInput.bind(this)));
+    const events4 = observe(this.rl);
+    const submit = events4.line.pipe(import_rxjs4.map(this.filterInput.bind(this)));
     const validation = this.handleSubmitEvents(submit);
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events3.keypress.pipe(import_rxjs4.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    events4.keypress.pipe(import_rxjs4.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -33093,9 +33093,9 @@ class ConfirmPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    events3.keypress.pipe(import_rxjs5.takeUntil(events3.line)).forEach(this.onKeypress.bind(this));
-    events3.line.pipe(import_rxjs5.take(1)).forEach(this.onEnd.bind(this));
+    const events4 = observe(this.rl);
+    events4.keypress.pipe(import_rxjs5.takeUntil(events4.line)).forEach(this.onKeypress.bind(this));
+    events4.line.pipe(import_rxjs5.take(1)).forEach(this.onEnd.bind(this));
     this.render();
     return this;
   }
@@ -33161,14 +33161,14 @@ class RawListPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    const submit = events3.line.pipe(import_rxjs6.map(this.getCurrentValue.bind(this)));
+    const events4 = observe(this.rl);
+    const submit = events4.line.pipe(import_rxjs6.map(this.getCurrentValue.bind(this)));
     const validation = this.handleSubmitEvents(submit);
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events3.normalizedUpKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
-    events3.normalizedDownKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
-    events3.keypress.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    events4.normalizedUpKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
+    events4.normalizedDownKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
+    events4.keypress.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -33284,11 +33284,11 @@ class ExpandPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    const validation = this.handleSubmitEvents(events3.line.pipe(import_rxjs7.map(this.getCurrentValue.bind(this))));
+    const events4 = observe(this.rl);
+    const validation = this.handleSubmitEvents(events4.line.pipe(import_rxjs7.map(this.getCurrentValue.bind(this))));
     validation.success.forEach(this.onSubmit.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    this.keypressObs = events3.keypress.pipe(import_rxjs7.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    this.keypressObs = events4.keypress.pipe(import_rxjs7.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -33443,16 +33443,16 @@ class CheckboxPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    const validation = this.handleSubmitEvents(events3.line.pipe(import_rxjs8.map(this.getCurrentValue.bind(this))));
+    const events4 = observe(this.rl);
+    const validation = this.handleSubmitEvents(events4.line.pipe(import_rxjs8.map(this.getCurrentValue.bind(this))));
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events3.normalizedUpKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
-    events3.normalizedDownKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
-    events3.numberKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onNumberKey.bind(this));
-    events3.spaceKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onSpaceKey.bind(this));
-    events3.aKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onAllKey.bind(this));
-    events3.iKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onInverseKey.bind(this));
+    events4.normalizedUpKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
+    events4.normalizedDownKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
+    events4.numberKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onNumberKey.bind(this));
+    events4.spaceKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onSpaceKey.bind(this));
+    events4.aKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onAllKey.bind(this));
+    events4.iKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onInverseKey.bind(this));
     this.render();
     this.firstRender = false;
     return this;
@@ -33592,12 +33592,12 @@ function mask(input, maskChar) {
 class PasswordPrompt extends Prompt {
   _run(cb) {
     this.done = cb;
-    const events3 = observe(this.rl);
-    const submit = events3.line.pipe(import_rxjs9.map(this.filterInput.bind(this)));
+    const events4 = observe(this.rl);
+    const submit = events4.line.pipe(import_rxjs9.map(this.filterInput.bind(this)));
     const validation = this.handleSubmitEvents(submit);
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events3.keypress.pipe(import_rxjs9.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    events4.keypress.pipe(import_rxjs9.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -33650,8 +33650,8 @@ class EditorPrompt extends Prompt {
   _run(cb) {
     this.done = cb;
     this.editorResult = new import_rxjs10.Subject;
-    const events3 = observe(this.rl);
-    this.lineSubscription = events3.line.subscribe(this.startExternalEditor.bind(this));
+    const events4 = observe(this.rl);
+    this.lineSubscription = events4.line.subscribe(this.startExternalEditor.bind(this));
     const waitUserInput = this.opt.waitUserInput === undefined ? true : this.opt.waitUserInput;
     const validation = this.handleSubmitEvents(this.editorResult);
     validation.success.forEach(this.onEnd.bind(this));
@@ -47514,9 +47514,9 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
   }
   start(emitCachedEvents = true) {
     let cacheResult;
-    const updateStateFromCacheResults = (events3) => {
+    const updateStateFromCacheResults = (events4) => {
       if (emitCachedEvents) {
-        for (const event of events3) {
+        for (const event of events4) {
           if (!this.mostRecentCacheEventTimestamp || event.created_at > this.mostRecentCacheEventTimestamp) {
             this.mostRecentCacheEventTimestamp = event.created_at;
           }
@@ -47524,7 +47524,7 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
         }
       } else {
         cacheResult = [];
-        for (const event of events3) {
+        for (const event of events4) {
           if (!this.mostRecentCacheEventTimestamp || event.created_at > this.mostRecentCacheEventTimestamp) {
             this.mostRecentCacheEventTimestamp = event.created_at;
           }
@@ -47555,8 +47555,8 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
       cacheResult = this.startWithCache();
       if (cacheResult instanceof Promise) {
         if (this.shouldWaitForCache()) {
-          cacheResult.then((events3) => {
-            updateStateFromCacheResults(events3);
+          cacheResult.then((events4) => {
+            updateStateFromCacheResults(events4);
             if (queryFullyFilled(this)) {
               this.emit("eose", this);
               return;
@@ -47565,8 +47565,8 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
           });
           return null;
         }
-        cacheResult.then((events3) => {
-          updateStateFromCacheResults(events3);
+        cacheResult.then((events4) => {
+          updateStateFromCacheResults(events4);
         });
         loadFromRelays();
         return null;
@@ -48313,17 +48313,17 @@ function relayListFromKind3(ndk, contactList) {
     const relayList = new NDKRelayList(ndk);
     const readRelays = /* @__PURE__ */ new Set;
     const writeRelays = /* @__PURE__ */ new Set;
-    for (let [key, config3] of Object.entries(content)) {
+    for (let [key, config4] of Object.entries(content)) {
       try {
         key = normalizeRelayUrl(key);
       } catch {
         continue;
       }
-      if (!config3) {
+      if (!config4) {
         readRelays.add(key);
         writeRelays.add(key);
       } else {
-        const relayConfig = config3;
+        const relayConfig = config4;
         if (relayConfig.write)
           writeRelays.add(key);
         if (relayConfig.read)
@@ -49589,17 +49589,17 @@ async function setActiveUserConnected(user) {
   if (this.autoFetchUserMutelist) {
     filters[0].kinds?.push(1e4);
   }
-  const events3 = /* @__PURE__ */ new Map;
+  const events4 = /* @__PURE__ */ new Map;
   const relaySet = userRelays ? userRelays.relaySet : undefined;
   this.subscribe(filters, { subId: "active-user-settings", closeOnEose: true, relaySet }, {
     onEvent: (event) => {
-      const prevEvent = events3.get(event.kind);
+      const prevEvent = events4.get(event.kind);
       if (prevEvent && prevEvent.created_at >= event.created_at)
         return;
-      events3.set(event.kind, event);
+      events4.set(event.kind, event);
     },
     onEose: () => {
-      for (const event of events3.values()) {
+      for (const event of events4.values()) {
         processEvent.call(this, event);
       }
     }
@@ -50021,10 +50021,10 @@ var NDK = class extends import_tseep7.EventEmitter {
     else
       filters = idOrFilter;
     const sub = new NDKSubscription(this, filters);
-    const events3 = this.cacheAdapter.query(sub);
-    if (events3 instanceof Promise)
+    const events4 = this.cacheAdapter.query(sub);
+    if (events4 instanceof Promise)
       throw new Error("Cache adapter is async");
-    return events3.map((e) => {
+    return events4.map((e) => {
       e.ndk = this;
       return e;
     });
@@ -50087,7 +50087,7 @@ var NDK = class extends import_tseep7.EventEmitter {
   }
   async fetchEvents(filters, opts, relaySet) {
     return new Promise((resolve) => {
-      const events3 = /* @__PURE__ */ new Map;
+      const events4 = /* @__PURE__ */ new Map;
       const subscribeOpts = {
         ...opts || {},
         closeOnEose: true
@@ -50102,16 +50102,16 @@ var NDK = class extends import_tseep7.EventEmitter {
         else
           _event = event;
         const dedupKey = _event.deduplicationKey();
-        const existingEvent = events3.get(dedupKey);
+        const existingEvent = events4.get(dedupKey);
         if (existingEvent) {
           _event = dedup(existingEvent, _event);
         }
         _event.ndk = this;
-        events3.set(dedupKey, _event);
+        events4.set(dedupKey, _event);
       };
       relaySetSubscription.on("event", onEvent);
       relaySetSubscription.on("eose", () => {
-        resolve(new Set(events3.values()));
+        resolve(new Set(events4.values()));
       });
       relaySetSubscription.start();
     });
@@ -50709,16 +50709,16 @@ Project ID: ${project3.dTag}`));
 
 // src/ndk-setup.ts
 var ndkInstance = null;
-async function getNDK(config3 = {}) {
+async function getNDK(config4 = {}) {
   if (!ndkInstance) {
-    const relays2 = config3.relays || getRelayUrls();
+    const relays2 = config4.relays || getRelayUrls();
     ndkInstance = new NDK({
       explicitRelayUrls: [...relays2],
       outboxRelayUrls: [...relays2],
       enableOutboxModel: true
     });
-    if (config3.nsec) {
-      const signer = new NDKPrivateKeySigner(config3.nsec);
+    if (config4.nsec) {
+      const signer = new NDKPrivateKeySigner(config4.nsec);
       ndkInstance.signer = signer;
     }
     await ndkInstance.connect();
@@ -50994,7 +50994,7 @@ async function createProject(options) {
     logger.info(source_default2.gray(`Project ID: ${projectId}`));
     logger.info(source_default2.gray(`NADDR: ${naddr}`));
     logger.info(source_default2.gray(`Author: ${user.npub}`));
-    console.log(naddr);
+    logger.info(naddr);
     process.exit(0);
   } catch (error) {
     logger.error(source_default2.red("\u274C Failed to create project:"), error);
@@ -51011,39 +51011,16 @@ async function startProject(options) {
     if (!user) {
       throw new Error("Failed to authenticate with provided nsec");
     }
-    let projectReference;
-    let projectTitle = "Project";
-    if (options.project.startsWith("naddr1")) {
-      try {
-        const projectEvent = await ndk.fetchEvent(options.project);
-        if (!projectEvent) {
-          throw new Error("Project not found");
-        }
-        const dTag = projectEvent.tags.find((tag) => tag[0] === "d")?.[1];
-        if (!dTag) {
-          throw new Error("Project missing d tag");
-        }
-        projectReference = `31933:${projectEvent.pubkey}:${dTag}`;
-        projectTitle = projectEvent.tags.find((tag) => tag[0] === "title")?.[1] || "Project";
-        logger.info(source_default2.gray(`Found project: ${projectTitle}`));
-      } catch (error) {
-        throw new Error(`Failed to fetch project: ${error}`);
-      }
-    } else {
-      projectReference = options.project;
+    const projectEvent = await ndk.fetchEvent(options.project);
+    if (!projectEvent) {
+      throw new Error("Project not found");
     }
     const event = new NDKEvent(ndk);
-    event.kind = 11;
+    event.kind = 24111;
     event.content = "Starting project...";
-    event.tags = [
-      ["a", projectReference],
-      ["title", "Project Start"]
-    ];
+    event.tag(projectEvent);
     await event.publish();
     logger.info(source_default2.green("\u2705 Project start event sent successfully!"));
-    logger.info(source_default2.gray(`Event ID: ${event.id}`));
-    logger.info(source_default2.gray(`Project: ${projectReference}`));
-    logger.info(source_default2.gray(`Author: ${user.npub}`));
     process.exit(0);
   } catch (error) {
     logger.error(source_default2.red("\u274C Failed to send project start event:"), error);

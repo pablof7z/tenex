@@ -1,13 +1,16 @@
+import type { Conversation } from "@/utils/agents/Conversation";
+import {
+    getConversationStats,
+    optimizeForContextWindow,
+} from "@/utils/agents/ConversationOptimizer";
+import type { AgentConversationManager } from "@/utils/agents/core/AgentConversationManager";
+import type { AgentCore } from "@/utils/agents/core/AgentCore";
+import { LLMConfigManager } from "@/utils/agents/llm/LLMConfigManager";
+import { createLLMProvider } from "@/utils/agents/llm/LLMFactory";
+import type { LLMMessage, LLMResponse as LLMProviderResponse } from "@/utils/agents/llm/types";
+import type { AgentResponse, LLMConfig } from "@/utils/agents/types";
 import type { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
 import { EVENT_KINDS } from "@tenex/types/events";
-import type { Conversation } from "../Conversation";
-import { getConversationStats, optimizeForContextWindow } from "../ConversationOptimizer";
-import { LLMConfigManager } from "../llm/LLMConfigManager";
-import { createLLMProvider } from "../llm/LLMFactory";
-import type { LLMMessage, LLMResponse as LLMProviderResponse } from "../llm/types";
-import type { AgentResponse, LLMConfig } from "../types";
-import type { AgentConversationManager } from "./AgentConversationManager";
-import type { AgentCore } from "./AgentCore";
 
 export class AgentResponseGenerator {
     private agentCore: AgentCore;

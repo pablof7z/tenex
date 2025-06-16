@@ -1,4 +1,4 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 export function getTag(event: NDKEvent, tagName: string): string | undefined {
     const tag = event.tags.find((t) => t[0] === tagName);

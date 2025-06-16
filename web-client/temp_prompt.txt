@@ -1,0 +1,30 @@
+TASK: Fix layout issues on the /agents page based on debug investigation findings
+
+CONTEXT: A debug investigation has identified specific layout problems on the /agents page. The main issues are:
+1. **Disproportionate Form Width**: AgentForm uses `max-w-3xl` (768px) creating unbalanced layout vs 320px sidebar
+2. **Fixed Sidebar Width**: AgentList uses rigid `w-80` (320px) without responsive considerations
+3. **Excessive Padding**: Form container uses `p-8` with large spacing on elements
+4. **Oversized Form Elements**: Input fields use `h-12` making them too large
+5. **Missing Responsive Design**: No breakpoints for mobile/tablet optimization
+
+SPECIFIC FILES TO MODIFY:
+- src/components/agents/AgentList.tsx - Fixed width sidebar
+- src/components/agents/AgentForm.tsx - Form width and spacing
+- src/components/agents/AgentMainContent.tsx - Content area
+- src/components/AgentsPage.tsx - Main layout container
+
+SCOPE: You should implement the following fixes:
+1. Reduce form max-width from `max-w-3xl` to `max-w-2xl` for better proportions
+2. Implement responsive sidebar width (e.g., `w-64 lg:w-80`)
+3. Reduce form padding from `p-8` to `p-6` and input heights from `h-12` to `h-10`
+4. Add responsive breakpoints for mobile/tablet views
+5. Optimize flex space distribution between sidebar and content area
+
+INSTRUCTIONS:
+- Only modify the layout and styling issues identified in the debug report
+- Focus on improving proportions, spacing, and responsive design
+- Test that the changes maintain functionality while improving visual balance
+- Do not add new features or change functionality beyond layout fixes
+- Signal completion using attempt_completion with a summary of the specific changes made
+
+These instructions supersede any conflicting general instructions for code mode.

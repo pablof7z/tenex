@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getNDK } from "@/nostr/ndkClient";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logError, logInfo, logWarning } from "@tenex/shared";
 import type {
@@ -11,7 +12,6 @@ import type {
 } from "@tenex/types/agents";
 import { getErrorMessage } from "@tenex/types/utils";
 import { nip19 } from "nostr-tools";
-import { getNDK } from "../nostr/ndkClient.js";
 
 /**
  * Convert agent name to kebab-case for use as key in agents.json

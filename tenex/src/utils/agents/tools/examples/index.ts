@@ -1,4 +1,4 @@
-import type { ToolDefinition } from "../types";
+import type { ToolDefinition } from "@/utils/agents/tools/types";
 
 // Example tool: Get current time
 export const getTimeTool: ToolDefinition = {

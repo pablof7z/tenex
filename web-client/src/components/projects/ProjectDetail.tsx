@@ -1,4 +1,4 @@
-import type { NDKArticle, NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKArticle, NDKEvent, NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
@@ -62,31 +62,6 @@ export function ProjectDetail({
     // Utility functions
     const formatTime = (timestamp: number) => {
         return formatAutoTime(timestamp);
-    };
-
-    const getTaskTitle = (task: NDKTask) => {
-        // Try to get title from tags first, fallback to content
-        const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
-        if (titleTag) return titleTag;
-
-        // Fallback to first line of content
-        const firstLine = task.content?.split("\n")[0] || "Untitled Task";
-        return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
-    };
-
-    const getTaskDescription = (task: NDKTask) => {
-        // Get description from content, skipping the first line if it's the title
-        const lines = task.content?.split("\n") || [];
-        const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
-
-        if (titleTag && lines.length > 1) {
-            return `${lines.slice(1).join(" ").slice(0, 80)}...`;
-        }
-        if (lines.length > 1) {
-            return `${lines.slice(1).join(" ").slice(0, 80)}...`;
-        }
-
-        return "No description";
     };
 
     const getThreadTitle = (thread: NDKEvent) => {
@@ -165,8 +140,6 @@ export function ProjectDetail({
                         onTaskSelect={onTaskSelect}
                         onCreateTask={() => setShowOptionsDialog(true)}
                         markTaskStatusUpdatesSeen={markTaskStatusUpdatesSeen}
-                        getTaskTitle={getTaskTitle}
-                        getTaskDescription={getTaskDescription}
                     />
                 ) : activeTab === "threads" ? (
                     <ThreadsTabContent

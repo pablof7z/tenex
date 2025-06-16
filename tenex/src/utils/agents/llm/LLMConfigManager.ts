@@ -1,8 +1,7 @@
-import path from "node:path";
-import * as fileSystem from "@tenex/shared/fs";
+import type { LLMConfig } from "@/utils/agents/types";
 import { logger } from "@tenex/shared/node";
-import type { LLMConfigs } from "@tenex/types/llm";
-import type { LLMConfig } from "../types";
+import { configurationService } from "@tenex/shared/services";
+import type { UnifiedLLMConfig } from "@tenex/types/config";
 
 export class LLMConfigManager {
     private projectPath: string;
@@ -15,22 +14,20 @@ export class LLMConfigManager {
      * Disables caching for a specific LLM configuration and persists the change to llms.json
      */
     async disableCachingForConfig(config: LLMConfig): Promise<void> {
-        const llmsPath = path.join(this.projectPath, ".tenex", "llms.json");
-
         try {
-            // Read the current llms.json
-            const llmsConfig = await fileSystem.readJsonFile<LLMConfigs>(llmsPath);
-            if (!llmsConfig) throw new Error("No llms.json found");
+            // Load the current configuration
+            const configuration = await configurationService.loadConfiguration(this.projectPath);
+            const llmsConfig = configuration.llms;
 
             // Find which key corresponds to this config
             const configKey = this.findConfigKey(llmsConfig, config);
 
             if (configKey) {
                 // Update the config to disable caching
-                llmsConfig[configKey].enableCaching = false;
+                llmsConfig.configurations[configKey].enableCaching = false;
 
-                // Write back to file
-                await fileSystem.writeJsonFile(llmsPath, llmsConfig, { spaces: 2 });
+                // Save back to file
+                await configurationService.saveConfiguration(this.projectPath, configuration);
                 logger.info(
                     `Updated llms.json to disable caching for '${configKey}' configuration`
                 );
@@ -48,21 +45,10 @@ export class LLMConfigManager {
     /**
      * Finds the key in llms.json that corresponds to the given LLM config
      */
-    private findConfigKey(llmsConfig: LLMConfigs, targetConfig: LLMConfig): string | null {
-        // Check if it's the default config
-        if (llmsConfig.default && typeof llmsConfig[llmsConfig.default] === "object") {
-            const defaultConfig = llmsConfig[llmsConfig.default];
-            if (this.isMatchingConfig(defaultConfig, targetConfig)) {
-                return llmsConfig.default;
-            }
-        }
-
-        // Search through all configs
-        for (const [key, value] of Object.entries(llmsConfig)) {
-            if (
-                typeof value === "object" &&
-                this.isMatchingConfig(value as LLMConfig, targetConfig)
-            ) {
+    private findConfigKey(llmsConfig: UnifiedLLMConfig, targetConfig: LLMConfig): string | null {
+        // Search through all configurations
+        for (const [key, value] of Object.entries(llmsConfig.configurations)) {
+            if (this.isMatchingConfig(value, targetConfig)) {
                 return key;
             }
         }

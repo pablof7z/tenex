@@ -73,7 +73,7 @@ export function VoiceTaskDialog({
             mediaRecorder.start();
             setIsRecording(true);
         } catch (error) {
-            console.error("Error starting recording:", error);
+            // console.error("Error starting recording:", error);
             let errorMessage = "Failed to start recording.";
 
             if (error instanceof DOMException) {
@@ -184,8 +184,8 @@ export function VoiceTaskDialog({
             setExtractedTaskData(extracted);
             onOpenChange(false);
             setShowCreateTaskDialog(true);
-        } catch (error) {
-            console.error("Processing error:", error);
+        } catch (_error) {
+            // console.error("Processing error:", error);
             alert("Failed to process audio. Please try again.");
             onOpenChange(false);
         } finally {

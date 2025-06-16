@@ -213,12 +213,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
             )}
 
             {/* Chat Interface */}
-            <div
-                className="flex-1 pb-safe-or-6"
-                style={{
-                    paddingBottom: "max(5rem, calc(env(safe-area-inset-bottom) + 1rem))",
-                }}
-            >
+            <div className="flex-1 pb-6">
                 {sortedStatusUpdates.length === 0 ? (
                     <div className="h-full flex items-center justify-center">
                         <div className="text-center">

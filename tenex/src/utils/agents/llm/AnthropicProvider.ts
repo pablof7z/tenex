@@ -1,35 +1,23 @@
-import { logger } from "@tenex/shared/logger";
-import type { LLMConfig } from "../types";
-import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } from "./types";
+import { BaseLLMProvider } from "@/utils/agents/llm/BaseLLMProvider";
+import type { LLMMessage, LLMResponse, ProviderTool } from "@/utils/agents/llm/types";
+import type { LLMConfig } from "@/utils/agents/types";
 
-export class AnthropicProvider implements LLMProvider {
-    async generateResponse(
+export class AnthropicProvider extends BaseLLMProvider {
+    protected readonly providerName = "Anthropic";
+    protected readonly defaultModel = "claude-3-opus-20240229";
+    protected readonly defaultBaseURL = "https://api.anthropic.com/v1";
+
+    protected buildRequestBody(
         messages: LLMMessage[],
         config: LLMConfig,
-        context?: LLMContext,
+        model: string,
         tools?: ProviderTool[]
-    ): Promise<LLMResponse> {
-        if (!config.apiKey) {
-            throw new Error("Anthropic API key is required");
-        }
-
-        const baseURL = config.baseURL || "https://api.anthropic.com/v1";
-        const model = config.model || "claude-3-opus-20240229";
-
+    ): Record<string, unknown> {
         // Separate system message from conversation messages
         const systemMessage = messages.find((msg) => msg.role === "system");
         const conversationMessages = messages.filter((msg) => msg.role !== "system");
 
-        interface AnthropicRequestBody {
-            model: string;
-            messages: LLMMessage[];
-            max_tokens: number;
-            temperature: number;
-            system?: string;
-            tools?: ProviderTool[];
-        }
-
-        const requestBody: AnthropicRequestBody = {
+        const requestBody: Record<string, unknown> = {
             model,
             messages: conversationMessages,
             max_tokens: config.maxTokens || 4096,
@@ -47,71 +35,72 @@ export class AnthropicProvider implements LLMProvider {
             requestBody.tool_choice = { type: "auto" };
         }
 
-        // Log user prompt only
-        const userMessage = conversationMessages.find((msg) => msg.role === "user");
-        if (userMessage && context) {
-            logger.debug(
-                `Anthropic request - Agent: ${context.agentName}, User: "${userMessage.content.substring(0, 100)}..."`
-            );
+        return requestBody;
+    }
+
+    protected async makeRequest(
+        baseURL: string,
+        requestBody: Record<string, unknown>,
+        config: LLMConfig
+    ): Promise<Response> {
+        return fetch(`${baseURL}/messages`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": config.apiKey,
+                "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify(requestBody),
+        });
+    }
+
+    protected parseResponse(data: any): LLMResponse {
+        // Extract content - Anthropic returns an array of content blocks
+        let content = "";
+        const toolCalls: any[] = [];
+
+        for (const block of data.content) {
+            if (block.type === "text") {
+                content += block.text;
+            } else if (block.type === "tool_use") {
+                toolCalls.push(block);
+            }
         }
 
-        try {
-            const response = await fetch(`${baseURL}/messages`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": config.apiKey,
-                    "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify(requestBody),
-            });
+        // Add tool calls to content
+        content += this.formatToolCallsAsText(toolCalls);
 
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`Anthropic API error: ${response.status} - ${error}`);
-            }
+        return {
+            content: content,
+            model: data.model,
+            usage: data.usage
+                ? {
+                      prompt_tokens: data.usage.input_tokens,
+                      completion_tokens: data.usage.output_tokens,
+                      total_tokens: data.usage.input_tokens + data.usage.output_tokens,
+                  }
+                : undefined,
+        };
+    }
 
-            const data = await response.json();
+    protected extractUsage(
+        data: any
+    ): { prompt_tokens?: number; completion_tokens?: number } | null {
+        return data.usage
+            ? {
+                  prompt_tokens: data.usage.input_tokens,
+                  completion_tokens: data.usage.output_tokens,
+              }
+            : null;
+    }
 
-            // Log response summary only
-            logger.debug(
-                `Anthropic response - tokens: ${data.usage?.input_tokens || 0}+${data.usage?.output_tokens || 0}`
-            );
-
-            // Extract content - Anthropic returns an array of content blocks
-            let content = "";
-
-            for (const block of data.content) {
-                if (block.type === "text") {
-                    content += block.text;
-                } else if (block.type === "tool_use") {
-                    // Convert native tool call to our format
-                    logger.debug("Model returned native tool call:", block);
-                    content += `\n<tool_use>\n${JSON.stringify(
-                        {
-                            tool: block.name,
-                            arguments: block.input,
-                        },
-                        null,
-                        2
-                    )}\n</tool_use>`;
-                }
-            }
-
+    protected extractToolCallData(toolCall: any): { name: string; arguments: any } | null {
+        if (toolCall.type === "tool_use") {
             return {
-                content: content,
-                model: data.model,
-                usage: data.usage
-                    ? {
-                          prompt_tokens: data.usage.input_tokens,
-                          completion_tokens: data.usage.output_tokens,
-                          total_tokens: data.usage.input_tokens + data.usage.output_tokens,
-                      }
-                    : undefined,
+                name: toolCall.name,
+                arguments: toolCall.input,
             };
-        } catch (error) {
-            logger.error(`Anthropic provider error: ${error}`);
-            throw error;
         }
+        return null;
     }
 }

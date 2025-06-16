@@ -1,8 +1,8 @@
+import { Conversation } from "@/utils/agents/Conversation";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { AgentCore } from "@/utils/agents/core/AgentCore";
+import type { SystemPromptContext } from "@/utils/agents/prompts/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { Conversation } from "../Conversation";
-import type { ConversationStorage } from "../ConversationStorage";
-import type { SystemPromptContext } from "../prompts/types";
-import type { AgentCore } from "./AgentCore";
 
 export class AgentConversationManager {
     private conversations: Map<string, Conversation>;

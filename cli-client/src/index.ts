@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { Command } from "commander";
 import { logger } from "@tenex/shared";
+import { Command } from "commander";
 import { TenexCLI } from "./cli.js";
 import { createProject } from "./commands/project-create.js";
 import { startProject } from "./commands/project-start.js";
@@ -21,9 +21,7 @@ program
         await cli.start();
     });
 
-const projectCommand = program
-    .command("project")
-    .description("Project management commands");
+const projectCommand = program.command("project").description("Project management commands");
 
 projectCommand
     .command("create")

@@ -1,17 +1,16 @@
-import path from "node:path";
-import type NDK from "@nostr-dev-kit/ndk";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import { STATUS_INTERVAL_MS, STATUS_KIND } from "@/commands/run/constants";
+import { getNDK } from "@/nostr/ndkClient";
+import { formatError } from "@/utils/errors";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logWarning } from "@tenex/shared/logger";
+import { configurationService } from "@tenex/shared/services";
+import type { UnifiedLLMConfig } from "@tenex/types/config";
+import type { LLMConfig } from "@tenex/types/llm";
 import chalk from "chalk";
-import { formatError } from "../../utils/errors";
-import { fs } from "../../utils/fs";
-import type { ProjectInfo } from "./ProjectLoader";
-import { STATUS_INTERVAL_MS, STATUS_KIND } from "./constants";
 
 export class StatusPublisher {
     private statusInterval?: NodeJS.Timeout;
-
-    constructor(private ndk: NDK) {}
 
     async startPublishing(projectInfo: ProjectInfo): Promise<void> {
         await this.publishStatusEvent(projectInfo);
@@ -30,10 +29,11 @@ export class StatusPublisher {
 
     private async publishStatusEvent(projectInfo: ProjectInfo): Promise<void> {
         try {
-            const event = new NDKEvent(this.ndk);
+            const ndk = getNDK();
+            const event = new NDKEvent(ndk);
             event.kind = STATUS_KIND;
 
-            const llmConfigs = await this.getLLMConfigNames(projectInfo.projectPath);
+            const llmConfigs = await this.getLLMConfigurations(projectInfo.projectPath);
 
             event.content = JSON.stringify({
                 status: "online",
@@ -46,6 +46,7 @@ export class StatusPublisher {
             event.tag(projectInfo.projectEvent);
 
             await this.addAgentPubkeys(event, projectInfo.projectPath);
+            await this.addModelTags(event, projectInfo.projectPath);
             event.publish();
         } catch (err) {
             const errorMessage = formatError(err);
@@ -53,56 +54,101 @@ export class StatusPublisher {
         }
     }
 
-    private async getLLMConfigNames(projectPath: string): Promise<string[]> {
-        const llmsPath = path.join(projectPath, ".tenex", "llms.json");
-
+    private async getLLMConfigurations(
+        projectPath: string
+    ): Promise<Record<string, Partial<LLMConfig> | UnifiedLLMConfig["defaults"]>> {
         try {
-            const llmsContent = await fs.readFile(llmsPath, "utf-8");
-            const llms = JSON.parse(llmsContent);
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const llms = configuration.llms;
 
-            // Filter out the 'default' key and return all config names
-            // Include both object configs and string references
-            const configNames = Object.keys(llms).filter(
-                (name) => name !== "default" && llms[name] !== undefined && llms[name] !== null
-            );
+            // Create a sanitized version of the configurations
+            const sanitizedConfigs: Record<
+                string,
+                Partial<LLMConfig> | UnifiedLLMConfig["defaults"]
+            > = {};
 
-            return configNames;
+            // Add defaults
+            sanitizedConfigs.defaults = llms.defaults;
+
+            // Add configurations without sensitive data
+            for (const [configName, config] of Object.entries(llms.configurations)) {
+                if (!config) continue;
+
+                // Copy the config but exclude sensitive data
+                const sanitizedConfig = { ...config };
+                sanitizedConfig.apiKey = undefined;
+                sanitizedConfigs[configName] = sanitizedConfig;
+            }
+
+            return sanitizedConfigs;
         } catch (_err) {
-            // If llms.json doesn't exist or can't be read, return empty array
+            // If configuration doesn't exist or can't be read, return empty object
+            return {};
+        }
+    }
+
+    private async getLLMConfigNames(projectPath: string): Promise<string[]> {
+        try {
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const llms = configuration.llms;
+
+            // Return all configuration names
+            return Object.keys(llms.configurations);
+        } catch (_err) {
+            // If configuration doesn't exist or can't be read, return empty array
             return [];
         }
     }
 
     private async addAgentPubkeys(event: NDKEvent, projectPath: string): Promise<void> {
-        const agentsPath = path.join(projectPath, ".tenex", "agents.json");
-
         try {
-            const agentsContent = await fs.readFile(agentsPath, "utf-8");
-            const agents = JSON.parse(agentsContent);
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const agents = configuration.agents || {};
 
             for (const [agentName, agentConfig] of Object.entries(agents)) {
                 let nsecValue: string | undefined;
 
+                // Handle both string and object agent configs
                 if (typeof agentConfig === "string") {
-                    // Handle old format where nsec is stored directly as string
                     nsecValue = agentConfig;
-                } else if (
-                    typeof agentConfig === "object" &&
-                    agentConfig &&
-                    "nsec" in agentConfig
-                ) {
-                    // Handle new format where nsec is stored in object with nsec property
+                } else if (typeof agentConfig === "object" && agentConfig?.nsec) {
                     nsecValue = agentConfig.nsec;
                 }
 
                 if (nsecValue) {
                     const agentSigner = new NDKPrivateKeySigner(nsecValue);
-                    const agentPubkey = await agentSigner.user().then((user) => user.pubkey);
+                    const agentPubkey = agentSigner.pubkey;
                     event.tags.push(["p", agentPubkey, agentName]);
                 }
             }
         } catch (_err) {
             logWarning("Could not load agent information for status event");
+        }
+    }
+
+    private async addModelTags(event: NDKEvent, projectPath: string): Promise<void> {
+        try {
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const llms = configuration.llms;
+
+            // Add model tags for each LLM configuration
+            for (const [configName, config] of Object.entries(llms.configurations)) {
+                if (!config || !config.model) continue;
+
+                event.tags.push(["model", config.model, configName]);
+            }
+
+            // Also check if there are agent-specific defaults
+            for (const [agentName, configRef] of Object.entries(llms.defaults)) {
+                if (agentName === "default" || agentName === "orchestrator") continue;
+
+                const config = llms.configurations[configRef];
+                if (config?.model) {
+                    event.tags.push(["model", config.model, `${agentName}-default`]);
+                }
+            }
+        } catch (_err) {
+            logWarning("Could not load LLM information for status event model tags");
         }
     }
 }

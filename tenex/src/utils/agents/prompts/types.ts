@@ -1,7 +1,7 @@
-import type { ProjectInfo } from "../../../commands/run/ProjectLoader";
-import type { CachedRule } from "../../RulesManager";
-import type { AgentConfig } from "../types";
-import type { SpecCache } from "./SpecCache";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { CachedRule } from "@/utils/RulesManager";
+import type { SpecCache } from "@/utils/agents/prompts/SpecCache";
+import type { AgentConfig } from "@/utils/agents/types";
 
 /**
  * Represents a section of the system prompt

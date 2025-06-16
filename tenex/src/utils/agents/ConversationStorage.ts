@@ -1,7 +1,7 @@
 import path from "node:path";
+import type { ConversationContext } from "@/utils/agents/types";
 import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
-import type { ConversationContext } from "./types";
 
 export class ConversationStorage {
     private storageDir: string;

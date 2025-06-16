@@ -1,6 +1,6 @@
+import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { NDKArticle, type NDKFilter } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import type { ToolContext, ToolDefinition } from "./types";
 
 export const readSpecsTool: ToolDefinition = {
     name: "read_specs",

@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Agent } from "../../../../utils/agents/Agent";
 import type { ConversationStorage } from "../../../../utils/agents/ConversationStorage";
 import type { Logger } from "../../../../utils/fs";
-import { PhasedDeliveryStrategy } from "../PhasedDeliveryStrategy";
 import type { Team } from "../../types";
+import { PhasedDeliveryStrategy } from "../PhasedDeliveryStrategy";
 
 describe("PhasedDeliveryStrategy", () => {
     let strategy: PhasedDeliveryStrategy;
@@ -19,7 +19,7 @@ describe("PhasedDeliveryStrategy", () => {
             warn: vi.fn(),
             error: vi.fn(),
         } as Logger;
-        
+
         strategy = new PhasedDeliveryStrategy(mockLogger);
         mockConversationStorage = {} as ConversationStorage;
     });
@@ -48,7 +48,7 @@ describe("PhasedDeliveryStrategy", () => {
 
         const event = new NDKEvent();
         event.content = "Build a real-time dashboard with authentication";
-        
+
         const agents = new Map<string, Agent>();
 
         const result = await strategy.execute(team, event, agents, mockConversationStorage);
@@ -87,7 +87,8 @@ describe("PhasedDeliveryStrategy", () => {
         const mockLeadAgent = {
             getConfig: () => ({ name: "Lead", role: "Phase Coordinator" }),
             getOrCreateConversationWithContext: vi.fn().mockResolvedValue(mockConversation),
-            generateResponse: vi.fn()
+            generateResponse: vi
+                .fn()
                 .mockResolvedValueOnce({
                     content: "Phase plan: 1) Design 2) Implementation 3) Testing",
                     metadata: {
@@ -129,7 +130,8 @@ describe("PhasedDeliveryStrategy", () => {
                 addUserMessage: vi.fn(),
                 addAssistantMessage: vi.fn(),
             }),
-            generateResponse: vi.fn()
+            generateResponse: vi
+                .fn()
                 .mockResolvedValueOnce({
                     content: "Designed dashboard mockups",
                     metadata: {},
@@ -163,7 +165,7 @@ describe("PhasedDeliveryStrategy", () => {
 
         expect(result.success).toBe(true);
         expect(result.responses).toHaveLength(7); // 1 plan + 2 phase executions + 2 phase reviews + 1 backend execution + 1 final
-        
+
         // Verify phase plan
         expect(result.responses[0].agentName).toBe("lead");
         expect(result.responses[0].metadata?.phase).toBe("planning");
@@ -211,7 +213,8 @@ describe("PhasedDeliveryStrategy", () => {
         const mockLeadAgent = {
             getConfig: () => ({ name: "Lead", role: "Phase Coordinator" }),
             getOrCreateConversationWithContext: vi.fn().mockResolvedValue(mockConversation),
-            generateResponse: vi.fn()
+            generateResponse: vi
+                .fn()
                 .mockResolvedValueOnce({
                     content: "Phase plan created",
                     metadata: {},
@@ -281,9 +284,7 @@ describe("PhasedDeliveryStrategy", () => {
             saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         };
 
-        const agents = new Map<string, Agent>([
-            ["lead", mockLeadAgent as unknown as Agent],
-        ]);
+        const agents = new Map<string, Agent>([["lead", mockLeadAgent as unknown as Agent]]);
 
         const result = await strategy.execute(team, event, agents, mockConversationStorage);
 

@@ -1,8 +1,8 @@
 import type NDK from "@nostr-dev-kit/ndk";
+import { logger } from "@tenex/shared";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { logger } from "@tenex/shared";
 import { TenexChat } from "./chat.js";
 import { ProjectCreator } from "./create-project.js";
 import { getNDK, shutdownNDK } from "./ndk-setup.js";

@@ -1,13 +1,13 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../../utils/agents/Agent";
-import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
-import type { Logger } from "../../../utils/fs";
-import type { Team } from "../types";
 import type {
     AgentResponse,
     OrchestrationStrategy,
     StrategyExecutionResult,
-} from "./OrchestrationStrategy";
+} from "@/core/orchestration/strategies/OrchestrationStrategy";
+import type { Team } from "@/core/orchestration/types";
+import type { Agent } from "@/utils/agents/Agent";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { AgentLogger } from "@tenex/shared/logger";
 
 interface ParallelExecution {
     agentName: string;
@@ -18,7 +18,7 @@ interface ParallelExecution {
 }
 
 export class ParallelExecutionStrategy implements OrchestrationStrategy {
-    constructor(private readonly logger: Logger) {
+    constructor(private readonly logger: AgentLogger) {
         if (!logger) throw new Error("Logger is required");
     }
 
@@ -26,33 +26,39 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
         team: Team,
         event: NDKEvent,
         agents: Map<string, Agent>,
-        conversationStorage: ConversationStorage
+        _conversationStorage: ConversationStorage
     ): Promise<StrategyExecutionResult> {
         this.logger.info(`Executing ParallelExecutionStrategy for task ${team.taskDefinition.id}`);
 
         try {
-            // Create conversation for this task
-            const conversation = await conversationStorage.createConversation({
-                projectNaddr: undefined,
-                taskId: team.taskDefinition.id,
-                agentName: undefined, // No specific agent owns this conversation
-                metadata: {
-                    orchestration: {
+            // Use the lead agent to create a coordination conversation
+            const leadAgent = agents.get(team.lead);
+            if (!leadAgent) {
+                const error = new Error(`Lead agent ${team.lead} not found`);
+                this.logger.error(error.message);
+                return {
+                    success: false,
+                    responses: [],
+                    errors: [error],
+                };
+            }
+
+            // Create conversation through the lead agent
+            const conversationId = team.taskDefinition.id;
+            const conversation = await leadAgent.getOrCreateConversationWithContext(
+                conversationId,
+                {
+                    agentRole: leadAgent.getConfig().role || "Coordinator",
+                    projectName: leadAgent.getConfig().name,
+                    orchestrationMetadata: {
                         team,
                         strategy: "PARALLEL_EXECUTION",
                     },
-                },
-            });
+                }
+            );
 
             // Add the incoming request to conversation
-            await conversationStorage.addMessage(conversation.id, {
-                role: "user",
-                content: event.content,
-                timestamp: Date.now(),
-                metadata: {
-                    eventId: event.id,
-                },
-            });
+            conversation.addUserMessage(event.content, event);
 
             const startTime = Date.now();
             const parallelExecutions: ParallelExecution[] = [];
@@ -76,10 +82,10 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
                 const promise = this.executeAgent(
                     agent,
                     event.content,
-                    conversation.id,
+                    conversation.getId(),
                     team.taskDefinition.id,
                     execution,
-                    conversationStorage
+                    conversation
                 );
                 promises.push(promise);
             }
@@ -111,18 +117,8 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
                     .map((r) => `${r.agentName}: ${r.response}`)
                     .join("\n\n");
 
-                // Update conversation metadata
-                await conversationStorage.updateConversationMetadata(conversation.id, {
-                    completedAt: Date.now(),
-                    status: "completed",
-                    parallelExecutions: parallelExecutions.map((e) => ({
-                        agent: e.agentName,
-                        duration: e.endTime ? e.endTime - e.startTime : undefined,
-                        success: !!e.result,
-                        error: e.error?.message,
-                    })),
-                    aggregatedContent,
-                });
+                // Save conversation with all responses
+                await leadAgent.saveConversationToStorage(conversation);
 
                 this.logger.info(
                     `ParallelExecutionStrategy completed with ${responses.length} successful and ${errors.length} failed executions`
@@ -133,7 +129,7 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
                     responses,
                     errors: errors.length > 0 ? errors : undefined,
                     metadata: {
-                        conversationId: conversation.id,
+                        conversationId: conversation.getId(),
                         executionTime: Date.now() - startTime,
                         parallelExecutions: parallelExecutions.map((e) => ({
                             agent: e.agentName,
@@ -148,11 +144,8 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
                 `ParallelExecutionStrategy failed - all ${errors.length} agents failed`
             );
 
-            await conversationStorage.updateConversationMetadata(conversation.id, {
-                completedAt: Date.now(),
-                status: "failed",
-                errors: errors.map((e) => e.message),
-            });
+            // Save conversation with error information
+            await leadAgent.saveConversationToStorage(conversation);
 
             return {
                 success: false,
@@ -171,48 +164,41 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
 
     private async executeAgent(
         agent: Agent,
-        content: string,
+        _content: string,
         conversationId: string,
-        taskId: string,
+        _taskId: string,
         execution: ParallelExecution,
-        conversationStorage: ConversationStorage
+        conversation: any
     ): Promise<void> {
         try {
-            this.logger.debug(`Agent ${agent.name} starting parallel execution`);
+            this.logger.debug(`Agent ${agent.getName()} starting parallel execution`);
 
-            const result = await agent.processRequest({
-                content,
+            const result = await agent.generateResponse(
                 conversationId,
-                metadata: {
-                    taskId,
-                    strategy: "PARALLEL_EXECUTION",
-                    parallelExecution: true,
-                },
-            });
+                undefined, // Use default LLM config
+                undefined, // No specific project path
+                false, // Not from agent
+                undefined // No typing indicator callback
+            );
 
             execution.endTime = Date.now();
             execution.result = {
-                agentName: agent.name,
+                agentName: agent.getName(),
                 response: result.content,
                 timestamp: Date.now(),
                 metadata: result.metadata,
             };
 
             // Add agent response to conversation
-            await conversationStorage.addMessage(conversationId, {
-                role: "assistant",
-                content: result.content,
-                timestamp: Date.now(),
-                metadata: { ...result.metadata, agentName: agent.name },
-            });
+            conversation.addAssistantMessage(result.content);
 
             this.logger.debug(
-                `Agent ${agent.name} completed in ${execution.endTime - execution.startTime}ms`
+                `Agent ${agent.getName()} completed in ${execution.endTime - execution.startTime}ms`
             );
         } catch (error) {
             execution.endTime = Date.now();
             execution.error = error instanceof Error ? error : new Error(String(error));
-            this.logger.error(`Agent ${agent.name} failed: ${error}`);
+            this.logger.error(`Agent ${agent.getName()} failed: ${error}`);
         }
     }
 

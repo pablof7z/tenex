@@ -122,8 +122,8 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
             await navigator.clipboard.writeText(event.encode());
             setCopiedEvent(event.id);
             setTimeout(() => setCopiedEvent(null), 2000);
-        } catch (err) {
-            console.error("Failed to copy nevent:", err);
+        } catch (_err) {
+            // console.error("Failed to copy nevent:", err);
         }
     };
 
@@ -168,8 +168,8 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
             setTimeout(() => {
                 window.location.reload(); // Refresh to show updated list
             }, 1000);
-        } catch (err) {
-            console.error("Failed to save agent list:", err);
+        } catch (_err) {
+            // console.error("Failed to save agent list:", err);
             setError("Failed to save agent list. Please try again.");
         } finally {
             setSaving(false);

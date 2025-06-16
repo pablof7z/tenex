@@ -2,7 +2,14 @@
  * LLM configuration types
  */
 
-export type LLMProvider = "anthropic" | "openai" | "openrouter" | "google" | "groq" | "deepseek";
+export type LLMProvider =
+    | "anthropic"
+    | "openai"
+    | "openrouter"
+    | "google"
+    | "groq"
+    | "deepseek"
+    | "ollama";
 
 export interface BaseLLMConfig {
     provider: LLMProvider;
@@ -55,13 +62,19 @@ export interface DeepSeekConfig extends BaseLLMConfig {
     model: string;
 }
 
+export interface OllamaConfig extends BaseLLMConfig {
+    provider: "ollama";
+    model: string;
+}
+
 export type LLMConfig =
     | AnthropicConfig
     | OpenAIConfig
     | OpenRouterConfig
     | GoogleConfig
     | GroqConfig
-    | DeepSeekConfig;
+    | DeepSeekConfig
+    | OllamaConfig;
 
 /**
  * LLM configuration map for projects

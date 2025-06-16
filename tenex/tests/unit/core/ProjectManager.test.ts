@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { default as NDK, type NDKArticle } from "@nostr-dev-kit/ndk";
+import type { default as NDK, NDKProject } from "@nostr-dev-kit/ndk";
 import { ProjectService } from "@tenex/shared/projects";
 import { nip19 } from "nostr-tools";
 import { ProjectManager } from "../../../src/core/ProjectManager";
@@ -12,9 +12,9 @@ const mockNDK = {
     pool: {
         relays: new Map(),
     },
-    fetchEvent: mock((filter: any) => {
+    fetchEvent: mock((filter: { ids?: string[] }) => {
         // Return a mock agent event
-        if (filter.ids && filter.ids[0] && filter.ids[0].startsWith("agent-event-")) {
+        if (filter.ids?.[0]?.startsWith("agent-event-")) {
             return Promise.resolve({
                 kind: 4199,
                 id: filter.ids[0],
@@ -88,8 +88,8 @@ describe("ProjectManager", () => {
         mockProjectServiceInstance.createProjectStructure.mockReset();
 
         mockProjectServiceInstance.fetchProject.mockImplementation((_naddr: string) => {
-            // Create a mock article object that matches NDKArticle structure
-            const article = {
+            // Create a mock project object that matches NDKProject structure
+            const project = {
                 kind: 31933,
                 dTag: "test-project",
                 pubkey: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -110,12 +110,35 @@ describe("ProjectManager", () => {
                     return undefined;
                 },
             };
-            return Promise.resolve(article as unknown as NDKArticle);
+            return Promise.resolve(project as unknown as NDKProject);
         });
 
         mockProjectServiceInstance.cloneRepository.mockImplementation(() => Promise.resolve());
-        mockProjectServiceInstance.createProjectStructure.mockImplementation(() =>
-            Promise.resolve()
+        mockProjectServiceInstance.createProjectStructure.mockImplementation(
+            async (projectPath: string, project: { title: string; naddr: string }) => {
+                // Actually create the directory structure that the real implementation would create
+                const tenexDir = path.join(projectPath, ".tenex");
+                await fs.mkdir(tenexDir, { recursive: true });
+                await fs.mkdir(path.join(tenexDir, "agents"), { recursive: true });
+                await fs.mkdir(path.join(tenexDir, "conversations"), { recursive: true });
+
+                const metadataPath = path.join(tenexDir, "metadata.json");
+                await fs.writeFile(
+                    metadataPath,
+                    JSON.stringify(
+                        {
+                            title: project.title,
+                            naddr: project.naddr,
+                            createdAt: new Date().toISOString(),
+                        },
+                        null,
+                        2
+                    )
+                );
+
+                const agentsPath = path.join(tenexDir, "agents.json");
+                await fs.writeFile(agentsPath, JSON.stringify({}, null, 2));
+            }
         );
 
         // Use the mockProjectServiceInstance for convenience
@@ -137,7 +160,7 @@ describe("ProjectManager", () => {
             const result = await projectManager.initializeProject(
                 projectPath,
                 naddr,
-                mockNDK as any
+                mockNDK as unknown as NDK
             );
 
             expect(result).toEqual({
@@ -149,7 +172,6 @@ describe("ProjectManager", () => {
                 repoUrl: "https://github.com/test/repo",
                 hashtags: ["ai", "nostr"],
                 agentEventIds: ["agent-event-1", "agent-event-2"],
-                defaultAgent: "agent-event-1",
                 createdAt: expect.any(Number),
                 updatedAt: expect.any(Number),
             });
@@ -165,7 +187,7 @@ describe("ProjectManager", () => {
 
         test("should handle project without repository", async () => {
             mockProjectService.fetchProject = mock(() => {
-                const article = {
+                const project = {
                     kind: 31933,
                     dTag: "test-project",
                     pubkey: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -179,7 +201,7 @@ describe("ProjectManager", () => {
                         return undefined;
                     },
                 };
-                return Promise.resolve(article as unknown as NDKArticle);
+                return Promise.resolve(project as unknown as NDKProject);
             });
 
             const projectPath = path.join(tempDir, "test-project");
@@ -188,7 +210,7 @@ describe("ProjectManager", () => {
             const result = await projectManager.initializeProject(
                 projectPath,
                 naddr,
-                mockNDK as any
+                mockNDK as unknown as NDK
             );
 
             expect(result.repoUrl).toBeUndefined();
@@ -298,7 +320,7 @@ describe("ProjectManager", () => {
             const result = await projectManager.ensureProjectExists(
                 identifier,
                 naddr,
-                mockNDK as any
+                mockNDK as unknown as NDK
             );
 
             expect(result).toBe(expectedPath);

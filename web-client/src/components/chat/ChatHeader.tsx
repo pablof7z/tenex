@@ -11,7 +11,7 @@ interface ChatHeaderProps {
     projectPubkey?: string;
     projectId?: string;
     projectEvent?: NDKEvent;
-    availableModels?: string[];
+    availableModels?: Record<string, any>;
     onBack?: () => void;
 }
 
@@ -28,7 +28,7 @@ export function ChatHeader({
 }: ChatHeaderProps) {
     if (!onBack) return null;
 
-    // console.log("[ChatHeader] Props:", {
+    // // console.log("[ChatHeader] Props:", {
     //     hasMessages: !!messages,
     //     messagesLength: messages?.length,
     //     projectPubkey,

@@ -23,11 +23,8 @@ export class ProcessManager implements IProcessManager {
 
         // Check if already running
         if (this.processes.has(id)) {
-            logger.warn("Project already running", { projectId: id });
             return;
         }
-
-        logger.info("Spawning project run", { projectId: id, projectPath });
 
         // Get the CLI binary path
         const cliBinPath = path.join(__dirname, "..", "..", "bin", "tenex.ts");
@@ -35,24 +32,8 @@ export class ProcessManager implements IProcessManager {
         // Spawn the process
         const child = spawn("bun", ["run", cliBinPath, "project", "run"], {
             cwd: projectPath,
-            stdio: ["ignore", "pipe", "pipe"],
+            stdio: "inherit", // Let output pass through directly
             detached: false,
-        });
-
-        // Handle stdout
-        child.stdout?.on("data", (data) => {
-            const lines = data.toString().split("\n").filter(Boolean);
-            for (const line of lines) {
-                logger.info(`[${id}] ${line}`);
-            }
-        });
-
-        // Handle stderr
-        child.stderr?.on("data", (data) => {
-            const lines = data.toString().split("\n").filter(Boolean);
-            for (const line of lines) {
-                logger.error(`[${id}] ${line}`);
-            }
         });
 
         // Handle process exit
@@ -79,11 +60,6 @@ export class ProcessManager implements IProcessManager {
             process: child,
             projectPath,
             startedAt: new Date(),
-        });
-
-        logger.info("Project process started", {
-            projectId: id,
-            pid: child.pid,
         });
     }
 

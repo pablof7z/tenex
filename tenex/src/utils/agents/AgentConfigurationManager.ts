@@ -228,10 +228,9 @@ export class AgentConfigurationManager {
             return null;
         }
 
-        const orchestratorConfigName = 
-            this.unifiedLLMConfig.defaults.orchestrator || 
-            this.unifiedLLMConfig.defaults.default;
-            
+        const orchestratorConfigName =
+            this.unifiedLLMConfig.defaults.orchestrator || this.unifiedLLMConfig.defaults.default;
+
         if (!orchestratorConfigName) {
             return null;
         }
@@ -243,7 +242,7 @@ export class AgentConfigurationManager {
                 teamFormationLLMConfig: this.unifiedLLMConfig.defaults.orchestrator,
                 maxTeamSize: 5,
                 strategies: {},
-            }
+            },
         };
     }
 
@@ -253,7 +252,7 @@ export class AgentConfigurationManager {
     async updateAgentLLMConfig(agentName: string, newConfigName: string): Promise<boolean> {
         try {
             const configuration = await configurationService.loadConfiguration(this.projectPath);
-            
+
             if (!configuration.llms.configurations[newConfigName]) {
                 logger.error(`LLM configuration '${newConfigName}' does not exist`);
                 return false;
@@ -261,13 +260,13 @@ export class AgentConfigurationManager {
 
             // Update the agent's default LLM configuration
             configuration.llms.defaults[agentName] = newConfigName;
-            
+
             // Save the updated configuration
             await configurationService.saveConfiguration(this.projectPath, configuration);
-            
+
             // Reload configurations
             await this.loadLLMConfigs();
-            
+
             logger.info(`Updated agent '${agentName}' to use LLM configuration '${newConfigName}'`);
             return true;
         } catch (error) {
@@ -291,7 +290,7 @@ export class AgentConfigurationManager {
     > {
         try {
             // Add .json extension if not present
-            const fileName = filename.endsWith('.json') ? filename : `${filename}.json`;
+            const fileName = filename.endsWith(".json") ? filename : `${filename}.json`;
             const filePath = path.join(this.projectPath, ".tenex", "agents", fileName);
             return readJsonFile(filePath);
         } catch (error) {

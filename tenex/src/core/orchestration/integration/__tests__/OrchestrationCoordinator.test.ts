@@ -1,4 +1,5 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { AgentLogger } from "@tenex/shared/logger";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Conversation } from "../../../utils/agents/Conversation";
 import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
@@ -26,6 +27,15 @@ function createMockConversationStorage(): ReturnType<typeof vi.mocked<Conversati
         isEventProcessed: vi.fn(),
         getProcessedEventTimestamp: vi.fn(),
         saveProcessedEvents: vi.fn(),
+    };
+}
+
+function createMockLogger(): ReturnType<typeof vi.mocked<Logger>> {
+    return {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
     };
 }
 
@@ -65,12 +75,18 @@ describe("OrchestrationCoordinator", () => {
     let coordinator: OrchestrationCoordinator;
     let mockOrchestrator: ReturnType<typeof createMockOrchestrator>;
     let mockConversationStorage: ReturnType<typeof createMockConversationStorage>;
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
         mockOrchestrator = createMockOrchestrator();
         mockConversationStorage = createMockConversationStorage();
+        mockLogger = createMockLogger();
 
-        coordinator = new OrchestrationCoordinator(mockOrchestrator, mockConversationStorage);
+        coordinator = new OrchestrationCoordinator(
+            mockOrchestrator,
+            mockConversationStorage,
+            mockLogger
+        );
     });
 
     describe("handleUserEvent", () => {

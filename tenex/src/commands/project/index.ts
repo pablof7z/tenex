@@ -1,6 +1,6 @@
+import { projectInitCommand } from "@/commands/project/init";
+import { projectRunCommand } from "@/commands/project/run";
 import { Command } from "commander";
-import { projectInitCommand } from "./init.js";
-import { projectRunCommand } from "./run.js";
 
 export const projectCommand = new Command("project")
     .description("Project management commands")

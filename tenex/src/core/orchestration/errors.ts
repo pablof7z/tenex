@@ -30,7 +30,7 @@ export class NoSuitableAgentsError extends TeamFormationError {
     }
 }
 
-import type { Milestone } from "./supervision/types";
+import type { Milestone } from "@/core/orchestration/supervision/types";
 
 export class SupervisionAbortError extends OrchestrationError {
     constructor(

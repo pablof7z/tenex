@@ -1,9 +1,9 @@
 import path from "node:path";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { AgentConfig } from "@/utils/agents/types";
 import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
-import type { ConversationStorage } from "../ConversationStorage";
-import type { ToolRegistry } from "../tools/ToolRegistry";
-import type { AgentConfig } from "../types";
 
 export async function loadAgentConfig(
     name: string,

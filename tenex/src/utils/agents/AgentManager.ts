@@ -1,16 +1,18 @@
-import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import { createOrchestrationCoordinator } from "@/core/orchestration/OrchestrationFactory";
+import type { OrchestrationCoordinator } from "@/core/orchestration/integration/OrchestrationCoordinator";
+import { getNDK } from "@/nostr/ndkClient";
+import type { Agent } from "@/utils/agents/Agent";
+import { AgentCommunicationHandler } from "@/utils/agents/AgentCommunicationHandler";
+import { AgentConfigurationManager } from "@/utils/agents/AgentConfigurationManager";
+import { AgentOrchestrator } from "@/utils/agents/AgentOrchestrator";
+import { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { ToolDefinition } from "@/utils/agents/tools/types";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 import type { LLMConfig } from "@tenex/types/llm";
-import type { ProjectInfo } from "../../commands/run/ProjectLoader";
-import { createOrchestrationCoordinator } from "../../core/orchestration/OrchestrationFactory";
-import type { OrchestrationCoordinator } from "../../core/orchestration/integration/OrchestrationCoordinator";
-import type { Agent } from "./Agent";
-import { AgentConfigurationManager } from "./AgentConfigurationManager";
-import { AgentEventHandler } from "./AgentEventHandler";
-import { AgentOrchestrator } from "./AgentOrchestrator";
-import { ConversationStorage } from "./ConversationStorage";
-import type { ToolRegistry } from "./tools/ToolRegistry";
-import type { ToolDefinition } from "./tools/types";
 
 /**
  * Main AgentManager class that orchestrates all agent operations
@@ -20,13 +22,14 @@ export class AgentManager {
     private projectPath: string;
     private conversationStorage: ConversationStorage;
     private _projectInfo?: ProjectInfo;
-    private ndk?: NDK;
 
     // Modular components
     private configManager: AgentConfigurationManager;
-    private eventHandler: AgentEventHandler;
+    private eventHandler: AgentCommunicationHandler;
     private orchestrator: AgentOrchestrator;
     private orchestrationCoordinator?: OrchestrationCoordinator;
+
+    private ndk = getNDK();
 
     constructor(projectPath: string, projectInfo?: ProjectInfo) {
         this.projectPath = projectPath;
@@ -43,11 +46,13 @@ export class AgentManager {
 
         // Create event handler but don't pass agents Map yet (it's empty)
         // We'll update it after initialization
-        this.eventHandler = new AgentEventHandler(
+        this.eventHandler = new AgentCommunicationHandler(
             this.configManager,
             this.conversationStorage,
             new Map(), // Empty map for now
-            this._projectInfo
+            this._projectInfo,
+            undefined, // No orchestration coordinator yet
+            this.ndk // Pass NDK instance if available
         );
 
         // Set dependencies for event handler
@@ -64,11 +69,6 @@ export class AgentManager {
 
         // Set agent manager reference for all agents
         this.orchestrator.setAgentManagerForAll(this);
-    }
-
-    setNDK(ndk: NDK): void {
-        this.ndk = ndk;
-        this.orchestrator.setNDK(ndk);
     }
 
     async initialize(): Promise<void> {
@@ -93,29 +93,113 @@ export class AgentManager {
             // Create orchestration coordinator after everything is initialized
             if (this._projectInfo) {
                 const defaultLLMConfig = this.configManager.getLLMConfig();
-                if (defaultLLMConfig) {
+                logger.info("🎯 [Orchestration] Checking LLM configuration for orchestration...");
+                logger.info(`   Project info available: ${!!this._projectInfo}`);
+                logger.info(`   Default LLM config available: ${!!defaultLLMConfig}`);
+
+                if (!defaultLLMConfig) {
+                    logger.error("❌ [Orchestration] No default LLM configuration found!");
+                    logger.error(
+                        `   Available LLM configs: ${Array.from(this.configManager.getAllLLMConfigs().keys()).join(", ")}`
+                    );
+                    logger.error(`   Default LLM name: ${this.configManager.getDefaultLLMName()}`);
+                    throw new Error(
+                        "No LLM configuration available. Please ensure llms.json exists and contains a valid default configuration."
+                    );
+                } else {
+                    // Log LLM configuration being used for orchestration
+                    logger.info(
+                        "✅ [Orchestration] Creating orchestration coordinator with LLM config:"
+                    );
+                    logger.info(`   LLM Name: ${this.configManager.getDefaultLLMName()}`);
+                    logger.info(`   Provider: ${defaultLLMConfig.provider}`);
+                    logger.info(`   Model: ${defaultLLMConfig.model}`);
+                    logger.info(`   Base URL: ${defaultLLMConfig.baseURL || "default"}`);
+                    logger.info(
+                        `   API Key: ${defaultLLMConfig.apiKey ? `***${defaultLLMConfig.apiKey.slice(-4)}` : "NOT SET"}`
+                    );
+
                     // Create a tool-enabled provider for orchestration
                     const { createLLMProvider } = await import("./llm/LLMFactory");
                     const llmProvider = createLLMProvider(defaultLLMConfig);
 
+                    // Load orchestration configuration if available
+                    const orchestrationConfig = await this.configManager.getOrchestrationConfig();
+
+                    // Create typing indicator publisher adapter
+                    const typingIndicatorPublisher = {
+                        publishTypingIndicator: async (
+                            originalEvent: NDKEvent,
+                            agentName: string,
+                            isTyping: boolean,
+                            message?: string,
+                            systemPrompt?: string,
+                            userPrompt?: string
+                        ) => {
+                            try {
+                                const { EnhancedResponsePublisher } = await import(
+                                    "./EnhancedResponsePublisher"
+                                );
+                                const publisher = new EnhancedResponsePublisher(
+                                    this.ndk || getNDK(),
+                                    this._projectInfo
+                                );
+                                // Create a mock agent for the orchestrator
+                                const mockAgent = {
+                                    getName: () => agentName,
+                                    getSigner: () => {
+                                        // Use project signer or a default one
+                                        if (this._projectInfo?.projectNsec) {
+                                            const { nip19 } = require("nostr-tools");
+                                            const { data } = nip19.decode(
+                                                this._projectInfo.projectNsec
+                                            );
+                                            return {
+                                                sign: async (event: any) => {
+                                                    // Simple signing implementation
+                                                    return event;
+                                                },
+                                            };
+                                        }
+                                        throw new Error("No signer available for orchestrator");
+                                    },
+                                };
+                                await publisher.publishTypingIndicator(
+                                    originalEvent,
+                                    mockAgent as any,
+                                    isTyping,
+                                    message,
+                                    systemPrompt,
+                                    userPrompt
+                                );
+                            } catch (error) {
+                                logger.warn(`Failed to publish typing indicator: ${error}`);
+                            }
+                        },
+                    };
+
                     this.orchestrationCoordinator = createOrchestrationCoordinator({
                         llmProvider,
+                        llmConfig: defaultLLMConfig, // Pass the full config
+                        allLLMConfigs: this.configManager.getAllLLMConfigs(), // Pass all available LLM configs
                         conversationStorage: this.conversationStorage,
-                        config: {
+                        config: orchestrationConfig || {
                             orchestrator: {
                                 llmConfig: "default",
                                 strategies: {},
                             },
                         },
+                        typingIndicatorPublisher,
                     });
 
                     // Re-create event handler with orchestration support
-                    this.eventHandler = new AgentEventHandler(
+                    this.eventHandler = new AgentCommunicationHandler(
                         this.configManager,
                         this.conversationStorage,
                         this.orchestrator.getAllAgents(),
                         this._projectInfo,
-                        this.orchestrationCoordinator
+                        this.orchestrationCoordinator,
+                        this.ndk
                     );
 
                     // Set dependencies again
@@ -201,7 +285,6 @@ export class AgentManager {
     // Delegate event handling methods to event handler
     async handleChatEvent(
         event: NDKEvent,
-        ndk: NDK,
         agentName: string,
         llmName?: string,
         mentionedPubkeys: string[] = []
@@ -209,12 +292,11 @@ export class AgentManager {
         if (!agentName) {
             throw new Error("Agent name is required for handling chat events");
         }
-        return this.eventHandler.handleChatEvent(event, ndk, agentName, llmName, mentionedPubkeys);
+        return this.eventHandler.handleChatEvent(event, agentName, llmName, mentionedPubkeys);
     }
 
     async handleTaskEvent(
         event: NDKEvent,
-        ndk: NDK,
         agentName: string,
         llmName?: string,
         mentionedPubkeys: string[] = []
@@ -222,7 +304,7 @@ export class AgentManager {
         if (!agentName) {
             throw new Error("Agent name is required for handling task events");
         }
-        return this.eventHandler.handleTaskEvent(event, ndk, agentName, llmName, mentionedPubkeys);
+        return this.eventHandler.handleTaskEvent(event, agentName, llmName, mentionedPubkeys);
     }
 
     // Utility methods
@@ -249,6 +331,11 @@ export class AgentManager {
     // Delegate helper methods to orchestrator
     async isEventFromAnyAgent(eventPubkey: string): Promise<boolean> {
         return this.orchestrator.isEventFromAnyAgent(eventPubkey);
+    }
+
+    // Set NDK instance for all agents
+    setNDK(ndk: NDK): void {
+        this.orchestrator.setNDK(ndk);
     }
 
     // Getter for project info - used by agents to access project information

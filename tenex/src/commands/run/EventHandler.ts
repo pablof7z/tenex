@@ -1,33 +1,33 @@
 import path from "node:path";
-import type NDK from "@nostr-dev-kit/ndk";
+import { AgentEventHandler } from "@/commands/run/AgentEventHandler";
+import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import { getEventKindName } from "@/commands/run/constants";
+import { getNDK } from "@/nostr/ndkClient";
+// toKebabCase utility function
+import type { Agent } from "@/utils/agents/Agent";
+import { AgentManager } from "@/utils/agents/AgentManager";
+import { formatError } from "@/utils/errors";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
 import { logInfo } from "@tenex/shared/logger";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
-// toKebabCase utility function
-import type { Agent } from "../../utils/agents/Agent";
-import { AgentManager } from "../../utils/agents/AgentManager";
-import { formatError } from "../../utils/errors";
-import { fs } from "../../utils/fs";
-import { AgentEventHandler } from "./AgentEventHandler";
-import type { ProjectInfo } from "./ProjectLoader";
-import { getEventKindName } from "./constants";
 
 export class EventHandler {
     private agentManager: AgentManager;
     private agentEventHandler: AgentEventHandler;
 
-    constructor(
-        private projectInfo: ProjectInfo,
-        private ndk: NDK
-    ) {
+    constructor(private projectInfo: ProjectInfo) {
         this.agentManager = new AgentManager(projectInfo.projectPath, projectInfo);
         this.agentEventHandler = new AgentEventHandler();
     }
 
     async initialize(): Promise<void> {
-        this.agentManager.setNDK(this.ndk);
         await this.agentManager.initialize();
+
+        // Set NDK instance on the agent manager so agents can access it
+        const ndk = getNDK();
+        this.agentManager.setNDK(ndk);
     }
 
     getAllAgents(): Map<string, Agent> {
@@ -117,11 +117,10 @@ export class EventHandler {
             );
         }
 
-        // Pass p-tags to the agent manager
+        // Use the default agent to handle chat events
         await this.agentManager.handleChatEvent(
             event,
-            this.ndk,
-            undefined,
+            "default",
             undefined,
             mentionedPubkeys.filter((pk): pk is string => pk !== undefined)
         );
@@ -149,15 +148,15 @@ export class EventHandler {
 
         await this.agentManager.handleTaskEvent(
             event,
-            this.ndk,
-            undefined,
+            "default",
             undefined,
             mentionedPubkeys.filter((pk): pk is string => pk !== undefined)
         );
     }
 
     private handleProjectStatus(event: NDKEvent): void {
-        if (event.author.pubkey !== this.ndk.activeUser?.pubkey) {
+        const ndk = getNDK();
+        if (event.author.pubkey !== ndk.activeUser?.pubkey) {
             logInfo(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
         }
     }
@@ -186,7 +185,7 @@ export class EventHandler {
             await this.fetchAndSaveAgents(agentEventIds);
         }
 
-        // TODO: Update title, description, etc. in metadata.json if changed
+        // TODO: Update title, description, etc. in config.json if changed
     }
 
     private isOurProjectEvent(event: NDKEvent): boolean {
@@ -213,25 +212,19 @@ export class EventHandler {
         const agentsDir = path.join(this.projectInfo.projectPath, ".tenex", "agents");
 
         // Ensure agents directory exists
-        try {
-            await fs.access(agentsDir);
-        } catch {
-            await fs.mkdir(agentsDir, { recursive: true });
-        }
+        await ensureDirectory(agentsDir);
 
         for (const agentEventId of agentEventIds) {
             const agentConfigPath = path.join(agentsDir, `${agentEventId}.json`);
 
             // Check if we already have this agent definition
-            try {
-                await fs.access(agentConfigPath);
+            if (await fileExists(agentConfigPath)) {
                 continue; // Already have it
-            } catch {
-                // Need to fetch it
             }
 
             try {
-                const agentEvent = await this.ndk.fetchEvent(agentEventId);
+                const ndk = getNDK();
+                const agentEvent = await ndk.fetchEvent(agentEventId);
 
                 if (agentEvent && agentEvent.kind === EVENT_KINDS.AGENT_CONFIG) {
                     const agentName = agentEvent.tagValue("title") || "unnamed";
@@ -251,7 +244,7 @@ export class EventHandler {
                         publisher: agentEvent.pubkey,
                     };
 
-                    await fs.writeFile(agentConfigPath, JSON.stringify(agentConfig, null, 2));
+                    await writeJsonFile(agentConfigPath, agentConfig);
                     logInfo(chalk.green(`✅ Saved new agent definition: ${agentName}`));
 
                     // Ensure this agent has an nsec in agents.json
@@ -334,8 +327,7 @@ export class EventHandler {
         const agentKey = this.toKebabCase(agentName);
 
         try {
-            const content = await fs.readFile(agentsJsonPath, "utf-8");
-            const agents = JSON.parse(content);
+            const agents = (await readJsonFile(agentsJsonPath)) || {};
 
             // Check if agent already has an nsec
             const agentEntry = agents[agentKey];
@@ -351,7 +343,7 @@ export class EventHandler {
                     file: `${agentEventId}.json`,
                 };
 
-                await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
+                await writeJsonFile(agentsJsonPath, agents);
                 logInfo(
                     chalk.green(`✅ Generated nsec for agent: ${agentName} (as '${agentKey}')`)
                 );
@@ -362,13 +354,15 @@ export class EventHandler {
                     const fullAgentName = `${agentKey} @ ${projectTitle}`;
                     const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fullAgentName)}`;
 
-                    const profileEvent = new NDKEvent(this.ndk, {
+                    const ndk = getNDK();
+                    const profileEvent = new NDKEvent(ndk, {
                         kind: 0,
                         pubkey: signer.pubkey,
                         content: JSON.stringify({
                             name: fullAgentName,
                             display_name: fullAgentName,
                             about: `${agentKey} AI agent for ${projectTitle} project`,
+                            bot: true,
                             picture: avatarUrl,
                             created_at: Math.floor(Date.now() / 1000),
                         }),
@@ -382,7 +376,7 @@ export class EventHandler {
 
                     // Publish kind 3199 agent request to the project owner
                     try {
-                        const agentRequestEvent = new NDKEvent(this.ndk, {
+                        const agentRequestEvent = new NDKEvent(ndk, {
                             kind: EVENT_KINDS.AGENT_REQUEST,
                             tags: [
                                 ["agent-name", agentKey],
@@ -426,12 +420,12 @@ export class EventHandler {
                         nsec: agentEntry,
                         file: `${agentEventId}.json`,
                     };
-                    await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
+                    await writeJsonFile(agentsJsonPath, agents);
                     logInfo(chalk.green(`✅ Updated agent ${agentName} to new format`));
                 } else if (!agentEntry.file) {
                     // New format but missing file reference
                     agentEntry.file = `${agentEventId}.json`;
-                    await fs.writeFile(agentsJsonPath, JSON.stringify(agents, null, 2));
+                    await writeJsonFile(agentsJsonPath, agents);
                     logInfo(chalk.green(`✅ Added file reference for agent ${agentName}`));
                 }
             }

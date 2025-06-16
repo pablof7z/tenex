@@ -47,7 +47,7 @@ export function AgentMainContent({
 }: AgentMainContentProps) {
     if (!selectedAgent && !isCreatingNew) {
         return (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center p-4">
                 <div className="text-center">
                     <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 mx-auto">
                         <span className="text-2xl">🤖</span>
@@ -62,7 +62,7 @@ export function AgentMainContent({
     }
 
     return (
-        <>
+        <div className="flex-1 flex flex-col">
             {/* Header */}
             <AgentHeader
                 isCreatingNew={isCreatingNew}
@@ -87,7 +87,7 @@ export function AgentMainContent({
                         onRemoveTag={onRemoveTag}
                     />
                 ) : (
-                    <div className="max-w-3xl mx-auto p-8">
+                    <div className="max-w-2xl mx-auto p-4 md:p-6 lg:p-8">
                         {isCreatingNew ? (
                             <div className="text-center py-12">
                                 <Bot className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
@@ -106,6 +106,6 @@ export function AgentMainContent({
                     </div>
                 )}
             </div>
-        </>
+        </div>
     );
 }

@@ -51,6 +51,7 @@ describe("Prompt Section Builders", () => {
             };
 
             const section = builder.build(context);
+            expect(section.content).toContain('Your name: "test-agent"');
             expect(section.content).toContain("You are Senior Developer");
             expect(section.content).toContain("Writes production code");
             expect(section.content).toContain("Follow best practices");
@@ -60,6 +61,7 @@ describe("Prompt Section Builders", () => {
 
         it("should build identity without role", () => {
             const section = builder.build(baseContext);
+            expect(section.content).toContain('Your name: "test-agent"');
             expect(section.content).toContain("You are test-agent");
         });
     });

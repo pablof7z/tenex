@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ProjectMetadata } from "@tenex/types/projects";
+import type { ProjectConfig } from "@tenex/types/config";
 import { directoryExists, ensureDirectory, readJsonFile, writeJsonFile } from "./filesystem.js";
 
 /**
@@ -10,7 +10,7 @@ export function getTenexPaths(projectPath: string) {
     return {
         tenexDir,
         agentsJson: path.join(tenexDir, "agents.json"),
-        metadataJson: path.join(tenexDir, "metadata.json"),
+        configJson: path.join(tenexDir, "config.json"),
         llmsJson: path.join(tenexDir, "llms.json"),
         agentsDir: path.join(tenexDir, "agents"),
         rulesDir: path.join(tenexDir, "rules"),
@@ -19,31 +19,31 @@ export function getTenexPaths(projectPath: string) {
 }
 
 /**
- * Read project metadata from .tenex/metadata.json
+ * Read project config from .tenex/config.json
  */
-export async function readProjectMetadata(projectPath: string): Promise<ProjectMetadata | null> {
+export async function readProjectConfig(projectPath: string): Promise<ProjectConfig | null> {
     const paths = getTenexPaths(projectPath);
-    return readJsonFile<ProjectMetadata>(paths.metadataJson);
+    return readJsonFile<ProjectConfig>(paths.configJson);
 }
 
 /**
- * Write project metadata to .tenex/metadata.json
+ * Write project config to .tenex/config.json
  */
-export async function writeProjectMetadata(
+export async function writeProjectConfig(
     projectPath: string,
-    metadata: ProjectMetadata
+    config: ProjectConfig
 ): Promise<void> {
     const paths = getTenexPaths(projectPath);
-    await writeJsonFile(paths.metadataJson, metadata);
+    await writeJsonFile(paths.configJson, config);
 }
 
 /**
- * Get project name from metadata or path
+ * Get project name from config or path
  */
 export async function getProjectName(projectPath: string): Promise<string> {
-    const metadata = await readProjectMetadata(projectPath);
-    if (metadata) {
-        return metadata.name || metadata.title || path.basename(projectPath);
+    const config = await readProjectConfig(projectPath);
+    if (config) {
+        return config.title || path.basename(projectPath);
     }
     return path.basename(projectPath);
 }

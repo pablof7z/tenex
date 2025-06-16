@@ -1,5 +1,9 @@
-import type { SpecCache } from "../SpecCache";
-import type { PromptSection, PromptSectionBuilder, SystemPromptContext } from "../types";
+import type { SpecCache } from "@/utils/agents/prompts/SpecCache";
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
 
 /**
  * Builder for project specifications section of system prompt

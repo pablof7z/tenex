@@ -16,9 +16,11 @@
 
 // Re-export all type modules
 export * from "./agents/index.js";
+export * from "./config/index.js";
 export * from "./conversations/index.js";
 export * from "./events/index.js";
 export * from "./llm/index.js";
 export * from "./projects/index.js";
+export * from "./telemetry/index.js";
 export * from "./tools/index.js";
 export * from "./utils/index.js";

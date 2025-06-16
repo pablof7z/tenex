@@ -22,7 +22,7 @@ interface ParticipantAvatarsWithModelsProps {
     projectPubkey: string;
     projectId?: string;
     projectEvent?: NDKEventType; // Changed from NDKArticle to NDKEventType
-    availableModels?: string[];
+    availableModels?: Record<string, any>;
     maxVisible?: number;
     size?: "sm" | "md" | "lg";
     className?: string;
@@ -34,7 +34,7 @@ export function ParticipantAvatarsWithModels({
     projectPubkey: _projectPubkey, // prefix with _ to indicate it's intentionally unused
     projectId,
     projectEvent,
-    availableModels = [],
+    availableModels = {},
     maxVisible = 4,
     size = "sm",
     className = "",
@@ -48,6 +48,11 @@ export function ParticipantAvatarsWithModels({
 
     const visibleParticipants = participants.slice(0, maxVisible);
     const remainingCount = participants.length - maxVisible;
+
+    // Extract model names from the configurations
+    const modelNames = Object.keys(availableModels).filter(
+        (key) => key !== "default" && key !== "orchestrator"
+    );
 
     return (
         <div className={`flex items-center gap-2 ${className}`}>
@@ -65,11 +70,7 @@ export function ParticipantAvatarsWithModels({
                             <ModelDropdown
                                 agentPubkey={pubkey}
                                 currentModel={modelInfo?.model}
-                                availableModels={
-                                    availableModels.length > 0
-                                        ? availableModels
-                                        : ["gpt-4", "claude-3", "llama-3"]
-                                }
+                                availableModels={modelNames}
                                 projectEvent={projectEvent}
                             />
                         )}
@@ -164,8 +165,8 @@ function ModelDropdown({
             }
 
             await event.publish();
-        } catch (error) {
-            // console.error("Failed to change model:", error);
+        } catch (_error) {
+            // // console.error("Failed to change model:", error);
         } finally {
             setIsChanging(false);
         }

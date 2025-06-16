@@ -94,11 +94,11 @@ export function useProjectStatus() {
                         if (projectDir) {
                             try {
                                 const content = JSON.parse(event.content);
-                                if (content.llmConfigs && Array.isArray(content.llmConfigs)) {
+                                if (content.llmConfigs && typeof content.llmConfigs === "object") {
                                     newConfigs.set(projectDir, content.llmConfigs);
                                 }
-                            } catch (e) {
-                                console.error("[useProjectStatus] Failed to parse content:", e);
+                            } catch (_e) {
+                                // console.error("[useProjectStatus] Failed to parse content:", e);
                             }
                         }
                     }

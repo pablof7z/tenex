@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type TimeFormatStyle = "relative" | "absolute" | "auto";
 export type RelativeTimeFormat = "long" | "short"; // "5 minutes ago" vs "5m"
@@ -17,6 +17,36 @@ export function useTimeFormat(options: UseTimeFormatOptions = {}) {
         includeTime = true,
         use24Hour = true,
     } = options;
+
+    // State to trigger re-renders
+    const [, forceUpdate] = useState({});
+
+    // Smart refresh intervals based on age
+    useEffect(() => {
+        const intervals: number[] = [];
+
+        // Update every 10 seconds for the first minute
+        intervals.push(window.setInterval(() => forceUpdate({}), 10 * 1000));
+
+        // After 1 minute, update every 30 seconds for the next hour
+        const timeout1 = setTimeout(() => {
+            intervals.push(window.setInterval(() => forceUpdate({}), 30 * 1000));
+        }, 60 * 1000);
+
+        // After 1 hour, update every 5 minutes
+        const timeout2 = setTimeout(
+            () => {
+                intervals.push(window.setInterval(() => forceUpdate({}), 5 * 60 * 1000));
+            },
+            60 * 60 * 1000
+        );
+
+        return () => {
+            intervals.forEach(clearInterval);
+            clearTimeout(timeout1);
+            clearTimeout(timeout2);
+        };
+    }, []);
 
     const formatRelativeTime = useCallback(
         (timestamp: number, format: RelativeTimeFormat = relativeFormat) => {

@@ -80,8 +80,8 @@ export function CreateTaskDialog({
             reset();
             onTaskCreated?.();
             onOpenChange(false);
-        } catch (error) {
-            console.error("Failed to create task:", error);
+        } catch (_error) {
+            // console.error("Failed to create task:", error);
             alert("Failed to create task. Please try again.");
         } finally {
             setIsLoading(false);

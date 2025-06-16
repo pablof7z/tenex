@@ -1,9 +1,0 @@
-{
-  "default": "default",
-  "openrouter-anthropic-claude-sonnet-4": {
-    "provider": "openrouter",
-    "model": "anthropic/claude-sonnet-4",
-    "apiKey": "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",
-    "enableCaching": true
-  }
-}

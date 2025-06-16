@@ -1,12 +1,12 @@
+import type { AgentManager } from "@/utils/agents/AgentManager";
+import { SystemPromptBuilder } from "@/utils/agents/prompts/SystemPromptBuilder";
+import type { SystemPromptContext } from "@/utils/agents/prompts/types";
+import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { AgentConfig, LLMConfig } from "@/utils/agents/types";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { AgentLogger } from "@tenex/shared/logger";
 import { createAgentLogger } from "@tenex/shared/logger";
-import type { AgentManager } from "../AgentManager";
-import { SystemPromptBuilder } from "../prompts/SystemPromptBuilder";
-import type { SystemPromptContext } from "../prompts/types";
-import type { ToolRegistry } from "../tools/ToolRegistry";
-import type { AgentConfig, LLMConfig } from "../types";
 
 export class AgentCore {
     private name: string;

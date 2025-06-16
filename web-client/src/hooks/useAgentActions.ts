@@ -16,8 +16,8 @@ export function useAgentActions() {
             setTimeout(() => {
                 setCopiedId(null);
             }, 2000);
-        } catch (error) {
-            console.error("Failed to copy agent ID:", error);
+        } catch (_error) {
+            // console.error("Failed to copy agent ID:", error);
         }
     };
 
@@ -35,8 +35,8 @@ export function useAgentActions() {
         try {
             await agent.delete();
             onSuccess?.();
-        } catch (error) {
-            console.error("Failed to delete agent:", error);
+        } catch (_error) {
+            // console.error("Failed to delete agent:", error);
             alert("Failed to delete agent. Please try again.");
         }
     };

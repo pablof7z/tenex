@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LLMProvider } from "../../../../utils/agents/llm/types";
 import { GreenLightSystem } from "../GreenLightSystem";
-import type { GreenLightConfig } from "../GreenLightSystem";
+import type { ApprovalRequest, GreenLightConfig } from "../GreenLightSystem";
 
 describe("GreenLightSystem", () => {
     let greenLightSystem: GreenLightSystem;
@@ -192,7 +192,7 @@ describe("GreenLightSystem", () => {
     });
 
     describe("approveRequest", () => {
-        let pendingRequest: any;
+        let pendingRequest: ApprovalRequest;
 
         beforeEach(async () => {
             pendingRequest = await greenLightSystem.requestApproval(
@@ -248,7 +248,7 @@ describe("GreenLightSystem", () => {
     });
 
     describe("denyRequest", () => {
-        let pendingRequest: any;
+        let pendingRequest: ApprovalRequest;
 
         beforeEach(async () => {
             pendingRequest = await greenLightSystem.requestApproval(
@@ -437,6 +437,8 @@ describe("GreenLightSystem", () => {
             const initialCount = initialHistory.length;
 
             // Manually set old timestamp on first entry
+            // @ts-expect-error - accessing private property for test
+            // biome-ignore lint/suspicious/noExplicitAny: test-only access to private property
             (greenLightSystem as any).approvalHistory[0].timestamp =
                 Date.now() - 8 * 24 * 60 * 60 * 1000;
 

@@ -12,7 +12,6 @@ import { InstructionsPage } from "../InstructionsPage";
 import { ProjectSettings } from "../ProjectSettings";
 import { SettingsPage } from "../SettingsPage";
 import { DocumentationView } from "../documentation/DocumentationView";
-import { ResponsiveLayout } from "../layout/ResponsiveLayout";
 import { ProjectDetail } from "../projects/ProjectDetail";
 import { ProjectList } from "../projects/ProjectList";
 import { TaskUpdates } from "../tasks/TaskUpdates";
@@ -24,7 +23,7 @@ function LoadingScreen() {
 
 // Root page component
 export function RootPage() {
-    return <ResponsiveLayout />;
+    return <DesktopLayout />;
 }
 
 // Project list page

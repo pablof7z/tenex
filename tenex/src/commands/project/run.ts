@@ -1,16 +1,17 @@
 import path from "node:path";
+import { EventHandler } from "@/commands/run/EventHandler";
+import { ProjectDisplay } from "@/commands/run/ProjectDisplay";
+import { type ProjectInfo, ProjectLoader } from "@/commands/run/ProjectLoader";
+import { StatusPublisher } from "@/commands/run/StatusPublisher";
+import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
+import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
+import { getNDK, initNDK, shutdownNDK } from "@/nostr/ndkClient";
+import { getAgentSigner } from "@/utils/agentManager";
+import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import chalk from "chalk";
 import { Command } from "commander";
-import { getNDK, shutdownNDK } from "../../nostr/ndkClient.js";
-import { getAgentSigner } from "../../utils/agentManager.js";
-import { formatError } from "../../utils/errors.js";
-import { EventHandler } from "../run/EventHandler.js";
-import { ProjectDisplay } from "../run/ProjectDisplay.js";
-import { type ProjectInfo, ProjectLoader } from "../run/ProjectLoader.js";
-import { StatusPublisher } from "../run/StatusPublisher.js";
-import { STARTUP_FILTER_MINUTES } from "../run/constants.js";
 
 export const projectRunCommand = new Command("run")
     .description("Run the TENEX agent orchestration system for the current project")
@@ -19,11 +20,9 @@ export const projectRunCommand = new Command("run")
         try {
             const projectPath = path.resolve(options.path);
 
-            logger.info("Starting TENEX project listener...");
-            logger.info(chalk.cyan("\n📡 Loading project configuration...\n"));
-
-            // Get NDK singleton
-            const ndk = await getNDK();
+            // Initialize NDK and get singleton
+            await initNDK();
+            const ndk = getNDK();
 
             // Load project using ProjectLoader (which includes fetching the project event)
             const projectLoader = new ProjectLoader(ndk);
@@ -53,11 +52,15 @@ async function runProjectListener(projectInfo: ProjectInfo, ndk: NDK) {
         ndk.signer = signer;
 
         // Initialize event handler
-        const eventHandler = new EventHandler(projectInfo, ndk);
+        const eventHandler = new EventHandler(projectInfo);
         await eventHandler.initialize();
 
+        // Initialize subscription manager
+        const subscriptionManager = new SubscriptionManager(eventHandler, projectInfo);
+        await subscriptionManager.start();
+
         // Start status publisher
-        const statusPublisher = new StatusPublisher(ndk);
+        const statusPublisher = new StatusPublisher();
         await statusPublisher.startPublishing(projectInfo);
 
         logger.success(
@@ -66,7 +69,7 @@ async function runProjectListener(projectInfo: ProjectInfo, ndk: NDK) {
         logger.info(chalk.green("\n✅ Ready to process events!\n"));
 
         // Set up graceful shutdown
-        setupGracefulShutdown(eventHandler, statusPublisher);
+        setupGracefulShutdown(eventHandler, statusPublisher, subscriptionManager);
 
         // Keep the process running
         await new Promise(() => {
@@ -79,11 +82,18 @@ async function runProjectListener(projectInfo: ProjectInfo, ndk: NDK) {
     }
 }
 
-function setupGracefulShutdown(eventHandler: EventHandler, statusPublisher: StatusPublisher) {
+function setupGracefulShutdown(
+    eventHandler: EventHandler,
+    statusPublisher: StatusPublisher,
+    subscriptionManager: SubscriptionManager
+) {
     const shutdown = async (signal: string) => {
         logger.info(`Received ${signal}, shutting down gracefully...`);
 
         try {
+            // Stop subscriptions first
+            await subscriptionManager.stop();
+
             // Stop status publisher
             statusPublisher.stopPublishing();
 

@@ -1,4 +1,4 @@
-import type { ConversationMessage } from "./types";
+import type { ConversationMessage } from "@/utils/agents/types";
 
 const DEFAULT_CONTEXT_WINDOW = 128000; // Claude 3 default
 const RESERVE_TOKENS = 4096; // Reserve for response

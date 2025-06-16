@@ -1,24 +1,26 @@
+import { BaseLLMProvider } from "@/utils/agents/llm/BaseLLMProvider";
+import type { LLMContext, LLMMessage, LLMResponse, ProviderTool } from "@/utils/agents/llm/types";
+import type { LLMConfig } from "@/utils/agents/types";
 import { logger } from "@tenex/shared/logger";
-import type { LLMConfig } from "../types";
-import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } from "./types";
 
-export class OpenRouterProvider implements LLMProvider {
-    async generateResponse(
-        messages: LLMMessage[],
-        config: LLMConfig,
-        context?: LLMContext,
-        tools?: ProviderTool[]
-    ): Promise<LLMResponse> {
-        if (!config.apiKey) {
-            throw new Error("OpenRouter API key is required");
-        }
+export class OpenRouterProvider extends BaseLLMProvider {
+    protected readonly providerName = "OpenRouter";
+    protected readonly defaultModel = "";
+    protected readonly defaultBaseURL = "https://openrouter.ai/api/v1";
 
-        const baseURL = config.baseURL || "https://openrouter.ai/api/v1";
-        const model = config.model;
-        if (!model) {
+    protected validateConfig(config: LLMConfig): void {
+        super.validateConfig(config);
+        if (!config.model) {
             throw new Error("Model is required for OpenRouter");
         }
+    }
 
+    protected buildRequestBody(
+        messages: LLMMessage[],
+        config: LLMConfig,
+        model: string,
+        tools?: ProviderTool[]
+    ): Record<string, unknown> {
         // Separate system message from conversation messages
         const systemMessage = messages.find((msg) => msg.role === "system");
         const conversationMessages = messages.filter((msg) => msg.role !== "system");
@@ -126,7 +128,6 @@ export class OpenRouterProvider implements LLMProvider {
         // Add tools if provided
         if (tools && tools.length > 0) {
             requestBody.tools = tools;
-            // Some models may need tool_choice to be set
             requestBody.tool_choice = "auto";
         }
 
@@ -135,108 +136,126 @@ export class OpenRouterProvider implements LLMProvider {
             Object.assign(requestBody, config.additionalParams);
         }
 
-        // Log user prompt only
-        const userMessage = conversationMessages.find((msg) => msg.role === "user");
-        if (userMessage && context) {
-            logger.debug(
-                `OpenRouter request - Agent: ${context.agentName}, User: "${userMessage.content.substring(0, 100)}..."`
+        return requestBody;
+    }
+
+    protected async makeRequest(
+        baseURL: string,
+        requestBody: Record<string, unknown>,
+        config: LLMConfig
+    ): Promise<Response> {
+        // Verify the API key format
+        if (config.apiKey && !config.apiKey.startsWith("sk-or-")) {
+            logger.warn(
+                "⚠️  API key does not start with 'sk-or-', might not be a valid OpenRouter key"
             );
         }
 
-        try {
-            const response = await fetch(`${baseURL}/chat/completions`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${config.apiKey}`,
-                    "HTTP-Referer": config.appName || "tenex-cli",
-                    "X-Title": config.appTitle || "TENEX CLI Agent",
-                },
-                body: JSON.stringify(requestBody),
-            });
+        const headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey}`,
+            "HTTP-Referer": config.appName || "tenex-cli",
+            "X-Title": config.appTitle || "TENEX CLI Agent",
+        };
 
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
-            }
+        return fetch(`${baseURL}/chat/completions`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(requestBody),
+        });
+    }
 
-            const data = await response.json();
+    protected logResponse(data: any): void {
+        super.logResponse(data);
 
-            // Log response summary only
-            logger.debug(
-                `OpenRouter response - tokens: ${data.usage?.prompt_tokens || 0}+${data.usage?.completion_tokens || 0}`
-            );
-
-            // Log cache usage if available
-            if (data.usage?.cached_tokens) {
-                logger.info(`OpenRouter cache hit! Cached tokens: ${data.usage.cached_tokens}`);
-            }
-            if (data.cache_discount) {
-                logger.info(`Cache discount: ${data.cache_discount}`);
-            }
-
-            // Validate response structure
-            if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
-                logger.error(
-                    "Invalid OpenRouter response structure:",
-                    JSON.stringify(data, null, 2)
-                );
-                throw new Error("Invalid response from OpenRouter: missing or empty choices array");
-            }
-
-            // Extract the response
-            const choice = data.choices[0];
-
-            // Check if the model returned tool calls in the native format
-            let content = choice.message.content || "";
-            const toolCalls = choice.message.tool_calls;
-
-            // If we have native tool calls, format them in our expected format
-            if (toolCalls && toolCalls.length > 0) {
-                logger.debug("Model returned native tool calls:", toolCalls);
-                // Convert native tool calls to our format in the content
-                for (const toolCall of toolCalls) {
-                    // Parse the arguments if they're a JSON string
-                    let parsedArgs = {};
-                    if (toolCall.function.arguments) {
-                        try {
-                            parsedArgs =
-                                typeof toolCall.function.arguments === "string"
-                                    ? JSON.parse(toolCall.function.arguments)
-                                    : toolCall.function.arguments;
-                        } catch (e) {
-                            logger.error("Failed to parse tool call arguments:", e);
-                            parsedArgs = { raw: toolCall.function.arguments };
-                        }
-                    }
-
-                    content += `\n<tool_use>\n${JSON.stringify(
-                        {
-                            tool: toolCall.function.name,
-                            arguments: parsedArgs,
-                        },
-                        null,
-                        2
-                    )}\n</tool_use>`;
-                }
-            }
-
-            return {
-                content: content,
-                model: data.model,
-                usage: data.usage
-                    ? {
-                          prompt_tokens: data.usage.prompt_tokens,
-                          completion_tokens: data.usage.completion_tokens,
-                          total_tokens: data.usage.total_tokens,
-                          cache_read_input_tokens: data.usage.cached_tokens,
-                          cost: data.usage.cost,
-                      }
-                    : undefined,
-            };
-        } catch (error) {
-            logger.error(`OpenRouter provider error: ${error}`);
-            throw error;
+        // Log cache usage if available
+        if (data.usage?.cached_tokens) {
+            logger.info(`OpenRouter cache hit! Cached tokens: ${data.usage.cached_tokens}`);
         }
+        if (data.cache_discount) {
+            logger.info(`Cache discount: ${data.cache_discount}`);
+        }
+    }
+
+    protected parseResponse(data: any): LLMResponse {
+        // Validate response structure
+        if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+            logger.error("Invalid OpenRouter response structure:", JSON.stringify(data, null, 2));
+            throw new Error("Invalid response from OpenRouter: missing or empty choices array");
+        }
+
+        // Extract the response
+        const choice = data.choices[0];
+
+        // Check if message exists
+        if (!choice.message) {
+            logger.error("OpenRouter choice missing message:", JSON.stringify(choice, null, 2));
+            throw new Error("Invalid response from OpenRouter: choice missing message");
+        }
+
+        // Check if the model returned tool calls in the native format
+        let content = choice.message.content || "";
+        const toolCalls = choice.message.tool_calls;
+
+        // If content is empty and no tool calls, this is an error
+        if (!content && (!toolCalls || toolCalls.length === 0)) {
+            logger.error("OpenRouter returned empty response:", JSON.stringify(data, null, 2));
+            throw new Error(
+                "OpenRouter returned empty response - the model may not be available or configured correctly"
+            );
+        }
+
+        // Add tool calls to content
+        if (toolCalls && toolCalls.length > 0) {
+            content += this.formatToolCallsAsText(toolCalls);
+        }
+
+        return {
+            content: content,
+            model: data.model,
+            usage: data.usage
+                ? {
+                      prompt_tokens: data.usage.prompt_tokens,
+                      completion_tokens: data.usage.completion_tokens,
+                      total_tokens: data.usage.total_tokens,
+                      cache_read_input_tokens: data.usage.cached_tokens,
+                      cost: data.usage.cost,
+                  }
+                : undefined,
+        };
+    }
+
+    protected extractUsage(
+        data: any
+    ): { prompt_tokens?: number; completion_tokens?: number } | null {
+        return data.usage
+            ? {
+                  prompt_tokens: data.usage.prompt_tokens,
+                  completion_tokens: data.usage.completion_tokens,
+              }
+            : null;
+    }
+
+    protected extractToolCallData(toolCall: any): { name: string; arguments: any } | null {
+        if (toolCall.function) {
+            try {
+                const parsedArgs =
+                    typeof toolCall.function.arguments === "string"
+                        ? JSON.parse(toolCall.function.arguments)
+                        : toolCall.function.arguments;
+
+                return {
+                    name: toolCall.function.name,
+                    arguments: parsedArgs,
+                };
+            } catch (e) {
+                logger.error("Failed to parse tool call arguments:", e);
+                return {
+                    name: toolCall.function.name,
+                    arguments: { raw: toolCall.function.arguments },
+                };
+            }
+        }
+        return null;
     }
 }

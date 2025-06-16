@@ -3,6 +3,7 @@ import type { ToolRegistry } from "../tools/ToolRegistry";
 import type { LLMConfig } from "../types";
 import { AnthropicProvider } from "./AnthropicProvider";
 import { AnthropicProviderWithCache } from "./AnthropicProviderWithCache";
+import { OllamaProvider } from "./OllamaProvider";
 import { OpenAIProvider } from "./OpenAIProvider";
 import { OpenRouterProvider } from "./OpenRouterProvider";
 import { ToolEnabledProvider } from "./ToolEnabledProvider";
@@ -43,8 +44,7 @@ export function createLLMProvider(config: LLMConfig, toolRegistry?: ToolRegistry
             break;
 
         case "ollama":
-            // Ollama uses OpenAI-compatible API with custom base URL
-            provider = new OpenAIProvider();
+            provider = new OllamaProvider();
             break;
 
         default:
@@ -61,7 +61,9 @@ export function createLLMProvider(config: LLMConfig, toolRegistry?: ToolRegistry
                 ? "anthropic"
                 : config.provider.toLowerCase() === "openrouter"
                   ? "openrouter"
-                  : "openai";
+                  : config.provider.toLowerCase() === "ollama"
+                    ? "openai" // Ollama uses OpenAI-compatible tools format
+                    : "openai";
         provider = new ToolEnabledProvider(provider, toolRegistry, providerType);
     }
 

@@ -32,6 +32,10 @@
         "./utils": {
             "import": "./dist/shared/src/utils/index.js",
             "types": "./dist/shared/src/utils/index.d.ts"
+        },
+        "./services": {
+            "import": "./dist/shared/src/services/index.js",
+            "types": "./dist/shared/src/services/index.d.ts"
         }
     },
     "scripts": {
@@ -40,9 +44,10 @@
     },
     "dependencies": {
         "@nostr-dev-kit/ndk": "^2.14.29",
-        "nostr-tools": "^2.15.0",
         "@tenex/types": "file:../packages/types",
-        "chalk": "^5.4.1"
+        "chalk": "^5.4.1",
+        "nostr-tools": "^2.15.0",
+        "zod": "^3.25.65"
     },
     "devDependencies": {
         "typescript": "^5.8.3",

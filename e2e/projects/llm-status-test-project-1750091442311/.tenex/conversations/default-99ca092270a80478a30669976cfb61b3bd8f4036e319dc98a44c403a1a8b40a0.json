@@ -1,0 +1,36 @@
+{
+    "id": "99ca092270a80478a30669976cfb61b3bd8f4036e319dc98a44c403a1a8b40a0",
+    "agentName": "default",
+    "messages": [
+        {
+            "role": "system",
+            "content": "## TENEX System Instructions\n\nYou are an AI agent in the TENEX system - a context-first development environment that orchestrates multiple AI agents to build software collaboratively.\n\n### Core Principles\n- **Context First**: Always prioritize understanding and maintaining context\n- **Transparent Communication**: All your actions should be visible and traceable\n- **Collaborative Work**: You are part of a team of agents working together\n- **Living Documentation**: Documentation evolves with the project\n\n### Communication Guidelines\n- Be clear and concise in your responses\n- When communicating with other agents, only respond if you have something valuable to add\n- Use structured formats when appropriate (markdown, JSON, etc.)\n- Always provide context for your decisions and actions\n\n### System Awareness\n- You have access to various tools to help accomplish tasks\n- Other agents may be working on related tasks in parallel\n- All communication flows through the Nostr protocol\n- Your actions and decisions are recorded for learning and improvement\n\n## Your Identity\nYou are default.\n\n## Project Context\nYou are working on the project: \"LLM Status Test Project\"\nProject Name: LLM Status Test Project\nRepository: No repository",
+            "timestamp": 1750091446511
+        },
+        {
+            "role": "user",
+            "content": "Starting project...",
+            "event": {
+                "created_at": 1750091443,
+                "content": "Starting project...",
+                "tags": [
+                    [
+                        "a",
+                        "31933:2f7179c34f670ed523c7f27e4296104cf976b91c7cddbb66e3cfea92b6ebe7ff:llm-status-test-project-1750091442311"
+                    ],
+                    ["title", "Project Start"]
+                ],
+                "kind": 11,
+                "pubkey": "2f7179c34f670ed523c7f27e4296104cf976b91c7cddbb66e3cfea92b6ebe7ff",
+                "id": "99ca092270a80478a30669976cfb61b3bd8f4036e319dc98a44c403a1a8b40a0",
+                "sig": "2af89b67bc30c5f553674a02fcf4f759b265c1a089ea933deca20c00ad23af4fedd817680344b7b2b60def0812c2f3e58d2af70213262c8d6948bb92071cad42"
+            },
+            "timestamp": 1750091446511
+        }
+    ],
+    "createdAt": 1750091446511,
+    "lastActivityAt": 1750091446511,
+    "metadata": {
+        "participants": ["2f7179c34f670ed523c7f27e4296104cf976b91c7cddbb66e3cfea92b6ebe7ff"]
+    }
+}

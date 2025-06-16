@@ -1,6 +1,6 @@
+import type { ConversationContext, ConversationMessage } from "@/utils/agents/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
-import type { ConversationContext, ConversationMessage } from "./types";
 
 export class Conversation {
     private context: ConversationContext;

@@ -147,7 +147,7 @@ export function ChatInterface({
     const projectDir = projectTagId ? projectTagId.split(":")[2] : undefined;
     const availableLLMConfigs = useProjectLLMConfigs(projectDir);
 
-    // console.log("[ChatInterface] Project debug:", {
+    // // console.log("[ChatInterface] Project debug:", {
     //     project,
     //     projectTagId,
     //     projectDir,
@@ -393,7 +393,7 @@ export function ChatInterface({
                 } else {
                     // We have a kind11Event but it might not have reply() yet
                     // This shouldn't happen in normal flow, but let's handle it
-                    // console.warn(
+                    // // console.warn(
                     //     "Thread event exists but doesn't support reply(). Waiting for thread to be properly loaded."
                     // );
                     return;
@@ -410,8 +410,8 @@ export function ChatInterface({
             setTimeout(() => {
                 scrollToBottom(true); // Force scroll after sending
             }, 100);
-        } catch (error) {
-            // console.error("Failed to send message:", error);
+        } catch (_error) {
+            // // console.error("Failed to send message:", error);
         } finally {
             setIsSending(false);
         }

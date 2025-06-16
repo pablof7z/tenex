@@ -1,8 +1,7 @@
 import type { NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { TaskCard } from "../tasks/TaskCard";
 import { Button } from "../ui/button";
-import { SwipeTaskItem } from "./SwipeTaskItem";
 
 interface TasksTabContentProps {
     tasks: NDKTask[];
@@ -11,8 +10,6 @@ interface TasksTabContentProps {
     onTaskSelect: (project: NDKProject, taskId: string) => void;
     onCreateTask: () => void;
     markTaskStatusUpdatesSeen: (taskId: string) => void;
-    getTaskTitle: (task: NDKTask) => string;
-    getTaskDescription: (task: NDKTask) => string;
 }
 
 export function TasksTabContent({
@@ -22,20 +19,8 @@ export function TasksTabContent({
     onTaskSelect,
     onCreateTask,
     markTaskStatusUpdatesSeen,
-    getTaskTitle,
-    getTaskDescription,
 }: TasksTabContentProps) {
-    const [deletedTaskIds, setDeletedTaskIds] = useState<Set<string>>(new Set());
-
-    // Filter out deleted tasks
-    const visibleTasks = tasks.filter((task) => !deletedTaskIds.has(task.id));
-
-    const handleTaskDelete = (task: NDKTask) => {
-        task.delete();
-        setDeletedTaskIds((prev) => new Set([...prev, task.id]));
-    };
-
-    if (visibleTasks.length === 0) {
+    if (tasks.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 sm:py-32 px-4 sm:px-6 text-center">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-muted/50 to-muted rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-sm">
@@ -60,22 +45,27 @@ export function TasksTabContent({
 
     return (
         <div className="space-y-0.5 sm:space-y-1 px-1 sm:px-2 pt-1 sm:pt-2">
-            {visibleTasks.map((task) => {
+            {tasks.map((task) => {
                 const handleTaskClick = () => {
                     markTaskStatusUpdatesSeen(task.id);
                     onTaskSelect(project, task.encode());
                 };
 
+                const unreadCount = taskUnreadMap.get(task.id) || 0;
+
                 return (
-                    <SwipeTaskItem
-                        key={task.id}
-                        task={task}
-                        unreadCount={taskUnreadMap.get(task.id) || 0}
-                        onTaskClick={handleTaskClick}
-                        onDelete={() => handleTaskDelete(task)}
-                        getTaskTitle={getTaskTitle}
-                        getTaskDescription={getTaskDescription}
-                    />
+                    <div key={task.id} className="relative">
+                        <TaskCard
+                            task={task}
+                            onClick={handleTaskClick}
+                            className={unreadCount > 0 ? "border-blue-500" : ""}
+                        />
+                        {unreadCount > 0 && (
+                            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {unreadCount}
+                            </div>
+                        )}
+                    </div>
                 );
             })}
         </div>

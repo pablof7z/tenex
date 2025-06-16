@@ -21,8 +21,8 @@ export function useArticle(articleIdOrNaddr?: string): NDKArticle | null {
                     // It's an nevent
                     return [{ ids: [decoded.data.id], kinds: [30023] }];
                 }
-            } catch (e) {
-                console.error("Failed to decode article ID:", e);
+            } catch (_e) {
+                // console.error("Failed to decode article ID:", e);
                 return false;
             }
         }
@@ -41,8 +41,8 @@ export function useArticle(articleIdOrNaddr?: string): NDKArticle | null {
                         },
                     ];
                 }
-            } catch (e) {
-                console.error("Failed to decode naddr:", e);
+            } catch (_e) {
+                // console.error("Failed to decode naddr:", e);
                 return false;
             }
         }

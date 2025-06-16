@@ -1,10 +1,10 @@
+import { ProjectLoader } from "@/commands/run/ProjectLoader";
+import { getNDK, initNDK } from "@/nostr/ndkClient";
+import { AgentManager } from "@/utils/agents/AgentManager";
+import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logError, logInfo } from "@tenex/shared/logger";
 import chalk from "chalk";
-import { getNDK } from "../../nostr/ndkClient";
-import { AgentManager } from "../../utils/agents/AgentManager";
-import { formatError } from "../../utils/errors";
-import { ProjectLoader } from "../run/ProjectLoader";
 
 interface DebugSystemPromptOptions {
     agent: string;
@@ -13,7 +13,8 @@ interface DebugSystemPromptOptions {
 export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
     try {
         const projectPath = process.cwd();
-        const ndk = await getNDK();
+        await initNDK();
+        const ndk = getNDK();
 
         logInfo(`🔍 Debug: Loading system prompt for agent '${options.agent}'`);
         logInfo(chalk.cyan("\n📡 Connecting and loading project...\n"));
@@ -26,7 +27,6 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
 
         // Initialize agent manager (same as real system)
         const agentManager = new AgentManager(projectPath, projectInfo);
-        agentManager.setNDK(ndk);
         await agentManager.initialize();
 
         // Get all agent pubkeys for specs loading

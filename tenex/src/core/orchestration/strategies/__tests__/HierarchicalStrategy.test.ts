@@ -27,7 +27,18 @@ describe("HierarchicalStrategy", () => {
 
         mockLeadAgent = {
             name: "lead-agent",
-            processRequest: vi.fn().mockResolvedValue({
+            getName: vi.fn().mockReturnValue("lead-agent"),
+            getConfig: vi.fn().mockReturnValue({
+                role: "Team Lead",
+                name: "lead-agent",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id-lead"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockResolvedValue({
                 content: "Lead coordination response",
                 metadata: {
                     agentName: "lead-agent",
@@ -37,22 +48,47 @@ describe("HierarchicalStrategy", () => {
                     ],
                 },
             }),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockMemberAgent1 = {
             name: "member1",
-            processRequest: vi.fn().mockResolvedValue({
+            getName: vi.fn().mockReturnValue("member1"),
+            getConfig: vi.fn().mockReturnValue({
+                role: "Team Member",
+                name: "member1",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id-member1"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockResolvedValue({
                 content: "Member 1 task completed",
                 metadata: { agentName: "member1" },
             }),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockMemberAgent2 = {
             name: "member2",
-            processRequest: vi.fn().mockResolvedValue({
+            getName: vi.fn().mockReturnValue("member2"),
+            getConfig: vi.fn().mockReturnValue({
+                role: "Team Member",
+                name: "member2",
+            }),
+            getOrCreateConversationWithContext: vi.fn().mockResolvedValue({
+                getId: vi.fn().mockReturnValue("test-conversation-id-member2"),
+                addUserMessage: vi.fn(),
+                addAssistantMessage: vi.fn(),
+                getLastActivityTime: vi.fn().mockReturnValue(Date.now()),
+            }),
+            generateResponse: vi.fn().mockResolvedValue({
                 content: "Member 2 task completed",
                 metadata: { agentName: "member2" },
             }),
+            saveConversationToStorage: vi.fn().mockResolvedValue(undefined),
         } as unknown as Agent;
 
         mockConversationStorage = {
@@ -154,24 +190,20 @@ describe("HierarchicalStrategy", () => {
 
             await strategy.execute(mockTeam, mockEvent, agents, mockConversationStorage);
 
-            // Verify lead agent was called first
-            expect(mockLeadAgent.processRequest).toHaveBeenCalledTimes(2); // Initial + final review
+            // Verify lead agent was called for analysis and review
+            expect(mockLeadAgent.generateResponse).toHaveBeenCalledTimes(2); // Analysis + final review
 
-            // Verify members were called with delegated tasks
-            expect(mockMemberAgent1.processRequest).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    content: expect.stringContaining("Task 1"),
-                })
-            );
-            expect(mockMemberAgent2.processRequest).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    content: expect.stringContaining("Task 2"),
-                })
-            );
+            // Verify member agents were called
+            expect(mockMemberAgent1.generateResponse).toHaveBeenCalled();
+            expect(mockMemberAgent2.generateResponse).toHaveBeenCalled();
+
+            // Verify member agents created their own conversations
+            expect(mockMemberAgent1.getOrCreateConversationWithContext).toHaveBeenCalled();
+            expect(mockMemberAgent2.getOrCreateConversationWithContext).toHaveBeenCalled();
         });
 
         it("should handle partial team member failures", async () => {
-            mockMemberAgent1.processRequest = vi
+            mockMemberAgent1.generateResponse = vi
                 .fn()
                 .mockRejectedValue(new Error("Member 1 failed"));
 
@@ -194,7 +226,7 @@ describe("HierarchicalStrategy", () => {
             expect(result.metadata?.partialFailures).toBeDefined();
         });
 
-        it("should create and update conversation metadata", async () => {
+        it("should create and manage conversations properly", async () => {
             const agents = new Map([
                 ["lead-agent", mockLeadAgent],
                 ["member1", mockMemberAgent1],
@@ -203,25 +235,25 @@ describe("HierarchicalStrategy", () => {
 
             await strategy.execute(mockTeam, mockEvent, agents, mockConversationStorage);
 
-            expect(mockConversationStorage.createConversation).toHaveBeenCalledWith(
+            // Lead agent creates main conversation
+            expect(mockLeadAgent.getOrCreateConversationWithContext).toHaveBeenCalledWith(
+                "test-task",
                 expect.objectContaining({
-                    agentName: "lead-agent",
-                    metadata: expect.objectContaining({
-                        orchestration: {
-                            team: mockTeam,
-                            strategy: "HIERARCHICAL",
-                        },
+                    agentRole: "Team Lead",
+                    projectName: "lead-agent",
+                    orchestrationMetadata: expect.objectContaining({
+                        team: mockTeam,
+                        strategy: "HIERARCHICAL",
                     }),
                 })
             );
 
-            expect(mockConversationStorage.updateConversationMetadata).toHaveBeenCalledWith(
-                "test-conversation-id",
-                expect.objectContaining({
-                    delegations: expect.any(Array),
-                    memberResponses: expect.any(Array),
-                })
-            );
+            // Member agents create their own conversations
+            expect(mockMemberAgent1.getOrCreateConversationWithContext).toHaveBeenCalled();
+            expect(mockMemberAgent2.getOrCreateConversationWithContext).toHaveBeenCalled();
+
+            // Lead agent saves conversation
+            expect(mockLeadAgent.saveConversationToStorage).toHaveBeenCalled();
         });
 
         it("should log execution steps", async () => {

@@ -1,0 +1,14 @@
+{
+    "debugger": {
+        "nsec": "nsec1au3s9n597gfr7dwuua5zdf44gfsp3pl2j0vsqplttcfv8g9r4j4qzf67jg",
+        "file": "fb7e4429db055f6fc53bb74e3b8689b997eb5cd47b8e37c44a7821e00fbc4779"
+    },
+    "triager": {
+        "nsec": "nsec15l05g5sg5v6k0j248wsnawm3rdd6qf87ygwumgqyqsnky2xs3c8suktrpe",
+        "file": "31a5f62f0efc017411a77585d89ea38f6969d3a38429bf3bc5799614a2ffce06"
+    },
+    "requirements": {
+        "nsec": "nsec1ere9cxknmhjle2urkaajq2evyta5s84vrgw98l9vjxqsyu98dwxs6zknpn",
+        "file": "5f6e2382c7c53444204e8938e6d92e69ed511f80b13ae1d41e1c6507c96e3b44"
+    }
+}

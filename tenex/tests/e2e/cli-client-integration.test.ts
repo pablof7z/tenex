@@ -7,7 +7,7 @@ import { EVENT_KINDS } from "@tenex/types/events";
 import { nip19 } from "nostr-tools";
 
 const CLI_PATH = path.join(__dirname, "../../bin/tenex.ts");
-const CLI_CLIENT_PATH = path.join(__dirname, "../../../cli-client/dist/index.js");
+const _CLI_CLIENT_PATH = path.join(__dirname, "../../../cli-client/dist/index.js");
 const TEST_DIR = path.join(process.cwd(), "test-e2e-temp");
 
 // Test configuration
@@ -61,10 +61,14 @@ describe("CLI Client Integration Tests", () => {
             async () => {
                 // Step 1: Start daemon
                 console.log("Starting daemon...");
-                daemonProcess = spawn("bun", ["run", CLI_PATH, "daemon", "--whitelist", ownerPubkey], {
-                    cwd: process.cwd(),
-                    stdio: "pipe",
-                });
+                daemonProcess = spawn(
+                    "bun",
+                    ["run", CLI_PATH, "daemon", "--whitelist", ownerPubkey],
+                    {
+                        cwd: process.cwd(),
+                        stdio: "pipe",
+                    }
+                );
 
                 const daemonStarted = await waitForOutput(
                     daemonProcess,
@@ -83,7 +87,7 @@ describe("CLI Client Integration Tests", () => {
 
                 // Step 3: Use cli-client to create a project
                 console.log("Creating project via cli-client...");
-                
+
                 // First create a simple script that uses cli-client programmatically
                 const testScript = `
                     import { ProjectCreator } from "${path.join(process.cwd(), "../cli-client/src/create-project.js")}";
@@ -110,7 +114,9 @@ describe("CLI Client Integration Tests", () => {
                 expect(createResult.code).toBe(0);
 
                 // Extract project naddr from output
-                const naddrMatch = createResult.stdout.match(/PROJECT_CREATED:(naddr1[a-zA-Z0-9]+)/);
+                const naddrMatch = createResult.stdout.match(
+                    /PROJECT_CREATED:(naddr1[a-zA-Z0-9]+)/
+                );
                 expect(naddrMatch).toBeTruthy();
                 const projectNaddr = naddrMatch![1];
 
@@ -121,7 +127,7 @@ describe("CLI Client Integration Tests", () => {
 
                 // Step 4: Create a chat message using cli-client approach
                 console.log("Creating chat thread...");
-                
+
                 const chatScript = `
                     import { TenexChat } from "${path.join(process.cwd(), "../cli-client/src/chat.js")}";
                     import { getNDK } from "${path.join(process.cwd(), "../cli-client/src/ndk-setup.js")}";
@@ -188,7 +194,7 @@ describe("CLI Client Integration Tests", () => {
 
                 // Step 7: Test typing indicators
                 console.log("Checking for typing indicators...");
-                
+
                 const typingFilter = {
                     kinds: [24111, 24112],
                     "#e": [threadId],
@@ -205,10 +211,8 @@ describe("CLI Client Integration Tests", () => {
     });
 
     describe("CLI Client Error Handling", () => {
-        test(
-            "should handle invalid project naddr gracefully",
-            async () => {
-                const invalidScript = `
+        test("should handle invalid project naddr gracefully", async () => {
+            const invalidScript = `
                     import { TenexChat } from "${path.join(process.cwd(), "../cli-client/src/chat.js")}";
                     import { getNDK } from "${path.join(process.cwd(), "../cli-client/src/ndk-setup.js")}";
                     
@@ -223,19 +227,19 @@ describe("CLI Client Integration Tests", () => {
                     }
                 `;
 
-                const errorScriptPath = path.join(TEST_DIR, "error-test.ts");
-                await fs.writeFile(errorScriptPath, invalidScript);
+            const errorScriptPath = path.join(TEST_DIR, "error-test.ts");
+            await fs.writeFile(errorScriptPath, invalidScript);
 
-                const result = await runCommand(["bun", "run", errorScriptPath]);
-                expect(result.stdout).toContain("ERROR_HANDLED");
-            },
-            30000
-        );
+            const result = await runCommand(["bun", "run", errorScriptPath]);
+            expect(result.stdout).toContain("ERROR_HANDLED");
+        }, 30000);
     });
 });
 
 // Helper functions
-async function runCommand(args: string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
+async function runCommand(
+    args: string[]
+): Promise<{ code: number | null; stdout: string; stderr: string }> {
     return new Promise((resolve) => {
         const proc = spawn(args[0], args.slice(1), {
             cwd: process.cwd(),

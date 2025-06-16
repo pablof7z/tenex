@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { IProcessManager } from "@/core/ProcessManager";
+import type { IProjectManager } from "@/core/ProjectManager";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { getRelayUrls, logger } from "@tenex/shared";
 import type { LLMConfig, LLMConfigs } from "@tenex/types";
 import { nip19 } from "nostr-tools";
-import type { IProcessManager } from "./ProcessManager";
-import type { IProjectManager } from "./ProjectManager";
 
 export interface IEventMonitor {
     start(whitelistedPubkeys: string[], llmConfigs?: LLMConfig[]): Promise<void>;
@@ -28,14 +28,10 @@ export class EventMonitor implements IEventMonitor {
         this.whitelistedPubkeys = new Set(whitelistedPubkeys);
         this.llmConfigs = llmConfigs || [];
 
-        logger.info("Starting event monitor", {
-            whitelistedCount: whitelistedPubkeys.length,
-        });
-
         // Subscribe to all events from whitelisted pubkeys
         const filter: NDKFilter = {
             authors: whitelistedPubkeys,
-            since: Math.floor(Date.now() / 1000) - 300, // 5 minutes ago
+            limit: 0,
         };
 
         this.subscription = this.ndk.subscribe(filter, {
@@ -48,19 +44,13 @@ export class EventMonitor implements IEventMonitor {
                 logger.error("Error handling event", { error, event: event.id });
             });
         });
-
-        logger.info("Event monitor started");
     }
 
     async stop(): Promise<void> {
-        logger.info("Stopping event monitor");
-
         if (this.subscription) {
             this.subscription.stop();
             this.subscription = null;
         }
-
-        logger.info("Event monitor stopped");
     }
 
     private async handleEvent(event: NDKEvent): Promise<void> {
@@ -80,12 +70,7 @@ export class EventMonitor implements IEventMonitor {
             return;
         }
 
-        logger.info("Received project event", {
-            eventId: event.id,
-            kind: event.kind,
-            projectIdentifier,
-            pubkey: event.pubkey,
-        });
+        logger.info(`Received event kind ${event.kind}`);
 
         // Check if project is already running
         if (await this.processManager.isProjectRunning(projectIdentifier)) {
@@ -99,11 +84,9 @@ export class EventMonitor implements IEventMonitor {
             const projectPath = await this.projectManager.ensureProjectExists(
                 projectIdentifier,
                 naddr,
-                this.ndk
+                this.ndk,
+                this.llmConfigs
             );
-
-            // Initialize llms.json if it doesn't exist and we have LLM configs
-            await this.initializeLLMConfig(projectPath);
 
             // Spawn project run process
             await this.processManager.spawnProjectRun(projectPath, projectIdentifier);
@@ -152,47 +135,5 @@ export class EventMonitor implements IEventMonitor {
             pubkey: projectPubkey,
             kind: Number.parseInt(kind, 10),
         });
-    }
-
-    private async initializeLLMConfig(projectPath: string): Promise<void> {
-        const llmsPath = path.join(projectPath, ".tenex", "llms.json");
-
-        try {
-            // Check if llms.json already exists
-            await fs.access(llmsPath);
-            logger.debug("llms.json already exists", { projectPath });
-        } catch {
-            // File doesn't exist, create it if we have LLM configs
-            if (this.llmConfigs.length > 0) {
-                logger.info("Creating llms.json from daemon configuration", { projectPath });
-
-                const llmsConfig: LLMConfigs = {};
-
-                // Add each LLM config with a key based on provider and model
-                for (let i = 0; i < this.llmConfigs.length; i++) {
-                    const config = this.llmConfigs[i];
-                    const key =
-                        i === 0
-                            ? "default"
-                            : `${config.provider}-${config.model}`
-                                  .toLowerCase()
-                                  .replace(/[^a-z0-9-]/g, "-");
-                    llmsConfig[key] = config;
-                }
-
-                // Set the default key to point to the first config
-                if (this.llmConfigs.length > 0) {
-                    llmsConfig.default = "default";
-                }
-
-                await fs.writeFile(llmsPath, JSON.stringify(llmsConfig, null, 2), "utf-8");
-                logger.info("Created llms.json with daemon LLM configurations", {
-                    projectPath,
-                    configCount: this.llmConfigs.length,
-                });
-            } else {
-                logger.warn("No LLM configurations available from daemon", { projectPath });
-            }
-        }
     }
 }

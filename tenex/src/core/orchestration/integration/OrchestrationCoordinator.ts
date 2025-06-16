@@ -1,18 +1,18 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../../utils/agents/Agent";
-import { Conversation } from "../../../utils/agents/Conversation";
-import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
-import type { AgentLogger } from "@tenex/shared/logger";
-import type { TeamOrchestrator } from "../TeamOrchestrator";
-import { HierarchicalStrategy } from "../strategies/HierarchicalStrategy";
+import type { TeamOrchestrator } from "@/core/orchestration/TeamOrchestrator";
+import { HierarchicalStrategy } from "@/core/orchestration/strategies/HierarchicalStrategy";
 import type {
     OrchestrationStrategy,
     StrategyExecutionResult,
-} from "../strategies/OrchestrationStrategy";
-import { ParallelExecutionStrategy } from "../strategies/ParallelExecutionStrategy";
-import { SingleResponderStrategy } from "../strategies/SingleResponderStrategy";
-import { PhasedDeliveryStrategy } from "../strategies/PhasedDeliveryStrategy";
-import type { EventContext, Team } from "../types";
+} from "@/core/orchestration/strategies/OrchestrationStrategy";
+import { ParallelExecutionStrategy } from "@/core/orchestration/strategies/ParallelExecutionStrategy";
+import { PhasedDeliveryStrategy } from "@/core/orchestration/strategies/PhasedDeliveryStrategy";
+import { SingleResponderStrategy } from "@/core/orchestration/strategies/SingleResponderStrategy";
+import type { EventContext, Team } from "@/core/orchestration/types";
+import type { Agent } from "@/utils/agents/Agent";
+import { Conversation } from "@/utils/agents/Conversation";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { AgentLogger } from "@tenex/shared/logger";
 
 export interface OrchestrationResult {
     teamFormed: boolean;

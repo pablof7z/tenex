@@ -1,3 +1,10 @@
+import type {
+    PromptSection,
+    PromptSectionBuilder,
+    SystemPromptBuilderConfig,
+    SystemPromptContext,
+} from "@/utils/agents/prompts/types";
+import { logger } from "@tenex/shared/logger";
 import {
     AgentIdentityBuilder,
     AgentToAgentBuilder,
@@ -7,12 +14,6 @@ import {
     StaticInstructionsBuilder,
     TeamInformationBuilder,
 } from "./builders";
-import type {
-    PromptSection,
-    PromptSectionBuilder,
-    SystemPromptBuilderConfig,
-    SystemPromptContext,
-} from "./types";
 
 /**
  * Centralized service for building system prompts for agents
@@ -138,7 +139,7 @@ export class SystemPromptBuilder {
                     sections.push(section);
                 }
             } catch (error) {
-                console.error(`Error building section ${builder.id}:`, error);
+                logger.error(`Error building section ${builder.id}:`, error);
             }
         }
 

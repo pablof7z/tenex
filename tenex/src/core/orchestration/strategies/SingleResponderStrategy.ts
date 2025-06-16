@@ -1,16 +1,16 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../../utils/agents/Agent";
-import type { ConversationStorage } from "../../../utils/agents/ConversationStorage";
-import type { Logger } from "../../../utils/fs";
-import type { Team } from "../types";
 import type {
     AgentResponse,
     OrchestrationStrategy,
     StrategyExecutionResult,
-} from "./OrchestrationStrategy";
+} from "@/core/orchestration/strategies/OrchestrationStrategy";
+import type { Team } from "@/core/orchestration/types";
+import type { Agent } from "@/utils/agents/Agent";
+import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { AgentLogger } from "@tenex/shared/logger";
 
 export class SingleResponderStrategy implements OrchestrationStrategy {
-    constructor(private readonly logger: Logger) {
+    constructor(private readonly logger: AgentLogger) {
         if (!logger) throw new Error("Logger is required");
     }
 
@@ -18,7 +18,7 @@ export class SingleResponderStrategy implements OrchestrationStrategy {
         team: Team,
         event: NDKEvent,
         agents: Map<string, Agent>,
-        conversationStorage: ConversationStorage
+        _conversationStorage: ConversationStorage
     ): Promise<StrategyExecutionResult> {
         this.logger.info(`Executing SingleResponderStrategy for task ${team.taskDefinition.id}`);
 
@@ -35,54 +35,39 @@ export class SingleResponderStrategy implements OrchestrationStrategy {
                 };
             }
 
-            // Create conversation for this task
-            const conversation = await conversationStorage.createConversation({
-                projectNaddr: undefined, // Will be set by the calling context
-                taskId: team.taskDefinition.id,
-                agentName: team.lead,
-                metadata: {
-                    orchestration: {
+            // Create conversation through the agent system
+            const conversationId = team.taskDefinition.id;
+            const conversation = await leadAgent.getOrCreateConversationWithContext(
+                conversationId,
+                {
+                    agentRole: leadAgent.getConfig().role || "Assistant",
+                    projectName: leadAgent.getConfig().name,
+                    orchestrationMetadata: {
                         team,
                         strategy: "SINGLE_RESPONDER",
                     },
-                },
-            });
+                }
+            );
 
             // Add the incoming request to conversation
-            await conversationStorage.addMessage(conversation.id, {
-                role: "user",
-                content: event.content,
-                timestamp: Date.now(),
-                metadata: {
-                    eventId: event.id,
-                },
-            });
+            conversation.addUserMessage(event.content, event);
 
             this.logger.debug(`Agent ${team.lead} processing request`);
 
             // Process the request with the single agent
-            const agentResult = await leadAgent.processRequest({
-                content: event.content,
-                conversationId: conversation.id,
-                metadata: {
-                    taskId: team.taskDefinition.id,
-                    strategy: "SINGLE_RESPONDER",
-                },
-            });
+            const agentResult = await leadAgent.generateResponse(
+                conversation.getId(),
+                undefined, // Use default LLM config
+                undefined, // No specific project path
+                false, // Not from agent
+                undefined // No typing indicator callback
+            );
 
             // Add agent response to conversation
-            await conversationStorage.addMessage(conversation.id, {
-                role: "assistant",
-                content: agentResult.content,
-                timestamp: Date.now(),
-                metadata: agentResult.metadata,
-            });
+            conversation.addAssistantMessage(agentResult.content);
 
-            // Update conversation metadata with completion
-            await conversationStorage.updateConversationMetadata(conversation.id, {
-                completedAt: Date.now(),
-                status: "completed",
-            });
+            // Save the conversation
+            await leadAgent.saveConversationToStorage(conversation);
 
             const response: AgentResponse = {
                 agentName: team.lead,
@@ -99,8 +84,8 @@ export class SingleResponderStrategy implements OrchestrationStrategy {
                 success: true,
                 responses: [response],
                 metadata: {
-                    conversationId: conversation.id,
-                    executionTime: Date.now() - conversation.createdAt,
+                    conversationId: conversation.getId(),
+                    executionTime: Date.now() - conversation.getLastActivityTime(),
                 },
             };
         } catch (error) {

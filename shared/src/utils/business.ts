@@ -1,3 +1,4 @@
+import { logger } from "@tenex/shared/logger";
 /**
  * Common business logic utilities
  * Consolidates repeated patterns found across the codebase
@@ -74,7 +75,7 @@ export const LocalStorageUtils = {
                     seen[itemId] = true;
                     localStorage.setItem(storageKey, JSON.stringify(seen));
                 } catch (error) {
-                    console.error("Failed to mark item as seen:", error);
+                    logger.error("Failed to mark item as seen:", error);
                 }
             },
 
@@ -89,7 +90,7 @@ export const LocalStorageUtils = {
                     }
                     localStorage.setItem(storageKey, JSON.stringify(seen));
                 } catch (error) {
-                    console.error("Failed to mark items as seen:", error);
+                    logger.error("Failed to mark items as seen:", error);
                 }
             },
 
@@ -158,7 +159,7 @@ export const LocalStorageUtils = {
                     const updated = { ...current, ...preferences };
                     localStorage.setItem(storageKey, JSON.stringify(updated));
                 } catch (error) {
-                    console.error("Failed to save preferences:", error);
+                    logger.error("Failed to save preferences:", error);
                 }
             },
 
