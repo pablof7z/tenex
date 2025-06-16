@@ -73,7 +73,7 @@ export class ProjectService implements IProjectService {
             JSON.stringify(
                 {
                     title: project.title,
-                    naddr: project.naddr,
+                    projectNaddr: project.naddr,
                     createdAt: new Date().toISOString(),
                 },
                 null,

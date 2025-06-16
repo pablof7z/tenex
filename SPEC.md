@@ -43,7 +43,7 @@ A Vite-based React application (not Next.js) providing the user interface:
 - Optimistic updates for better UX
 - Entity parsing for rich content display
 
-### 2. CLI Tool (`cli/`)
+### 2. CLI Tool (`tenex/`)
 
 A command-line interface for local development operations with sophisticated agent orchestration:
 

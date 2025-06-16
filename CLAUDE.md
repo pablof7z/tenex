@@ -35,7 +35,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TENEX is a context-first development environment that orchestrates multiple AI agents to build software collaboratively. It consists of:
 - **Web Client** (`web-client/`): Vite React app with living documentation viewer
-- **CLI Tool** (`cli/`): Unified CLI with daemon mode and agent orchestration
+- **CLI Tool** (`tenex/`): Unified CLI with daemon mode and agent orchestration
 - **MCP Server** (`mcp/`): Model Context Protocol server with git integration
 - **Shared Libraries** (`shared/`): Common types and utilities
 - **iOS Client** (`ios-client/`): Native mobile application
@@ -231,7 +231,7 @@ Agent definitions from NDKAgent events (kind 4199) are automatically fetched and
 - `.tenex/agents/`: Cached NDKAgent event definitions
 - `.tenex/conversations/`: Persistent conversation history
 - `web-client/src/utils/`: Entity parsing and utilities
-- `cli/src/utils/agents/tools/`: Agent tool implementations
+- `tenex/src/utils/agents/tools/`: Agent tool implementations
 
 When working on this codebase, always:
 1. Use `read_specs` tool to access current documentation

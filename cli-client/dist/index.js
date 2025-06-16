@@ -1924,8 +1924,8 @@ var require_ansi_escapes = __commonJS((exports, module) => {
 
 // node_modules/yoctocolors-cjs/index.js
 var require_yoctocolors_cjs = __commonJS((exports, module) => {
-  var tty2 = __require("tty");
-  var hasColors = tty2?.WriteStream?.prototype?.hasColors?.() ?? false;
+  var tty3 = __require("tty");
+  var hasColors = tty3?.WriteStream?.prototype?.hasColors?.() ?? false;
   var format = (open, close) => {
     if (!hasColors) {
       return (input) => input;
@@ -2125,15 +2125,15 @@ var require_UnsubscriptionError = __commonJS((exports) => {
   exports.UnsubscriptionError = undefined;
   var createErrorClass_1 = require_createErrorClass();
   exports.UnsubscriptionError = createErrorClass_1.createErrorClass(function(_super) {
-    return function UnsubscriptionErrorImpl(errors) {
+    return function UnsubscriptionErrorImpl(errors2) {
       _super(this);
-      this.message = errors ? errors.length + ` errors occurred during unsubscription:
-` + errors.map(function(err, i) {
+      this.message = errors2 ? errors2.length + ` errors occurred during unsubscription:
+` + errors2.map(function(err, i) {
         return i + 1 + ") " + err.toString();
       }).join(`
   `) : "";
       this.name = "UnsubscriptionError";
-      this.errors = errors;
+      this.errors = errors2;
     };
   });
 });
@@ -2207,7 +2207,7 @@ var require_Subscription = __commonJS((exports) => {
     }
     Subscription2.prototype.unsubscribe = function() {
       var e_1, _a2, e_2, _b;
-      var errors;
+      var errors2;
       if (!this.closed) {
         this.closed = true;
         var _parentage = this._parentage;
@@ -2239,7 +2239,7 @@ var require_Subscription = __commonJS((exports) => {
           try {
             initialFinalizer();
           } catch (e) {
-            errors = e instanceof UnsubscriptionError_1.UnsubscriptionError ? e.errors : [e];
+            errors2 = e instanceof UnsubscriptionError_1.UnsubscriptionError ? e.errors : [e];
           }
         }
         var _finalizers = this._finalizers;
@@ -2251,11 +2251,11 @@ var require_Subscription = __commonJS((exports) => {
               try {
                 execFinalizer(finalizer);
               } catch (err) {
-                errors = errors !== null && errors !== undefined ? errors : [];
+                errors2 = errors2 !== null && errors2 !== undefined ? errors2 : [];
                 if (err instanceof UnsubscriptionError_1.UnsubscriptionError) {
-                  errors = __spreadArray(__spreadArray([], __read(errors)), __read(err.errors));
+                  errors2 = __spreadArray(__spreadArray([], __read(errors2)), __read(err.errors));
                 } else {
-                  errors.push(err);
+                  errors2.push(err);
                 }
               }
             }
@@ -2271,8 +2271,8 @@ var require_Subscription = __commonJS((exports) => {
             }
           }
         }
-        if (errors) {
-          throw new UnsubscriptionError_1.UnsubscriptionError(errors);
+        if (errors2) {
+          throw new UnsubscriptionError_1.UnsubscriptionError(errors2);
         }
       }
     };
@@ -2457,17 +2457,17 @@ var require_errorContext = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.captureError = exports.errorContext = undefined;
   var config_1 = require_config();
-  var context = null;
+  var context2 = null;
   function errorContext(cb) {
     if (config_1.config.useDeprecatedSynchronousErrorHandling) {
-      var isRoot = !context;
+      var isRoot = !context2;
       if (isRoot) {
-        context = { errorThrown: false, error: null };
+        context2 = { errorThrown: false, error: null };
       }
       cb();
       if (isRoot) {
-        var _a2 = context, errorThrown = _a2.errorThrown, error = _a2.error;
-        context = null;
+        var _a2 = context2, errorThrown = _a2.errorThrown, error = _a2.error;
+        context2 = null;
         if (errorThrown) {
           throw error;
         }
@@ -2478,9 +2478,9 @@ var require_errorContext = __commonJS((exports) => {
   }
   exports.errorContext = errorContext;
   function captureError(err) {
-    if (config_1.config.useDeprecatedSynchronousErrorHandling && context) {
-      context.errorThrown = true;
-      context.error = err;
+    if (config_1.config.useDeprecatedSynchronousErrorHandling && context2) {
+      context2.errorThrown = true;
+      context2.error = err;
     }
   }
   exports.captureError = captureError;
@@ -5079,7 +5079,7 @@ var require_innerFrom = __commonJS((exports) => {
   exports.fromIterable = fromIterable;
   function fromAsyncIterable(asyncIterable) {
     return new Observable_1.Observable(function(subscriber) {
-      process4(asyncIterable, subscriber).catch(function(err) {
+      process5(asyncIterable, subscriber).catch(function(err) {
         return subscriber.error(err);
       });
     });
@@ -5089,7 +5089,7 @@ var require_innerFrom = __commonJS((exports) => {
     return fromAsyncIterable(isReadableStreamLike_1.readableStreamLikeToAsyncGenerator(readableStream));
   }
   exports.fromReadableStreamLike = fromReadableStreamLike;
-  function process4(asyncIterable, subscriber) {
+  function process5(asyncIterable, subscriber) {
     var asyncIterable_1, asyncIterable_1_1;
     var e_2, _a2;
     return __awaiter(this, undefined, undefined, function() {
@@ -5535,8 +5535,8 @@ var require_lastValueFrom = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.lastValueFrom = undefined;
   var EmptyError_1 = require_EmptyError();
-  function lastValueFrom(source, config) {
-    var hasConfig = typeof config === "object";
+  function lastValueFrom(source, config3) {
+    var hasConfig = typeof config3 === "object";
     return new Promise(function(resolve, reject) {
       var _hasValue = false;
       var _value;
@@ -5550,7 +5550,7 @@ var require_lastValueFrom = __commonJS((exports) => {
           if (_hasValue) {
             resolve(_value);
           } else if (hasConfig) {
-            resolve(config.defaultValue);
+            resolve(config3.defaultValue);
           } else {
             reject(new EmptyError_1.EmptyError);
           }
@@ -5567,8 +5567,8 @@ var require_firstValueFrom = __commonJS((exports) => {
   exports.firstValueFrom = undefined;
   var EmptyError_1 = require_EmptyError();
   var Subscriber_1 = require_Subscriber();
-  function firstValueFrom(source, config) {
-    var hasConfig = typeof config === "object";
+  function firstValueFrom(source, config3) {
+    var hasConfig = typeof config3 === "object";
     return new Promise(function(resolve, reject) {
       var subscriber = new Subscriber_1.SafeSubscriber({
         next: function(value) {
@@ -5578,7 +5578,7 @@ var require_firstValueFrom = __commonJS((exports) => {
         error: reject,
         complete: function() {
           if (hasConfig) {
-            resolve(config.defaultValue);
+            resolve(config3.defaultValue);
           } else {
             reject(new EmptyError_1.EmptyError);
           }
@@ -5664,8 +5664,8 @@ var require_timeout = __commonJS((exports) => {
       this.info = info;
     };
   });
-  function timeout(config, schedulerArg) {
-    var _a2 = isDate_1.isValidDate(config) ? { first: config } : typeof config === "number" ? { each: config } : config, first = _a2.first, each = _a2.each, _b = _a2.with, _with = _b === undefined ? timeoutErrorFactory : _b, _c = _a2.scheduler, scheduler = _c === undefined ? schedulerArg !== null && schedulerArg !== undefined ? schedulerArg : async_1.asyncScheduler : _c, _d = _a2.meta, meta = _d === undefined ? null : _d;
+  function timeout(config3, schedulerArg) {
+    var _a2 = isDate_1.isValidDate(config3) ? { first: config3 } : typeof config3 === "number" ? { each: config3 } : config3, first = _a2.first, each = _a2.each, _b = _a2.with, _with = _b === undefined ? timeoutErrorFactory : _b, _c = _a2.scheduler, scheduler = _c === undefined ? schedulerArg !== null && schedulerArg !== undefined ? schedulerArg : async_1.asyncScheduler : _c, _d = _a2.meta, meta = _d === undefined ? null : _d;
     if (first == null && each == null) {
       throw new TypeError("No timeout provided.");
     }
@@ -5714,11 +5714,11 @@ var require_map = __commonJS((exports) => {
   exports.map = undefined;
   var lift_1 = require_lift();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
-  function map(project, thisArg) {
+  function map(project3, thisArg) {
     return lift_1.operate(function(source, subscriber) {
       var index = 0;
       source.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function(value) {
-        subscriber.next(project.call(thisArg, value, index++));
+        subscriber.next(project3.call(thisArg, value, index++));
       }));
     });
   }
@@ -6022,7 +6022,7 @@ var require_mergeInternals = __commonJS((exports) => {
   var innerFrom_1 = require_innerFrom();
   var executeSchedule_1 = require_executeSchedule();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
-  function mergeInternals(source, subscriber, project, concurrent, onBeforeNext, expand, innerSubScheduler, additionalFinalizer) {
+  function mergeInternals(source, subscriber, project3, concurrent, onBeforeNext, expand, innerSubScheduler, additionalFinalizer) {
     var buffer = [];
     var active = 0;
     var index = 0;
@@ -6039,7 +6039,7 @@ var require_mergeInternals = __commonJS((exports) => {
       expand && subscriber.next(value);
       active++;
       var innerComplete = false;
-      innerFrom_1.innerFrom(project(value, index++)).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function(innerValue) {
+      innerFrom_1.innerFrom(project3(value, index++)).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function(innerValue) {
         onBeforeNext === null || onBeforeNext === undefined || onBeforeNext(innerValue);
         if (expand) {
           outerNext(innerValue);
@@ -6092,7 +6092,7 @@ var require_mergeMap = __commonJS((exports) => {
   var lift_1 = require_lift();
   var mergeInternals_1 = require_mergeInternals();
   var isFunction_1 = require_isFunction();
-  function mergeMap(project, resultSelector, concurrent) {
+  function mergeMap(project3, resultSelector, concurrent) {
     if (concurrent === undefined) {
       concurrent = Infinity;
     }
@@ -6100,13 +6100,13 @@ var require_mergeMap = __commonJS((exports) => {
       return mergeMap(function(a, i) {
         return map_1.map(function(b, ii) {
           return resultSelector(a, b, i, ii);
-        })(innerFrom_1.innerFrom(project(a, i)));
+        })(innerFrom_1.innerFrom(project3(a, i)));
       }, concurrent);
     } else if (typeof resultSelector === "number") {
       concurrent = resultSelector;
     }
     return lift_1.operate(function(source, subscriber) {
-      return mergeInternals_1.mergeInternals(source, subscriber, project, concurrent);
+      return mergeInternals_1.mergeInternals(source, subscriber, project3, concurrent);
     });
   }
   exports.mergeMap = mergeMap;
@@ -6182,12 +6182,12 @@ var require_connectable = __commonJS((exports) => {
     },
     resetOnDisconnect: true
   };
-  function connectable(source, config) {
-    if (config === undefined) {
-      config = DEFAULT_CONFIG;
+  function connectable(source, config3) {
+    if (config3 === undefined) {
+      config3 = DEFAULT_CONFIG;
     }
     var connection = null;
-    var { connector, resetOnDisconnect: _a2 } = config, resetOnDisconnect = _a2 === undefined ? true : _a2;
+    var { connector, resetOnDisconnect: _a2 } = config3, resetOnDisconnect = _a2 === undefined ? true : _a2;
     var subject = connector();
     var result = new Observable_1.Observable(function(subscriber) {
       return subject.subscribe(subscriber);
@@ -7402,10 +7402,10 @@ var require_joinAllInternals = __commonJS((exports) => {
   var pipe_1 = require_pipe();
   var mergeMap_1 = require_mergeMap();
   var toArray_1 = require_toArray();
-  function joinAllInternals(joinFn, project) {
+  function joinAllInternals(joinFn, project3) {
     return pipe_1.pipe(toArray_1.toArray(), mergeMap_1.mergeMap(function(sources) {
       return joinFn(sources);
-    }), project ? mapOneOrManyArgs_1.mapOneOrManyArgs(project) : identity_1.identity);
+    }), project3 ? mapOneOrManyArgs_1.mapOneOrManyArgs(project3) : identity_1.identity);
   }
   exports.joinAllInternals = joinAllInternals;
 });
@@ -7416,8 +7416,8 @@ var require_combineLatestAll = __commonJS((exports) => {
   exports.combineLatestAll = undefined;
   var combineLatest_1 = require_combineLatest();
   var joinAllInternals_1 = require_joinAllInternals();
-  function combineLatestAll(project) {
-    return joinAllInternals_1.joinAllInternals(combineLatest_1.combineLatest, project);
+  function combineLatestAll(project3) {
+    return joinAllInternals_1.joinAllInternals(combineLatest_1.combineLatest, project3);
   }
   exports.combineLatestAll = combineLatestAll;
 });
@@ -7526,8 +7526,8 @@ var require_concatMap = __commonJS((exports) => {
   exports.concatMap = undefined;
   var mergeMap_1 = require_mergeMap();
   var isFunction_1 = require_isFunction();
-  function concatMap(project, resultSelector) {
-    return isFunction_1.isFunction(resultSelector) ? mergeMap_1.mergeMap(project, resultSelector, 1) : mergeMap_1.mergeMap(project, 1);
+  function concatMap(project3, resultSelector) {
+    return isFunction_1.isFunction(resultSelector) ? mergeMap_1.mergeMap(project3, resultSelector, 1) : mergeMap_1.mergeMap(project3, 1);
   }
   exports.concatMap = concatMap;
 });
@@ -7662,11 +7662,11 @@ var require_connect = __commonJS((exports) => {
       return new Subject_1.Subject;
     }
   };
-  function connect(selector, config) {
-    if (config === undefined) {
-      config = DEFAULT_CONFIG;
+  function connect(selector, config3) {
+    if (config3 === undefined) {
+      config3 = DEFAULT_CONFIG;
     }
-    var connector = config.connector;
+    var connector = config3.connector;
     return lift_1.operate(function(source, subscriber) {
       var subject = connector();
       innerFrom_1.innerFrom(selector(fromSubscribable_1.fromSubscribable(subject))).subscribe(subscriber);
@@ -8113,11 +8113,11 @@ var require_exhaustMap = __commonJS((exports) => {
   var innerFrom_1 = require_innerFrom();
   var lift_1 = require_lift();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
-  function exhaustMap(project, resultSelector) {
+  function exhaustMap(project3, resultSelector) {
     if (resultSelector) {
       return function(source) {
         return source.pipe(exhaustMap(function(a, i) {
-          return innerFrom_1.innerFrom(project(a, i)).pipe(map_1.map(function(b, ii) {
+          return innerFrom_1.innerFrom(project3(a, i)).pipe(map_1.map(function(b, ii) {
             return resultSelector(a, b, i, ii);
           }));
         }));
@@ -8133,7 +8133,7 @@ var require_exhaustMap = __commonJS((exports) => {
             innerSub = null;
             isComplete && subscriber.complete();
           });
-          innerFrom_1.innerFrom(project(outerValue, index++)).subscribe(innerSub);
+          innerFrom_1.innerFrom(project3(outerValue, index++)).subscribe(innerSub);
         }
       }, function() {
         isComplete = true;
@@ -8170,13 +8170,13 @@ var require_expand = __commonJS((exports) => {
   exports.expand = undefined;
   var lift_1 = require_lift();
   var mergeInternals_1 = require_mergeInternals();
-  function expand(project, concurrent, scheduler) {
+  function expand(project3, concurrent, scheduler) {
     if (concurrent === undefined) {
       concurrent = Infinity;
     }
     concurrent = (concurrent || 0) < 1 ? Infinity : concurrent;
     return lift_1.operate(function(source, subscriber) {
-      return mergeInternals_1.mergeInternals(source, subscriber, project, concurrent, undefined, true, scheduler);
+      return mergeInternals_1.mergeInternals(source, subscriber, project3, concurrent, undefined, true, scheduler);
     });
   }
   exports.expand = expand;
@@ -9005,15 +9005,15 @@ var require_retry = __commonJS((exports) => {
     if (configOrCount === undefined) {
       configOrCount = Infinity;
     }
-    var config;
+    var config3;
     if (configOrCount && typeof configOrCount === "object") {
-      config = configOrCount;
+      config3 = configOrCount;
     } else {
-      config = {
+      config3 = {
         count: configOrCount
       };
     }
-    var _a2 = config.count, count = _a2 === undefined ? Infinity : _a2, delay = config.delay, _b = config.resetOnSuccess, resetOnSuccess = _b === undefined ? false : _b;
+    var _a2 = config3.count, count = _a2 === undefined ? Infinity : _a2, delay = config3.delay, _b = config3.resetOnSuccess, resetOnSuccess = _b === undefined ? false : _b;
     return count <= 0 ? identity_1.identity : lift_1.operate(function(source, subscriber) {
       var soFar = 0;
       var innerSub;
@@ -9502,7 +9502,7 @@ var require_switchMap = __commonJS((exports) => {
   var innerFrom_1 = require_innerFrom();
   var lift_1 = require_lift();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
-  function switchMap(project, resultSelector) {
+  function switchMap(project3, resultSelector) {
     return lift_1.operate(function(source, subscriber) {
       var innerSubscriber = null;
       var index = 0;
@@ -9514,7 +9514,7 @@ var require_switchMap = __commonJS((exports) => {
         innerSubscriber === null || innerSubscriber === undefined || innerSubscriber.unsubscribe();
         var innerIndex = 0;
         var outerIndex = index++;
-        innerFrom_1.innerFrom(project(value, outerIndex)).subscribe(innerSubscriber = OperatorSubscriber_1.createOperatorSubscriber(subscriber, function(innerValue) {
+        innerFrom_1.innerFrom(project3(value, outerIndex)).subscribe(innerSubscriber = OperatorSubscriber_1.createOperatorSubscriber(subscriber, function(innerValue) {
           return subscriber.next(resultSelector ? resultSelector(value, innerValue, outerIndex, innerIndex++) : innerValue);
         }, function() {
           innerSubscriber = null;
@@ -9667,9 +9667,9 @@ var require_throttle = __commonJS((exports) => {
   var lift_1 = require_lift();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
   var innerFrom_1 = require_innerFrom();
-  function throttle(durationSelector, config) {
+  function throttle(durationSelector, config3) {
     return lift_1.operate(function(source, subscriber) {
-      var _a2 = config !== null && config !== undefined ? config : {}, _b = _a2.leading, leading = _b === undefined ? true : _b, _c = _a2.trailing, trailing = _c === undefined ? false : _c;
+      var _a2 = config3 !== null && config3 !== undefined ? config3 : {}, _b = _a2.leading, leading = _b === undefined ? true : _b, _c = _a2.trailing, trailing = _c === undefined ? false : _c;
       var hasValue = false;
       var sendValue = null;
       var throttled = null;
@@ -9718,14 +9718,14 @@ var require_throttleTime = __commonJS((exports) => {
   var async_1 = require_async();
   var throttle_1 = require_throttle();
   var timer_1 = require_timer();
-  function throttleTime(duration, scheduler, config) {
+  function throttleTime(duration, scheduler, config3) {
     if (scheduler === undefined) {
       scheduler = async_1.asyncScheduler;
     }
     var duration$ = timer_1.timer(duration, scheduler);
     return throttle_1.throttle(function() {
       return duration$;
-    }, config);
+    }, config3);
   }
   exports.throttleTime = throttleTime;
 });
@@ -10189,7 +10189,7 @@ var require_withLatestFrom = __commonJS((exports) => {
     for (var _i = 0;_i < arguments.length; _i++) {
       inputs[_i] = arguments[_i];
     }
-    var project = args_1.popResultSelector(inputs);
+    var project3 = args_1.popResultSelector(inputs);
     return lift_1.operate(function(source, subscriber) {
       var len = inputs.length;
       var otherValues = new Array(len);
@@ -10212,7 +10212,7 @@ var require_withLatestFrom = __commonJS((exports) => {
       source.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function(value) {
         if (ready) {
           var values = __spreadArray([value], __read(otherValues));
-          subscriber.next(project ? project.apply(undefined, __spreadArray([], __read(values))) : values);
+          subscriber.next(project3 ? project3.apply(undefined, __spreadArray([], __read(values))) : values);
         }
       }));
     });
@@ -10226,8 +10226,8 @@ var require_zipAll = __commonJS((exports) => {
   exports.zipAll = undefined;
   var zip_1 = require_zip();
   var joinAllInternals_1 = require_joinAllInternals();
-  function zipAll(project) {
-    return joinAllInternals_1.joinAllInternals(zip_1.zip, project);
+  function zipAll(project3) {
+    return joinAllInternals_1.joinAllInternals(zip_1.zip, project3);
   }
   exports.zipAll = zipAll;
 });
@@ -12092,15 +12092,15 @@ var require_color_convert = __commonJS((exports, module) => {
 
 // node_modules/ansi-styles/index.js
 var require_ansi_styles = __commonJS((exports, module) => {
-  var wrapAnsi162 = (fn, offset) => (...args) => {
+  var wrapAnsi163 = (fn, offset) => (...args) => {
     const code = fn(...args);
     return `\x1B[${code + offset}m`;
   };
-  var wrapAnsi2562 = (fn, offset) => (...args) => {
+  var wrapAnsi2563 = (fn, offset) => (...args) => {
     const code = fn(...args);
     return `\x1B[${38 + offset};5;${code}m`;
   };
-  var wrapAnsi16m2 = (fn, offset) => (...args) => {
+  var wrapAnsi16m3 = (fn, offset) => (...args) => {
     const rgb = fn(...args);
     return `\x1B[${38 + offset};2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
   };
@@ -12127,20 +12127,20 @@ var require_ansi_styles = __commonJS((exports, module) => {
       colorConvert = require_color_convert();
     }
     const offset = isBackground ? 10 : 0;
-    const styles3 = {};
+    const styles5 = {};
     for (const [sourceSpace, suite] of Object.entries(colorConvert)) {
       const name = sourceSpace === "ansi16" ? "ansi" : sourceSpace;
       if (sourceSpace === targetSpace) {
-        styles3[name] = wrap(identity, offset);
+        styles5[name] = wrap(identity, offset);
       } else if (typeof suite === "object") {
-        styles3[name] = wrap(suite[targetSpace], offset);
+        styles5[name] = wrap(suite[targetSpace], offset);
       }
     }
-    return styles3;
+    return styles5;
   };
-  function assembleStyles2() {
+  function assembleStyles3() {
     const codes = new Map;
-    const styles3 = {
+    const styles5 = {
       modifier: {
         reset: [0, 0],
         bold: [1, 22],
@@ -12188,41 +12188,41 @@ var require_ansi_styles = __commonJS((exports, module) => {
         bgWhiteBright: [107, 49]
       }
     };
-    styles3.color.gray = styles3.color.blackBright;
-    styles3.bgColor.bgGray = styles3.bgColor.bgBlackBright;
-    styles3.color.grey = styles3.color.blackBright;
-    styles3.bgColor.bgGrey = styles3.bgColor.bgBlackBright;
-    for (const [groupName, group] of Object.entries(styles3)) {
+    styles5.color.gray = styles5.color.blackBright;
+    styles5.bgColor.bgGray = styles5.bgColor.bgBlackBright;
+    styles5.color.grey = styles5.color.blackBright;
+    styles5.bgColor.bgGrey = styles5.bgColor.bgBlackBright;
+    for (const [groupName, group] of Object.entries(styles5)) {
       for (const [styleName, style] of Object.entries(group)) {
-        styles3[styleName] = {
+        styles5[styleName] = {
           open: `\x1B[${style[0]}m`,
           close: `\x1B[${style[1]}m`
         };
-        group[styleName] = styles3[styleName];
+        group[styleName] = styles5[styleName];
         codes.set(style[0], style[1]);
       }
-      Object.defineProperty(styles3, groupName, {
+      Object.defineProperty(styles5, groupName, {
         value: group,
         enumerable: false
       });
     }
-    Object.defineProperty(styles3, "codes", {
+    Object.defineProperty(styles5, "codes", {
       value: codes,
       enumerable: false
     });
-    styles3.color.close = "\x1B[39m";
-    styles3.bgColor.close = "\x1B[49m";
-    setLazyProperty(styles3.color, "ansi", () => makeDynamicStyles(wrapAnsi162, "ansi16", ansi2ansi, false));
-    setLazyProperty(styles3.color, "ansi256", () => makeDynamicStyles(wrapAnsi2562, "ansi256", ansi2ansi, false));
-    setLazyProperty(styles3.color, "ansi16m", () => makeDynamicStyles(wrapAnsi16m2, "rgb", rgb2rgb, false));
-    setLazyProperty(styles3.bgColor, "ansi", () => makeDynamicStyles(wrapAnsi162, "ansi16", ansi2ansi, true));
-    setLazyProperty(styles3.bgColor, "ansi256", () => makeDynamicStyles(wrapAnsi2562, "ansi256", ansi2ansi, true));
-    setLazyProperty(styles3.bgColor, "ansi16m", () => makeDynamicStyles(wrapAnsi16m2, "rgb", rgb2rgb, true));
-    return styles3;
+    styles5.color.close = "\x1B[39m";
+    styles5.bgColor.close = "\x1B[49m";
+    setLazyProperty(styles5.color, "ansi", () => makeDynamicStyles(wrapAnsi163, "ansi16", ansi2ansi, false));
+    setLazyProperty(styles5.color, "ansi256", () => makeDynamicStyles(wrapAnsi2563, "ansi256", ansi2ansi, false));
+    setLazyProperty(styles5.color, "ansi16m", () => makeDynamicStyles(wrapAnsi16m3, "rgb", rgb2rgb, false));
+    setLazyProperty(styles5.bgColor, "ansi", () => makeDynamicStyles(wrapAnsi163, "ansi16", ansi2ansi, true));
+    setLazyProperty(styles5.bgColor, "ansi256", () => makeDynamicStyles(wrapAnsi2563, "ansi256", ansi2ansi, true));
+    setLazyProperty(styles5.bgColor, "ansi16m", () => makeDynamicStyles(wrapAnsi16m3, "rgb", rgb2rgb, true));
+    return styles5;
   }
   Object.defineProperty(module, "exports", {
     enumerable: true,
-    get: assembleStyles2
+    get: assembleStyles3
   });
 });
 
@@ -12230,7 +12230,7 @@ var require_ansi_styles = __commonJS((exports, module) => {
 var require_wrap_ansi = __commonJS((exports, module) => {
   var stringWidth = require_string_width();
   var stripAnsi = require_strip_ansi();
-  var ansiStyles2 = require_ansi_styles();
+  var ansiStyles3 = require_ansi_styles();
   var ESCAPES = new Set([
     "\x1B",
     "\x9B"
@@ -12341,7 +12341,7 @@ var require_wrap_ansi = __commonJS((exports, module) => {
         const code2 = parseFloat(/\d[^m]*/.exec(pre.slice(index, index + 4)));
         escapeCode = code2 === END_CODE ? null : code2;
       }
-      const code = ansiStyles2.codes.get(Number(escapeCode));
+      const code = ansiStyles3.codes.get(Number(escapeCode));
       if (escapeCode && code) {
         if (pre[index + 1] === `
 `) {
@@ -12374,26 +12374,26 @@ var require_has_flag = __commonJS((exports, module) => {
 
 // node_modules/supports-color/index.js
 var require_supports_color = __commonJS((exports, module) => {
-  var os2 = __require("os");
-  var tty2 = __require("tty");
-  var hasFlag2 = require_has_flag();
-  var { env: env2 } = process;
+  var os3 = __require("os");
+  var tty3 = __require("tty");
+  var hasFlag3 = require_has_flag();
+  var { env: env3 } = process;
   var forceColor;
-  if (hasFlag2("no-color") || hasFlag2("no-colors") || hasFlag2("color=false") || hasFlag2("color=never")) {
+  if (hasFlag3("no-color") || hasFlag3("no-colors") || hasFlag3("color=false") || hasFlag3("color=never")) {
     forceColor = 0;
-  } else if (hasFlag2("color") || hasFlag2("colors") || hasFlag2("color=true") || hasFlag2("color=always")) {
+  } else if (hasFlag3("color") || hasFlag3("colors") || hasFlag3("color=true") || hasFlag3("color=always")) {
     forceColor = 1;
   }
-  if ("FORCE_COLOR" in env2) {
-    if (env2.FORCE_COLOR === "true") {
+  if ("FORCE_COLOR" in env3) {
+    if (env3.FORCE_COLOR === "true") {
       forceColor = 1;
-    } else if (env2.FORCE_COLOR === "false") {
+    } else if (env3.FORCE_COLOR === "false") {
       forceColor = 0;
     } else {
-      forceColor = env2.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env2.FORCE_COLOR, 10), 3);
+      forceColor = env3.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env3.FORCE_COLOR, 10), 3);
     }
   }
-  function translateLevel2(level) {
+  function translateLevel3(level) {
     if (level === 0) {
       return false;
     }
@@ -12404,76 +12404,76 @@ var require_supports_color = __commonJS((exports, module) => {
       has16m: level >= 3
     };
   }
-  function supportsColor2(haveStream, streamIsTTY) {
+  function supportsColor3(haveStream, streamIsTTY) {
     if (forceColor === 0) {
       return 0;
     }
-    if (hasFlag2("color=16m") || hasFlag2("color=full") || hasFlag2("color=truecolor")) {
+    if (hasFlag3("color=16m") || hasFlag3("color=full") || hasFlag3("color=truecolor")) {
       return 3;
     }
-    if (hasFlag2("color=256")) {
+    if (hasFlag3("color=256")) {
       return 2;
     }
     if (haveStream && !streamIsTTY && forceColor === undefined) {
       return 0;
     }
     const min = forceColor || 0;
-    if (env2.TERM === "dumb") {
+    if (env3.TERM === "dumb") {
       return min;
     }
     if (process.platform === "win32") {
-      const osRelease = os2.release().split(".");
+      const osRelease = os3.release().split(".");
       if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
         return Number(osRelease[2]) >= 14931 ? 3 : 2;
       }
       return 1;
     }
-    if ("CI" in env2) {
-      if (["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "GITHUB_ACTIONS", "BUILDKITE"].some((sign) => (sign in env2)) || env2.CI_NAME === "codeship") {
+    if ("CI" in env3) {
+      if (["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "GITHUB_ACTIONS", "BUILDKITE"].some((sign) => (sign in env3)) || env3.CI_NAME === "codeship") {
         return 1;
       }
       return min;
     }
-    if ("TEAMCITY_VERSION" in env2) {
-      return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env2.TEAMCITY_VERSION) ? 1 : 0;
+    if ("TEAMCITY_VERSION" in env3) {
+      return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env3.TEAMCITY_VERSION) ? 1 : 0;
     }
-    if (env2.COLORTERM === "truecolor") {
+    if (env3.COLORTERM === "truecolor") {
       return 3;
     }
-    if ("TERM_PROGRAM" in env2) {
-      const version = parseInt((env2.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
-      switch (env2.TERM_PROGRAM) {
+    if ("TERM_PROGRAM" in env3) {
+      const version = parseInt((env3.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
+      switch (env3.TERM_PROGRAM) {
         case "iTerm.app":
           return version >= 3 ? 3 : 2;
         case "Apple_Terminal":
           return 2;
       }
     }
-    if (/-256(color)?$/i.test(env2.TERM)) {
+    if (/-256(color)?$/i.test(env3.TERM)) {
       return 2;
     }
-    if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env2.TERM)) {
+    if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env3.TERM)) {
       return 1;
     }
-    if ("COLORTERM" in env2) {
+    if ("COLORTERM" in env3) {
       return 1;
     }
     return min;
   }
   function getSupportLevel(stream) {
-    const level = supportsColor2(stream, stream && stream.isTTY);
-    return translateLevel2(level);
+    const level = supportsColor3(stream, stream && stream.isTTY);
+    return translateLevel3(level);
   }
   module.exports = {
     supportsColor: getSupportLevel,
-    stdout: translateLevel2(supportsColor2(true, tty2.isatty(1))),
-    stderr: translateLevel2(supportsColor2(true, tty2.isatty(2)))
+    stdout: translateLevel3(supportsColor3(true, tty3.isatty(1))),
+    stderr: translateLevel3(supportsColor3(true, tty3.isatty(2)))
   };
 });
 
 // node_modules/inquirer/node_modules/ora/node_modules/chalk/source/util.js
 var require_util = __commonJS((exports, module) => {
-  var stringReplaceAll2 = (string, substring, replacer) => {
+  var stringReplaceAll3 = (string, substring, replacer) => {
     let index = string.indexOf(substring);
     if (index === -1) {
       return string;
@@ -12489,7 +12489,7 @@ var require_util = __commonJS((exports, module) => {
     returnValue += string.substr(endIndex);
     return returnValue;
   };
-  var stringEncaseCRLFWithFirstIndex2 = (string, prefix, postfix, index) => {
+  var stringEncaseCRLFWithFirstIndex3 = (string, prefix, postfix, index) => {
     let endIndex = 0;
     let returnValue = "";
     do {
@@ -12505,8 +12505,8 @@ var require_util = __commonJS((exports, module) => {
     return returnValue;
   };
   module.exports = {
-    stringReplaceAll: stringReplaceAll2,
-    stringEncaseCRLFWithFirstIndex: stringEncaseCRLFWithFirstIndex2
+    stringReplaceAll: stringReplaceAll3,
+    stringEncaseCRLFWithFirstIndex: stringEncaseCRLFWithFirstIndex3
   };
 });
 
@@ -12571,27 +12571,27 @@ var require_templates = __commonJS((exports, module) => {
     }
     return results;
   }
-  function buildStyle(chalk2, styles3) {
+  function buildStyle(chalk3, styles5) {
     const enabled = {};
-    for (const layer of styles3) {
+    for (const layer of styles5) {
       for (const style of layer.styles) {
         enabled[style[0]] = layer.inverse ? null : style.slice(1);
       }
     }
-    let current = chalk2;
-    for (const [styleName, styles4] of Object.entries(enabled)) {
-      if (!Array.isArray(styles4)) {
+    let current = chalk3;
+    for (const [styleName, styles6] of Object.entries(enabled)) {
+      if (!Array.isArray(styles6)) {
         continue;
       }
       if (!(styleName in current)) {
         throw new Error(`Unknown Chalk style: ${styleName}`);
       }
-      current = styles4.length > 0 ? current[styleName](...styles4) : current[styleName];
+      current = styles6.length > 0 ? current[styleName](...styles6) : current[styleName];
     }
     return current;
   }
-  module.exports = (chalk2, temporary) => {
-    const styles3 = [];
+  module.exports = (chalk3, temporary) => {
+    const styles5 = [];
     const chunks = [];
     let chunk = [];
     temporary.replace(TEMPLATE_REGEX, (m, escapeCharacter, inverse, style, close, character) => {
@@ -12600,22 +12600,22 @@ var require_templates = __commonJS((exports, module) => {
       } else if (style) {
         const string = chunk.join("");
         chunk = [];
-        chunks.push(styles3.length === 0 ? string : buildStyle(chalk2, styles3)(string));
-        styles3.push({ inverse, styles: parseStyle(style) });
+        chunks.push(styles5.length === 0 ? string : buildStyle(chalk3, styles5)(string));
+        styles5.push({ inverse, styles: parseStyle(style) });
       } else if (close) {
-        if (styles3.length === 0) {
+        if (styles5.length === 0) {
           throw new Error("Found extraneous } in Chalk template literal");
         }
-        chunks.push(buildStyle(chalk2, styles3)(chunk.join("")));
+        chunks.push(buildStyle(chalk3, styles5)(chunk.join("")));
         chunk = [];
-        styles3.pop();
+        styles5.pop();
       } else {
         chunk.push(character);
       }
     });
     chunks.push(chunk.join(""));
-    if (styles3.length > 0) {
-      const errMessage = `Chalk template literal is missing ${styles3.length} closing bracket${styles3.length === 1 ? "" : "s"} (\`}\`)`;
+    if (styles5.length > 0) {
+      const errMessage = `Chalk template literal is missing ${styles5.length} closing bracket${styles5.length === 1 ? "" : "s"} (\`}\`)`;
       throw new Error(errMessage);
     }
     return chunks.join("");
@@ -12624,90 +12624,90 @@ var require_templates = __commonJS((exports, module) => {
 
 // node_modules/inquirer/node_modules/ora/node_modules/chalk/source/index.js
 var require_source = __commonJS((exports, module) => {
-  var ansiStyles2 = require_ansi_styles();
-  var { stdout: stdoutColor2, stderr: stderrColor2 } = require_supports_color();
+  var ansiStyles3 = require_ansi_styles();
+  var { stdout: stdoutColor3, stderr: stderrColor3 } = require_supports_color();
   var {
-    stringReplaceAll: stringReplaceAll2,
-    stringEncaseCRLFWithFirstIndex: stringEncaseCRLFWithFirstIndex2
+    stringReplaceAll: stringReplaceAll3,
+    stringEncaseCRLFWithFirstIndex: stringEncaseCRLFWithFirstIndex3
   } = require_util();
   var { isArray } = Array;
-  var levelMapping2 = [
+  var levelMapping3 = [
     "ansi",
     "ansi",
     "ansi256",
     "ansi16m"
   ];
-  var styles3 = Object.create(null);
-  var applyOptions2 = (object, options = {}) => {
+  var styles5 = Object.create(null);
+  var applyOptions3 = (object, options = {}) => {
     if (options.level && !(Number.isInteger(options.level) && options.level >= 0 && options.level <= 3)) {
       throw new Error("The `level` option should be an integer from 0 to 3");
     }
-    const colorLevel = stdoutColor2 ? stdoutColor2.level : 0;
+    const colorLevel = stdoutColor3 ? stdoutColor3.level : 0;
     object.level = options.level === undefined ? colorLevel : options.level;
   };
 
   class ChalkClass {
     constructor(options) {
-      return chalkFactory2(options);
+      return chalkFactory3(options);
     }
   }
-  var chalkFactory2 = (options) => {
-    const chalk3 = {};
-    applyOptions2(chalk3, options);
-    chalk3.template = (...arguments_) => chalkTag(chalk3.template, ...arguments_);
-    Object.setPrototypeOf(chalk3, Chalk.prototype);
-    Object.setPrototypeOf(chalk3.template, chalk3);
-    chalk3.template.constructor = () => {
+  var chalkFactory3 = (options) => {
+    const chalk4 = {};
+    applyOptions3(chalk4, options);
+    chalk4.template = (...arguments_) => chalkTag(chalk4.template, ...arguments_);
+    Object.setPrototypeOf(chalk4, Chalk.prototype);
+    Object.setPrototypeOf(chalk4.template, chalk4);
+    chalk4.template.constructor = () => {
       throw new Error("`chalk.constructor()` is deprecated. Use `new chalk.Instance()` instead.");
     };
-    chalk3.template.Instance = ChalkClass;
-    return chalk3.template;
+    chalk4.template.Instance = ChalkClass;
+    return chalk4.template;
   };
   function Chalk(options) {
-    return chalkFactory2(options);
+    return chalkFactory3(options);
   }
-  for (const [styleName, style] of Object.entries(ansiStyles2)) {
-    styles3[styleName] = {
+  for (const [styleName, style] of Object.entries(ansiStyles3)) {
+    styles5[styleName] = {
       get() {
-        const builder = createBuilder2(this, createStyler2(style.open, style.close, this._styler), this._isEmpty);
+        const builder = createBuilder3(this, createStyler3(style.open, style.close, this._styler), this._isEmpty);
         Object.defineProperty(this, styleName, { value: builder });
         return builder;
       }
     };
   }
-  styles3.visible = {
+  styles5.visible = {
     get() {
-      const builder = createBuilder2(this, this._styler, true);
+      const builder = createBuilder3(this, this._styler, true);
       Object.defineProperty(this, "visible", { value: builder });
       return builder;
     }
   };
-  var usedModels2 = ["rgb", "hex", "keyword", "hsl", "hsv", "hwb", "ansi", "ansi256"];
-  for (const model of usedModels2) {
-    styles3[model] = {
+  var usedModels3 = ["rgb", "hex", "keyword", "hsl", "hsv", "hwb", "ansi", "ansi256"];
+  for (const model of usedModels3) {
+    styles5[model] = {
       get() {
         const { level } = this;
         return function(...arguments_) {
-          const styler = createStyler2(ansiStyles2.color[levelMapping2[level]][model](...arguments_), ansiStyles2.color.close, this._styler);
-          return createBuilder2(this, styler, this._isEmpty);
+          const styler = createStyler3(ansiStyles3.color[levelMapping3[level]][model](...arguments_), ansiStyles3.color.close, this._styler);
+          return createBuilder3(this, styler, this._isEmpty);
         };
       }
     };
   }
-  for (const model of usedModels2) {
+  for (const model of usedModels3) {
     const bgModel = "bg" + model[0].toUpperCase() + model.slice(1);
-    styles3[bgModel] = {
+    styles5[bgModel] = {
       get() {
         const { level } = this;
         return function(...arguments_) {
-          const styler = createStyler2(ansiStyles2.bgColor[levelMapping2[level]][model](...arguments_), ansiStyles2.bgColor.close, this._styler);
-          return createBuilder2(this, styler, this._isEmpty);
+          const styler = createStyler3(ansiStyles3.bgColor[levelMapping3[level]][model](...arguments_), ansiStyles3.bgColor.close, this._styler);
+          return createBuilder3(this, styler, this._isEmpty);
         };
       }
     };
   }
-  var proto2 = Object.defineProperties(() => {}, {
-    ...styles3,
+  var proto3 = Object.defineProperties(() => {}, {
+    ...styles5,
     level: {
       enumerable: true,
       get() {
@@ -12718,7 +12718,7 @@ var require_source = __commonJS((exports, module) => {
       }
     }
   });
-  var createStyler2 = (open, close, parent) => {
+  var createStyler3 = (open, close, parent) => {
     let openAll;
     let closeAll;
     if (parent === undefined) {
@@ -12736,20 +12736,20 @@ var require_source = __commonJS((exports, module) => {
       parent
     };
   };
-  var createBuilder2 = (self2, _styler, _isEmpty) => {
+  var createBuilder3 = (self2, _styler, _isEmpty) => {
     const builder = (...arguments_) => {
       if (isArray(arguments_[0]) && isArray(arguments_[0].raw)) {
-        return applyStyle2(builder, chalkTag(builder, ...arguments_));
+        return applyStyle3(builder, chalkTag(builder, ...arguments_));
       }
-      return applyStyle2(builder, arguments_.length === 1 ? "" + arguments_[0] : arguments_.join(" "));
+      return applyStyle3(builder, arguments_.length === 1 ? "" + arguments_[0] : arguments_.join(" "));
     };
-    Object.setPrototypeOf(builder, proto2);
+    Object.setPrototypeOf(builder, proto3);
     builder._generator = self2;
     builder._styler = _styler;
     builder._isEmpty = _isEmpty;
     return builder;
   };
-  var applyStyle2 = (self2, string) => {
+  var applyStyle3 = (self2, string) => {
     if (self2.level <= 0 || !string) {
       return self2._isEmpty ? "" : string;
     }
@@ -12760,19 +12760,19 @@ var require_source = __commonJS((exports, module) => {
     const { openAll, closeAll } = styler;
     if (string.indexOf("\x1B") !== -1) {
       while (styler !== undefined) {
-        string = stringReplaceAll2(string, styler.close, styler.open);
+        string = stringReplaceAll3(string, styler.close, styler.open);
         styler = styler.parent;
       }
     }
     const lfIndex = string.indexOf(`
 `);
     if (lfIndex !== -1) {
-      string = stringEncaseCRLFWithFirstIndex2(string, closeAll, openAll, lfIndex);
+      string = stringEncaseCRLFWithFirstIndex3(string, closeAll, openAll, lfIndex);
     }
     return openAll + string + closeAll;
   };
   var template;
-  var chalkTag = (chalk3, ...strings) => {
+  var chalkTag = (chalk4, ...strings) => {
     const [firstString] = strings;
     if (!isArray(firstString) || !isArray(firstString.raw)) {
       return strings.join(" ");
@@ -12785,14 +12785,14 @@ var require_source = __commonJS((exports, module) => {
     if (template === undefined) {
       template = require_templates();
     }
-    return template(chalk3, parts.join(""));
+    return template(chalk4, parts.join(""));
   };
-  Object.defineProperties(Chalk.prototype, styles3);
-  var chalk2 = Chalk();
-  chalk2.supportsColor = stdoutColor2;
-  chalk2.stderr = Chalk({ level: stderrColor2 ? stderrColor2.level : 0 });
-  chalk2.stderr.supportsColor = stderrColor2;
-  module.exports = chalk2;
+  Object.defineProperties(Chalk.prototype, styles5);
+  var chalk3 = Chalk();
+  chalk3.supportsColor = stdoutColor3;
+  chalk3.stderr = Chalk({ level: stderrColor3 ? stderrColor3.level : 0 });
+  chalk3.stderr.supportsColor = stderrColor3;
+  module.exports = chalk3;
 });
 
 // node_modules/mimic-fn/index.js
@@ -12861,26 +12861,26 @@ var require_signals = __commonJS((exports, module) => {
 
 // node_modules/signal-exit/index.js
 var require_signal_exit = __commonJS((exports, module) => {
-  var process4 = global.process;
-  var processOk = function(process5) {
-    return process5 && typeof process5 === "object" && typeof process5.removeListener === "function" && typeof process5.emit === "function" && typeof process5.reallyExit === "function" && typeof process5.listeners === "function" && typeof process5.kill === "function" && typeof process5.pid === "number" && typeof process5.on === "function";
+  var process5 = global.process;
+  var processOk = function(process6) {
+    return process6 && typeof process6 === "object" && typeof process6.removeListener === "function" && typeof process6.emit === "function" && typeof process6.reallyExit === "function" && typeof process6.listeners === "function" && typeof process6.kill === "function" && typeof process6.pid === "number" && typeof process6.on === "function";
   };
-  if (!processOk(process4)) {
+  if (!processOk(process5)) {
     module.exports = function() {
       return function() {};
     };
   } else {
     assert2 = __require("assert");
     signals = require_signals();
-    isWin = /^win/i.test(process4.platform);
+    isWin = /^win/i.test(process5.platform);
     EE = __require("events");
     if (typeof EE !== "function") {
       EE = EE.EventEmitter;
     }
-    if (process4.__signal_exit_emitter__) {
-      emitter = process4.__signal_exit_emitter__;
+    if (process5.__signal_exit_emitter__) {
+      emitter = process5.__signal_exit_emitter__;
     } else {
-      emitter = process4.__signal_exit_emitter__ = new EE;
+      emitter = process5.__signal_exit_emitter__ = new EE;
       emitter.count = 0;
       emitter.emitted = {};
     }
@@ -12916,11 +12916,11 @@ var require_signal_exit = __commonJS((exports, module) => {
       loaded = false;
       signals.forEach(function(sig) {
         try {
-          process4.removeListener(sig, sigListeners[sig]);
+          process5.removeListener(sig, sigListeners[sig]);
         } catch (er) {}
       });
-      process4.emit = originalProcessEmit;
-      process4.reallyExit = originalProcessReallyExit;
+      process5.emit = originalProcessEmit;
+      process5.reallyExit = originalProcessReallyExit;
       emitter.count -= 1;
     };
     module.exports.unload = unload;
@@ -12937,7 +12937,7 @@ var require_signal_exit = __commonJS((exports, module) => {
         if (!processOk(global.process)) {
           return;
         }
-        var listeners = process4.listeners(sig);
+        var listeners = process5.listeners(sig);
         if (listeners.length === emitter.count) {
           unload();
           emit("exit", null, sig);
@@ -12945,7 +12945,7 @@ var require_signal_exit = __commonJS((exports, module) => {
           if (isWin && sig === "SIGHUP") {
             sig = "SIGINT";
           }
-          process4.kill(process4.pid, sig);
+          process5.kill(process5.pid, sig);
         }
       };
     });
@@ -12961,35 +12961,35 @@ var require_signal_exit = __commonJS((exports, module) => {
       emitter.count += 1;
       signals = signals.filter(function(sig) {
         try {
-          process4.on(sig, sigListeners[sig]);
+          process5.on(sig, sigListeners[sig]);
           return true;
         } catch (er) {
           return false;
         }
       });
-      process4.emit = processEmit;
-      process4.reallyExit = processReallyExit;
+      process5.emit = processEmit;
+      process5.reallyExit = processReallyExit;
     };
     module.exports.load = load;
-    originalProcessReallyExit = process4.reallyExit;
+    originalProcessReallyExit = process5.reallyExit;
     processReallyExit = function processReallyExit(code) {
       if (!processOk(global.process)) {
         return;
       }
-      process4.exitCode = code || 0;
-      emit("exit", process4.exitCode, null);
-      emit("afterexit", process4.exitCode, null);
-      originalProcessReallyExit.call(process4, process4.exitCode);
+      process5.exitCode = code || 0;
+      emit("exit", process5.exitCode, null);
+      emit("afterexit", process5.exitCode, null);
+      originalProcessReallyExit.call(process5, process5.exitCode);
     };
-    originalProcessEmit = process4.emit;
+    originalProcessEmit = process5.emit;
     processEmit = function processEmit(ev, arg) {
       if (ev === "exit" && processOk(global.process)) {
         if (arg !== undefined) {
-          process4.exitCode = arg;
+          process5.exitCode = arg;
         }
         var ret = originalProcessEmit.apply(this, arguments);
-        emit("exit", process4.exitCode, null);
-        emit("afterexit", process4.exitCode, null);
+        emit("exit", process5.exitCode, null);
+        emit("afterexit", process5.exitCode, null);
         return ret;
       } else {
         return originalProcessEmit.apply(this, arguments);
@@ -14706,19 +14706,19 @@ var require_is_unicode_supported = __commonJS((exports, module) => {
 
 // node_modules/inquirer/node_modules/ora/node_modules/log-symbols/index.js
 var require_log_symbols = __commonJS((exports, module) => {
-  var chalk2 = require_source();
+  var chalk3 = require_source();
   var isUnicodeSupported2 = require_is_unicode_supported();
   var main = {
-    info: chalk2.blue("\u2139"),
-    success: chalk2.green("\u2714"),
-    warning: chalk2.yellow("\u26A0"),
-    error: chalk2.red("\u2716")
+    info: chalk3.blue("\u2139"),
+    success: chalk3.green("\u2714"),
+    warning: chalk3.yellow("\u26A0"),
+    error: chalk3.red("\u2716")
   };
   var fallback = {
-    info: chalk2.blue("i"),
-    success: chalk2.green("\u221A"),
-    warning: chalk2.yellow("\u203C"),
-    error: chalk2.red("\xD7")
+    info: chalk3.blue("i"),
+    success: chalk3.green("\u221A"),
+    warning: chalk3.yellow("\u203C"),
+    error: chalk3.red("\xD7")
   };
   module.exports = isUnicodeSupported2() ? main : fallback;
 });
@@ -14747,7 +14747,7 @@ var require_clone = __commonJS((exports, module) => {
         if (depth2 == 0)
           return parent2;
         var child;
-        var proto2;
+        var proto3;
         if (typeof parent2 != "object") {
           return parent2;
         }
@@ -14769,11 +14769,11 @@ var require_clone = __commonJS((exports, module) => {
           return child;
         } else {
           if (typeof prototype == "undefined") {
-            proto2 = Object.getPrototypeOf(parent2);
-            child = Object.create(proto2);
+            proto3 = Object.getPrototypeOf(parent2);
+            child = Object.create(proto3);
           } else {
             child = Object.create(prototype);
-            proto2 = prototype;
+            proto3 = prototype;
           }
         }
         if (circular) {
@@ -14786,8 +14786,8 @@ var require_clone = __commonJS((exports, module) => {
         }
         for (var i in parent2) {
           var attrs;
-          if (proto2) {
-            attrs = Object.getOwnPropertyDescriptor(proto2, i);
+          if (proto3) {
+            attrs = Object.getOwnPropertyDescriptor(proto3, i);
           }
           if (attrs && attrs.set == null) {
             continue;
@@ -18240,7 +18240,7 @@ var require_bl = __commonJS((exports, module) => {
 // node_modules/inquirer/node_modules/ora/index.js
 var require_ora = __commonJS((exports, module) => {
   var readline = __require("readline");
-  var chalk2 = require_source();
+  var chalk3 = require_source();
   var cliCursor = require_cli_cursor();
   var cliSpinners = require_cli_spinners();
   var logSymbols = require_log_symbols();
@@ -18440,7 +18440,7 @@ var require_ora = __commonJS((exports, module) => {
       const { frames } = this.spinner;
       let frame = frames[this.frameIndex];
       if (this.color) {
-        frame = chalk2[this.color](frame);
+        frame = chalk3[this.color](frame);
       }
       this.frameIndex = ++this.frameIndex % frames.length;
       const fullPrefixText = typeof this.prefixText === "string" && this.prefixText !== "" ? this.prefixText + " " : "";
@@ -23894,7 +23894,7 @@ var require_chardet = __commonJS((exports, module) => {
         break;
       }
     }
-    var context = {
+    var context2 = {
       fByteStats,
       fC1Bytes,
       fRawInput: buffer,
@@ -23903,7 +23903,7 @@ var require_chardet = __commonJS((exports, module) => {
       fInputLen: buffer.length
     };
     var matches = recognisers.map(function(rec) {
-      return rec.match(context);
+      return rec.match(context2);
     }).filter(function(match) {
       return !!match;
     }).sort(function(a, b) {
@@ -27608,9 +27608,9 @@ var require_CreateFileError = __commonJS((exports) => {
       var _newTarget = this.constructor;
       var _this = _super.call(this, "Failed to create temporary file for editor") || this;
       _this.originalError = originalError;
-      var proto2 = _newTarget.prototype;
+      var proto3 = _newTarget.prototype;
       if (Object.setPrototypeOf) {
-        Object.setPrototypeOf(_this, proto2);
+        Object.setPrototypeOf(_this, proto3);
       } else {
         _this.__proto__ = _newTarget.prototype;
       }
@@ -27649,9 +27649,9 @@ var require_LaunchEditorError = __commonJS((exports) => {
       var _newTarget = this.constructor;
       var _this = _super.call(this, "Failed launch editor") || this;
       _this.originalError = originalError;
-      var proto2 = _newTarget.prototype;
+      var proto3 = _newTarget.prototype;
       if (Object.setPrototypeOf) {
-        Object.setPrototypeOf(_this, proto2);
+        Object.setPrototypeOf(_this, proto3);
       } else {
         _this.__proto__ = _newTarget.prototype;
       }
@@ -27690,9 +27690,9 @@ var require_ReadFileError = __commonJS((exports) => {
       var _newTarget = this.constructor;
       var _this = _super.call(this, "Failed to read temporary file") || this;
       _this.originalError = originalError;
-      var proto2 = _newTarget.prototype;
+      var proto3 = _newTarget.prototype;
       if (Object.setPrototypeOf) {
-        Object.setPrototypeOf(_this, proto2);
+        Object.setPrototypeOf(_this, proto3);
       } else {
         _this.__proto__ = _newTarget.prototype;
       }
@@ -27731,9 +27731,9 @@ var require_RemoveFileError = __commonJS((exports) => {
       var _newTarget = this.constructor;
       var _this = _super.call(this, "Failed to cleanup temporary file") || this;
       _this.originalError = originalError;
-      var proto2 = _newTarget.prototype;
+      var proto3 = _newTarget.prototype;
       if (Object.setPrototypeOf) {
-        Object.setPrototypeOf(_this, proto2);
+        Object.setPrototypeOf(_this, proto3);
       } else {
         _this.__proto__ = _newTarget.prototype;
       }
@@ -29477,7 +29477,7 @@ var require_ms = __commonJS((exports, module) => {
 
 // node_modules/debug/src/common.js
 var require_common = __commonJS((exports, module) => {
-  function setup(env2) {
+  function setup(env3) {
     createDebug.debug = createDebug;
     createDebug.default = createDebug;
     createDebug.coerce = coerce;
@@ -29486,8 +29486,8 @@ var require_common = __commonJS((exports, module) => {
     createDebug.enabled = enabled;
     createDebug.humanize = require_ms();
     createDebug.destroy = destroy;
-    Object.keys(env2).forEach((key) => {
-      createDebug[key] = env2[key];
+    Object.keys(env3).forEach((key) => {
+      createDebug[key] = env3[key];
     });
     createDebug.names = [];
     createDebug.skips = [];
@@ -29812,7 +29812,7 @@ var require_browser = __commonJS((exports, module) => {
 
 // node_modules/debug/src/node.js
 var require_node2 = __commonJS((exports, module) => {
-  var tty2 = __require("tty");
+  var tty3 = __require("tty");
   var util = __require("util");
   exports.init = init;
   exports.log = log;
@@ -29823,8 +29823,8 @@ var require_node2 = __commonJS((exports, module) => {
   exports.destroy = util.deprecate(() => {}, "Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
   exports.colors = [6, 2, 3, 4, 5, 1];
   try {
-    const supportsColor2 = require_supports_color();
-    if (supportsColor2 && (supportsColor2.stderr || supportsColor2).level >= 2) {
+    const supportsColor3 = require_supports_color();
+    if (supportsColor3 && (supportsColor3.stderr || supportsColor3).level >= 2) {
       exports.colors = [
         20,
         21,
@@ -29925,7 +29925,7 @@ var require_node2 = __commonJS((exports, module) => {
     return obj;
   }, {});
   function useColors() {
-    return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty2.isatty(process.stderr.fd);
+    return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty3.isatty(process.stderr.fd);
   }
   function formatArgs(args) {
     const { namespace: name, useColors: useColors2 } = this;
@@ -30875,15 +30875,15 @@ var require_bolt11 = __commonJS((exports, module) => {
     }
     const featureBits = {};
     FEATUREBIT_ORDER.forEach((featureName, index) => {
-      let status;
+      let status3;
       if (bools[index * 2]) {
-        status = "required";
+        status3 = "required";
       } else if (bools[index * 2 + 1]) {
-        status = "supported";
+        status3 = "supported";
       } else {
-        status = "unsupported";
+        status3 = "unsupported";
       }
-      featureBits[featureName] = status;
+      featureBits[featureName] = status3;
     });
     const extraBits = bools.slice(FEATUREBIT_ORDER.length * 2);
     featureBits.extra_bits = {
@@ -31055,2671 +31055,6 @@ var require_bolt11 = __commonJS((exports, module) => {
   };
 });
 
-// ../shared/node_modules/tseep/lib/types.js
-var require_types3 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-});
-
-// ../shared/node_modules/tseep/lib/task-collection/utils.js
-var require_utils3 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports._fast_remove_single = undefined;
-  function _fast_remove_single(arr, index) {
-    if (index === -1)
-      return;
-    if (index === 0)
-      arr.shift();
-    else if (index === arr.length - 1)
-      arr.length = arr.length - 1;
-    else
-      arr.splice(index, 1);
-  }
-  exports._fast_remove_single = _fast_remove_single;
-});
-
-// ../shared/node_modules/tseep/lib/task-collection/bake-collection.js
-var require_bake_collection2 = __commonJS((exports, module) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.bakeCollectionVariadic = exports.bakeCollectionAwait = exports.bakeCollection = exports.BAKED_EMPTY_FUNC = undefined;
-  exports.BAKED_EMPTY_FUNC = function() {};
-  var FORLOOP_FALLBACK = 1500;
-  function generateArgsDefCode(numArgs) {
-    var argsDefCode2 = "";
-    if (numArgs === 0)
-      return argsDefCode2;
-    for (var i2 = 0;i2 < numArgs - 1; ++i2) {
-      argsDefCode2 += "arg" + String(i2) + ", ";
-    }
-    argsDefCode2 += "arg" + String(numArgs - 1);
-    return argsDefCode2;
-  }
-  function generateBodyPartsCode(argsDefCode2, collectionLength) {
-    var funcDefCode2 = "", funcCallCode2 = "";
-    for (var i2 = 0;i2 < collectionLength; ++i2) {
-      funcDefCode2 += "var f".concat(i2, " = collection[").concat(i2, `];
-`);
-      funcCallCode2 += "f".concat(i2, "(").concat(argsDefCode2, `)
-`);
-    }
-    return { funcDefCode: funcDefCode2, funcCallCode: funcCallCode2 };
-  }
-  function generateBodyPartsVariadicCode(collectionLength) {
-    var funcDefCode2 = "", funcCallCode2 = "";
-    for (var i2 = 0;i2 < collectionLength; ++i2) {
-      funcDefCode2 += "var f".concat(i2, " = collection[").concat(i2, `];
-`);
-      funcCallCode2 += "f".concat(i2, `.apply(undefined, arguments)
-`);
-    }
-    return { funcDefCode: funcDefCode2, funcCallCode: funcCallCode2 };
-  }
-  function bakeCollection(collection, fixedArgsNum) {
-    if (collection.length === 0)
-      return exports.BAKED_EMPTY_FUNC;
-    else if (collection.length === 1)
-      return collection[0];
-    var funcFactoryCode;
-    if (collection.length < FORLOOP_FALLBACK) {
-      var argsDefCode = generateArgsDefCode(fixedArgsNum);
-      var _a = generateBodyPartsCode(argsDefCode, collection.length), funcDefCode = _a.funcDefCode, funcCallCode = _a.funcCallCode;
-      funcFactoryCode = `(function(collection) {
-            `.concat(funcDefCode, `
-            collection = undefined;
-            return (function(`).concat(argsDefCode, `) {
-                `).concat(funcCallCode, `
-            });
-        })`);
-    } else {
-      var argsDefCode = generateArgsDefCode(fixedArgsNum);
-      if (collection.length % 10 === 0) {
-        funcFactoryCode = `(function(collection) {
-                return (function(`.concat(argsDefCode, `) {
-                    for (var i = 0; i < collection.length; i += 10) {
-                        collection[i](`).concat(argsDefCode, `);
-                        collection[i+1](`).concat(argsDefCode, `);
-                        collection[i+2](`).concat(argsDefCode, `);
-                        collection[i+3](`).concat(argsDefCode, `);
-                        collection[i+4](`).concat(argsDefCode, `);
-                        collection[i+5](`).concat(argsDefCode, `);
-                        collection[i+6](`).concat(argsDefCode, `);
-                        collection[i+7](`).concat(argsDefCode, `);
-                        collection[i+8](`).concat(argsDefCode, `);
-                        collection[i+9](`).concat(argsDefCode, `);
-                    }
-                });
-            })`);
-      } else if (collection.length % 4 === 0) {
-        funcFactoryCode = `(function(collection) {
-                return (function(`.concat(argsDefCode, `) {
-                    for (var i = 0; i < collection.length; i += 4) {
-                        collection[i](`).concat(argsDefCode, `);
-                        collection[i+1](`).concat(argsDefCode, `);
-                        collection[i+2](`).concat(argsDefCode, `);
-                        collection[i+3](`).concat(argsDefCode, `);
-                    }
-                });
-            })`);
-      } else if (collection.length % 3 === 0) {
-        funcFactoryCode = `(function(collection) {
-                return (function(`.concat(argsDefCode, `) {
-                    for (var i = 0; i < collection.length; i += 3) {
-                        collection[i](`).concat(argsDefCode, `);
-                        collection[i+1](`).concat(argsDefCode, `);
-                        collection[i+2](`).concat(argsDefCode, `);
-                    }
-                });
-            })`);
-      } else {
-        funcFactoryCode = `(function(collection) {
-                return (function(`.concat(argsDefCode, `) {
-                    for (var i = 0; i < collection.length; ++i) {
-                        collection[i](`).concat(argsDefCode, `);
-                    }
-                });
-            })`);
-      }
-    }
-    {
-      var bakeCollection_1 = undefined;
-      var fixedArgsNum_1 = undefined;
-      var bakeCollectionVariadic_1 = undefined;
-      var bakeCollectionAwait_1 = undefined;
-      var funcFactory = eval(funcFactoryCode);
-      return funcFactory(collection);
-    }
-  }
-  exports.bakeCollection = bakeCollection;
-  function bakeCollectionAwait(collection, fixedArgsNum) {
-    if (collection.length === 0)
-      return exports.BAKED_EMPTY_FUNC;
-    else if (collection.length === 1)
-      return collection[0];
-    var funcFactoryCode;
-    if (collection.length < FORLOOP_FALLBACK) {
-      var argsDefCode = generateArgsDefCode(fixedArgsNum);
-      var _a = generateBodyPartsCode(argsDefCode, collection.length), funcDefCode = _a.funcDefCode, funcCallCode = _a.funcCallCode;
-      funcFactoryCode = `(function(collection) {
-            `.concat(funcDefCode, `
-            collection = undefined;
-            return (function(`).concat(argsDefCode, `) {
-                return Promise.all([ `).concat(funcCallCode, ` ]);
-            });
-        })`);
-    } else {
-      var argsDefCode = generateArgsDefCode(fixedArgsNum);
-      funcFactoryCode = `(function(collection) {
-            return (function(`.concat(argsDefCode, `) {
-                var promises = Array(collection.length);
-                for (var i = 0; i < collection.length; ++i) {
-                    promises[i] = collection[i](`).concat(argsDefCode, `);
-                }
-                return Promise.all(promises);
-            });
-        })`);
-    }
-    {
-      var bakeCollection_2 = undefined;
-      var fixedArgsNum_2 = undefined;
-      var bakeCollectionVariadic_2 = undefined;
-      var bakeCollectionAwait_2 = undefined;
-      var funcFactory = eval(funcFactoryCode);
-      return funcFactory(collection);
-    }
-  }
-  exports.bakeCollectionAwait = bakeCollectionAwait;
-  function bakeCollectionVariadic(collection) {
-    if (collection.length === 0)
-      return exports.BAKED_EMPTY_FUNC;
-    else if (collection.length === 1)
-      return collection[0];
-    var funcFactoryCode;
-    if (collection.length < FORLOOP_FALLBACK) {
-      var _a = generateBodyPartsVariadicCode(collection.length), funcDefCode = _a.funcDefCode, funcCallCode = _a.funcCallCode;
-      funcFactoryCode = `(function(collection) {
-            `.concat(funcDefCode, `
-            collection = undefined;
-            return (function() {
-                `).concat(funcCallCode, `
-            });
-        })`);
-    } else {
-      funcFactoryCode = `(function(collection) {
-            return (function() {
-                for (var i = 0; i < collection.length; ++i) {
-                    collection[i].apply(undefined, arguments);
-                }
-            });
-        })`;
-    }
-    {
-      var bakeCollection_3 = undefined;
-      var fixedArgsNum = undefined;
-      var bakeCollectionVariadic_3 = undefined;
-      var bakeCollectionAwait_3 = undefined;
-      var funcFactory = eval(funcFactoryCode);
-      return funcFactory(collection);
-    }
-  }
-  exports.bakeCollectionVariadic = bakeCollectionVariadic;
-});
-
-// ../shared/node_modules/tseep/lib/task-collection/task-collection.js
-var require_task_collection3 = __commonJS((exports) => {
-  var __spreadArray = exports && exports.__spreadArray || function(to, from3, pack) {
-    if (pack || arguments.length === 2)
-      for (var i2 = 0, l = from3.length, ar;i2 < l; i2++) {
-        if (ar || !(i2 in from3)) {
-          if (!ar)
-            ar = Array.prototype.slice.call(from3, 0, i2);
-          ar[i2] = from3[i2];
-        }
-      }
-    return to.concat(ar || Array.prototype.slice.call(from3));
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.TaskCollection = undefined;
-  var utils_1 = require_utils3();
-  var bake_collection_1 = require_bake_collection2();
-  function push_norebuild(a, b) {
-    var len = this.length;
-    if (len > 1) {
-      if (b) {
-        var _a2;
-        (_a2 = this._tasks).push.apply(_a2, arguments);
-        this.length += arguments.length;
-      } else {
-        this._tasks.push(a);
-        this.length++;
-      }
-    } else {
-      if (b) {
-        if (len === 1) {
-          var newAr = Array(1 + arguments.length);
-          newAr.push(newAr);
-          newAr.push.apply(newAr, arguments);
-          this._tasks = newAr;
-        } else {
-          var newAr = Array(arguments.length);
-          newAr.push.apply(newAr, arguments);
-          this._tasks = newAr;
-        }
-        this.length += arguments.length;
-      } else {
-        if (len === 1)
-          this._tasks = [this._tasks, a];
-        else
-          this._tasks = a;
-        this.length++;
-      }
-    }
-  }
-  function push_rebuild(a, b) {
-    var len = this.length;
-    if (len > 1) {
-      if (b) {
-        var _a2;
-        (_a2 = this._tasks).push.apply(_a2, arguments);
-        this.length += arguments.length;
-      } else {
-        this._tasks.push(a);
-        this.length++;
-      }
-    } else {
-      if (b) {
-        if (len === 1) {
-          var newAr = Array(1 + arguments.length);
-          newAr.push(newAr);
-          newAr.push.apply(newAr, arguments);
-          this._tasks = newAr;
-        } else {
-          var newAr = Array(arguments.length);
-          newAr.push.apply(newAr, arguments);
-          this._tasks = newAr;
-        }
-        this.length += arguments.length;
-      } else {
-        if (len === 1)
-          this._tasks = [this._tasks, a];
-        else
-          this._tasks = a;
-        this.length++;
-      }
-    }
-    if (this.firstEmitBuildStrategy)
-      this.call = rebuild_on_first_call;
-    else
-      this.rebuild();
-  }
-  function removeLast_norebuild(a) {
-    if (this.length === 0)
-      return;
-    if (this.length === 1) {
-      if (this._tasks === a) {
-        this.length = 0;
-      }
-    } else {
-      (0, utils_1._fast_remove_single)(this._tasks, this._tasks.lastIndexOf(a));
-      if (this._tasks.length === 1) {
-        this._tasks = this._tasks[0];
-        this.length = 1;
-      } else
-        this.length = this._tasks.length;
-    }
-  }
-  function removeLast_rebuild(a) {
-    if (this.length === 0)
-      return;
-    if (this.length === 1) {
-      if (this._tasks === a) {
-        this.length = 0;
-      }
-      if (this.firstEmitBuildStrategy) {
-        this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-        return;
-      } else {
-        this.rebuild();
-        return;
-      }
-    } else {
-      (0, utils_1._fast_remove_single)(this._tasks, this._tasks.lastIndexOf(a));
-      if (this._tasks.length === 1) {
-        this._tasks = this._tasks[0];
-        this.length = 1;
-      } else
-        this.length = this._tasks.length;
-    }
-    if (this.firstEmitBuildStrategy)
-      this.call = rebuild_on_first_call;
-    else
-      this.rebuild();
-  }
-  function insert_norebuild(index) {
-    var _b;
-    var func = [];
-    for (var _i = 1;_i < arguments.length; _i++) {
-      func[_i - 1] = arguments[_i];
-    }
-    if (this.length === 0) {
-      this._tasks = func;
-      this.length = 1;
-    } else if (this.length === 1) {
-      func.unshift(this._tasks);
-      this._tasks = func;
-      this.length = this._tasks.length;
-    } else {
-      (_b = this._tasks).splice.apply(_b, __spreadArray([index, 0], func, false));
-      this.length = this._tasks.length;
-    }
-  }
-  function insert_rebuild(index) {
-    var _b;
-    var func = [];
-    for (var _i = 1;_i < arguments.length; _i++) {
-      func[_i - 1] = arguments[_i];
-    }
-    if (this.length === 0) {
-      this._tasks = func;
-      this.length = 1;
-    } else if (this.length === 1) {
-      func.unshift(this._tasks);
-      this._tasks = func;
-      this.length = this._tasks.length;
-    } else {
-      (_b = this._tasks).splice.apply(_b, __spreadArray([index, 0], func, false));
-      this.length = this._tasks.length;
-    }
-    if (this.firstEmitBuildStrategy)
-      this.call = rebuild_on_first_call;
-    else
-      this.rebuild();
-  }
-  function rebuild_noawait() {
-    if (this.length === 0)
-      this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-    else if (this.length === 1)
-      this.call = this._tasks;
-    else
-      this.call = (0, bake_collection_1.bakeCollection)(this._tasks, this.argsNum);
-  }
-  function rebuild_await() {
-    if (this.length === 0)
-      this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-    else if (this.length === 1)
-      this.call = this._tasks;
-    else
-      this.call = (0, bake_collection_1.bakeCollectionAwait)(this._tasks, this.argsNum);
-  }
-  function rebuild_on_first_call() {
-    this.rebuild();
-    this.call.apply(undefined, arguments);
-  }
-  var TaskCollection = function() {
-    function TaskCollection2(argsNum, autoRebuild, initialTasks, awaitTasks) {
-      if (autoRebuild === undefined) {
-        autoRebuild = true;
-      }
-      if (initialTasks === undefined) {
-        initialTasks = null;
-      }
-      if (awaitTasks === undefined) {
-        awaitTasks = false;
-      }
-      this.awaitTasks = awaitTasks;
-      this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-      this.argsNum = argsNum;
-      this.firstEmitBuildStrategy = true;
-      if (awaitTasks)
-        this.rebuild = rebuild_await.bind(this);
-      else
-        this.rebuild = rebuild_noawait.bind(this);
-      this.setAutoRebuild(autoRebuild);
-      if (initialTasks) {
-        if (typeof initialTasks === "function") {
-          this._tasks = initialTasks;
-          this.length = 1;
-        } else {
-          this._tasks = initialTasks;
-          this.length = initialTasks.length;
-        }
-      } else {
-        this._tasks = null;
-        this.length = 0;
-      }
-      if (autoRebuild)
-        this.rebuild();
-    }
-    return TaskCollection2;
-  }();
-  exports.TaskCollection = TaskCollection;
-  function fastClear() {
-    this._tasks = null;
-    this.length = 0;
-    this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-  }
-  function clear() {
-    this._tasks = null;
-    this.length = 0;
-    this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-  }
-  function growArgsNum(argsNum) {
-    if (this.argsNum < argsNum) {
-      this.argsNum = argsNum;
-      if (this.firstEmitBuildStrategy)
-        this.call = rebuild_on_first_call;
-      else
-        this.rebuild();
-    }
-  }
-  function setAutoRebuild(newVal) {
-    if (newVal) {
-      this.push = push_rebuild.bind(this);
-      this.insert = insert_rebuild.bind(this);
-      this.removeLast = removeLast_rebuild.bind(this);
-    } else {
-      this.push = push_norebuild.bind(this);
-      this.insert = insert_norebuild.bind(this);
-      this.removeLast = removeLast_norebuild.bind(this);
-    }
-  }
-  function tasksAsArray() {
-    if (this.length === 0)
-      return [];
-    if (this.length === 1)
-      return [this._tasks];
-    return this._tasks;
-  }
-  function setTasks(tasks) {
-    if (tasks.length === 0) {
-      this.length = 0;
-      this.call = bake_collection_1.BAKED_EMPTY_FUNC;
-    } else if (tasks.length === 1) {
-      this.length = 1;
-      this.call = tasks[0];
-      this._tasks = tasks[0];
-    } else {
-      this.length = tasks.length;
-      this._tasks = tasks;
-      if (this.firstEmitBuildStrategy)
-        this.call = rebuild_on_first_call;
-      else
-        this.rebuild();
-    }
-  }
-  TaskCollection.prototype.fastClear = fastClear;
-  TaskCollection.prototype.clear = clear;
-  TaskCollection.prototype.growArgsNum = growArgsNum;
-  TaskCollection.prototype.setAutoRebuild = setAutoRebuild;
-  TaskCollection.prototype.tasksAsArray = tasksAsArray;
-  TaskCollection.prototype.setTasks = setTasks;
-});
-
-// ../shared/node_modules/tseep/lib/task-collection/index.js
-var require_task_collection4 = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __exportStar = exports && exports.__exportStar || function(m, exports2) {
-    for (var p in m)
-      if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p))
-        __createBinding(exports2, m, p);
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  __exportStar(require_task_collection3(), exports);
-});
-
-// ../shared/node_modules/tseep/lib/utils.js
-var require_utils4 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.nullObj = undefined;
-  function nullObj() {
-    var x = {};
-    x.__proto__ = null;
-    return x;
-  }
-  exports.nullObj = nullObj;
-});
-
-// ../shared/node_modules/tseep/lib/ee.js
-var require_ee2 = __commonJS((exports) => {
-  var __spreadArray = exports && exports.__spreadArray || function(to, from3, pack) {
-    if (pack || arguments.length === 2)
-      for (var i2 = 0, l = from3.length, ar;i2 < l; i2++) {
-        if (ar || !(i2 in from3)) {
-          if (!ar)
-            ar = Array.prototype.slice.call(from3, 0, i2);
-          ar[i2] = from3[i2];
-        }
-      }
-    return to.concat(ar || Array.prototype.slice.call(from3));
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.EventEmitter = undefined;
-  var task_collection_1 = require_task_collection4();
-  var utils_1 = require_utils3();
-  var utils_2 = require_utils4();
-  function emit(event, a, b, c, d4, e) {
-    var ev = this.events[event];
-    if (ev) {
-      if (ev.length === 0)
-        return false;
-      if (ev.argsNum < 6) {
-        ev.call(a, b, c, d4, e);
-      } else {
-        var arr = new Array(ev.argsNum);
-        for (var i2 = 0, len = arr.length;i2 < len; ++i2) {
-          arr[i2] = arguments[i2 + 1];
-        }
-        ev.call.apply(undefined, arr);
-      }
-      return true;
-    }
-    return false;
-  }
-  function emitHasOnce(event, a, b, c, d4, e) {
-    var ev = this.events[event];
-    var argsArr;
-    if (ev !== undefined) {
-      if (ev.length === 0)
-        return false;
-      if (ev.argsNum < 6) {
-        ev.call(a, b, c, d4, e);
-      } else {
-        argsArr = new Array(ev.argsNum);
-        for (var i2 = 0, len = argsArr.length;i2 < len; ++i2) {
-          argsArr[i2] = arguments[i2 + 1];
-        }
-        ev.call.apply(undefined, argsArr);
-      }
-    }
-    var oev = this.onceEvents[event];
-    if (oev) {
-      if (typeof oev === "function") {
-        this.onceEvents[event] = undefined;
-        if (arguments.length < 6) {
-          oev(a, b, c, d4, e);
-        } else {
-          if (argsArr === undefined) {
-            argsArr = new Array(arguments.length - 1);
-            for (var i2 = 0, len = argsArr.length;i2 < len; ++i2) {
-              argsArr[i2] = arguments[i2 + 1];
-            }
-          }
-          oev.apply(undefined, argsArr);
-        }
-      } else {
-        var fncs = oev;
-        this.onceEvents[event] = undefined;
-        if (arguments.length < 6) {
-          for (var i2 = 0;i2 < fncs.length; ++i2) {
-            fncs[i2](a, b, c, d4, e);
-          }
-        } else {
-          if (argsArr === undefined) {
-            argsArr = new Array(arguments.length - 1);
-            for (var i2 = 0, len = argsArr.length;i2 < len; ++i2) {
-              argsArr[i2] = arguments[i2 + 1];
-            }
-          }
-          for (var i2 = 0;i2 < fncs.length; ++i2) {
-            fncs[i2].apply(undefined, argsArr);
-          }
-        }
-      }
-      return true;
-    }
-    return ev !== undefined;
-  }
-  var EventEmitter10 = function() {
-    function EventEmitter11() {
-      this.events = (0, utils_2.nullObj)();
-      this.onceEvents = (0, utils_2.nullObj)();
-      this._symbolKeys = new Set;
-      this.maxListeners = Infinity;
-    }
-    Object.defineProperty(EventEmitter11.prototype, "_eventsCount", {
-      get: function() {
-        return this.eventNames().length;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return EventEmitter11;
-  }();
-  exports.EventEmitter = EventEmitter10;
-  function once(event, listener) {
-    if (this.emit === emit) {
-      this.emit = emitHasOnce;
-    }
-    switch (typeof this.onceEvents[event]) {
-      case "undefined":
-        this.onceEvents[event] = listener;
-        if (typeof event === "symbol")
-          this._symbolKeys.add(event);
-        break;
-      case "function":
-        this.onceEvents[event] = [this.onceEvents[event], listener];
-        break;
-      case "object":
-        this.onceEvents[event].push(listener);
-    }
-    return this;
-  }
-  function addListener(event, listener, argsNum) {
-    if (argsNum === undefined) {
-      argsNum = listener.length;
-    }
-    if (typeof listener !== "function")
-      throw new TypeError("The listener must be a function");
-    var evtmap = this.events[event];
-    if (!evtmap) {
-      this.events[event] = new task_collection_1.TaskCollection(argsNum, true, listener, false);
-      if (typeof event === "symbol")
-        this._symbolKeys.add(event);
-    } else {
-      evtmap.push(listener);
-      evtmap.growArgsNum(argsNum);
-      if (this.maxListeners !== Infinity && this.maxListeners <= evtmap.length)
-        console.warn('Maximum event listeners for "'.concat(String(event), '" event!'));
-    }
-    return this;
-  }
-  function removeListener(event, listener) {
-    var evt = this.events[event];
-    if (evt) {
-      evt.removeLast(listener);
-    }
-    var evto = this.onceEvents[event];
-    if (evto) {
-      if (typeof evto === "function") {
-        this.onceEvents[event] = undefined;
-      } else if (typeof evto === "object") {
-        if (evto.length === 1 && evto[0] === listener) {
-          this.onceEvents[event] = undefined;
-        } else {
-          (0, utils_1._fast_remove_single)(evto, evto.lastIndexOf(listener));
-        }
-      }
-    }
-    return this;
-  }
-  function addListenerBound(event, listener, bindTo, argsNum) {
-    if (bindTo === undefined) {
-      bindTo = this;
-    }
-    if (argsNum === undefined) {
-      argsNum = listener.length;
-    }
-    if (!this.boundFuncs)
-      this.boundFuncs = new Map;
-    var bound = listener.bind(bindTo);
-    this.boundFuncs.set(listener, bound);
-    return this.addListener(event, bound, argsNum);
-  }
-  function removeListenerBound(event, listener) {
-    var _a2, _b;
-    var bound = (_a2 = this.boundFuncs) === null || _a2 === undefined ? undefined : _a2.get(listener);
-    (_b = this.boundFuncs) === null || _b === undefined || _b.delete(listener);
-    return this.removeListener(event, bound);
-  }
-  function hasListeners(event) {
-    return this.events[event] && !!this.events[event].length;
-  }
-  function prependListener(event, listener, argsNum) {
-    if (argsNum === undefined) {
-      argsNum = listener.length;
-    }
-    if (typeof listener !== "function")
-      throw new TypeError("The listener must be a function");
-    var evtmap = this.events[event];
-    if (!evtmap || !(evtmap instanceof task_collection_1.TaskCollection)) {
-      evtmap = this.events[event] = new task_collection_1.TaskCollection(argsNum, true, listener, false);
-      if (typeof event === "symbol")
-        this._symbolKeys.add(event);
-    } else {
-      evtmap.insert(0, listener);
-      evtmap.growArgsNum(argsNum);
-      if (this.maxListeners !== Infinity && this.maxListeners <= evtmap.length)
-        console.warn('Maximum event listeners for "'.concat(String(event), '" event!'));
-    }
-    return this;
-  }
-  function prependOnceListener(event, listener) {
-    if (this.emit === emit) {
-      this.emit = emitHasOnce;
-    }
-    var evtmap = this.onceEvents[event];
-    if (!evtmap) {
-      this.onceEvents[event] = [listener];
-      if (typeof event === "symbol")
-        this._symbolKeys.add(event);
-    } else if (typeof evtmap !== "object") {
-      this.onceEvents[event] = [listener, evtmap];
-      if (typeof event === "symbol")
-        this._symbolKeys.add(event);
-    } else {
-      evtmap.unshift(listener);
-      if (this.maxListeners !== Infinity && this.maxListeners <= evtmap.length) {
-        console.warn('Maximum event listeners for "'.concat(String(event), '" once event!'));
-      }
-    }
-    return this;
-  }
-  function removeAllListeners(event) {
-    if (event === undefined) {
-      this.events = (0, utils_2.nullObj)();
-      this.onceEvents = (0, utils_2.nullObj)();
-      this._symbolKeys = new Set;
-    } else {
-      this.events[event] = undefined;
-      this.onceEvents[event] = undefined;
-      if (typeof event === "symbol")
-        this._symbolKeys.delete(event);
-    }
-    return this;
-  }
-  function setMaxListeners(n) {
-    this.maxListeners = n;
-    return this;
-  }
-  function getMaxListeners() {
-    return this.maxListeners;
-  }
-  function listeners(event) {
-    if (this.emit === emit)
-      return this.events[event] ? this.events[event].tasksAsArray().slice() : [];
-    else {
-      if (this.events[event] && this.onceEvents[event]) {
-        return __spreadArray(__spreadArray([], this.events[event].tasksAsArray(), true), typeof this.onceEvents[event] === "function" ? [this.onceEvents[event]] : this.onceEvents[event], true);
-      } else if (this.events[event])
-        return this.events[event].tasksAsArray();
-      else if (this.onceEvents[event])
-        return typeof this.onceEvents[event] === "function" ? [this.onceEvents[event]] : this.onceEvents[event];
-      else
-        return [];
-    }
-  }
-  function eventNames() {
-    var _this = this;
-    if (this.emit === emit) {
-      var keys = Object.keys(this.events);
-      return __spreadArray(__spreadArray([], keys, true), Array.from(this._symbolKeys), true).filter(function(x) {
-        return x in _this.events && _this.events[x] && _this.events[x].length;
-      });
-    } else {
-      var keys = Object.keys(this.events).filter(function(x) {
-        return _this.events[x] && _this.events[x].length;
-      });
-      var keysO = Object.keys(this.onceEvents).filter(function(x) {
-        return _this.onceEvents[x] && _this.onceEvents[x].length;
-      });
-      return __spreadArray(__spreadArray(__spreadArray([], keys, true), keysO, true), Array.from(this._symbolKeys).filter(function(x) {
-        return x in _this.events && _this.events[x] && _this.events[x].length || x in _this.onceEvents && _this.onceEvents[x] && _this.onceEvents[x].length;
-      }), true);
-    }
-  }
-  function listenerCount(type) {
-    if (this.emit === emit)
-      return this.events[type] && this.events[type].length || 0;
-    else
-      return (this.events[type] && this.events[type].length || 0) + (this.onceEvents[type] && this.onceEvents[type].length || 0);
-  }
-  EventEmitter10.prototype.emit = emit;
-  EventEmitter10.prototype.on = addListener;
-  EventEmitter10.prototype.once = once;
-  EventEmitter10.prototype.addListener = addListener;
-  EventEmitter10.prototype.removeListener = removeListener;
-  EventEmitter10.prototype.addListenerBound = addListenerBound;
-  EventEmitter10.prototype.removeListenerBound = removeListenerBound;
-  EventEmitter10.prototype.hasListeners = hasListeners;
-  EventEmitter10.prototype.prependListener = prependListener;
-  EventEmitter10.prototype.prependOnceListener = prependOnceListener;
-  EventEmitter10.prototype.off = removeListener;
-  EventEmitter10.prototype.removeAllListeners = removeAllListeners;
-  EventEmitter10.prototype.setMaxListeners = setMaxListeners;
-  EventEmitter10.prototype.getMaxListeners = getMaxListeners;
-  EventEmitter10.prototype.listeners = listeners;
-  EventEmitter10.prototype.eventNames = eventNames;
-  EventEmitter10.prototype.listenerCount = listenerCount;
-});
-
-// ../shared/node_modules/tseep/lib/index.js
-var require_lib5 = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __exportStar = exports && exports.__exportStar || function(m, exports2) {
-    for (var p in m)
-      if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p))
-        __createBinding(exports2, m, p);
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  __exportStar(require_types3(), exports);
-  __exportStar(require_ee2(), exports);
-});
-
-// ../shared/node_modules/ms/index.js
-var require_ms2 = __commonJS((exports, module) => {
-  var s = 1000;
-  var m = s * 60;
-  var h = m * 60;
-  var d4 = h * 24;
-  var w = d4 * 7;
-  var y = d4 * 365.25;
-  module.exports = function(val, options) {
-    options = options || {};
-    var type = typeof val;
-    if (type === "string" && val.length > 0) {
-      return parse4(val);
-    } else if (type === "number" && isFinite(val)) {
-      return options.long ? fmtLong(val) : fmtShort(val);
-    }
-    throw new Error("val is not a non-empty string or a valid number. val=" + JSON.stringify(val));
-  };
-  function parse4(str) {
-    str = String(str);
-    if (str.length > 100) {
-      return;
-    }
-    var match = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(str);
-    if (!match) {
-      return;
-    }
-    var n = parseFloat(match[1]);
-    var type = (match[2] || "ms").toLowerCase();
-    switch (type) {
-      case "years":
-      case "year":
-      case "yrs":
-      case "yr":
-      case "y":
-        return n * y;
-      case "weeks":
-      case "week":
-      case "w":
-        return n * w;
-      case "days":
-      case "day":
-      case "d":
-        return n * d4;
-      case "hours":
-      case "hour":
-      case "hrs":
-      case "hr":
-      case "h":
-        return n * h;
-      case "minutes":
-      case "minute":
-      case "mins":
-      case "min":
-      case "m":
-        return n * m;
-      case "seconds":
-      case "second":
-      case "secs":
-      case "sec":
-      case "s":
-        return n * s;
-      case "milliseconds":
-      case "millisecond":
-      case "msecs":
-      case "msec":
-      case "ms":
-        return n;
-      default:
-        return;
-    }
-  }
-  function fmtShort(ms) {
-    var msAbs = Math.abs(ms);
-    if (msAbs >= d4) {
-      return Math.round(ms / d4) + "d";
-    }
-    if (msAbs >= h) {
-      return Math.round(ms / h) + "h";
-    }
-    if (msAbs >= m) {
-      return Math.round(ms / m) + "m";
-    }
-    if (msAbs >= s) {
-      return Math.round(ms / s) + "s";
-    }
-    return ms + "ms";
-  }
-  function fmtLong(ms) {
-    var msAbs = Math.abs(ms);
-    if (msAbs >= d4) {
-      return plural(ms, msAbs, d4, "day");
-    }
-    if (msAbs >= h) {
-      return plural(ms, msAbs, h, "hour");
-    }
-    if (msAbs >= m) {
-      return plural(ms, msAbs, m, "minute");
-    }
-    if (msAbs >= s) {
-      return plural(ms, msAbs, s, "second");
-    }
-    return ms + " ms";
-  }
-  function plural(ms, msAbs, n, name) {
-    var isPlural = msAbs >= n * 1.5;
-    return Math.round(ms / n) + " " + name + (isPlural ? "s" : "");
-  }
-});
-
-// ../shared/node_modules/debug/src/common.js
-var require_common2 = __commonJS((exports, module) => {
-  function setup(env2) {
-    createDebug6.debug = createDebug6;
-    createDebug6.default = createDebug6;
-    createDebug6.coerce = coerce;
-    createDebug6.disable = disable;
-    createDebug6.enable = enable;
-    createDebug6.enabled = enabled;
-    createDebug6.humanize = require_ms2();
-    createDebug6.destroy = destroy;
-    Object.keys(env2).forEach((key) => {
-      createDebug6[key] = env2[key];
-    });
-    createDebug6.names = [];
-    createDebug6.skips = [];
-    createDebug6.formatters = {};
-    function selectColor(namespace) {
-      let hash3 = 0;
-      for (let i2 = 0;i2 < namespace.length; i2++) {
-        hash3 = (hash3 << 5) - hash3 + namespace.charCodeAt(i2);
-        hash3 |= 0;
-      }
-      return createDebug6.colors[Math.abs(hash3) % createDebug6.colors.length];
-    }
-    createDebug6.selectColor = selectColor;
-    function createDebug6(namespace) {
-      let prevTime;
-      let enableOverride = null;
-      let namespacesCache;
-      let enabledCache;
-      function debug9(...args) {
-        if (!debug9.enabled) {
-          return;
-        }
-        const self2 = debug9;
-        const curr = Number(new Date);
-        const ms = curr - (prevTime || curr);
-        self2.diff = ms;
-        self2.prev = prevTime;
-        self2.curr = curr;
-        prevTime = curr;
-        args[0] = createDebug6.coerce(args[0]);
-        if (typeof args[0] !== "string") {
-          args.unshift("%O");
-        }
-        let index = 0;
-        args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
-          if (match === "%%") {
-            return "%";
-          }
-          index++;
-          const formatter = createDebug6.formatters[format];
-          if (typeof formatter === "function") {
-            const val = args[index];
-            match = formatter.call(self2, val);
-            args.splice(index, 1);
-            index--;
-          }
-          return match;
-        });
-        createDebug6.formatArgs.call(self2, args);
-        const logFn = self2.log || createDebug6.log;
-        logFn.apply(self2, args);
-      }
-      debug9.namespace = namespace;
-      debug9.useColors = createDebug6.useColors();
-      debug9.color = createDebug6.selectColor(namespace);
-      debug9.extend = extend;
-      debug9.destroy = createDebug6.destroy;
-      Object.defineProperty(debug9, "enabled", {
-        enumerable: true,
-        configurable: false,
-        get: () => {
-          if (enableOverride !== null) {
-            return enableOverride;
-          }
-          if (namespacesCache !== createDebug6.namespaces) {
-            namespacesCache = createDebug6.namespaces;
-            enabledCache = createDebug6.enabled(namespace);
-          }
-          return enabledCache;
-        },
-        set: (v) => {
-          enableOverride = v;
-        }
-      });
-      if (typeof createDebug6.init === "function") {
-        createDebug6.init(debug9);
-      }
-      return debug9;
-    }
-    function extend(namespace, delimiter) {
-      const newDebug = createDebug6(this.namespace + (typeof delimiter === "undefined" ? ":" : delimiter) + namespace);
-      newDebug.log = this.log;
-      return newDebug;
-    }
-    function enable(namespaces) {
-      createDebug6.save(namespaces);
-      createDebug6.namespaces = namespaces;
-      createDebug6.names = [];
-      createDebug6.skips = [];
-      const split = (typeof namespaces === "string" ? namespaces : "").trim().replace(/\s+/g, ",").split(",").filter(Boolean);
-      for (const ns of split) {
-        if (ns[0] === "-") {
-          createDebug6.skips.push(ns.slice(1));
-        } else {
-          createDebug6.names.push(ns);
-        }
-      }
-    }
-    function matchesTemplate(search, template) {
-      let searchIndex = 0;
-      let templateIndex = 0;
-      let starIndex = -1;
-      let matchIndex = 0;
-      while (searchIndex < search.length) {
-        if (templateIndex < template.length && (template[templateIndex] === search[searchIndex] || template[templateIndex] === "*")) {
-          if (template[templateIndex] === "*") {
-            starIndex = templateIndex;
-            matchIndex = searchIndex;
-            templateIndex++;
-          } else {
-            searchIndex++;
-            templateIndex++;
-          }
-        } else if (starIndex !== -1) {
-          templateIndex = starIndex + 1;
-          matchIndex++;
-          searchIndex = matchIndex;
-        } else {
-          return false;
-        }
-      }
-      while (templateIndex < template.length && template[templateIndex] === "*") {
-        templateIndex++;
-      }
-      return templateIndex === template.length;
-    }
-    function disable() {
-      const namespaces = [
-        ...createDebug6.names,
-        ...createDebug6.skips.map((namespace) => "-" + namespace)
-      ].join(",");
-      createDebug6.enable("");
-      return namespaces;
-    }
-    function enabled(name) {
-      for (const skip of createDebug6.skips) {
-        if (matchesTemplate(name, skip)) {
-          return false;
-        }
-      }
-      for (const ns of createDebug6.names) {
-        if (matchesTemplate(name, ns)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    function coerce(val) {
-      if (val instanceof Error) {
-        return val.stack || val.message;
-      }
-      return val;
-    }
-    function destroy() {
-      console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
-    }
-    createDebug6.enable(createDebug6.load());
-    return createDebug6;
-  }
-  module.exports = setup;
-});
-
-// ../shared/node_modules/debug/src/browser.js
-var require_browser2 = __commonJS((exports, module) => {
-  exports.formatArgs = formatArgs;
-  exports.save = save;
-  exports.load = load;
-  exports.useColors = useColors;
-  exports.storage = localstorage();
-  exports.destroy = (() => {
-    let warned = false;
-    return () => {
-      if (!warned) {
-        warned = true;
-        console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
-      }
-    };
-  })();
-  exports.colors = [
-    "#0000CC",
-    "#0000FF",
-    "#0033CC",
-    "#0033FF",
-    "#0066CC",
-    "#0066FF",
-    "#0099CC",
-    "#0099FF",
-    "#00CC00",
-    "#00CC33",
-    "#00CC66",
-    "#00CC99",
-    "#00CCCC",
-    "#00CCFF",
-    "#3300CC",
-    "#3300FF",
-    "#3333CC",
-    "#3333FF",
-    "#3366CC",
-    "#3366FF",
-    "#3399CC",
-    "#3399FF",
-    "#33CC00",
-    "#33CC33",
-    "#33CC66",
-    "#33CC99",
-    "#33CCCC",
-    "#33CCFF",
-    "#6600CC",
-    "#6600FF",
-    "#6633CC",
-    "#6633FF",
-    "#66CC00",
-    "#66CC33",
-    "#9900CC",
-    "#9900FF",
-    "#9933CC",
-    "#9933FF",
-    "#99CC00",
-    "#99CC33",
-    "#CC0000",
-    "#CC0033",
-    "#CC0066",
-    "#CC0099",
-    "#CC00CC",
-    "#CC00FF",
-    "#CC3300",
-    "#CC3333",
-    "#CC3366",
-    "#CC3399",
-    "#CC33CC",
-    "#CC33FF",
-    "#CC6600",
-    "#CC6633",
-    "#CC9900",
-    "#CC9933",
-    "#CCCC00",
-    "#CCCC33",
-    "#FF0000",
-    "#FF0033",
-    "#FF0066",
-    "#FF0099",
-    "#FF00CC",
-    "#FF00FF",
-    "#FF3300",
-    "#FF3333",
-    "#FF3366",
-    "#FF3399",
-    "#FF33CC",
-    "#FF33FF",
-    "#FF6600",
-    "#FF6633",
-    "#FF9900",
-    "#FF9933",
-    "#FFCC00",
-    "#FFCC33"
-  ];
-  function useColors() {
-    if (typeof window !== "undefined" && window.process && (window.process.type === "renderer" || window.process.__nwjs)) {
-      return true;
-    }
-    if (typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
-      return false;
-    }
-    let m;
-    return typeof document !== "undefined" && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance || typeof window !== "undefined" && window.console && (window.console.firebug || window.console.exception && window.console.table) || typeof navigator !== "undefined" && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31 || typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/);
-  }
-  function formatArgs(args) {
-    args[0] = (this.useColors ? "%c" : "") + this.namespace + (this.useColors ? " %c" : " ") + args[0] + (this.useColors ? "%c " : " ") + "+" + module.exports.humanize(this.diff);
-    if (!this.useColors) {
-      return;
-    }
-    const c = "color: " + this.color;
-    args.splice(1, 0, c, "color: inherit");
-    let index = 0;
-    let lastC = 0;
-    args[0].replace(/%[a-zA-Z%]/g, (match) => {
-      if (match === "%%") {
-        return;
-      }
-      index++;
-      if (match === "%c") {
-        lastC = index;
-      }
-    });
-    args.splice(lastC, 0, c);
-  }
-  exports.log = console.debug || console.log || (() => {});
-  function save(namespaces) {
-    try {
-      if (namespaces) {
-        exports.storage.setItem("debug", namespaces);
-      } else {
-        exports.storage.removeItem("debug");
-      }
-    } catch (error) {}
-  }
-  function load() {
-    let r;
-    try {
-      r = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
-    } catch (error) {}
-    if (!r && typeof process !== "undefined" && "env" in process) {
-      r = process.env.DEBUG;
-    }
-    return r;
-  }
-  function localstorage() {
-    try {
-      return localStorage;
-    } catch (error) {}
-  }
-  module.exports = require_common2()(exports);
-  var { formatters } = module.exports;
-  formatters.j = function(v) {
-    try {
-      return JSON.stringify(v);
-    } catch (error) {
-      return "[UnexpectedJSONParseError]: " + error.message;
-    }
-  };
-});
-
-// ../node_modules/has-flag/index.js
-var require_has_flag2 = __commonJS((exports, module) => {
-  module.exports = (flag, argv = process.argv) => {
-    const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
-    const position = argv.indexOf(prefix + flag);
-    const terminatorPosition = argv.indexOf("--");
-    return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-  };
-});
-
-// ../node_modules/supports-color/index.js
-var require_supports_color2 = __commonJS((exports, module) => {
-  var os2 = __require("os");
-  var tty2 = __require("tty");
-  var hasFlag2 = require_has_flag2();
-  var { env: env2 } = process;
-  var forceColor;
-  if (hasFlag2("no-color") || hasFlag2("no-colors") || hasFlag2("color=false") || hasFlag2("color=never")) {
-    forceColor = 0;
-  } else if (hasFlag2("color") || hasFlag2("colors") || hasFlag2("color=true") || hasFlag2("color=always")) {
-    forceColor = 1;
-  }
-  if ("FORCE_COLOR" in env2) {
-    if (env2.FORCE_COLOR === "true") {
-      forceColor = 1;
-    } else if (env2.FORCE_COLOR === "false") {
-      forceColor = 0;
-    } else {
-      forceColor = env2.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env2.FORCE_COLOR, 10), 3);
-    }
-  }
-  function translateLevel2(level) {
-    if (level === 0) {
-      return false;
-    }
-    return {
-      level,
-      hasBasic: true,
-      has256: level >= 2,
-      has16m: level >= 3
-    };
-  }
-  function supportsColor2(haveStream, streamIsTTY) {
-    if (forceColor === 0) {
-      return 0;
-    }
-    if (hasFlag2("color=16m") || hasFlag2("color=full") || hasFlag2("color=truecolor")) {
-      return 3;
-    }
-    if (hasFlag2("color=256")) {
-      return 2;
-    }
-    if (haveStream && !streamIsTTY && forceColor === undefined) {
-      return 0;
-    }
-    const min = forceColor || 0;
-    if (env2.TERM === "dumb") {
-      return min;
-    }
-    if (process.platform === "win32") {
-      const osRelease = os2.release().split(".");
-      if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
-        return Number(osRelease[2]) >= 14931 ? 3 : 2;
-      }
-      return 1;
-    }
-    if ("CI" in env2) {
-      if (["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "GITHUB_ACTIONS", "BUILDKITE"].some((sign) => (sign in env2)) || env2.CI_NAME === "codeship") {
-        return 1;
-      }
-      return min;
-    }
-    if ("TEAMCITY_VERSION" in env2) {
-      return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env2.TEAMCITY_VERSION) ? 1 : 0;
-    }
-    if (env2.COLORTERM === "truecolor") {
-      return 3;
-    }
-    if ("TERM_PROGRAM" in env2) {
-      const version = parseInt((env2.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
-      switch (env2.TERM_PROGRAM) {
-        case "iTerm.app":
-          return version >= 3 ? 3 : 2;
-        case "Apple_Terminal":
-          return 2;
-      }
-    }
-    if (/-256(color)?$/i.test(env2.TERM)) {
-      return 2;
-    }
-    if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env2.TERM)) {
-      return 1;
-    }
-    if ("COLORTERM" in env2) {
-      return 1;
-    }
-    return min;
-  }
-  function getSupportLevel(stream) {
-    const level = supportsColor2(stream, stream && stream.isTTY);
-    return translateLevel2(level);
-  }
-  module.exports = {
-    supportsColor: getSupportLevel,
-    stdout: translateLevel2(supportsColor2(true, tty2.isatty(1))),
-    stderr: translateLevel2(supportsColor2(true, tty2.isatty(2)))
-  };
-});
-
-// ../shared/node_modules/debug/src/node.js
-var require_node3 = __commonJS((exports, module) => {
-  var tty2 = __require("tty");
-  var util = __require("util");
-  exports.init = init;
-  exports.log = log;
-  exports.formatArgs = formatArgs;
-  exports.save = save;
-  exports.load = load;
-  exports.useColors = useColors;
-  exports.destroy = util.deprecate(() => {}, "Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
-  exports.colors = [6, 2, 3, 4, 5, 1];
-  try {
-    const supportsColor2 = require_supports_color2();
-    if (supportsColor2 && (supportsColor2.stderr || supportsColor2).level >= 2) {
-      exports.colors = [
-        20,
-        21,
-        26,
-        27,
-        32,
-        33,
-        38,
-        39,
-        40,
-        41,
-        42,
-        43,
-        44,
-        45,
-        56,
-        57,
-        62,
-        63,
-        68,
-        69,
-        74,
-        75,
-        76,
-        77,
-        78,
-        79,
-        80,
-        81,
-        92,
-        93,
-        98,
-        99,
-        112,
-        113,
-        128,
-        129,
-        134,
-        135,
-        148,
-        149,
-        160,
-        161,
-        162,
-        163,
-        164,
-        165,
-        166,
-        167,
-        168,
-        169,
-        170,
-        171,
-        172,
-        173,
-        178,
-        179,
-        184,
-        185,
-        196,
-        197,
-        198,
-        199,
-        200,
-        201,
-        202,
-        203,
-        204,
-        205,
-        206,
-        207,
-        208,
-        209,
-        214,
-        215,
-        220,
-        221
-      ];
-    }
-  } catch (error) {}
-  exports.inspectOpts = Object.keys(process.env).filter((key) => {
-    return /^debug_/i.test(key);
-  }).reduce((obj, key) => {
-    const prop = key.substring(6).toLowerCase().replace(/_([a-z])/g, (_2, k) => {
-      return k.toUpperCase();
-    });
-    let val = process.env[key];
-    if (/^(yes|on|true|enabled)$/i.test(val)) {
-      val = true;
-    } else if (/^(no|off|false|disabled)$/i.test(val)) {
-      val = false;
-    } else if (val === "null") {
-      val = null;
-    } else {
-      val = Number(val);
-    }
-    obj[prop] = val;
-    return obj;
-  }, {});
-  function useColors() {
-    return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty2.isatty(process.stderr.fd);
-  }
-  function formatArgs(args) {
-    const { namespace: name, useColors: useColors2 } = this;
-    if (useColors2) {
-      const c = this.color;
-      const colorCode = "\x1B[3" + (c < 8 ? c : "8;5;" + c);
-      const prefix = `  ${colorCode};1m${name} \x1B[0m`;
-      args[0] = prefix + args[0].split(`
-`).join(`
-` + prefix);
-      args.push(colorCode + "m+" + module.exports.humanize(this.diff) + "\x1B[0m");
-    } else {
-      args[0] = getDate() + name + " " + args[0];
-    }
-  }
-  function getDate() {
-    if (exports.inspectOpts.hideDate) {
-      return "";
-    }
-    return new Date().toISOString() + " ";
-  }
-  function log(...args) {
-    return process.stderr.write(util.formatWithOptions(exports.inspectOpts, ...args) + `
-`);
-  }
-  function save(namespaces) {
-    if (namespaces) {
-      process.env.DEBUG = namespaces;
-    } else {
-      delete process.env.DEBUG;
-    }
-  }
-  function load() {
-    return process.env.DEBUG;
-  }
-  function init(debug9) {
-    debug9.inspectOpts = {};
-    const keys = Object.keys(exports.inspectOpts);
-    for (let i2 = 0;i2 < keys.length; i2++) {
-      debug9.inspectOpts[keys[i2]] = exports.inspectOpts[keys[i2]];
-    }
-  }
-  module.exports = require_common2()(exports);
-  var { formatters } = module.exports;
-  formatters.o = function(v) {
-    this.inspectOpts.colors = this.useColors;
-    return util.inspect(v, this.inspectOpts).split(`
-`).map((str) => str.trim()).join(" ");
-  };
-  formatters.O = function(v) {
-    this.inspectOpts.colors = this.useColors;
-    return util.inspect(v, this.inspectOpts);
-  };
-});
-
-// ../shared/node_modules/debug/src/index.js
-var require_src2 = __commonJS((exports, module) => {
-  if (typeof process === "undefined" || process.type === "renderer" || false || process.__nwjs) {
-    module.exports = require_browser2();
-  } else {
-    module.exports = require_node3();
-  }
-});
-
-// ../shared/node_modules/typescript-lru-cache/dist/LRUCacheNode.js
-var require_LRUCacheNode2 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.LRUCacheNode = undefined;
-
-  class LRUCacheNode {
-    constructor(key, value, options) {
-      const { entryExpirationTimeInMS = null, next = null, prev = null, onEntryEvicted, onEntryMarkedAsMostRecentlyUsed, clone, cloneFn } = options !== null && options !== undefined ? options : {};
-      if (typeof entryExpirationTimeInMS === "number" && (entryExpirationTimeInMS <= 0 || Number.isNaN(entryExpirationTimeInMS))) {
-        throw new Error("entryExpirationTimeInMS must either be null (no expiry) or greater than 0");
-      }
-      this.clone = clone !== null && clone !== undefined ? clone : false;
-      this.cloneFn = cloneFn !== null && cloneFn !== undefined ? cloneFn : this.defaultClone;
-      this.key = key;
-      this.internalValue = this.clone ? this.cloneFn(value) : value;
-      this.created = Date.now();
-      this.entryExpirationTimeInMS = entryExpirationTimeInMS;
-      this.next = next;
-      this.prev = prev;
-      this.onEntryEvicted = onEntryEvicted;
-      this.onEntryMarkedAsMostRecentlyUsed = onEntryMarkedAsMostRecentlyUsed;
-    }
-    get value() {
-      return this.clone ? this.cloneFn(this.internalValue) : this.internalValue;
-    }
-    get isExpired() {
-      return typeof this.entryExpirationTimeInMS === "number" && Date.now() - this.created > this.entryExpirationTimeInMS;
-    }
-    invokeOnEvicted() {
-      if (this.onEntryEvicted) {
-        const { key, value, isExpired } = this;
-        this.onEntryEvicted({ key, value, isExpired });
-      }
-    }
-    invokeOnEntryMarkedAsMostRecentlyUsed() {
-      if (this.onEntryMarkedAsMostRecentlyUsed) {
-        const { key, value } = this;
-        this.onEntryMarkedAsMostRecentlyUsed({ key, value });
-      }
-    }
-    defaultClone(value) {
-      if (typeof value === "boolean" || typeof value === "string" || typeof value === "number") {
-        return value;
-      }
-      return JSON.parse(JSON.stringify(value));
-    }
-  }
-  exports.LRUCacheNode = LRUCacheNode;
-});
-
-// ../shared/node_modules/typescript-lru-cache/dist/LRUCache.js
-var require_LRUCache2 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.LRUCache = undefined;
-  var LRUCacheNode_1 = require_LRUCacheNode2();
-
-  class LRUCache3 {
-    constructor(options) {
-      this.lookupTable = new Map;
-      this.head = null;
-      this.tail = null;
-      const { maxSize = 25, entryExpirationTimeInMS = null, onEntryEvicted, onEntryMarkedAsMostRecentlyUsed, cloneFn, clone } = options !== null && options !== undefined ? options : {};
-      if (Number.isNaN(maxSize) || maxSize <= 0) {
-        throw new Error("maxSize must be greater than 0.");
-      }
-      if (typeof entryExpirationTimeInMS === "number" && (entryExpirationTimeInMS <= 0 || Number.isNaN(entryExpirationTimeInMS))) {
-        throw new Error("entryExpirationTimeInMS must either be null (no expiry) or greater than 0");
-      }
-      this.maxSizeInternal = maxSize;
-      this.entryExpirationTimeInMS = entryExpirationTimeInMS;
-      this.onEntryEvicted = onEntryEvicted;
-      this.onEntryMarkedAsMostRecentlyUsed = onEntryMarkedAsMostRecentlyUsed;
-      this.clone = clone;
-      this.cloneFn = cloneFn;
-    }
-    get size() {
-      this.cleanCache();
-      return this.lookupTable.size;
-    }
-    get remainingSize() {
-      return this.maxSizeInternal - this.size;
-    }
-    get newest() {
-      if (!this.head) {
-        return null;
-      }
-      if (this.head.isExpired) {
-        this.removeNodeFromListAndLookupTable(this.head);
-        return this.newest;
-      }
-      return this.mapNodeToEntry(this.head);
-    }
-    get oldest() {
-      if (!this.tail) {
-        return null;
-      }
-      if (this.tail.isExpired) {
-        this.removeNodeFromListAndLookupTable(this.tail);
-        return this.oldest;
-      }
-      return this.mapNodeToEntry(this.tail);
-    }
-    get maxSize() {
-      return this.maxSizeInternal;
-    }
-    set maxSize(value) {
-      if (Number.isNaN(value) || value <= 0) {
-        throw new Error("maxSize must be greater than 0.");
-      }
-      this.maxSizeInternal = value;
-      this.enforceSizeLimit();
-    }
-    set(key, value, entryOptions) {
-      const currentNodeForKey = this.lookupTable.get(key);
-      if (currentNodeForKey) {
-        this.removeNodeFromListAndLookupTable(currentNodeForKey);
-      }
-      const node = new LRUCacheNode_1.LRUCacheNode(key, value, {
-        entryExpirationTimeInMS: this.entryExpirationTimeInMS,
-        onEntryEvicted: this.onEntryEvicted,
-        onEntryMarkedAsMostRecentlyUsed: this.onEntryMarkedAsMostRecentlyUsed,
-        clone: this.clone,
-        cloneFn: this.cloneFn,
-        ...entryOptions
-      });
-      this.setNodeAsHead(node);
-      this.lookupTable.set(key, node);
-      this.enforceSizeLimit();
-      return this;
-    }
-    get(key) {
-      const node = this.lookupTable.get(key);
-      if (!node) {
-        return null;
-      }
-      if (node.isExpired) {
-        this.removeNodeFromListAndLookupTable(node);
-        return null;
-      }
-      this.setNodeAsHead(node);
-      return node.value;
-    }
-    peek(key) {
-      const node = this.lookupTable.get(key);
-      if (!node) {
-        return null;
-      }
-      if (node.isExpired) {
-        this.removeNodeFromListAndLookupTable(node);
-        return null;
-      }
-      return node.value;
-    }
-    delete(key) {
-      const node = this.lookupTable.get(key);
-      if (!node) {
-        return false;
-      }
-      return this.removeNodeFromListAndLookupTable(node);
-    }
-    has(key) {
-      const node = this.lookupTable.get(key);
-      if (!node) {
-        return false;
-      }
-      if (node.isExpired) {
-        this.removeNodeFromListAndLookupTable(node);
-        return false;
-      }
-      return true;
-    }
-    clear() {
-      this.head = null;
-      this.tail = null;
-      this.lookupTable.clear();
-    }
-    find(condition) {
-      let node = this.head;
-      while (node) {
-        if (node.isExpired) {
-          const next = node.next;
-          this.removeNodeFromListAndLookupTable(node);
-          node = next;
-          continue;
-        }
-        const entry = this.mapNodeToEntry(node);
-        if (condition(entry)) {
-          this.setNodeAsHead(node);
-          return entry;
-        }
-        node = node.next;
-      }
-      return null;
-    }
-    forEach(callback) {
-      let node = this.head;
-      let index = 0;
-      while (node) {
-        if (node.isExpired) {
-          const next = node.next;
-          this.removeNodeFromListAndLookupTable(node);
-          node = next;
-          continue;
-        }
-        callback(node.value, node.key, index);
-        node = node.next;
-        index++;
-      }
-    }
-    *values() {
-      let node = this.head;
-      while (node) {
-        if (node.isExpired) {
-          const next = node.next;
-          this.removeNodeFromListAndLookupTable(node);
-          node = next;
-          continue;
-        }
-        yield node.value;
-        node = node.next;
-      }
-    }
-    *keys() {
-      let node = this.head;
-      while (node) {
-        if (node.isExpired) {
-          const next = node.next;
-          this.removeNodeFromListAndLookupTable(node);
-          node = next;
-          continue;
-        }
-        yield node.key;
-        node = node.next;
-      }
-    }
-    *entries() {
-      let node = this.head;
-      while (node) {
-        if (node.isExpired) {
-          const next = node.next;
-          this.removeNodeFromListAndLookupTable(node);
-          node = next;
-          continue;
-        }
-        yield this.mapNodeToEntry(node);
-        node = node.next;
-      }
-    }
-    *[Symbol.iterator]() {
-      let node = this.head;
-      while (node) {
-        if (node.isExpired) {
-          const next = node.next;
-          this.removeNodeFromListAndLookupTable(node);
-          node = next;
-          continue;
-        }
-        yield this.mapNodeToEntry(node);
-        node = node.next;
-      }
-    }
-    enforceSizeLimit() {
-      let node = this.tail;
-      while (node !== null && this.size > this.maxSizeInternal) {
-        const prev = node.prev;
-        this.removeNodeFromListAndLookupTable(node);
-        node = prev;
-      }
-    }
-    mapNodeToEntry({ key, value }) {
-      return {
-        key,
-        value
-      };
-    }
-    setNodeAsHead(node) {
-      this.removeNodeFromList(node);
-      if (!this.head) {
-        this.head = node;
-        this.tail = node;
-      } else {
-        node.next = this.head;
-        this.head.prev = node;
-        this.head = node;
-      }
-      node.invokeOnEntryMarkedAsMostRecentlyUsed();
-    }
-    removeNodeFromList(node) {
-      if (node.prev !== null) {
-        node.prev.next = node.next;
-      }
-      if (node.next !== null) {
-        node.next.prev = node.prev;
-      }
-      if (this.head === node) {
-        this.head = node.next;
-      }
-      if (this.tail === node) {
-        this.tail = node.prev;
-      }
-      node.next = null;
-      node.prev = null;
-    }
-    removeNodeFromListAndLookupTable(node) {
-      node.invokeOnEvicted();
-      this.removeNodeFromList(node);
-      return this.lookupTable.delete(node.key);
-    }
-    cleanCache() {
-      if (!this.entryExpirationTimeInMS) {
-        return;
-      }
-      const expiredNodes = [];
-      for (const node of this.lookupTable.values()) {
-        if (node.isExpired) {
-          expiredNodes.push(node);
-        }
-      }
-      expiredNodes.forEach((node) => this.removeNodeFromListAndLookupTable(node));
-    }
-  }
-  exports.LRUCache = LRUCache3;
-});
-
-// ../shared/node_modules/typescript-lru-cache/dist/index.js
-var require_dist2 = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __exportStar = exports && exports.__exportStar || function(m, exports2) {
-    for (var p in m)
-      if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p))
-        __createBinding(exports2, m, p);
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  __exportStar(require_LRUCache2(), exports);
-});
-
-// ../shared/node_modules/light-bolt11-decoder/node_modules/@scure/base/lib/index.js
-var require_lib6 = __commonJS((exports) => {
-  /*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.bytes = exports.stringToBytes = exports.str = exports.bytesToString = exports.hex = exports.utf8 = exports.bech32m = exports.bech32 = exports.base58check = exports.base58xmr = exports.base58xrp = exports.base58flickr = exports.base58 = exports.base64url = exports.base64 = exports.base32crockford = exports.base32hex = exports.base32 = exports.base16 = exports.utils = exports.assertNumber = undefined;
-  function assertNumber3(n) {
-    if (!Number.isSafeInteger(n))
-      throw new Error(`Wrong integer: ${n}`);
-  }
-  exports.assertNumber = assertNumber3;
-  function chain3(...args) {
-    const wrap = (a, b) => (c) => a(b(c));
-    const encode2 = Array.from(args).reverse().reduce((acc, i3) => acc ? wrap(acc, i3.encode) : i3.encode, undefined);
-    const decode4 = args.reduce((acc, i3) => acc ? wrap(acc, i3.decode) : i3.decode, undefined);
-    return { encode: encode2, decode: decode4 };
-  }
-  function alphabet3(alphabet4) {
-    return {
-      encode: (digits) => {
-        if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-          throw new Error("alphabet.encode input should be an array of numbers");
-        return digits.map((i3) => {
-          assertNumber3(i3);
-          if (i3 < 0 || i3 >= alphabet4.length)
-            throw new Error(`Digit index outside alphabet: ${i3} (alphabet: ${alphabet4.length})`);
-          return alphabet4[i3];
-        });
-      },
-      decode: (input) => {
-        if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
-          throw new Error("alphabet.decode input should be array of strings");
-        return input.map((letter) => {
-          if (typeof letter !== "string")
-            throw new Error(`alphabet.decode: not string element=${letter}`);
-          const index = alphabet4.indexOf(letter);
-          if (index === -1)
-            throw new Error(`Unknown letter: "${letter}". Allowed: ${alphabet4}`);
-          return index;
-        });
-      }
-    };
-  }
-  function join3(separator = "") {
-    if (typeof separator !== "string")
-      throw new Error("join separator should be string");
-    return {
-      encode: (from3) => {
-        if (!Array.isArray(from3) || from3.length && typeof from3[0] !== "string")
-          throw new Error("join.encode input should be array of strings");
-        for (let i3 of from3)
-          if (typeof i3 !== "string")
-            throw new Error(`join.encode: non-string input=${i3}`);
-        return from3.join(separator);
-      },
-      decode: (to) => {
-        if (typeof to !== "string")
-          throw new Error("join.decode input should be string");
-        return to.split(separator);
-      }
-    };
-  }
-  function padding3(bits, chr = "=") {
-    assertNumber3(bits);
-    if (typeof chr !== "string")
-      throw new Error("padding chr should be string");
-    return {
-      encode(data) {
-        if (!Array.isArray(data) || data.length && typeof data[0] !== "string")
-          throw new Error("padding.encode input should be array of strings");
-        for (let i3 of data)
-          if (typeof i3 !== "string")
-            throw new Error(`padding.encode: non-string input=${i3}`);
-        while (data.length * bits % 8)
-          data.push(chr);
-        return data;
-      },
-      decode(input) {
-        if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
-          throw new Error("padding.encode input should be array of strings");
-        for (let i3 of input)
-          if (typeof i3 !== "string")
-            throw new Error(`padding.decode: non-string input=${i3}`);
-        let end = input.length;
-        if (end * bits % 8)
-          throw new Error("Invalid padding: string should have whole number of bytes");
-        for (;end > 0 && input[end - 1] === chr; end--) {
-          if (!((end - 1) * bits % 8))
-            throw new Error("Invalid padding: string has too much padding");
-        }
-        return input.slice(0, end);
-      }
-    };
-  }
-  function normalize4(fn) {
-    if (typeof fn !== "function")
-      throw new Error("normalize fn should be function");
-    return { encode: (from3) => from3, decode: (to) => fn(to) };
-  }
-  function convertRadix4(data, from3, to) {
-    if (from3 < 2)
-      throw new Error(`convertRadix: wrong from=${from3}, base cannot be less than 2`);
-    if (to < 2)
-      throw new Error(`convertRadix: wrong to=${to}, base cannot be less than 2`);
-    if (!Array.isArray(data))
-      throw new Error("convertRadix: data should be array");
-    if (!data.length)
-      return [];
-    let pos = 0;
-    const res = [];
-    const digits = Array.from(data);
-    digits.forEach((d4) => {
-      assertNumber3(d4);
-      if (d4 < 0 || d4 >= from3)
-        throw new Error(`Wrong integer: ${d4}`);
-    });
-    while (true) {
-      let carry = 0;
-      let done = true;
-      for (let i3 = pos;i3 < digits.length; i3++) {
-        const digit = digits[i3];
-        const digitBase = from3 * carry + digit;
-        if (!Number.isSafeInteger(digitBase) || from3 * carry / from3 !== carry || digitBase - digit !== from3 * carry) {
-          throw new Error("convertRadix: carry overflow");
-        }
-        carry = digitBase % to;
-        digits[i3] = Math.floor(digitBase / to);
-        if (!Number.isSafeInteger(digits[i3]) || digits[i3] * to + carry !== digitBase)
-          throw new Error("convertRadix: carry overflow");
-        if (!done)
-          continue;
-        else if (!digits[i3])
-          pos = i3;
-        else
-          done = false;
-      }
-      res.push(carry);
-      if (done)
-        break;
-    }
-    for (let i3 = 0;i3 < data.length - 1 && data[i3] === 0; i3++)
-      res.push(0);
-    return res.reverse();
-  }
-  var gcd3 = (a, b) => !b ? a : gcd3(b, a % b);
-  var radix2carry3 = (from3, to) => from3 + (to - gcd3(from3, to));
-  function convertRadix23(data, from3, to, padding4) {
-    if (!Array.isArray(data))
-      throw new Error("convertRadix2: data should be array");
-    if (from3 <= 0 || from3 > 32)
-      throw new Error(`convertRadix2: wrong from=${from3}`);
-    if (to <= 0 || to > 32)
-      throw new Error(`convertRadix2: wrong to=${to}`);
-    if (radix2carry3(from3, to) > 32) {
-      throw new Error(`convertRadix2: carry overflow from=${from3} to=${to} carryBits=${radix2carry3(from3, to)}`);
-    }
-    let carry = 0;
-    let pos = 0;
-    const mask2 = 2 ** to - 1;
-    const res = [];
-    for (const n of data) {
-      assertNumber3(n);
-      if (n >= 2 ** from3)
-        throw new Error(`convertRadix2: invalid data word=${n} from=${from3}`);
-      carry = carry << from3 | n;
-      if (pos + from3 > 32)
-        throw new Error(`convertRadix2: carry overflow pos=${pos} from=${from3}`);
-      pos += from3;
-      for (;pos >= to; pos -= to)
-        res.push((carry >> pos - to & mask2) >>> 0);
-      carry &= 2 ** pos - 1;
-    }
-    carry = carry << to - pos & mask2;
-    if (!padding4 && pos >= from3)
-      throw new Error("Excess padding");
-    if (!padding4 && carry)
-      throw new Error(`Non-zero padding: ${carry}`);
-    if (padding4 && pos > 0)
-      res.push(carry >>> 0);
-    return res;
-  }
-  function radix4(num3) {
-    assertNumber3(num3);
-    return {
-      encode: (bytes7) => {
-        if (!(bytes7 instanceof Uint8Array))
-          throw new Error("radix.encode input should be Uint8Array");
-        return convertRadix4(Array.from(bytes7), 2 ** 8, num3);
-      },
-      decode: (digits) => {
-        if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-          throw new Error("radix.decode input should be array of strings");
-        return Uint8Array.from(convertRadix4(digits, num3, 2 ** 8));
-      }
-    };
-  }
-  function radix23(bits, revPadding = false) {
-    assertNumber3(bits);
-    if (bits <= 0 || bits > 32)
-      throw new Error("radix2: bits should be in (0..32]");
-    if (radix2carry3(8, bits) > 32 || radix2carry3(bits, 8) > 32)
-      throw new Error("radix2: carry overflow");
-    return {
-      encode: (bytes7) => {
-        if (!(bytes7 instanceof Uint8Array))
-          throw new Error("radix2.encode input should be Uint8Array");
-        return convertRadix23(Array.from(bytes7), 8, bits, !revPadding);
-      },
-      decode: (digits) => {
-        if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-          throw new Error("radix2.decode input should be array of strings");
-        return Uint8Array.from(convertRadix23(digits, bits, 8, revPadding));
-      }
-    };
-  }
-  function unsafeWrapper3(fn) {
-    if (typeof fn !== "function")
-      throw new Error("unsafeWrapper fn should be function");
-    return function(...args) {
-      try {
-        return fn.apply(null, args);
-      } catch (e) {}
-    };
-  }
-  function checksum(len, fn) {
-    assertNumber3(len);
-    if (typeof fn !== "function")
-      throw new Error("checksum fn should be function");
-    return {
-      encode(data) {
-        if (!(data instanceof Uint8Array))
-          throw new Error("checksum.encode: input should be Uint8Array");
-        const checksum2 = fn(data).slice(0, len);
-        const res = new Uint8Array(data.length + len);
-        res.set(data);
-        res.set(checksum2, data.length);
-        return res;
-      },
-      decode(data) {
-        if (!(data instanceof Uint8Array))
-          throw new Error("checksum.decode: input should be Uint8Array");
-        const payload = data.slice(0, -len);
-        const newChecksum = fn(payload).slice(0, len);
-        const oldChecksum = data.slice(-len);
-        for (let i3 = 0;i3 < len; i3++)
-          if (newChecksum[i3] !== oldChecksum[i3])
-            throw new Error("Invalid checksum");
-        return payload;
-      }
-    };
-  }
-  exports.utils = { alphabet: alphabet3, chain: chain3, checksum, radix: radix4, radix2: radix23, join: join3, padding: padding3 };
-  exports.base16 = chain3(radix23(4), alphabet3("0123456789ABCDEF"), join3(""));
-  exports.base32 = chain3(radix23(5), alphabet3("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"), padding3(5), join3(""));
-  exports.base32hex = chain3(radix23(5), alphabet3("0123456789ABCDEFGHIJKLMNOPQRSTUV"), padding3(5), join3(""));
-  exports.base32crockford = chain3(radix23(5), alphabet3("0123456789ABCDEFGHJKMNPQRSTVWXYZ"), join3(""), normalize4((s) => s.toUpperCase().replace(/O/g, "0").replace(/[IL]/g, "1")));
-  exports.base64 = chain3(radix23(6), alphabet3("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"), padding3(6), join3(""));
-  exports.base64url = chain3(radix23(6), alphabet3("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), padding3(6), join3(""));
-  var genBase583 = (abc) => chain3(radix4(58), alphabet3(abc), join3(""));
-  exports.base58 = genBase583("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
-  exports.base58flickr = genBase583("123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ");
-  exports.base58xrp = genBase583("rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz");
-  var XMR_BLOCK_LEN3 = [0, 2, 3, 5, 6, 7, 9, 10, 11];
-  exports.base58xmr = {
-    encode(data) {
-      let res = "";
-      for (let i3 = 0;i3 < data.length; i3 += 8) {
-        const block = data.subarray(i3, i3 + 8);
-        res += exports.base58.encode(block).padStart(XMR_BLOCK_LEN3[block.length], "1");
-      }
-      return res;
-    },
-    decode(str) {
-      let res = [];
-      for (let i3 = 0;i3 < str.length; i3 += 11) {
-        const slice = str.slice(i3, i3 + 11);
-        const blockLen = XMR_BLOCK_LEN3.indexOf(slice.length);
-        const block = exports.base58.decode(slice);
-        for (let j = 0;j < block.length - blockLen; j++) {
-          if (block[j] !== 0)
-            throw new Error("base58xmr: wrong padding");
-        }
-        res = res.concat(Array.from(block.slice(block.length - blockLen)));
-      }
-      return Uint8Array.from(res);
-    }
-  };
-  var base58check = (sha2569) => chain3(checksum(4, (data) => sha2569(sha2569(data))), exports.base58);
-  exports.base58check = base58check;
-  var BECH_ALPHABET3 = chain3(alphabet3("qpzry9x8gf2tvdw0s3jn54khce6mua7l"), join3(""));
-  var POLYMOD_GENERATORS3 = [996825010, 642813549, 513874426, 1027748829, 705979059];
-  function bech32Polymod3(pre) {
-    const b = pre >> 25;
-    let chk = (pre & 33554431) << 5;
-    for (let i3 = 0;i3 < POLYMOD_GENERATORS3.length; i3++) {
-      if ((b >> i3 & 1) === 1)
-        chk ^= POLYMOD_GENERATORS3[i3];
-    }
-    return chk;
-  }
-  function bechChecksum3(prefix, words, encodingConst = 1) {
-    const len = prefix.length;
-    let chk = 1;
-    for (let i3 = 0;i3 < len; i3++) {
-      const c = prefix.charCodeAt(i3);
-      if (c < 33 || c > 126)
-        throw new Error(`Invalid prefix (${prefix})`);
-      chk = bech32Polymod3(chk) ^ c >> 5;
-    }
-    chk = bech32Polymod3(chk);
-    for (let i3 = 0;i3 < len; i3++)
-      chk = bech32Polymod3(chk) ^ prefix.charCodeAt(i3) & 31;
-    for (let v of words)
-      chk = bech32Polymod3(chk) ^ v;
-    for (let i3 = 0;i3 < 6; i3++)
-      chk = bech32Polymod3(chk);
-    chk ^= encodingConst;
-    return BECH_ALPHABET3.encode(convertRadix23([chk % 2 ** 30], 30, 5, false));
-  }
-  function genBech323(encoding) {
-    const ENCODING_CONST = encoding === "bech32" ? 1 : 734539939;
-    const _words = radix23(5);
-    const fromWords = _words.decode;
-    const toWords = _words.encode;
-    const fromWordsUnsafe = unsafeWrapper3(fromWords);
-    function encode2(prefix, words, limit3 = 90) {
-      if (typeof prefix !== "string")
-        throw new Error(`bech32.encode prefix should be string, not ${typeof prefix}`);
-      if (!Array.isArray(words) || words.length && typeof words[0] !== "number")
-        throw new Error(`bech32.encode words should be array of numbers, not ${typeof words}`);
-      const actualLength = prefix.length + 7 + words.length;
-      if (limit3 !== false && actualLength > limit3)
-        throw new TypeError(`Length ${actualLength} exceeds limit ${limit3}`);
-      prefix = prefix.toLowerCase();
-      return `${prefix}1${BECH_ALPHABET3.encode(words)}${bechChecksum3(prefix, words, ENCODING_CONST)}`;
-    }
-    function decode4(str, limit3 = 90) {
-      if (typeof str !== "string")
-        throw new Error(`bech32.decode input should be string, not ${typeof str}`);
-      if (str.length < 8 || limit3 !== false && str.length > limit3)
-        throw new TypeError(`Wrong string length: ${str.length} (${str}). Expected (8..${limit3})`);
-      const lowered = str.toLowerCase();
-      if (str !== lowered && str !== str.toUpperCase())
-        throw new Error(`String must be lowercase or uppercase`);
-      str = lowered;
-      const sepIndex = str.lastIndexOf("1");
-      if (sepIndex === 0 || sepIndex === -1)
-        throw new Error(`Letter "1" must be present between prefix and data only`);
-      const prefix = str.slice(0, sepIndex);
-      const _words2 = str.slice(sepIndex + 1);
-      if (_words2.length < 6)
-        throw new Error("Data must be at least 6 characters long");
-      const words = BECH_ALPHABET3.decode(_words2).slice(0, -6);
-      const sum = bechChecksum3(prefix, words, ENCODING_CONST);
-      if (!_words2.endsWith(sum))
-        throw new Error(`Invalid checksum in ${str}: expected "${sum}"`);
-      return { prefix, words };
-    }
-    const decodeUnsafe = unsafeWrapper3(decode4);
-    function decodeToBytes(str) {
-      const { prefix, words } = decode4(str, false);
-      return { prefix, words, bytes: fromWords(words) };
-    }
-    return { encode: encode2, decode: decode4, decodeToBytes, decodeUnsafe, fromWords, fromWordsUnsafe, toWords };
-  }
-  exports.bech32 = genBech323("bech32");
-  exports.bech32m = genBech323("bech32m");
-  exports.utf8 = {
-    encode: (data) => new TextDecoder().decode(data),
-    decode: (str) => new TextEncoder().encode(str)
-  };
-  exports.hex = chain3(radix23(4), alphabet3("0123456789abcdef"), join3(""), normalize4((s) => {
-    if (typeof s !== "string" || s.length % 2)
-      throw new TypeError(`hex.decode: expected string, got ${typeof s} with length ${s.length}`);
-    return s.toLowerCase();
-  }));
-  var CODERS3 = {
-    utf8: exports.utf8,
-    hex: exports.hex,
-    base16: exports.base16,
-    base32: exports.base32,
-    base64: exports.base64,
-    base64url: exports.base64url,
-    base58: exports.base58,
-    base58xmr: exports.base58xmr
-  };
-  var coderTypeError3 = `Invalid encoding type. Available types: ${Object.keys(CODERS3).join(", ")}`;
-  var bytesToString = (type, bytes7) => {
-    if (typeof type !== "string" || !CODERS3.hasOwnProperty(type))
-      throw new TypeError(coderTypeError3);
-    if (!(bytes7 instanceof Uint8Array))
-      throw new TypeError("bytesToString() expects Uint8Array");
-    return CODERS3[type].encode(bytes7);
-  };
-  exports.bytesToString = bytesToString;
-  exports.str = exports.bytesToString;
-  var stringToBytes = (type, str) => {
-    if (!CODERS3.hasOwnProperty(type))
-      throw new TypeError(coderTypeError3);
-    if (typeof str !== "string")
-      throw new TypeError("stringToBytes() expects string");
-    return CODERS3[type].decode(str);
-  };
-  exports.stringToBytes = stringToBytes;
-  exports.bytes = exports.stringToBytes;
-});
-
-// ../shared/node_modules/light-bolt11-decoder/bolt11.js
-var require_bolt112 = __commonJS((exports, module) => {
-  var { bech32: bech323, hex: hex3, utf8: utf83 } = require_lib6();
-  var DEFAULTNETWORK = {
-    bech32: "bc",
-    pubKeyHash: 0,
-    scriptHash: 5,
-    validWitnessVersions: [0]
-  };
-  var TESTNETWORK = {
-    bech32: "tb",
-    pubKeyHash: 111,
-    scriptHash: 196,
-    validWitnessVersions: [0]
-  };
-  var SIGNETNETWORK = {
-    bech32: "tbs",
-    pubKeyHash: 111,
-    scriptHash: 196,
-    validWitnessVersions: [0]
-  };
-  var REGTESTNETWORK = {
-    bech32: "bcrt",
-    pubKeyHash: 111,
-    scriptHash: 196,
-    validWitnessVersions: [0]
-  };
-  var SIMNETWORK = {
-    bech32: "sb",
-    pubKeyHash: 63,
-    scriptHash: 123,
-    validWitnessVersions: [0]
-  };
-  var FEATUREBIT_ORDER = [
-    "option_data_loss_protect",
-    "initial_routing_sync",
-    "option_upfront_shutdown_script",
-    "gossip_queries",
-    "var_onion_optin",
-    "gossip_queries_ex",
-    "option_static_remotekey",
-    "payment_secret",
-    "basic_mpp",
-    "option_support_large_channel"
-  ];
-  var DIVISORS = {
-    m: BigInt(1000),
-    u: BigInt(1e6),
-    n: BigInt(1e9),
-    p: BigInt(1000000000000)
-  };
-  var MAX_MILLISATS = BigInt("2100000000000000000");
-  var MILLISATS_PER_BTC = BigInt(100000000000);
-  var TAGCODES = {
-    payment_hash: 1,
-    payment_secret: 16,
-    description: 13,
-    payee: 19,
-    description_hash: 23,
-    expiry: 6,
-    min_final_cltv_expiry: 24,
-    fallback_address: 9,
-    route_hint: 3,
-    feature_bits: 5,
-    metadata: 27
-  };
-  var TAGNAMES = {};
-  for (let i3 = 0, keys = Object.keys(TAGCODES);i3 < keys.length; i3++) {
-    const currentName = keys[i3];
-    const currentCode = TAGCODES[keys[i3]].toString();
-    TAGNAMES[currentCode] = currentName;
-  }
-  var TAGPARSERS = {
-    1: (words) => hex3.encode(bech323.fromWordsUnsafe(words)),
-    16: (words) => hex3.encode(bech323.fromWordsUnsafe(words)),
-    13: (words) => utf83.encode(bech323.fromWordsUnsafe(words)),
-    19: (words) => hex3.encode(bech323.fromWordsUnsafe(words)),
-    23: (words) => hex3.encode(bech323.fromWordsUnsafe(words)),
-    27: (words) => hex3.encode(bech323.fromWordsUnsafe(words)),
-    6: wordsToIntBE,
-    24: wordsToIntBE,
-    3: routingInfoParser,
-    5: featureBitsParser
-  };
-  function getUnknownParser(tagCode) {
-    return (words) => ({
-      tagCode: parseInt(tagCode),
-      words: bech323.encode("unknown", words, Number.MAX_SAFE_INTEGER)
-    });
-  }
-  function wordsToIntBE(words) {
-    return words.reverse().reduce((total, item, index) => {
-      return total + item * Math.pow(32, index);
-    }, 0);
-  }
-  function routingInfoParser(words) {
-    const routes = [];
-    let pubkey, shortChannelId, feeBaseMSats, feeProportionalMillionths, cltvExpiryDelta;
-    let routesBuffer = bech323.fromWordsUnsafe(words);
-    while (routesBuffer.length > 0) {
-      pubkey = hex3.encode(routesBuffer.slice(0, 33));
-      shortChannelId = hex3.encode(routesBuffer.slice(33, 41));
-      feeBaseMSats = parseInt(hex3.encode(routesBuffer.slice(41, 45)), 16);
-      feeProportionalMillionths = parseInt(hex3.encode(routesBuffer.slice(45, 49)), 16);
-      cltvExpiryDelta = parseInt(hex3.encode(routesBuffer.slice(49, 51)), 16);
-      routesBuffer = routesBuffer.slice(51);
-      routes.push({
-        pubkey,
-        short_channel_id: shortChannelId,
-        fee_base_msat: feeBaseMSats,
-        fee_proportional_millionths: feeProportionalMillionths,
-        cltv_expiry_delta: cltvExpiryDelta
-      });
-    }
-    return routes;
-  }
-  function featureBitsParser(words) {
-    const bools = words.slice().reverse().map((word) => [
-      !!(word & 1),
-      !!(word & 2),
-      !!(word & 4),
-      !!(word & 8),
-      !!(word & 16)
-    ]).reduce((finalArr, itemArr) => finalArr.concat(itemArr), []);
-    while (bools.length < FEATUREBIT_ORDER.length * 2) {
-      bools.push(false);
-    }
-    const featureBits = {};
-    FEATUREBIT_ORDER.forEach((featureName, index) => {
-      let status;
-      if (bools[index * 2]) {
-        status = "required";
-      } else if (bools[index * 2 + 1]) {
-        status = "supported";
-      } else {
-        status = "unsupported";
-      }
-      featureBits[featureName] = status;
-    });
-    const extraBits = bools.slice(FEATUREBIT_ORDER.length * 2);
-    featureBits.extra_bits = {
-      start_bit: FEATUREBIT_ORDER.length * 2,
-      bits: extraBits,
-      has_required: extraBits.reduce((result, bit, index) => index % 2 !== 0 ? result || false : result || bit, false)
-    };
-    return featureBits;
-  }
-  function hrpToMillisat(hrpString, outputString) {
-    let divisor, value;
-    if (hrpString.slice(-1).match(/^[munp]$/)) {
-      divisor = hrpString.slice(-1);
-      value = hrpString.slice(0, -1);
-    } else if (hrpString.slice(-1).match(/^[^munp0-9]$/)) {
-      throw new Error("Not a valid multiplier for the amount");
-    } else {
-      value = hrpString;
-    }
-    if (!value.match(/^\d+$/))
-      throw new Error("Not a valid human readable amount");
-    const valueBN = BigInt(value);
-    const millisatoshisBN = divisor ? valueBN * MILLISATS_PER_BTC / DIVISORS[divisor] : valueBN * MILLISATS_PER_BTC;
-    if (divisor === "p" && !(valueBN % BigInt(10) === BigInt(0)) || millisatoshisBN > MAX_MILLISATS) {
-      throw new Error("Amount is outside of valid range");
-    }
-    return outputString ? millisatoshisBN.toString() : millisatoshisBN;
-  }
-  function decode4(paymentRequest, network) {
-    if (typeof paymentRequest !== "string")
-      throw new Error("Lightning Payment Request must be string");
-    if (paymentRequest.slice(0, 2).toLowerCase() !== "ln")
-      throw new Error("Not a proper lightning payment request");
-    const sections = [];
-    const decoded = bech323.decode(paymentRequest, Number.MAX_SAFE_INTEGER);
-    paymentRequest = paymentRequest.toLowerCase();
-    const prefix = decoded.prefix;
-    let words = decoded.words;
-    let letters = paymentRequest.slice(prefix.length + 1);
-    let sigWords = words.slice(-104);
-    words = words.slice(0, -104);
-    let prefixMatches = prefix.match(/^ln(\S+?)(\d*)([a-zA-Z]?)$/);
-    if (prefixMatches && !prefixMatches[2])
-      prefixMatches = prefix.match(/^ln(\S+)$/);
-    if (!prefixMatches) {
-      throw new Error("Not a proper lightning payment request");
-    }
-    sections.push({
-      name: "lightning_network",
-      letters: "ln"
-    });
-    const bech32Prefix = prefixMatches[1];
-    let coinNetwork;
-    if (!network) {
-      switch (bech32Prefix) {
-        case DEFAULTNETWORK.bech32:
-          coinNetwork = DEFAULTNETWORK;
-          break;
-        case TESTNETWORK.bech32:
-          coinNetwork = TESTNETWORK;
-          break;
-        case SIGNETNETWORK.bech32:
-          coinNetwork = SIGNETNETWORK;
-          break;
-        case REGTESTNETWORK.bech32:
-          coinNetwork = REGTESTNETWORK;
-          break;
-        case SIMNETWORK.bech32:
-          coinNetwork = SIMNETWORK;
-          break;
-      }
-    } else {
-      if (network.bech32 === undefined || network.pubKeyHash === undefined || network.scriptHash === undefined || !Array.isArray(network.validWitnessVersions))
-        throw new Error("Invalid network");
-      coinNetwork = network;
-    }
-    if (!coinNetwork || coinNetwork.bech32 !== bech32Prefix) {
-      throw new Error("Unknown coin bech32 prefix");
-    }
-    sections.push({
-      name: "coin_network",
-      letters: bech32Prefix,
-      value: coinNetwork
-    });
-    const value = prefixMatches[2];
-    let millisatoshis;
-    if (value) {
-      const divisor = prefixMatches[3];
-      millisatoshis = hrpToMillisat(value + divisor, true);
-      sections.push({
-        name: "amount",
-        letters: prefixMatches[2] + prefixMatches[3],
-        value: millisatoshis
-      });
-    } else {
-      millisatoshis = null;
-    }
-    sections.push({
-      name: "separator",
-      letters: "1"
-    });
-    const timestamp = wordsToIntBE(words.slice(0, 7));
-    words = words.slice(7);
-    sections.push({
-      name: "timestamp",
-      letters: letters.slice(0, 7),
-      value: timestamp
-    });
-    letters = letters.slice(7);
-    let tagName, parser, tagLength, tagWords;
-    while (words.length > 0) {
-      const tagCode = words[0].toString();
-      tagName = TAGNAMES[tagCode] || "unknown_tag";
-      parser = TAGPARSERS[tagCode] || getUnknownParser(tagCode);
-      words = words.slice(1);
-      tagLength = wordsToIntBE(words.slice(0, 2));
-      words = words.slice(2);
-      tagWords = words.slice(0, tagLength);
-      words = words.slice(tagLength);
-      sections.push({
-        name: tagName,
-        tag: letters[0],
-        letters: letters.slice(0, 1 + 2 + tagLength),
-        value: parser(tagWords)
-      });
-      letters = letters.slice(1 + 2 + tagLength);
-    }
-    sections.push({
-      name: "signature",
-      letters: letters.slice(0, 104),
-      value: hex3.encode(bech323.fromWordsUnsafe(sigWords))
-    });
-    letters = letters.slice(104);
-    sections.push({
-      name: "checksum",
-      letters
-    });
-    let result = {
-      paymentRequest,
-      sections,
-      get expiry() {
-        let exp = sections.find((s) => s.name === "expiry");
-        if (exp)
-          return getValue("timestamp") + exp.value;
-      },
-      get route_hints() {
-        return sections.filter((s) => s.name === "route_hint").map((s) => s.value);
-      }
-    };
-    for (let name in TAGCODES) {
-      if (name === "route_hint") {
-        continue;
-      }
-      Object.defineProperty(result, name, {
-        get() {
-          return getValue(name);
-        }
-      });
-    }
-    return result;
-    function getValue(name) {
-      let section = sections.find((s) => s.name === name);
-      return section ? section.value : undefined;
-    }
-  }
-  module.exports = {
-    decode: decode4,
-    hrpToMillisat
-  };
-});
-
 // node_modules/commander/esm.mjs
 var import__ = __toESM(require_commander(), 1);
 var {
@@ -33735,8 +31070,19 @@ var {
   Option,
   Help
 } = import__.default;
-
-// node_modules/chalk/source/vendor/ansi-styles/index.js
+// ../packages/types/src/tools/definitions.js
+var ToolCategory;
+(function(ToolCategory2) {
+  ToolCategory2["FileSystem"] = "filesystem";
+  ToolCategory2["Git"] = "git";
+  ToolCategory2["Nostr"] = "nostr";
+  ToolCategory2["Documentation"] = "documentation";
+  ToolCategory2["Agent"] = "agent";
+  ToolCategory2["System"] = "system";
+  ToolCategory2["Development"] = "development";
+  ToolCategory2["Testing"] = "testing";
+})(ToolCategory || (ToolCategory = {}));
+// ../shared/node_modules/chalk/source/vendor/ansi-styles/index.js
 var ANSI_BACKGROUND_OFFSET = 10;
 var wrapAnsi16 = (offset = 0) => (code) => `\x1B[${code + offset}m`;
 var wrapAnsi256 = (offset = 0) => (code) => `\x1B[${38 + offset};5;${code}m`;
@@ -33913,7 +31259,7 @@ function assembleStyles() {
 var ansiStyles = assembleStyles();
 var ansi_styles_default = ansiStyles;
 
-// node_modules/chalk/source/vendor/supports-color/index.js
+// ../shared/node_modules/chalk/source/vendor/supports-color/index.js
 import process2 from "process";
 import os from "os";
 import tty from "tty";
@@ -34039,7 +31385,7 @@ var supportsColor = {
 };
 var supports_color_default = supportsColor;
 
-// node_modules/chalk/source/utilities.js
+// ../shared/node_modules/chalk/source/utilities.js
 function stringReplaceAll(string, substring, replacer) {
   let index = string.indexOf(substring);
   if (index === -1) {
@@ -34072,7 +31418,7 @@ function stringEncaseCRLFWithFirstIndex(string, prefix, postfix, index) {
   return returnValue;
 }
 
-// node_modules/chalk/source/index.js
+// ../shared/node_modules/chalk/source/index.js
 var { stdout: stdoutColor, stderr: stderrColor } = supports_color_default;
 var GENERATOR = Symbol("GENERATOR");
 var STYLER = Symbol("STYLER");
@@ -34219,17 +31565,616 @@ var chalk = createChalk();
 var chalkStderr = createChalk({ level: stderrColor ? stderrColor.level : 0 });
 var source_default = chalk;
 
+// ../shared/dist/shared/src/logger.js
+var globalConfig = {
+  useEmoji: true,
+  useLabels: false,
+  debugEnabled: typeof process !== "undefined" && process.env?.DEBUG === "true"
+};
+var agentColors = [
+  source_default.red,
+  source_default.green,
+  source_default.yellow,
+  source_default.blue,
+  source_default.magenta,
+  source_default.cyan,
+  source_default.white,
+  source_default.gray,
+  source_default.redBright,
+  source_default.greenBright,
+  source_default.yellowBright,
+  source_default.blueBright,
+  source_default.magentaBright,
+  source_default.cyanBright
+];
+var agentColorMap = new Map;
+function getAgentColor(agentName) {
+  if (!agentColorMap.has(agentName)) {
+    const index = agentColorMap.size % agentColors.length;
+    const color = agentColors[index] || source_default.white;
+    agentColorMap.set(agentName, color);
+  }
+  return agentColorMap.get(agentName) || source_default.white;
+}
+function logError(message, error) {
+  const prefix = globalConfig.useEmoji ? "\u274C" : globalConfig.useLabels ? "[ERROR]" : "";
+  const fullMessage = prefix ? `${prefix} ${message}` : message;
+  console.error(source_default.redBright(fullMessage), error || "");
+}
+function logInfo(message, ...args) {
+  const prefix = globalConfig.useEmoji ? "\u2139\uFE0F" : globalConfig.useLabels ? "[INFO]" : "";
+  const fullMessage = prefix ? `${prefix} ${message}` : message;
+  console.log(source_default.blueBright(fullMessage), ...args);
+}
+function logSuccess(message) {
+  const prefix = globalConfig.useEmoji ? "\u2705" : globalConfig.useLabels ? "[SUCCESS]" : "";
+  const fullMessage = prefix ? `${prefix} ${message}` : message;
+  console.log(source_default.greenBright(fullMessage));
+}
+function logWarning(message, ...args) {
+  const prefix = globalConfig.useEmoji ? "\u26A0\uFE0F" : globalConfig.useLabels ? "[WARNING]" : "";
+  const fullMessage = prefix ? `${prefix} ${message}` : message;
+  console.warn(source_default.yellowBright(fullMessage), ...args);
+}
+function logDebug(message, ...args) {
+  if (!globalConfig.debugEnabled)
+    return;
+  const prefix = globalConfig.useEmoji ? "\uD83D\uDD0D" : globalConfig.useLabels ? "[DEBUG]" : "";
+  const fullMessage = prefix ? `${prefix} ${message}` : message;
+  console.log(source_default.magentaBright(fullMessage), ...args);
+}
+
+class AgentLogger {
+  projectName;
+  agentName;
+  color;
+  constructor(agentName, projectName) {
+    this.agentName = agentName;
+    this.projectName = projectName;
+    this.color = getAgentColor(agentName);
+  }
+  formatMessage(emoji, message, colorFn) {
+    const projectPrefix = this.projectName ? `${source_default.gray(`[${this.projectName}]`)} ` : "";
+    const agentPrefix = `${this.color(`[${this.agentName}]`)} `;
+    const emojiPrefix = globalConfig.useEmoji ? `${emoji} ` : "";
+    const coloredMessage = colorFn(message);
+    return `${projectPrefix}${agentPrefix}${emojiPrefix}${coloredMessage}`;
+  }
+  info(message, ...args) {
+    console.log(this.formatMessage("\u2139\uFE0F", message, source_default.blueBright), ...args);
+  }
+  success(message, ...args) {
+    console.log(this.formatMessage("\u2705", message, source_default.greenBright), ...args);
+  }
+  warning(message, ...args) {
+    console.warn(this.formatMessage("\u26A0\uFE0F", message, source_default.yellowBright), ...args);
+  }
+  error(message, error) {
+    console.error(this.formatMessage("\u274C", message, source_default.redBright), error || "");
+  }
+  debug(message, ...args) {
+    if (globalConfig.debugEnabled) {
+      console.log(this.formatMessage("\uD83D\uDD0D", message, source_default.magentaBright), ...args);
+    }
+  }
+}
+function createAgentLogger(agentName, projectName) {
+  return new AgentLogger(agentName, projectName);
+}
+var logger = {
+  info: logInfo,
+  error: logError,
+  success: logSuccess,
+  warn: logWarning,
+  warning: logWarning,
+  debug: logDebug,
+  createAgent: createAgentLogger
+};
+// ../shared/dist/shared/src/config/relays.js
+var DEFAULT_RELAYS = [
+  "wss://relay.damus.io",
+  "wss://relay.primal.net",
+  "wss://relay.nostr.band",
+  "wss://nos.lol"
+];
+var EXTENDED_RELAYS = [...DEFAULT_RELAYS, "wss://purplepag.es"];
+function getRelayUrls(extended = false) {
+  return extended ? EXTENDED_RELAYS : DEFAULT_RELAYS;
+}
+// node_modules/chalk/source/vendor/ansi-styles/index.js
+var ANSI_BACKGROUND_OFFSET2 = 10;
+var wrapAnsi162 = (offset = 0) => (code) => `\x1B[${code + offset}m`;
+var wrapAnsi2562 = (offset = 0) => (code) => `\x1B[${38 + offset};5;${code}m`;
+var wrapAnsi16m2 = (offset = 0) => (red, green, blue) => `\x1B[${38 + offset};2;${red};${green};${blue}m`;
+var styles3 = {
+  modifier: {
+    reset: [0, 0],
+    bold: [1, 22],
+    dim: [2, 22],
+    italic: [3, 23],
+    underline: [4, 24],
+    overline: [53, 55],
+    inverse: [7, 27],
+    hidden: [8, 28],
+    strikethrough: [9, 29]
+  },
+  color: {
+    black: [30, 39],
+    red: [31, 39],
+    green: [32, 39],
+    yellow: [33, 39],
+    blue: [34, 39],
+    magenta: [35, 39],
+    cyan: [36, 39],
+    white: [37, 39],
+    blackBright: [90, 39],
+    gray: [90, 39],
+    grey: [90, 39],
+    redBright: [91, 39],
+    greenBright: [92, 39],
+    yellowBright: [93, 39],
+    blueBright: [94, 39],
+    magentaBright: [95, 39],
+    cyanBright: [96, 39],
+    whiteBright: [97, 39]
+  },
+  bgColor: {
+    bgBlack: [40, 49],
+    bgRed: [41, 49],
+    bgGreen: [42, 49],
+    bgYellow: [43, 49],
+    bgBlue: [44, 49],
+    bgMagenta: [45, 49],
+    bgCyan: [46, 49],
+    bgWhite: [47, 49],
+    bgBlackBright: [100, 49],
+    bgGray: [100, 49],
+    bgGrey: [100, 49],
+    bgRedBright: [101, 49],
+    bgGreenBright: [102, 49],
+    bgYellowBright: [103, 49],
+    bgBlueBright: [104, 49],
+    bgMagentaBright: [105, 49],
+    bgCyanBright: [106, 49],
+    bgWhiteBright: [107, 49]
+  }
+};
+var modifierNames2 = Object.keys(styles3.modifier);
+var foregroundColorNames2 = Object.keys(styles3.color);
+var backgroundColorNames2 = Object.keys(styles3.bgColor);
+var colorNames2 = [...foregroundColorNames2, ...backgroundColorNames2];
+function assembleStyles2() {
+  const codes = new Map;
+  for (const [groupName, group] of Object.entries(styles3)) {
+    for (const [styleName, style] of Object.entries(group)) {
+      styles3[styleName] = {
+        open: `\x1B[${style[0]}m`,
+        close: `\x1B[${style[1]}m`
+      };
+      group[styleName] = styles3[styleName];
+      codes.set(style[0], style[1]);
+    }
+    Object.defineProperty(styles3, groupName, {
+      value: group,
+      enumerable: false
+    });
+  }
+  Object.defineProperty(styles3, "codes", {
+    value: codes,
+    enumerable: false
+  });
+  styles3.color.close = "\x1B[39m";
+  styles3.bgColor.close = "\x1B[49m";
+  styles3.color.ansi = wrapAnsi162();
+  styles3.color.ansi256 = wrapAnsi2562();
+  styles3.color.ansi16m = wrapAnsi16m2();
+  styles3.bgColor.ansi = wrapAnsi162(ANSI_BACKGROUND_OFFSET2);
+  styles3.bgColor.ansi256 = wrapAnsi2562(ANSI_BACKGROUND_OFFSET2);
+  styles3.bgColor.ansi16m = wrapAnsi16m2(ANSI_BACKGROUND_OFFSET2);
+  Object.defineProperties(styles3, {
+    rgbToAnsi256: {
+      value(red, green, blue) {
+        if (red === green && green === blue) {
+          if (red < 8) {
+            return 16;
+          }
+          if (red > 248) {
+            return 231;
+          }
+          return Math.round((red - 8) / 247 * 24) + 232;
+        }
+        return 16 + 36 * Math.round(red / 255 * 5) + 6 * Math.round(green / 255 * 5) + Math.round(blue / 255 * 5);
+      },
+      enumerable: false
+    },
+    hexToRgb: {
+      value(hex) {
+        const matches = /[a-f\d]{6}|[a-f\d]{3}/i.exec(hex.toString(16));
+        if (!matches) {
+          return [0, 0, 0];
+        }
+        let [colorString] = matches;
+        if (colorString.length === 3) {
+          colorString = [...colorString].map((character) => character + character).join("");
+        }
+        const integer = Number.parseInt(colorString, 16);
+        return [
+          integer >> 16 & 255,
+          integer >> 8 & 255,
+          integer & 255
+        ];
+      },
+      enumerable: false
+    },
+    hexToAnsi256: {
+      value: (hex) => styles3.rgbToAnsi256(...styles3.hexToRgb(hex)),
+      enumerable: false
+    },
+    ansi256ToAnsi: {
+      value(code) {
+        if (code < 8) {
+          return 30 + code;
+        }
+        if (code < 16) {
+          return 90 + (code - 8);
+        }
+        let red;
+        let green;
+        let blue;
+        if (code >= 232) {
+          red = ((code - 232) * 10 + 8) / 255;
+          green = red;
+          blue = red;
+        } else {
+          code -= 16;
+          const remainder = code % 36;
+          red = Math.floor(code / 36) / 5;
+          green = Math.floor(remainder / 6) / 5;
+          blue = remainder % 6 / 5;
+        }
+        const value = Math.max(red, green, blue) * 2;
+        if (value === 0) {
+          return 30;
+        }
+        let result = 30 + (Math.round(blue) << 2 | Math.round(green) << 1 | Math.round(red));
+        if (value === 2) {
+          result += 60;
+        }
+        return result;
+      },
+      enumerable: false
+    },
+    rgbToAnsi: {
+      value: (red, green, blue) => styles3.ansi256ToAnsi(styles3.rgbToAnsi256(red, green, blue)),
+      enumerable: false
+    },
+    hexToAnsi: {
+      value: (hex) => styles3.ansi256ToAnsi(styles3.hexToAnsi256(hex)),
+      enumerable: false
+    }
+  });
+  return styles3;
+}
+var ansiStyles2 = assembleStyles2();
+var ansi_styles_default2 = ansiStyles2;
+
+// node_modules/chalk/source/vendor/supports-color/index.js
+import process3 from "process";
+import os2 from "os";
+import tty2 from "tty";
+function hasFlag2(flag, argv = globalThis.Deno ? globalThis.Deno.args : process3.argv) {
+  const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
+  const position = argv.indexOf(prefix + flag);
+  const terminatorPosition = argv.indexOf("--");
+  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+var { env: env2 } = process3;
+var flagForceColor2;
+if (hasFlag2("no-color") || hasFlag2("no-colors") || hasFlag2("color=false") || hasFlag2("color=never")) {
+  flagForceColor2 = 0;
+} else if (hasFlag2("color") || hasFlag2("colors") || hasFlag2("color=true") || hasFlag2("color=always")) {
+  flagForceColor2 = 1;
+}
+function envForceColor2() {
+  if ("FORCE_COLOR" in env2) {
+    if (env2.FORCE_COLOR === "true") {
+      return 1;
+    }
+    if (env2.FORCE_COLOR === "false") {
+      return 0;
+    }
+    return env2.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env2.FORCE_COLOR, 10), 3);
+  }
+}
+function translateLevel2(level) {
+  if (level === 0) {
+    return false;
+  }
+  return {
+    level,
+    hasBasic: true,
+    has256: level >= 2,
+    has16m: level >= 3
+  };
+}
+function _supportsColor2(haveStream, { streamIsTTY, sniffFlags = true } = {}) {
+  const noFlagForceColor = envForceColor2();
+  if (noFlagForceColor !== undefined) {
+    flagForceColor2 = noFlagForceColor;
+  }
+  const forceColor = sniffFlags ? flagForceColor2 : noFlagForceColor;
+  if (forceColor === 0) {
+    return 0;
+  }
+  if (sniffFlags) {
+    if (hasFlag2("color=16m") || hasFlag2("color=full") || hasFlag2("color=truecolor")) {
+      return 3;
+    }
+    if (hasFlag2("color=256")) {
+      return 2;
+    }
+  }
+  if ("TF_BUILD" in env2 && "AGENT_NAME" in env2) {
+    return 1;
+  }
+  if (haveStream && !streamIsTTY && forceColor === undefined) {
+    return 0;
+  }
+  const min = forceColor || 0;
+  if (env2.TERM === "dumb") {
+    return min;
+  }
+  if (process3.platform === "win32") {
+    const osRelease = os2.release().split(".");
+    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
+      return Number(osRelease[2]) >= 14931 ? 3 : 2;
+    }
+    return 1;
+  }
+  if ("CI" in env2) {
+    if (["GITHUB_ACTIONS", "GITEA_ACTIONS", "CIRCLECI"].some((key) => (key in env2))) {
+      return 3;
+    }
+    if (["TRAVIS", "APPVEYOR", "GITLAB_CI", "BUILDKITE", "DRONE"].some((sign) => (sign in env2)) || env2.CI_NAME === "codeship") {
+      return 1;
+    }
+    return min;
+  }
+  if ("TEAMCITY_VERSION" in env2) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env2.TEAMCITY_VERSION) ? 1 : 0;
+  }
+  if (env2.COLORTERM === "truecolor") {
+    return 3;
+  }
+  if (env2.TERM === "xterm-kitty") {
+    return 3;
+  }
+  if ("TERM_PROGRAM" in env2) {
+    const version = Number.parseInt((env2.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
+    switch (env2.TERM_PROGRAM) {
+      case "iTerm.app": {
+        return version >= 3 ? 3 : 2;
+      }
+      case "Apple_Terminal": {
+        return 2;
+      }
+    }
+  }
+  if (/-256(color)?$/i.test(env2.TERM)) {
+    return 2;
+  }
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env2.TERM)) {
+    return 1;
+  }
+  if ("COLORTERM" in env2) {
+    return 1;
+  }
+  return min;
+}
+function createSupportsColor2(stream, options = {}) {
+  const level = _supportsColor2(stream, {
+    streamIsTTY: stream && stream.isTTY,
+    ...options
+  });
+  return translateLevel2(level);
+}
+var supportsColor2 = {
+  stdout: createSupportsColor2({ isTTY: tty2.isatty(1) }),
+  stderr: createSupportsColor2({ isTTY: tty2.isatty(2) })
+};
+var supports_color_default2 = supportsColor2;
+
+// node_modules/chalk/source/utilities.js
+function stringReplaceAll2(string, substring, replacer) {
+  let index = string.indexOf(substring);
+  if (index === -1) {
+    return string;
+  }
+  const substringLength = substring.length;
+  let endIndex = 0;
+  let returnValue = "";
+  do {
+    returnValue += string.slice(endIndex, index) + substring + replacer;
+    endIndex = index + substringLength;
+    index = string.indexOf(substring, endIndex);
+  } while (index !== -1);
+  returnValue += string.slice(endIndex);
+  return returnValue;
+}
+function stringEncaseCRLFWithFirstIndex2(string, prefix, postfix, index) {
+  let endIndex = 0;
+  let returnValue = "";
+  do {
+    const gotCR = string[index - 1] === "\r";
+    returnValue += string.slice(endIndex, gotCR ? index - 1 : index) + prefix + (gotCR ? `\r
+` : `
+`) + postfix;
+    endIndex = index + 1;
+    index = string.indexOf(`
+`, endIndex);
+  } while (index !== -1);
+  returnValue += string.slice(endIndex);
+  return returnValue;
+}
+
+// node_modules/chalk/source/index.js
+var { stdout: stdoutColor2, stderr: stderrColor2 } = supports_color_default2;
+var GENERATOR2 = Symbol("GENERATOR");
+var STYLER2 = Symbol("STYLER");
+var IS_EMPTY2 = Symbol("IS_EMPTY");
+var levelMapping2 = [
+  "ansi",
+  "ansi",
+  "ansi256",
+  "ansi16m"
+];
+var styles4 = Object.create(null);
+var applyOptions2 = (object, options = {}) => {
+  if (options.level && !(Number.isInteger(options.level) && options.level >= 0 && options.level <= 3)) {
+    throw new Error("The `level` option should be an integer from 0 to 3");
+  }
+  const colorLevel = stdoutColor2 ? stdoutColor2.level : 0;
+  object.level = options.level === undefined ? colorLevel : options.level;
+};
+var chalkFactory2 = (options) => {
+  const chalk2 = (...strings) => strings.join(" ");
+  applyOptions2(chalk2, options);
+  Object.setPrototypeOf(chalk2, createChalk2.prototype);
+  return chalk2;
+};
+function createChalk2(options) {
+  return chalkFactory2(options);
+}
+Object.setPrototypeOf(createChalk2.prototype, Function.prototype);
+for (const [styleName, style] of Object.entries(ansi_styles_default2)) {
+  styles4[styleName] = {
+    get() {
+      const builder = createBuilder2(this, createStyler2(style.open, style.close, this[STYLER2]), this[IS_EMPTY2]);
+      Object.defineProperty(this, styleName, { value: builder });
+      return builder;
+    }
+  };
+}
+styles4.visible = {
+  get() {
+    const builder = createBuilder2(this, this[STYLER2], true);
+    Object.defineProperty(this, "visible", { value: builder });
+    return builder;
+  }
+};
+var getModelAnsi2 = (model, level, type, ...arguments_) => {
+  if (model === "rgb") {
+    if (level === "ansi16m") {
+      return ansi_styles_default2[type].ansi16m(...arguments_);
+    }
+    if (level === "ansi256") {
+      return ansi_styles_default2[type].ansi256(ansi_styles_default2.rgbToAnsi256(...arguments_));
+    }
+    return ansi_styles_default2[type].ansi(ansi_styles_default2.rgbToAnsi(...arguments_));
+  }
+  if (model === "hex") {
+    return getModelAnsi2("rgb", level, type, ...ansi_styles_default2.hexToRgb(...arguments_));
+  }
+  return ansi_styles_default2[type][model](...arguments_);
+};
+var usedModels2 = ["rgb", "hex", "ansi256"];
+for (const model of usedModels2) {
+  styles4[model] = {
+    get() {
+      const { level } = this;
+      return function(...arguments_) {
+        const styler = createStyler2(getModelAnsi2(model, levelMapping2[level], "color", ...arguments_), ansi_styles_default2.color.close, this[STYLER2]);
+        return createBuilder2(this, styler, this[IS_EMPTY2]);
+      };
+    }
+  };
+  const bgModel = "bg" + model[0].toUpperCase() + model.slice(1);
+  styles4[bgModel] = {
+    get() {
+      const { level } = this;
+      return function(...arguments_) {
+        const styler = createStyler2(getModelAnsi2(model, levelMapping2[level], "bgColor", ...arguments_), ansi_styles_default2.bgColor.close, this[STYLER2]);
+        return createBuilder2(this, styler, this[IS_EMPTY2]);
+      };
+    }
+  };
+}
+var proto2 = Object.defineProperties(() => {}, {
+  ...styles4,
+  level: {
+    enumerable: true,
+    get() {
+      return this[GENERATOR2].level;
+    },
+    set(level) {
+      this[GENERATOR2].level = level;
+    }
+  }
+});
+var createStyler2 = (open, close, parent) => {
+  let openAll;
+  let closeAll;
+  if (parent === undefined) {
+    openAll = open;
+    closeAll = close;
+  } else {
+    openAll = parent.openAll + open;
+    closeAll = close + parent.closeAll;
+  }
+  return {
+    open,
+    close,
+    openAll,
+    closeAll,
+    parent
+  };
+};
+var createBuilder2 = (self2, _styler, _isEmpty) => {
+  const builder = (...arguments_) => applyStyle2(builder, arguments_.length === 1 ? "" + arguments_[0] : arguments_.join(" "));
+  Object.setPrototypeOf(builder, proto2);
+  builder[GENERATOR2] = self2;
+  builder[STYLER2] = _styler;
+  builder[IS_EMPTY2] = _isEmpty;
+  return builder;
+};
+var applyStyle2 = (self2, string) => {
+  if (self2.level <= 0 || !string) {
+    return self2[IS_EMPTY2] ? "" : string;
+  }
+  let styler = self2[STYLER2];
+  if (styler === undefined) {
+    return string;
+  }
+  const { openAll, closeAll } = styler;
+  if (string.includes("\x1B")) {
+    while (styler !== undefined) {
+      string = stringReplaceAll2(string, styler.close, styler.open);
+      styler = styler.parent;
+    }
+  }
+  const lfIndex = string.indexOf(`
+`);
+  if (lfIndex !== -1) {
+    string = stringEncaseCRLFWithFirstIndex2(string, closeAll, openAll, lfIndex);
+  }
+  return openAll + string + closeAll;
+};
+Object.defineProperties(createChalk2.prototype, styles4);
+var chalk2 = createChalk2();
+var chalkStderr2 = createChalk2({ level: stderrColor2 ? stderrColor2.level : 0 });
+var source_default2 = chalk2;
+
 // node_modules/inquirer/lib/prompts/list.js
 var import_ansi_escapes3 = __toESM(require_ansi_escapes(), 1);
 var import_yoctocolors_cjs4 = __toESM(require_yoctocolors_cjs(), 1);
 
 // node_modules/@inquirer/figures/dist/esm/index.js
-import process3 from "process";
+import process4 from "process";
 function isUnicodeSupported() {
-  if (process3.platform !== "win32") {
-    return process3.env["TERM"] !== "linux";
+  if (process4.platform !== "win32") {
+    return process4.env["TERM"] !== "linux";
   }
-  return Boolean(process3.env["WT_SESSION"]) || Boolean(process3.env["TERMINUS_SUBLIME"]) || process3.env["ConEmuTask"] === "{cmd::Cmder}" || process3.env["TERM_PROGRAM"] === "Terminus-Sublime" || process3.env["TERM_PROGRAM"] === "vscode" || process3.env["TERM"] === "xterm-256color" || process3.env["TERM"] === "alacritty" || process3.env["TERMINAL_EMULATOR"] === "JetBrains-JediTerm";
+  return Boolean(process4.env["WT_SESSION"]) || Boolean(process4.env["TERMINUS_SUBLIME"]) || process4.env["ConEmuTask"] === "{cmd::Cmder}" || process4.env["TERM_PROGRAM"] === "Terminus-Sublime" || process4.env["TERM_PROGRAM"] === "vscode" || process4.env["TERM"] === "xterm-256color" || process4.env["TERM"] === "alacritty" || process4.env["TERMINAL_EMULATOR"] === "JetBrains-JediTerm";
 }
 var common = {
   circleQuestionMark: "(?)",
@@ -34960,11 +32905,11 @@ class ListPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    events.normalizedUpKey.pipe(import_rxjs3.takeUntil(events.line)).forEach(this.onUpKey.bind(this));
-    events.normalizedDownKey.pipe(import_rxjs3.takeUntil(events.line)).forEach(this.onDownKey.bind(this));
-    events.numberKey.pipe(import_rxjs3.takeUntil(events.line)).forEach(this.onNumberKey.bind(this));
-    events.line.pipe(import_rxjs3.take(1), import_rxjs3.map(this.getCurrentValue.bind(this)), import_rxjs3.flatMap((value) => import_run_async2.default(this.opt.filter)(value, this.answers).catch((error) => error))).forEach(this.onSubmit.bind(this));
+    const events3 = observe(this.rl);
+    events3.normalizedUpKey.pipe(import_rxjs3.takeUntil(events3.line)).forEach(this.onUpKey.bind(this));
+    events3.normalizedDownKey.pipe(import_rxjs3.takeUntil(events3.line)).forEach(this.onDownKey.bind(this));
+    events3.numberKey.pipe(import_rxjs3.takeUntil(events3.line)).forEach(this.onNumberKey.bind(this));
+    events3.line.pipe(import_rxjs3.take(1), import_rxjs3.map(this.getCurrentValue.bind(this)), import_rxjs3.flatMap((value) => import_run_async2.default(this.opt.filter)(value, this.answers).catch((error) => error))).forEach(this.onSubmit.bind(this));
     this.render();
     return this;
   }
@@ -35059,12 +33004,12 @@ var import_rxjs4 = __toESM(require_cjs(), 1);
 class InputPrompt extends Prompt {
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    const submit = events.line.pipe(import_rxjs4.map(this.filterInput.bind(this)));
+    const events3 = observe(this.rl);
+    const submit = events3.line.pipe(import_rxjs4.map(this.filterInput.bind(this)));
     const validation = this.handleSubmitEvents(submit);
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events.keypress.pipe(import_rxjs4.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    events3.keypress.pipe(import_rxjs4.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -35148,9 +33093,9 @@ class ConfirmPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    events.keypress.pipe(import_rxjs5.takeUntil(events.line)).forEach(this.onKeypress.bind(this));
-    events.line.pipe(import_rxjs5.take(1)).forEach(this.onEnd.bind(this));
+    const events3 = observe(this.rl);
+    events3.keypress.pipe(import_rxjs5.takeUntil(events3.line)).forEach(this.onKeypress.bind(this));
+    events3.line.pipe(import_rxjs5.take(1)).forEach(this.onEnd.bind(this));
     this.render();
     return this;
   }
@@ -35216,14 +33161,14 @@ class RawListPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    const submit = events.line.pipe(import_rxjs6.map(this.getCurrentValue.bind(this)));
+    const events3 = observe(this.rl);
+    const submit = events3.line.pipe(import_rxjs6.map(this.getCurrentValue.bind(this)));
     const validation = this.handleSubmitEvents(submit);
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events.normalizedUpKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
-    events.normalizedDownKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
-    events.keypress.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    events3.normalizedUpKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
+    events3.normalizedDownKey.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
+    events3.keypress.pipe(import_rxjs6.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -35339,11 +33284,11 @@ class ExpandPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    const validation = this.handleSubmitEvents(events.line.pipe(import_rxjs7.map(this.getCurrentValue.bind(this))));
+    const events3 = observe(this.rl);
+    const validation = this.handleSubmitEvents(events3.line.pipe(import_rxjs7.map(this.getCurrentValue.bind(this))));
     validation.success.forEach(this.onSubmit.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    this.keypressObs = events.keypress.pipe(import_rxjs7.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    this.keypressObs = events3.keypress.pipe(import_rxjs7.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -35420,7 +33365,7 @@ class ExpandPrompt extends Prompt {
   }
   validateChoices(choices) {
     let formatError;
-    const errors = [];
+    const errors2 = [];
     const keymap = {};
     choices.filter(Separator.exclude).forEach((choice) => {
       if (!choice.key || choice.key.length !== 1) {
@@ -35428,7 +33373,7 @@ class ExpandPrompt extends Prompt {
       }
       choice.key = String(choice.key).toLowerCase();
       if (keymap[choice.key]) {
-        errors.push(choice.key);
+        errors2.push(choice.key);
       }
       keymap[choice.key] = true;
     });
@@ -35438,8 +33383,8 @@ class ExpandPrompt extends Prompt {
     if (keymap.h) {
       throw new Error("Reserved key error: `key` param cannot be `h` - this value is reserved.");
     }
-    if (errors.length > 0) {
-      throw new Error("Duplicate key error: `key` param must be unique. Duplicates: " + [...new Set(errors)].join(","));
+    if (errors2.length > 0) {
+      throw new Error("Duplicate key error: `key` param must be unique. Duplicates: " + [...new Set(errors2)].join(","));
     }
   }
   generateChoicesString(choices, defaultChoice) {
@@ -35498,16 +33443,16 @@ class CheckboxPrompt extends Prompt {
   }
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    const validation = this.handleSubmitEvents(events.line.pipe(import_rxjs8.map(this.getCurrentValue.bind(this))));
+    const events3 = observe(this.rl);
+    const validation = this.handleSubmitEvents(events3.line.pipe(import_rxjs8.map(this.getCurrentValue.bind(this))));
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events.normalizedUpKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
-    events.normalizedDownKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
-    events.numberKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onNumberKey.bind(this));
-    events.spaceKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onSpaceKey.bind(this));
-    events.aKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onAllKey.bind(this));
-    events.iKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onInverseKey.bind(this));
+    events3.normalizedUpKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onUpKey.bind(this));
+    events3.normalizedDownKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onDownKey.bind(this));
+    events3.numberKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onNumberKey.bind(this));
+    events3.spaceKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onSpaceKey.bind(this));
+    events3.aKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onAllKey.bind(this));
+    events3.iKey.pipe(import_rxjs8.takeUntil(validation.success)).forEach(this.onInverseKey.bind(this));
     this.render();
     this.firstRender = false;
     return this;
@@ -35647,12 +33592,12 @@ function mask(input, maskChar) {
 class PasswordPrompt extends Prompt {
   _run(cb) {
     this.done = cb;
-    const events = observe(this.rl);
-    const submit = events.line.pipe(import_rxjs9.map(this.filterInput.bind(this)));
+    const events3 = observe(this.rl);
+    const submit = events3.line.pipe(import_rxjs9.map(this.filterInput.bind(this)));
     const validation = this.handleSubmitEvents(submit);
     validation.success.forEach(this.onEnd.bind(this));
     validation.error.forEach(this.onError.bind(this));
-    events.keypress.pipe(import_rxjs9.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
+    events3.keypress.pipe(import_rxjs9.takeUntil(validation.success)).forEach(this.onKeypress.bind(this));
     this.render();
     return this;
   }
@@ -35705,8 +33650,8 @@ class EditorPrompt extends Prompt {
   _run(cb) {
     this.done = cb;
     this.editorResult = new import_rxjs10.Subject;
-    const events = observe(this.rl);
-    this.lineSubscription = events.line.subscribe(this.startExternalEditor.bind(this));
+    const events3 = observe(this.rl);
+    this.lineSubscription = events3.line.subscribe(this.startExternalEditor.bind(this));
     const waitUserInput = this.opt.waitUserInput === undefined ? true : this.opt.waitUserInput;
     const validation = this.handleSubmitEvents(this.editorResult);
     validation.success.forEach(this.onEnd.bind(this));
@@ -36026,18 +33971,18 @@ var inquirer = {
 var lib_default = inquirer;
 
 // node_modules/ora/index.js
-import process8 from "process";
+import process9 from "process";
 
 // node_modules/cli-cursor/index.js
-import process5 from "process";
+import process6 from "process";
 
 // node_modules/restore-cursor/index.js
 var import_onetime = __toESM(require_onetime(), 1);
 var import_signal_exit = __toESM(require_signal_exit(), 1);
-import process4 from "process";
+import process5 from "process";
 var restoreCursor = import_onetime.default(() => {
   import_signal_exit.default(() => {
-    process4.stderr.write("\x1B[?25h");
+    process5.stderr.write("\x1B[?25h");
   }, { alwaysLast: true });
 });
 var restore_cursor_default = restoreCursor;
@@ -36045,14 +33990,14 @@ var restore_cursor_default = restoreCursor;
 // node_modules/cli-cursor/index.js
 var isHidden = false;
 var cliCursor = {};
-cliCursor.show = (writableStream = process5.stderr) => {
+cliCursor.show = (writableStream = process6.stderr) => {
   if (!writableStream.isTTY) {
     return;
   }
   isHidden = false;
   writableStream.write("\x1B[?25h");
 };
-cliCursor.hide = (writableStream = process5.stderr) => {
+cliCursor.hide = (writableStream = process6.stderr) => {
   if (!writableStream.isTTY) {
     return;
   }
@@ -36076,26 +34021,26 @@ var cli_cursor_default = cliCursor;
 var import_cli_spinners = __toESM(require_cli_spinners(), 1);
 
 // node_modules/is-unicode-supported/index.js
-import process6 from "process";
+import process7 from "process";
 function isUnicodeSupported2() {
-  if (process6.platform !== "win32") {
-    return process6.env.TERM !== "linux";
+  if (process7.platform !== "win32") {
+    return process7.env.TERM !== "linux";
   }
-  return Boolean(process6.env.CI) || Boolean(process6.env.WT_SESSION) || Boolean(process6.env.TERMINUS_SUBLIME) || process6.env.ConEmuTask === "{cmd::Cmder}" || process6.env.TERM_PROGRAM === "Terminus-Sublime" || process6.env.TERM_PROGRAM === "vscode" || process6.env.TERM === "xterm-256color" || process6.env.TERM === "alacritty" || process6.env.TERMINAL_EMULATOR === "JetBrains-JediTerm";
+  return Boolean(process7.env.CI) || Boolean(process7.env.WT_SESSION) || Boolean(process7.env.TERMINUS_SUBLIME) || process7.env.ConEmuTask === "{cmd::Cmder}" || process7.env.TERM_PROGRAM === "Terminus-Sublime" || process7.env.TERM_PROGRAM === "vscode" || process7.env.TERM === "xterm-256color" || process7.env.TERM === "alacritty" || process7.env.TERMINAL_EMULATOR === "JetBrains-JediTerm";
 }
 
 // node_modules/log-symbols/index.js
 var main = {
-  info: source_default.blue("\u2139"),
-  success: source_default.green("\u2714"),
-  warning: source_default.yellow("\u26A0"),
-  error: source_default.red("\u2716")
+  info: source_default2.blue("\u2139"),
+  success: source_default2.green("\u2714"),
+  warning: source_default2.yellow("\u26A0"),
+  error: source_default2.red("\u2716")
 };
 var fallback = {
-  info: source_default.blue("i"),
-  success: source_default.green("\u221A"),
-  warning: source_default.yellow("\u203C"),
-  error: source_default.red("\xD7")
+  info: source_default2.blue("i"),
+  success: source_default2.green("\u221A"),
+  warning: source_default2.yellow("\u203C"),
+  error: source_default2.red("\xD7")
 };
 var logSymbols = isUnicodeSupported2() ? main : fallback;
 var log_symbols_default = logSymbols;
@@ -36183,7 +34128,7 @@ function isInteractive({ stream = process.stdout } = {}) {
 
 // node_modules/stdin-discarder/index.js
 var import_bl = __toESM(require_bl2(), 1);
-import process7 from "process";
+import process8 from "process";
 import readline2 from "readline";
 var ASCII_ETX_CODE = 3;
 
@@ -36193,20 +34138,20 @@ class StdinDiscarder {
   #ourEmit;
   #rl;
   constructor() {
-    this.#mutedStream.pipe(process7.stdout);
+    this.#mutedStream.pipe(process8.stdout);
     const self2 = this;
     this.#ourEmit = function(event, data, ...arguments_) {
-      const { stdin } = process7;
+      const { stdin } = process8;
       if (self2.#requests > 0 || stdin.emit === self2.#ourEmit) {
         if (event === "keypress") {
           return;
         }
         if (event === "data" && data.includes(ASCII_ETX_CODE)) {
-          process7.emit("SIGINT");
+          process8.emit("SIGINT");
         }
         Reflect.apply(self2.#ourEmit, this, [event, data, ...arguments_]);
       } else {
-        Reflect.apply(process7.stdin.emit, this, [event, data, ...arguments_]);
+        Reflect.apply(process8.stdin.emit, this, [event, data, ...arguments_]);
       }
     };
   }
@@ -36226,24 +34171,24 @@ class StdinDiscarder {
     }
   }
   _realStart() {
-    if (process7.platform === "win32") {
+    if (process8.platform === "win32") {
       return;
     }
     this.#rl = readline2.createInterface({
-      input: process7.stdin,
+      input: process8.stdin,
       output: this.#mutedStream
     });
     this.#rl.on("SIGINT", () => {
-      if (process7.listenerCount("SIGINT") === 0) {
-        process7.emit("SIGINT");
+      if (process8.listenerCount("SIGINT") === 0) {
+        process8.emit("SIGINT");
       } else {
         this.#rl.close();
-        process7.kill(process7.pid, "SIGINT");
+        process8.kill(process8.pid, "SIGINT");
       }
     });
   }
   _realStop() {
-    if (process7.platform === "win32") {
+    if (process8.platform === "win32") {
       return;
     }
     this.#rl.close();
@@ -36281,7 +34226,7 @@ class Ora {
     }
     this.#options = {
       color: "cyan",
-      stream: process8.stderr,
+      stream: process9.stderr,
       discardStdin: true,
       hideCursor: true,
       ...options
@@ -36296,7 +34241,7 @@ class Ora {
     this.prefixText = this.#options.prefixText;
     this.suffixText = this.#options.suffixText;
     this.indent = this.#options.indent;
-    if (process8.env.NODE_ENV === "test") {
+    if (process9.env.NODE_ENV === "test") {
       this._stream = this.#stream;
       this._isEnabled = this.#isEnabled;
       Object.defineProperty(this, "_linesToClear", {
@@ -36428,7 +34373,7 @@ class Ora {
     const { frames } = this.#spinner;
     let frame = frames[this.#frameIndex];
     if (this.color) {
-      frame = source_default[this.color](frame);
+      frame = source_default2[this.color](frame);
     }
     this.#frameIndex = ++this.#frameIndex % frames.length;
     const fullPrefixText = typeof this.#prefixText === "string" && this.#prefixText !== "" ? this.#prefixText + " " : "";
@@ -36483,7 +34428,7 @@ class Ora {
     if (this.#options.hideCursor) {
       cli_cursor_default.hide(this.#stream);
     }
-    if (this.#options.discardStdin && process8.stdin.isTTY) {
+    if (this.#options.discardStdin && process9.stdin.isTTY) {
       this.#isDiscardingStdin = true;
       stdin_discarder_default.start();
     }
@@ -36502,7 +34447,7 @@ class Ora {
     if (this.#options.hideCursor) {
       cli_cursor_default.show(this.#stream);
     }
-    if (this.#options.discardStdin && process8.stdin.isTTY && this.#isDiscardingStdin) {
+    if (this.#options.discardStdin && process9.stdin.isTTY && this.#isDiscardingStdin) {
       stdin_discarder_default.stop();
       this.#isDiscardingStdin = false;
     }
@@ -37400,15 +35345,15 @@ function wNAF(c, bits) {
       const { windows, windowSize } = opts(W);
       const points = [];
       let p = elm;
-      let base = p;
+      let base2 = p;
       for (let window2 = 0;window2 < windows; window2++) {
-        base = p;
-        points.push(base);
+        base2 = p;
+        points.push(base2);
         for (let i = 1;i < windowSize; i++) {
-          base = base.add(p);
-          points.push(base);
+          base2 = base2.add(p);
+          points.push(base2);
         }
-        p = base.double();
+        p = base2.double();
       }
       return points;
     },
@@ -38028,7 +35973,7 @@ function weierstrass(curveDef) {
       return numToNByteStr(this.r) + numToNByteStr(this.s);
     }
   }
-  const utils = {
+  const utils2 = {
     isValidPrivateKey(privateKey) {
       try {
         normPrivateKeyToScalar(privateKey);
@@ -38190,7 +36135,7 @@ function weierstrass(curveDef) {
     verify,
     ProjectivePoint: Point,
     Signature,
-    utils
+    utils: utils2
   };
 }
 
@@ -38342,14 +36287,14 @@ var _0n5 = BigInt(0);
 var fe = (x) => typeof x === "bigint" && _0n5 < x && x < secp256k1P;
 var ge = (x) => typeof x === "bigint" && _0n5 < x && x < secp256k1N;
 var TAGGED_HASH_PREFIXES = {};
-function taggedHash(tag, ...messages) {
+function taggedHash(tag, ...messages3) {
   let tagP = TAGGED_HASH_PREFIXES[tag];
   if (tagP === undefined) {
     const tagH = sha256(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
     tagP = concatBytes2(tagH, tagH);
     TAGGED_HASH_PREFIXES[tag] = tagP;
   }
-  return sha256(concatBytes2(tagP, ...messages));
+  return sha256(concatBytes2(tagP, ...messages3));
 }
 var pointToBytes = (point) => point.toRawBytes(true).slice(1);
 var numTo32b = (n) => numberToBytesBE(n, 32);
@@ -41682,10 +39627,10 @@ function encodeBech32(prefix, data) {
 function encodeBytes(prefix, bytes4) {
   return encodeBech32(prefix, bytes4);
 }
-function nprofileEncode(profile) {
+function nprofileEncode(profile2) {
   let data = encodeTLV({
-    0: [hexToBytes2(profile.pubkey)],
-    1: (profile.relays || []).map((url) => utf8Encoder.encode(url))
+    0: [hexToBytes2(profile2.pubkey)],
+    1: (profile2.relays || []).map((url) => utf8Encoder.encode(url))
   });
   return encodeBech32("nprofile", data);
 }
@@ -42617,10 +40562,10 @@ try {
 function useFetchImplementation4(fetchImplementation) {
   _fetch4 = fetchImplementation;
 }
-async function getZapEndpoint(metadata) {
+async function getZapEndpoint(metadata2) {
   try {
     let lnurl = "";
-    let { lud06, lud16 } = JSON.parse(metadata.content);
+    let { lud06, lud16 } = JSON.parse(metadata2.content);
     if (lud06) {
       let { words } = bech32.decode(lud06, 1000);
       let data = bech32.fromWords(words);
@@ -42640,24 +40585,24 @@ async function getZapEndpoint(metadata) {
   return null;
 }
 function makeZapRequest({
-  profile,
+  profile: profile2,
   event,
   amount,
-  relays,
+  relays: relays2,
   comment = ""
 }) {
   if (!amount)
     throw new Error("amount not given");
-  if (!profile)
+  if (!profile2)
     throw new Error("profile not given");
   let zr = {
     kind: 9734,
     created_at: Math.round(Date.now() / 1000),
     content: comment,
     tags: [
-      ["p", profile],
+      ["p", profile2],
       ["amount", amount.toString()],
-      ["relays", ...relays]
+      ["relays", ...relays2]
     ]
   };
   if (event && typeof event === "string") {
@@ -42696,8 +40641,8 @@ function validateZapRequest(zapRequestString) {
   let e = zapRequest.tags.find(([t, v]) => t === "e" && v);
   if (e && !e[1].match(/^[a-f0-9]{64}$/))
     return "Zap request 'e' tag is not valid hex.";
-  let relays = zapRequest.tags.find(([t, v]) => t === "relays" && v);
-  if (!relays)
+  let relays2 = zapRequest.tags.find(([t, v]) => t === "relays" && v);
+  if (!relays2)
     return "Zap request doesn't have a 'relays' tag.";
   return null;
 }
@@ -43857,15 +41802,15 @@ function wNAF2(c, bits) {
       const { windows, windowSize } = calcWOpts(W, bits);
       const points = [];
       let p = elm;
-      let base = p;
+      let base2 = p;
       for (let window2 = 0;window2 < windows; window2++) {
-        base = p;
-        points.push(base);
+        base2 = p;
+        points.push(base2);
         for (let i2 = 1;i2 < windowSize; i2++) {
-          base = base.add(p);
-          points.push(base);
+          base2 = base2.add(p);
+          points.push(base2);
         }
-        p = base.double();
+        p = base2.double();
       }
       return points;
     },
@@ -44642,7 +42587,7 @@ function ecdsa(Point2, ecdsaOpts, curveOpts = {}) {
     }
   }
   const normPrivateKeyToScalar = _legacyHelperNormPriv(Fn, curveOpts.allowedPrivateKeyLengths, curveOpts.wrapPrivateKey);
-  const utils = {
+  const utils2 = {
     isValidPrivateKey(privateKey) {
       try {
         normPrivateKeyToScalar(privateKey);
@@ -44813,7 +42758,7 @@ function ecdsa(Point2, ecdsaOpts, curveOpts = {}) {
     getSharedSecret,
     sign,
     verify,
-    utils,
+    utils: utils2,
     Point: Point2,
     Signature
   });
@@ -44945,14 +42890,14 @@ var secp256k12 = createCurve2({
   }
 }, sha2563);
 var TAGGED_HASH_PREFIXES2 = {};
-function taggedHash2(tag, ...messages) {
+function taggedHash2(tag, ...messages3) {
   let tagP = TAGGED_HASH_PREFIXES2[tag];
   if (tagP === undefined) {
     const tagH = sha2563(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
     tagP = concatBytes4(tagH, tagH);
     TAGGED_HASH_PREFIXES2[tag] = tagP;
   }
-  return sha2563(concatBytes4(tagP, ...messages));
+  return sha2563(concatBytes4(tagP, ...messages3));
 }
 var pointToBytes2 = (point) => point.toBytes(true).slice(1);
 var numTo32b2 = (n) => numberToBytesBE2(n, 32);
@@ -45099,13 +43044,13 @@ function getAllRelaysForAllPubkeys(ndk, pubkeys, type = "read") {
   const pubkeysToRelays = /* @__PURE__ */ new Map;
   const authorsMissingRelays = /* @__PURE__ */ new Set;
   pubkeys.forEach((pubkey) => {
-    const relays = getRelaysForSync(ndk, pubkey, type);
-    if (relays && relays.size > 0) {
-      relays.forEach((relay) => {
+    const relays2 = getRelaysForSync(ndk, pubkey, type);
+    if (relays2 && relays2.size > 0) {
+      relays2.forEach((relay) => {
         const pubkeysInRelay = pubkeysToRelays.get(relay) || /* @__PURE__ */ new Set;
         pubkeysInRelay.add(pubkey);
       });
-      pubkeysToRelays.set(pubkey, relays);
+      pubkeysToRelays.set(pubkey, relays2);
     } else {
       authorsMissingRelays.add(pubkey);
     }
@@ -46301,18 +44246,18 @@ var NDKPublishError = class extends Error {
   errors;
   publishedToRelays;
   intendedRelaySet;
-  constructor(message, errors, publishedToRelays, intendedRelaySet) {
+  constructor(message, errors2, publishedToRelays, intendedRelaySet) {
     super(message);
-    this.errors = errors;
+    this.errors = errors2;
     this.publishedToRelays = publishedToRelays;
     this.intendedRelaySet = intendedRelaySet;
   }
   get relayErrors() {
-    const errors = [];
+    const errors2 = [];
     for (const [relay, err] of this.errors) {
-      errors.push(`${relay.url}: ${err}`);
+      errors2.push(`${relay.url}: ${err}`);
     }
-    return errors.join(`
+    return errors2.join(`
 `);
   }
 };
@@ -46321,8 +44266,8 @@ var NDKRelaySet = class _NDKRelaySet {
   debug;
   ndk;
   pool;
-  constructor(relays, ndk, pool) {
-    this.relays = relays;
+  constructor(relays2, ndk, pool) {
+    this.relays = relays2;
     this.ndk = ndk;
     this.pool = pool ?? ndk.pool;
     this.debug = ndk.debug.extend("relayset");
@@ -46337,25 +44282,25 @@ var NDKRelaySet = class _NDKRelaySet {
     pool = pool ?? ndk.pool;
     if (!pool)
       throw new Error("No pool provided");
-    const relays = /* @__PURE__ */ new Set;
+    const relays2 = /* @__PURE__ */ new Set;
     for (const url of relayUrls) {
       const relay = pool.relays.get(normalizeRelayUrl(url));
       if (relay) {
         if (relay.status < 5 && connect) {
           relay.connect();
         }
-        relays.add(relay);
+        relays2.add(relay);
       } else {
         const temporaryRelay = new NDKRelay(normalizeRelayUrl(url), ndk?.relayAuthDefaultPolicy, ndk);
         pool.useTemporaryRelay(temporaryRelay, undefined, `requested from fromRelayUrls ${relayUrls}`);
-        relays.add(temporaryRelay);
+        relays2.add(temporaryRelay);
       }
     }
-    return new _NDKRelaySet(new Set(relays), ndk, pool);
+    return new _NDKRelaySet(new Set(relays2), ndk, pool);
   }
   async publish(event, timeoutMs, requiredRelayCount = 1) {
     const publishedToRelays = /* @__PURE__ */ new Set;
-    const errors = /* @__PURE__ */ new Map;
+    const errors2 = /* @__PURE__ */ new Map;
     const isEphemeral2 = event.isEphemeral();
     event.publishStatus = "pending";
     const relayPublishedHandler = (relay) => {
@@ -46367,7 +44312,7 @@ var NDKRelaySet = class _NDKRelaySet {
         return new Promise((resolve) => {
           const timeoutId = timeoutMs ? setTimeout(() => {
             if (!publishedToRelays.has(relay)) {
-              errors.set(relay, new Error(`Publish timeout after ${timeoutMs}ms`));
+              errors2.set(relay, new Error(`Publish timeout after ${timeoutMs}ms`));
               resolve(false);
             }
           }, timeoutMs) : null;
@@ -46384,7 +44329,7 @@ var NDKRelaySet = class _NDKRelaySet {
             if (timeoutId)
               clearTimeout(timeoutId);
             if (!isEphemeral2) {
-              errors.set(relay, err);
+              errors2.set(relay, err);
             }
             resolve(false);
           });
@@ -46393,7 +44338,7 @@ var NDKRelaySet = class _NDKRelaySet {
       await Promise.all(promises);
       if (publishedToRelays.size < requiredRelayCount) {
         if (!isEphemeral2) {
-          const error = new NDKPublishError("Not enough relays received the event (" + publishedToRelays.size + " published, " + requiredRelayCount + " required)", errors, publishedToRelays, this);
+          const error = new NDKPublishError("Not enough relays received the event (" + publishedToRelays.size + " published, " + requiredRelayCount + " required)", errors2, publishedToRelays, this);
           event.publishStatus = "error";
           event.publishError = error;
           this.ndk?.emit("event:publish-failed", event, error, this.relayUrls);
@@ -46414,13 +44359,13 @@ var NDKRelaySet = class _NDKRelaySet {
 };
 var d = import_debug.default("ndk:outbox:calculate");
 async function calculateRelaySetFromEvent(ndk, event, requiredRelayCount) {
-  const relays = /* @__PURE__ */ new Set;
+  const relays2 = /* @__PURE__ */ new Set;
   const authorWriteRelays = await getWriteRelaysFor(ndk, event.pubkey);
   if (authorWriteRelays) {
     authorWriteRelays.forEach((relayUrl) => {
       const relay = ndk.pool?.getRelay(relayUrl);
       if (relay)
-        relays.add(relay);
+        relays2.add(relay);
     });
   }
   let relayHints = event.tags.filter((tag) => ["a", "e"].includes(tag[0])).map((tag) => tag[2]).filter((url) => url?.startsWith("wss://")).filter((url) => {
@@ -46436,7 +44381,7 @@ async function calculateRelaySetFromEvent(ndk, event, requiredRelayCount) {
     const relay = ndk.pool?.getRelay(relayUrl, true, true);
     if (relay) {
       d("Adding relay hint %s", relayUrl);
-      relays.add(relay);
+      relays2.add(relay);
     }
   });
   const pTags = event.getMatchingTags("p").map((tag) => tag[1]);
@@ -46448,24 +44393,24 @@ async function calculateRelaySetFromEvent(ndk, event, requiredRelayCount) {
       const relay = ndk.pool?.getRelay(relayUrl, false, true);
       if (relay) {
         d("Adding p-tagged relay %s", relayUrl);
-        relays.add(relay);
+        relays2.add(relay);
       }
     });
   } else {
     d("Too many p-tags to consider %d", pTags.length);
   }
-  ndk.pool?.permanentAndConnectedRelays().forEach((relay) => relays.add(relay));
-  if (requiredRelayCount && relays.size < requiredRelayCount) {
-    const explicitRelays = ndk.explicitRelayUrls?.filter((url) => !Array.from(relays).some((r) => r.url === url)).slice(0, requiredRelayCount - relays.size);
+  ndk.pool?.permanentAndConnectedRelays().forEach((relay) => relays2.add(relay));
+  if (requiredRelayCount && relays2.size < requiredRelayCount) {
+    const explicitRelays = ndk.explicitRelayUrls?.filter((url) => !Array.from(relays2).some((r) => r.url === url)).slice(0, requiredRelayCount - relays2.size);
     explicitRelays?.forEach((url) => {
       const relay = ndk.pool?.getRelay(url, false, true);
       if (relay) {
         d("Adding explicit relay %s", url);
-        relays.add(relay);
+        relays2.add(relay);
       }
     });
   }
-  return new NDKRelaySet(relays, ndk);
+  return new NDKRelaySet(relays2, ndk);
 }
 function calculateRelaySetsFromFilter(ndk, filters, pool) {
   const result = /* @__PURE__ */ new Map;
@@ -46580,11 +44525,11 @@ async function generateContentTags(content, tags = []) {
         case "nevent":
           promises.push(new Promise(async (resolve) => {
             const { id, author } = data;
-            let { relays } = data;
-            if (!relays || relays.length === 0) {
-              relays = [await maybeGetEventRelayUrl(entity)];
+            let { relays: relays2 } = data;
+            if (!relays2 || relays2.length === 0) {
+              relays2 = [await maybeGetEventRelayUrl(entity)];
             }
-            addTagIfNew(["q", id, relays[0]]);
+            addTagIfNew(["q", id, relays2[0]]);
             if (author)
               addTagIfNew(["p", author]);
             resolve();
@@ -46593,11 +44538,11 @@ async function generateContentTags(content, tags = []) {
         case "naddr":
           promises.push(new Promise(async (resolve) => {
             const id = [data.kind, data.pubkey, data.identifier].join(":");
-            let relays = data.relays ?? [];
-            if (relays.length === 0) {
-              relays = [await maybeGetEventRelayUrl(entity)];
+            let relays2 = data.relays ?? [];
+            if (relays2.length === 0) {
+              relays2 = [await maybeGetEventRelayUrl(entity)];
             }
-            addTagIfNew(["q", id, relays[0]]);
+            addTagIfNew(["q", id, relays2[0]]);
             addTagIfNew(["p", data.pubkey]);
             resolve();
           }));
@@ -46791,27 +44736,27 @@ function isParamReplaceable() {
 }
 var DEFAULT_RELAY_COUNT = 2;
 function encode(maxRelayCount = DEFAULT_RELAY_COUNT) {
-  let relays = [];
+  let relays2 = [];
   if (this.onRelays.length > 0) {
-    relays = this.onRelays.map((relay) => relay.url);
+    relays2 = this.onRelays.map((relay) => relay.url);
   } else if (this.relay) {
-    relays = [this.relay.url];
+    relays2 = [this.relay.url];
   }
-  if (relays.length > maxRelayCount) {
-    relays = relays.slice(0, maxRelayCount);
+  if (relays2.length > maxRelayCount) {
+    relays2 = relays2.slice(0, maxRelayCount);
   }
   if (this.isParamReplaceable()) {
     return nip19_exports.naddrEncode({
       kind: this.kind,
       pubkey: this.pubkey,
       identifier: this.replaceableDTag(),
-      relays
+      relays: relays2
     });
   }
-  if (relays.length > 0) {
+  if (relays2.length > 0) {
     return nip19_exports.neventEncode({
       id: this.tagId(),
-      relays,
+      relays: relays2,
       author: this.pubkey
     });
   }
@@ -47277,9 +45222,9 @@ var NDKEvent = class _NDKEvent extends import_tseep.EventEmitter {
       this.ndk.cacheAdapter.deleteEventIds(this.getMatchingTags("e").map((tag) => tag[1]));
     }
     this.ndk.subManager.dispatchEvent(rawEvent, undefined, true);
-    const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount);
-    relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay));
-    return relays;
+    const relays2 = await relaySet.publish(this, timeoutMs, requiredRelayCount);
+    relays2.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay));
+    return relays2;
   }
   async generateTags() {
     let tags = [];
@@ -48059,12 +46004,12 @@ var NDKHighlight = class _NDKHighlight extends NDKEvent {
   get url() {
     return this.tagValue("r");
   }
-  set context(context) {
-    if (context === undefined) {
+  set context(context2) {
+    if (context2 === undefined) {
       this.tags = this.tags.filter(([tag, _value]) => tag !== "context");
     } else {
       this.tags = this.tags.filter(([tag, _value]) => tag !== "context");
-      this.tags.push(["context", context]);
+      this.tags.push(["context", context2]);
     }
   }
   get context() {
@@ -48757,11 +46702,11 @@ var NDKStorySticker = class _NDKStorySticker {
   };
   toTag() {
     if (!this.isValid) {
-      const errors = [
+      const errors2 = [
         !this.hasValidDimensions() ? "dimensions is invalid" : undefined,
         !this.hasValidPosition() ? "position is invalid" : undefined
       ].filter(Boolean);
-      throw new Error(`Invalid sticker: ${errors.join(", ")}`);
+      throw new Error(`Invalid sticker: ${errors2.join(", ")}`);
     }
     let value;
     switch (this.type) {
@@ -49569,9 +47514,9 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
   }
   start(emitCachedEvents = true) {
     let cacheResult;
-    const updateStateFromCacheResults = (events) => {
+    const updateStateFromCacheResults = (events3) => {
       if (emitCachedEvents) {
-        for (const event of events) {
+        for (const event of events3) {
           if (!this.mostRecentCacheEventTimestamp || event.created_at > this.mostRecentCacheEventTimestamp) {
             this.mostRecentCacheEventTimestamp = event.created_at;
           }
@@ -49579,7 +47524,7 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
         }
       } else {
         cacheResult = [];
-        for (const event of events) {
+        for (const event of events3) {
           if (!this.mostRecentCacheEventTimestamp || event.created_at > this.mostRecentCacheEventTimestamp) {
             this.mostRecentCacheEventTimestamp = event.created_at;
           }
@@ -49610,8 +47555,8 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
       cacheResult = this.startWithCache();
       if (cacheResult instanceof Promise) {
         if (this.shouldWaitForCache()) {
-          cacheResult.then((events) => {
-            updateStateFromCacheResults(events);
+          cacheResult.then((events3) => {
+            updateStateFromCacheResults(events3);
             if (queryFullyFilled(this)) {
               this.emit("eose", this);
               return;
@@ -49620,8 +47565,8 @@ var NDKSubscription = class extends import_tseep4.EventEmitter {
           });
           return null;
         }
-        cacheResult.then((events) => {
-          updateStateFromCacheResults(events);
+        cacheResult.then((events3) => {
+          updateStateFromCacheResults(events3);
         });
         loadFromRelays();
         return null;
@@ -49842,13 +47787,13 @@ async function getNip05For(ndk, fullname, _fetch5 = fetch, fetchOpts = {}) {
     id: fullname,
     func: async () => {
       if (ndk.cacheAdapter?.loadNip05) {
-        const profile = await ndk.cacheAdapter.loadNip05(fullname);
-        if (profile !== "missing") {
-          if (profile) {
+        const profile2 = await ndk.cacheAdapter.loadNip05(fullname);
+        if (profile2 !== "missing") {
+          if (profile2) {
             const user = new NDKUser({
-              pubkey: profile.pubkey,
-              relayUrls: profile.relays,
-              nip46Urls: profile.nip46
+              pubkey: profile2.pubkey,
+              relayUrls: profile2.relays,
+              nip46Urls: profile2.nip46
             });
             user.ndk = ndk;
             return user;
@@ -49864,16 +47809,16 @@ async function getNip05For(ndk, fullname, _fetch5 = fetch, fetchOpts = {}) {
       const [_2, name = "_", domain] = match;
       try {
         const res = await _fetch5(`https://${domain}/.well-known/nostr.json?name=${name}`, fetchOpts);
-        const { names, relays, nip46 } = parseNIP05Result(await res.json());
+        const { names, relays: relays2, nip46 } = parseNIP05Result(await res.json());
         const pubkey = names[name.toLowerCase()];
-        let profile = null;
+        let profile2 = null;
         if (pubkey) {
-          profile = { pubkey, relays: relays?.[pubkey], nip46: nip46?.[pubkey] };
+          profile2 = { pubkey, relays: relays2?.[pubkey], nip46: nip46?.[pubkey] };
         }
         if (ndk?.cacheAdapter?.saveNip05) {
-          ndk.cacheAdapter.saveNip05(fullname, profile);
+          ndk.cacheAdapter.saveNip05(fullname, profile2);
         }
-        return profile;
+        return profile2;
       } catch (_e) {
         if (ndk?.cacheAdapter?.saveNip05) {
           ndk?.cacheAdapter.saveNip05(fullname, null);
@@ -49895,9 +47840,9 @@ function parseNIP05Result(json) {
   }
   if (json.relays) {
     result.relays = {};
-    for (const [pubkey, relays] of Object.entries(json.relays)) {
-      if (typeof pubkey === "string" && Array.isArray(relays)) {
-        result.relays[pubkey] = relays.filter((relay) => typeof relay === "string");
+    for (const [pubkey, relays2] of Object.entries(json.relays)) {
+      if (typeof pubkey === "string" && Array.isArray(relays2)) {
+        result.relays[pubkey] = relays2.filter((relay) => typeof relay === "string");
       }
     }
   }
@@ -49912,59 +47857,59 @@ function parseNIP05Result(json) {
   return result;
 }
 function profileFromEvent(event) {
-  const profile = {};
+  const profile2 = {};
   let payload;
   try {
     payload = JSON.parse(event.content);
   } catch (error) {
     throw new Error(`Failed to parse profile event: ${error}`);
   }
-  profile.profileEvent = JSON.stringify(event.rawEvent());
+  profile2.profileEvent = JSON.stringify(event.rawEvent());
   for (const key of Object.keys(payload)) {
     switch (key) {
       case "name":
-        profile.name = payload.name;
+        profile2.name = payload.name;
         break;
       case "display_name":
-        profile.displayName = payload.display_name;
+        profile2.displayName = payload.display_name;
         break;
       case "image":
       case "picture":
-        profile.picture = payload.picture || payload.image;
-        profile.image = profile.picture;
+        profile2.picture = payload.picture || payload.image;
+        profile2.image = profile2.picture;
         break;
       case "banner":
-        profile.banner = payload.banner;
+        profile2.banner = payload.banner;
         break;
       case "bio":
-        profile.bio = payload.bio;
+        profile2.bio = payload.bio;
         break;
       case "nip05":
-        profile.nip05 = payload.nip05;
+        profile2.nip05 = payload.nip05;
         break;
       case "lud06":
-        profile.lud06 = payload.lud06;
+        profile2.lud06 = payload.lud06;
         break;
       case "lud16":
-        profile.lud16 = payload.lud16;
+        profile2.lud16 = payload.lud16;
         break;
       case "about":
-        profile.about = payload.about;
+        profile2.about = payload.about;
         break;
       case "website":
-        profile.website = payload.website;
+        profile2.website = payload.website;
         break;
       default:
-        profile[key] = payload[key];
+        profile2[key] = payload[key];
         break;
     }
   }
-  profile.created_at = event.created_at;
-  return profile;
+  profile2.created_at = event.created_at;
+  return profile2;
 }
-function serializeProfile(profile) {
+function serializeProfile(profile2) {
   const payload = {};
-  for (const [key, val] of Object.entries(profile)) {
+  for (const [key, val] of Object.entries(profile2)) {
     switch (key) {
       case "username":
       case "name":
@@ -50030,10 +47975,10 @@ var NDKUser = class _NDKUser {
     return this._npub;
   }
   get nprofile() {
-    const relays = this.profileEvent?.onRelays?.map((r) => r.url);
+    const relays2 = this.profileEvent?.onRelays?.map((r) => r.url);
     return nip19_exports.nprofileEncode({
       pubkey: this.pubkey,
-      relays
+      relays: relays2
     });
   }
   set npub(npub2) {
@@ -50107,12 +48052,12 @@ var NDKUser = class _NDKUser {
     const opts = {};
     if (skipCache)
       opts.cache = "no-cache";
-    const profile = await getNip05For(ndk, nip05Id, ndk?.httpFetch, opts);
-    if (profile) {
+    const profile2 = await getNip05For(ndk, nip05Id, ndk?.httpFetch, opts);
+    if (profile2) {
       const user = new _NDKUser({
-        pubkey: profile.pubkey,
-        relayUrls: profile.relays,
-        nip46Urls: profile.nip46
+        pubkey: profile2.pubkey,
+        relayUrls: profile2.relays,
+        nip46Urls: profile2.nip46
       });
       user.ndk = ndk;
       return user;
@@ -50123,15 +48068,15 @@ var NDKUser = class _NDKUser {
       throw new Error("NDK not set");
     let setMetadataEvent = null;
     if (this.ndk.cacheAdapter && (this.ndk.cacheAdapter.fetchProfile || this.ndk.cacheAdapter.fetchProfileSync) && opts?.cacheUsage !== "ONLY_RELAY") {
-      let profile = null;
+      let profile2 = null;
       if (this.ndk.cacheAdapter.fetchProfileSync) {
-        profile = this.ndk.cacheAdapter.fetchProfileSync(this.pubkey);
+        profile2 = this.ndk.cacheAdapter.fetchProfileSync(this.pubkey);
       } else if (this.ndk.cacheAdapter.fetchProfile) {
-        profile = await this.ndk.cacheAdapter.fetchProfile(this.pubkey);
+        profile2 = await this.ndk.cacheAdapter.fetchProfile(this.pubkey);
       }
-      if (profile) {
-        this.profile = profile;
-        return profile;
+      if (profile2) {
+        this.profile = profile2;
+        return profile2;
       }
     }
     opts ??= {};
@@ -50332,24 +48277,24 @@ var NDKRelayList = class _NDKRelayList extends NDKEvent {
   get readRelayUrls() {
     return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").filter((tag) => !tag[2] || tag[2] && tag[2] === READ_MARKER).map((tag) => tryNormalizeRelayUrl(tag[1])).filter((url) => !!url);
   }
-  set readRelayUrls(relays) {
-    for (const relay of relays) {
+  set readRelayUrls(relays2) {
+    for (const relay of relays2) {
       this.tags.push(["r", relay, READ_MARKER]);
     }
   }
   get writeRelayUrls() {
     return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").filter((tag) => !tag[2] || tag[2] && tag[2] === WRITE_MARKER).map((tag) => tryNormalizeRelayUrl(tag[1])).filter((url) => !!url);
   }
-  set writeRelayUrls(relays) {
-    for (const relay of relays) {
+  set writeRelayUrls(relays2) {
+    for (const relay of relays2) {
       this.tags.push(["r", relay, WRITE_MARKER]);
     }
   }
   get bothRelayUrls() {
     return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").filter((tag) => !tag[2]).map((tag) => tag[1]);
   }
-  set bothRelayUrls(relays) {
-    for (const relay of relays) {
+  set bothRelayUrls(relays2) {
+    for (const relay of relays2) {
       this.tags.push(["r", relay]);
     }
   }
@@ -50368,17 +48313,17 @@ function relayListFromKind3(ndk, contactList) {
     const relayList = new NDKRelayList(ndk);
     const readRelays = /* @__PURE__ */ new Set;
     const writeRelays = /* @__PURE__ */ new Set;
-    for (let [key, config] of Object.entries(content)) {
+    for (let [key, config3] of Object.entries(content)) {
       try {
         key = normalizeRelayUrl(key);
       } catch {
         continue;
       }
-      if (!config) {
+      if (!config3) {
         readRelays.add(key);
         writeRelays.add(key);
       } else {
-        const relayConfig = config;
+        const relayConfig = config3;
         if (relayConfig.write)
           writeRelays.add(key);
         if (relayConfig.read)
@@ -50409,9 +48354,9 @@ var NDKTask = class _NDKTask extends NDKEvent {
   get title() {
     return this.tagValue("title");
   }
-  set project(project) {
+  set project(project3) {
     this.removeTag("a");
-    this.tags.push(project.tagReference());
+    this.tags.push(project3.tagReference());
   }
   get projectSlug() {
     const tag = this.getMatchingTags("a")[0];
@@ -50597,10 +48542,10 @@ var NDKNip07Signer = class _NDKNip07Signer {
   }
   async relays(ndk) {
     await this.waitForExtension();
-    const relays = await window.nostr?.getRelays?.() || {};
+    const relays2 = await window.nostr?.getRelays?.() || {};
     const activeRelays = [];
-    for (const url of Object.keys(relays)) {
-      if (relays[url].read && relays[url].write) {
+    for (const url of Object.keys(relays2)) {
+      if (relays2[url].read && relays2[url].write) {
         activeRelays.push(url);
       }
     }
@@ -51644,17 +49589,17 @@ async function setActiveUserConnected(user) {
   if (this.autoFetchUserMutelist) {
     filters[0].kinds?.push(1e4);
   }
-  const events = /* @__PURE__ */ new Map;
+  const events3 = /* @__PURE__ */ new Map;
   const relaySet = userRelays ? userRelays.relaySet : undefined;
   this.subscribe(filters, { subId: "active-user-settings", closeOnEose: true, relaySet }, {
     onEvent: (event) => {
-      const prevEvent = events.get(event.kind);
+      const prevEvent = events3.get(event.kind);
       if (prevEvent && prevEvent.created_at >= event.created_at)
         return;
-      events.set(event.kind, event);
+      events3.set(event.kind, event);
     },
     onEose: () => {
-      for (const event of events.values()) {
+      for (const event of events3.values()) {
         processEvent.call(this, event);
       }
     }
@@ -51696,10 +49641,10 @@ function getEntity(entity) {
 function npub(ndk, pubkey) {
   return ndk.getUser({ pubkey });
 }
-function nprofile(ndk, profile) {
-  const user = ndk.getUser({ pubkey: profile.pubkey });
-  if (profile.relays)
-    user.relayUrls = profile.relays;
+function nprofile(ndk, profile2) {
+  const user = ndk.getUser({ pubkey: profile2.pubkey });
+  if (profile2.relays)
+    user.relayUrls = profile2.relays;
   return user;
 }
 function isValidHint(hint) {
@@ -51980,8 +49925,8 @@ var NDK = class extends import_tseep7.EventEmitter {
     if (this._signer && this.autoConnectUserRelays) {
       this.debug("Attempting to connect to user relays specified by signer %o", await this._signer.relays?.(this));
       if (this._signer.relays) {
-        const relays = await this._signer.relays(this);
-        relays.forEach((relay) => this.pool.addRelay(relay));
+        const relays2 = await this._signer.relays(this);
+        relays2.forEach((relay) => this.pool.addRelay(relay));
       }
     }
     const connections = [this.pool.connect(timeoutMs)];
@@ -52076,10 +50021,10 @@ var NDK = class extends import_tseep7.EventEmitter {
     else
       filters = idOrFilter;
     const sub = new NDKSubscription(this, filters);
-    const events = this.cacheAdapter.query(sub);
-    if (events instanceof Promise)
+    const events3 = this.cacheAdapter.query(sub);
+    if (events3 instanceof Promise)
       throw new Error("Cache adapter is async");
-    return events.map((e) => {
+    return events3.map((e) => {
       e.ndk = this;
       return e;
     });
@@ -52094,9 +50039,9 @@ var NDK = class extends import_tseep7.EventEmitter {
     }
     if (!relaySetOrRelay && typeof idOrFilter === "string") {
       if (!isNip33AValue(idOrFilter)) {
-        const relays = relaysFromBech32(idOrFilter, this);
-        if (relays.length > 0) {
-          relaySet = new NDKRelaySet(new Set(relays), this);
+        const relays2 = relaysFromBech32(idOrFilter, this);
+        if (relays2.length > 0) {
+          relaySet = new NDKRelaySet(new Set(relays2), this);
           relaySet = correctRelaySet(relaySet, this.pool);
         }
       }
@@ -52142,7 +50087,7 @@ var NDK = class extends import_tseep7.EventEmitter {
   }
   async fetchEvents(filters, opts, relaySet) {
     return new Promise((resolve) => {
-      const events = /* @__PURE__ */ new Map;
+      const events3 = /* @__PURE__ */ new Map;
       const subscribeOpts = {
         ...opts || {},
         closeOnEose: true
@@ -52157,16 +50102,16 @@ var NDK = class extends import_tseep7.EventEmitter {
         else
           _event = event;
         const dedupKey = _event.deduplicationKey();
-        const existingEvent = events.get(dedupKey);
+        const existingEvent = events3.get(dedupKey);
         if (existingEvent) {
           _event = dedup(existingEvent, _event);
         }
         _event.ndk = this;
-        events.set(dedupKey, _event);
+        events3.set(dedupKey, _event);
       };
       relaySetSubscription.on("event", onEvent);
       relaySetSubscription.on("eose", () => {
-        resolve(new Set(events.values()));
+        resolve(new Set(events3.values()));
       });
       relaySetSubscription.start();
     });
@@ -52204,10 +50149,10 @@ var EVENT_KINDS = {
 class TenexChat {
   ndk;
   session;
-  constructor(ndk, project) {
+  constructor(ndk, project3) {
     this.ndk = ndk;
     this.session = {
-      project,
+      project: project3,
       agents: [],
       typingIndicators: new Map
     };
@@ -52222,26 +50167,26 @@ class TenexChat {
       }
     ];
     return new Promise((resolve) => {
-      const agents = [];
+      const agents2 = [];
       const sub = this.ndk.subscribe(filters);
       sub.on("event", (event) => {
         for (const tag of event.tags) {
           if (tag[0] === "p" && tag.length >= 3) {
-            const existingAgent = agents.find((a) => a.pubkey === tag[1]);
+            const existingAgent = agents2.find((a) => a.pubkey === tag[1]);
             if (!existingAgent) {
-              agents.push({
+              agents2.push({
                 pubkey: tag[1],
                 name: tag[2]
               });
             }
           }
         }
-        this.session.agents = agents;
-        console.log(`\uD83E\uDD16 Discovered ${agents.length} agents:`, agents.map((a) => a.name).join(", "));
-        resolve(agents);
+        this.session.agents = agents2;
+        logger.info(`\uD83E\uDD16 Discovered ${agents2.length} agents: ${agents2.map((a) => a.name).join(", ")}`);
+        resolve(agents2);
       });
       setTimeout(() => {
-        resolve(agents);
+        resolve(agents2);
       }, 3000);
     });
   }
@@ -52270,7 +50215,7 @@ class TenexChat {
       title
     };
     this.session.currentThread = threadEvent;
-    console.log(`\uD83E\uDDF5 Created thread: "${title}"`);
+    logger.info(`\uD83E\uDDF5 Created thread: "${title}"`);
     return threadEvent;
   }
   async replyToThread(content, mentionedAgents = []) {
@@ -52291,7 +50236,7 @@ class TenexChat {
     }
     await event.sign();
     await event.publish();
-    console.log("\uD83D\uDCAC Replied to thread");
+    logger.info("\uD83D\uDCAC Replied to thread");
   }
   resolveMentions(mentionedAgents) {
     const pubkeys = [];
@@ -52300,7 +50245,7 @@ class TenexChat {
       if (agent) {
         pubkeys.push(agent.pubkey);
       } else {
-        console.warn(`\u26A0\uFE0F  Agent "${agentName}" not found`);
+        logger.warn(`\u26A0\uFE0F  Agent "${agentName}" not found`);
       }
     }
     return pubkeys;
@@ -52326,7 +50271,7 @@ class TenexChat {
     ];
     const sub = this.ndk.subscribe(filters);
     sub.on("event", onMessage);
-    console.log(`\uD83D\uDC42 Listening for replies to thread: ${threadId}`);
+    logger.info(`\uD83D\uDC42 Listening for replies to thread: ${threadId}`);
   }
   async subscribeToTypingIndicators(threadId, onTyping) {
     const filters = [
@@ -52359,7 +50304,7 @@ class TenexChat {
       }
       onTyping(indicator);
     });
-    console.log(`\u2328\uFE0F  Listening for typing indicators in thread: ${threadId}`);
+    logger.info(`\u2328\uFE0F  Listening for typing indicators in thread: ${threadId}`);
   }
   getSession() {
     return this.session;
@@ -52484,9 +50429,9 @@ class ProjectCreator {
     this.ndk = ndk;
   }
   async create() {
-    console.log(source_default.blue.bold(`
+    logger.info(source_default2.blue.bold(`
 \uD83D\uDE80 Create New TENEX Project`));
-    console.log(source_default.gray(`Follow the steps to create your project
+    logger.info(source_default2.gray(`Follow the steps to create your project
 `));
     const formData = {
       name: "",
@@ -52502,7 +50447,7 @@ class ProjectCreator {
     await this.confirmAndCreate(formData);
   }
   async getProjectDetails(formData) {
-    console.log(source_default.yellow(`
+    logger.info(source_default2.yellow(`
 \uD83D\uDCDD Step 1: Project Details`));
     const answers = await lib_default.prompt([
       {
@@ -52539,7 +50484,7 @@ class ProjectCreator {
     Object.assign(formData, answers);
   }
   async selectTemplate(formData) {
-    console.log(source_default.yellow(`
+    logger.info(source_default2.yellow(`
 \uD83D\uDCCB Step 2: Choose Template (optional)`));
     const { useTemplate } = await lib_default.prompt([
       {
@@ -52557,10 +50502,10 @@ class ProjectCreator {
       const templateEvents = await this.ndk.fetchEvents(filters);
       spinner.stop();
       if (templateEvents.size === 0) {
-        console.log(source_default.yellow("No templates found. Continuing without template."));
+        logger.info(source_default2.yellow("No templates found. Continuing without template."));
         return;
       }
-      const templates = Array.from(templateEvents).map((event) => {
+      const templates2 = Array.from(templateEvents).map((event) => {
         const template = new NDKProjectTemplate(this.ndk, event);
         const title = template.tagValue("title") || "Untitled Template";
         const description = template.tagValue("description") || "";
@@ -52574,17 +50519,17 @@ class ProjectCreator {
           type: "list",
           name: "selectedTemplate",
           message: "Select a template:",
-          choices: templates
+          choices: templates2
         }
       ]);
       formData.selectedTemplate = selectedTemplate;
     } catch (error) {
-      spinner.fail(source_default.red("Failed to fetch templates"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to fetch templates"));
+      logger.error(error);
     }
   }
   async selectAgents(formData) {
-    console.log(source_default.yellow(`
+    logger.info(source_default2.yellow(`
 \uD83E\uDD16 Step 3: Select Agents`));
     const spinner = ora2("Fetching available agents...").start();
     try {
@@ -52592,10 +50537,10 @@ class ProjectCreator {
       const agentEvents = await this.ndk.fetchEvents(filters);
       spinner.stop();
       if (agentEvents.size === 0) {
-        console.log(source_default.yellow("No agents found. You can add agents later."));
+        logger.info(source_default2.yellow("No agents found. You can add agents later."));
         return;
       }
-      const agents = Array.from(agentEvents).map((event) => {
+      const agents2 = Array.from(agentEvents).map((event) => {
         const agent = NDKAgent.from(event);
         const name = agent.name || "Unnamed Agent";
         const description = agent.description || agent.role || "";
@@ -52609,17 +50554,17 @@ class ProjectCreator {
           type: "checkbox",
           name: "selectedAgents",
           message: "Select agents for your project:",
-          choices: agents
+          choices: agents2
         }
       ]);
       formData.selectedAgents = selectedAgents;
     } catch (error) {
-      spinner.fail(source_default.red("Failed to fetch agents"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to fetch agents"));
+      logger.error(error);
     }
   }
   async selectInstructions(formData) {
-    console.log(source_default.yellow(`
+    logger.info(source_default2.yellow(`
 \uD83D\uDCDA Step 4: Select Instructions`));
     const spinner = ora2("Fetching available instructions...").start();
     try {
@@ -52627,7 +50572,7 @@ class ProjectCreator {
       const instructionEvents = await this.ndk.fetchEvents(filters);
       spinner.stop();
       if (instructionEvents.size === 0) {
-        console.log(source_default.yellow("No instructions found. You can add instructions later."));
+        logger.info(source_default2.yellow("No instructions found. You can add instructions later."));
         return;
       }
       const instructions = Array.from(instructionEvents).map((event) => {
@@ -52683,28 +50628,28 @@ class ProjectCreator {
       }
       formData.selectedInstructions = instructionsWithAgents;
     } catch (error) {
-      spinner.fail(source_default.red("Failed to fetch instructions"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to fetch instructions"));
+      logger.error(error);
     }
   }
   async confirmAndCreate(formData) {
-    console.log(source_default.yellow(`
+    logger.info(source_default2.yellow(`
 \u2705 Step 5: Confirm & Create`));
-    console.log(source_default.blue(`
+    logger.info(source_default2.blue(`
 \uD83D\uDCCA Project Summary:`));
-    console.log(`Name: ${source_default.white(formData.name)}`);
-    console.log(`Description: ${source_default.white(formData.description || "None")}`);
-    console.log(`Hashtags: ${source_default.white(formData.hashtags || "None")}`);
-    console.log(`Repository: ${source_default.white(formData.repoUrl || "None")}`);
-    console.log(`Image: ${source_default.white(formData.imageUrl || "None")}`);
+    logger.info(`Name: ${source_default2.white(formData.name)}`);
+    logger.info(`Description: ${source_default2.white(formData.description || "None")}`);
+    logger.info(`Hashtags: ${source_default2.white(formData.hashtags || "None")}`);
+    logger.info(`Repository: ${source_default2.white(formData.repoUrl || "None")}`);
+    logger.info(`Image: ${source_default2.white(formData.imageUrl || "None")}`);
     if (formData.selectedTemplate) {
-      console.log(`Template: ${source_default.white(formData.selectedTemplate.tagValue("title") || "Selected")}`);
+      logger.info(`Template: ${source_default2.white(formData.selectedTemplate.tagValue("title") || "Selected")}`);
     }
     if (formData.selectedAgents && formData.selectedAgents.length > 0) {
-      console.log(`Agents (${formData.selectedAgents.length}): ${source_default.white(formData.selectedAgents.map((a) => a.name).join(", "))}`);
+      logger.info(`Agents (${formData.selectedAgents.length}): ${source_default2.white(formData.selectedAgents.map((a) => a.name).join(", "))}`);
     }
     if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
-      console.log(`Instructions (${formData.selectedInstructions.length}): ${source_default.white(formData.selectedInstructions.map((i2) => i2.title || "Untitled").join(", "))}`);
+      logger.info(`Instructions (${formData.selectedInstructions.length}): ${source_default2.white(formData.selectedInstructions.map((i2) => i2.title || "Untitled").join(", "))}`);
     }
     const { confirm } = await lib_default.prompt([
       {
@@ -52715,16237 +50660,69 @@ class ProjectCreator {
       }
     ]);
     if (!confirm) {
-      console.log(source_default.gray("Project creation cancelled."));
+      logger.info(source_default2.gray("Project creation cancelled."));
       return;
     }
     const spinner = ora2("Creating project...").start();
     try {
-      const project = new NDKProject(this.ndk);
-      project.title = formData.name.trim();
-      project.content = formData.description.trim() || `A new TENEX project: ${formData.name}`;
+      const project3 = new NDKProject(this.ndk);
+      project3.title = formData.name.trim();
+      project3.content = formData.description.trim() || `A new TENEX project: ${formData.name}`;
       if (formData.hashtags.trim()) {
         const hashtagArray = formData.hashtags.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
-        project.hashtags = hashtagArray;
+        project3.hashtags = hashtagArray;
       }
       if (formData.repoUrl?.trim()) {
-        project.repo = formData.repoUrl.trim();
+        project3.repo = formData.repoUrl.trim();
       }
       if (formData.imageUrl?.trim()) {
-        project.picture = formData.imageUrl.trim();
+        project3.picture = formData.imageUrl.trim();
       }
       if (formData.selectedTemplate) {
-        project.tags.push(["template", formData.selectedTemplate.tagId()]);
+        project3.tags.push(["template", formData.selectedTemplate.tagId()]);
       }
       if (formData.selectedAgents && formData.selectedAgents.length > 0) {
         for (const agent of formData.selectedAgents) {
-          project.tags.push(["agent", agent.id]);
+          project3.tags.push(["agent", agent.id]);
         }
       }
       if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
         for (const instruction of formData.selectedInstructions) {
           if (instruction.assignedAgents && instruction.assignedAgents.length > 0) {
-            project.tags.push(["rule", instruction.id, ...instruction.assignedAgents]);
+            project3.tags.push(["rule", instruction.id, ...instruction.assignedAgents]);
           } else {
-            project.tags.push(["rule", instruction.id]);
+            project3.tags.push(["rule", instruction.id]);
           }
         }
       }
-      await project.publish();
-      spinner.succeed(source_default.green("Project created successfully!"));
-      console.log(source_default.gray(`
-Project ID: ${project.dTag}`));
-      console.log(source_default.gray(`NADDR: ${project.encode()}`));
+      await project3.publish();
+      spinner.succeed(source_default2.green("Project created successfully!"));
+      logger.info(source_default2.gray(`
+Project ID: ${project3.dTag}`));
+      logger.info(source_default2.gray(`NADDR: ${project3.encode()}`));
     } catch (error) {
-      spinner.fail(source_default.red("Failed to create project"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to create project"));
+      logger.error(error);
     }
   }
 }
 
-// ../shared/dist/config/relays.js
-var DEFAULT_RELAYS = [
-  "wss://relay.damus.io",
-  "wss://relay.primal.net",
-  "wss://relay.nostr.band",
-  "wss://nos.lol"
-];
-var EXTENDED_RELAYS = [...DEFAULT_RELAYS, "wss://purplepag.es"];
-function getRelayUrls(extended = false) {
-  return extended ? EXTENDED_RELAYS : DEFAULT_RELAYS;
-}
-// ../shared/node_modules/@nostr-dev-kit/ndk/dist/index.mjs
-var import_tseep10 = __toESM(require_lib5(), 1);
-var import_debug13 = __toESM(require_src2(), 1);
-var import_debug14 = __toESM(require_src2(), 1);
-var import_tseep11 = __toESM(require_lib5(), 1);
-var import_debug15 = __toESM(require_src2(), 1);
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/_assert.js
-function number4(n) {
-  if (!Number.isSafeInteger(n) || n < 0)
-    throw new Error(`Wrong positive integer: ${n}`);
-}
-function bytes4(b, ...lengths) {
-  if (!(b instanceof Uint8Array))
-    throw new Error("Expected Uint8Array");
-  if (lengths.length > 0 && !lengths.includes(b.length))
-    throw new Error(`Expected Uint8Array of length ${lengths}, not of length=${b.length}`);
-}
-function hash3(hash4) {
-  if (typeof hash4 !== "function" || typeof hash4.create !== "function")
-    throw new Error("Hash should be wrapped by utils.wrapConstructor");
-  number4(hash4.outputLen);
-  number4(hash4.blockLen);
-}
-function exists4(instance, checkFinished = true) {
-  if (instance.destroyed)
-    throw new Error("Hash instance has been destroyed");
-  if (checkFinished && instance.finished)
-    throw new Error("Hash#digest() has already been called");
-}
-function output4(out, instance) {
-  bytes4(out);
-  const min = instance.outputLen;
-  if (out.length < min) {
-    throw new Error(`digestInto() expects output buffer of length at least ${min}`);
-  }
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/cryptoNode.js
-import * as nc4 from "crypto";
-var crypto4 = nc4 && typeof nc4 === "object" && "webcrypto" in nc4 ? nc4.webcrypto : undefined;
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/utils.js
-/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var u8a4 = (a) => a instanceof Uint8Array;
-var createView5 = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-var rotr4 = (word, shift) => word << 32 - shift | word >>> shift;
-var isLE4 = new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68;
-if (!isLE4)
-  throw new Error("Non little-endian hardware is not supported");
-function utf8ToBytes6(str) {
-  if (typeof str !== "string")
-    throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
-  return new Uint8Array(new TextEncoder().encode(str));
-}
-function toBytes5(data) {
-  if (typeof data === "string")
-    data = utf8ToBytes6(data);
-  if (!u8a4(data))
-    throw new Error(`expected Uint8Array, got ${typeof data}`);
-  return data;
-}
-function concatBytes5(...arrays) {
-  const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
-  let pad2 = 0;
-  arrays.forEach((a) => {
-    if (!u8a4(a))
-      throw new Error("Uint8Array expected");
-    r.set(a, pad2);
-    pad2 += a.length;
-  });
-  return r;
-}
-
-class Hash4 {
-  clone() {
-    return this._cloneInto();
-  }
-}
-var toStr2 = {}.toString;
-function wrapConstructor3(hashCons) {
-  const hashC = (msg) => hashCons().update(toBytes5(msg)).digest();
-  const tmp = hashCons();
-  hashC.outputLen = tmp.outputLen;
-  hashC.blockLen = tmp.blockLen;
-  hashC.create = () => hashCons();
-  return hashC;
-}
-function randomBytes4(bytesLength = 32) {
-  if (crypto4 && typeof crypto4.getRandomValues === "function") {
-    return crypto4.getRandomValues(new Uint8Array(bytesLength));
-  }
-  throw new Error("crypto.getRandomValues must be defined");
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/_sha2.js
-function setBigUint645(view, byteOffset, value, isLE5) {
-  if (typeof view.setBigUint64 === "function")
-    return view.setBigUint64(byteOffset, value, isLE5);
-  const _32n = BigInt(32);
-  const _u32_max = BigInt(4294967295);
-  const wh = Number(value >> _32n & _u32_max);
-  const wl = Number(value & _u32_max);
-  const h = isLE5 ? 4 : 0;
-  const l = isLE5 ? 0 : 4;
-  view.setUint32(byteOffset + h, wh, isLE5);
-  view.setUint32(byteOffset + l, wl, isLE5);
-}
-
-class SHA23 extends Hash4 {
-  constructor(blockLen, outputLen, padOffset, isLE5) {
-    super();
-    this.blockLen = blockLen;
-    this.outputLen = outputLen;
-    this.padOffset = padOffset;
-    this.isLE = isLE5;
-    this.finished = false;
-    this.length = 0;
-    this.pos = 0;
-    this.destroyed = false;
-    this.buffer = new Uint8Array(blockLen);
-    this.view = createView5(this.buffer);
-  }
-  update(data) {
-    exists4(this);
-    const { view, buffer, blockLen } = this;
-    data = toBytes5(data);
-    const len = data.length;
-    for (let pos = 0;pos < len; ) {
-      const take4 = Math.min(blockLen - this.pos, len - pos);
-      if (take4 === blockLen) {
-        const dataView = createView5(data);
-        for (;blockLen <= len - pos; pos += blockLen)
-          this.process(dataView, pos);
-        continue;
-      }
-      buffer.set(data.subarray(pos, pos + take4), this.pos);
-      this.pos += take4;
-      pos += take4;
-      if (this.pos === blockLen) {
-        this.process(view, 0);
-        this.pos = 0;
-      }
-    }
-    this.length += data.length;
-    this.roundClean();
-    return this;
-  }
-  digestInto(out) {
-    exists4(this);
-    output4(out, this);
-    this.finished = true;
-    const { buffer, view, blockLen, isLE: isLE5 } = this;
-    let { pos } = this;
-    buffer[pos++] = 128;
-    this.buffer.subarray(pos).fill(0);
-    if (this.padOffset > blockLen - pos) {
-      this.process(view, 0);
-      pos = 0;
-    }
-    for (let i2 = pos;i2 < blockLen; i2++)
-      buffer[i2] = 0;
-    setBigUint645(view, blockLen - 8, BigInt(this.length * 8), isLE5);
-    this.process(view, 0);
-    const oview = createView5(out);
-    const len = this.outputLen;
-    if (len % 4)
-      throw new Error("_sha2: outputLen should be aligned to 32bit");
-    const outLen = len / 4;
-    const state = this.get();
-    if (outLen > state.length)
-      throw new Error("_sha2: outputLen bigger than state");
-    for (let i2 = 0;i2 < outLen; i2++)
-      oview.setUint32(4 * i2, state[i2], isLE5);
-  }
-  digest() {
-    const { buffer, outputLen } = this;
-    this.digestInto(buffer);
-    const res = buffer.slice(0, outputLen);
-    this.destroy();
-    return res;
-  }
-  _cloneInto(to) {
-    to || (to = new this.constructor);
-    to.set(...this.get());
-    const { blockLen, buffer, length, finished, destroyed, pos } = this;
-    to.length = length;
-    to.pos = pos;
-    to.finished = finished;
-    to.destroyed = destroyed;
-    if (length % blockLen)
-      to.buffer.set(buffer);
-    return to;
-  }
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/sha256.js
-var Chi4 = (a, b, c) => a & b ^ ~a & c;
-var Maj4 = (a, b, c) => a & b ^ a & c ^ b & c;
-var SHA256_K4 = /* @__PURE__ */ new Uint32Array([
-  1116352408,
-  1899447441,
-  3049323471,
-  3921009573,
-  961987163,
-  1508970993,
-  2453635748,
-  2870763221,
-  3624381080,
-  310598401,
-  607225278,
-  1426881987,
-  1925078388,
-  2162078206,
-  2614888103,
-  3248222580,
-  3835390401,
-  4022224774,
-  264347078,
-  604807628,
-  770255983,
-  1249150122,
-  1555081692,
-  1996064986,
-  2554220882,
-  2821834349,
-  2952996808,
-  3210313671,
-  3336571891,
-  3584528711,
-  113926993,
-  338241895,
-  666307205,
-  773529912,
-  1294757372,
-  1396182291,
-  1695183700,
-  1986661051,
-  2177026350,
-  2456956037,
-  2730485921,
-  2820302411,
-  3259730800,
-  3345764771,
-  3516065817,
-  3600352804,
-  4094571909,
-  275423344,
-  430227734,
-  506948616,
-  659060556,
-  883997877,
-  958139571,
-  1322822218,
-  1537002063,
-  1747873779,
-  1955562222,
-  2024104815,
-  2227730452,
-  2361852424,
-  2428436474,
-  2756734187,
-  3204031479,
-  3329325298
-]);
-var IV3 = /* @__PURE__ */ new Uint32Array([
-  1779033703,
-  3144134277,
-  1013904242,
-  2773480762,
-  1359893119,
-  2600822924,
-  528734635,
-  1541459225
-]);
-var SHA256_W4 = /* @__PURE__ */ new Uint32Array(64);
-
-class SHA2564 extends SHA23 {
-  constructor() {
-    super(64, 32, 8, false);
-    this.A = IV3[0] | 0;
-    this.B = IV3[1] | 0;
-    this.C = IV3[2] | 0;
-    this.D = IV3[3] | 0;
-    this.E = IV3[4] | 0;
-    this.F = IV3[5] | 0;
-    this.G = IV3[6] | 0;
-    this.H = IV3[7] | 0;
-  }
-  get() {
-    const { A, B, C, D, E, F, G, H } = this;
-    return [A, B, C, D, E, F, G, H];
-  }
-  set(A, B, C, D, E, F, G, H) {
-    this.A = A | 0;
-    this.B = B | 0;
-    this.C = C | 0;
-    this.D = D | 0;
-    this.E = E | 0;
-    this.F = F | 0;
-    this.G = G | 0;
-    this.H = H | 0;
-  }
-  process(view, offset) {
-    for (let i2 = 0;i2 < 16; i2++, offset += 4)
-      SHA256_W4[i2] = view.getUint32(offset, false);
-    for (let i2 = 16;i2 < 64; i2++) {
-      const W15 = SHA256_W4[i2 - 15];
-      const W2 = SHA256_W4[i2 - 2];
-      const s0 = rotr4(W15, 7) ^ rotr4(W15, 18) ^ W15 >>> 3;
-      const s1 = rotr4(W2, 17) ^ rotr4(W2, 19) ^ W2 >>> 10;
-      SHA256_W4[i2] = s1 + SHA256_W4[i2 - 7] + s0 + SHA256_W4[i2 - 16] | 0;
-    }
-    let { A, B, C, D, E, F, G, H } = this;
-    for (let i2 = 0;i2 < 64; i2++) {
-      const sigma1 = rotr4(E, 6) ^ rotr4(E, 11) ^ rotr4(E, 25);
-      const T1 = H + sigma1 + Chi4(E, F, G) + SHA256_K4[i2] + SHA256_W4[i2] | 0;
-      const sigma0 = rotr4(A, 2) ^ rotr4(A, 13) ^ rotr4(A, 22);
-      const T2 = sigma0 + Maj4(A, B, C) | 0;
-      H = G;
-      G = F;
-      F = E;
-      E = D + T1 | 0;
-      D = C;
-      C = B;
-      B = A;
-      A = T1 + T2 | 0;
-    }
-    A = A + this.A | 0;
-    B = B + this.B | 0;
-    C = C + this.C | 0;
-    D = D + this.D | 0;
-    E = E + this.E | 0;
-    F = F + this.F | 0;
-    G = G + this.G | 0;
-    H = H + this.H | 0;
-    this.set(A, B, C, D, E, F, G, H);
-  }
-  roundClean() {
-    SHA256_W4.fill(0);
-  }
-  destroy() {
-    this.set(0, 0, 0, 0, 0, 0, 0, 0);
-    this.buffer.fill(0);
-  }
-}
-var sha2565 = /* @__PURE__ */ wrapConstructor3(() => new SHA2564);
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/esm/abstract/utils.js
-var exports_utils3 = {};
-__export(exports_utils3, {
-  validateObject: () => validateObject3,
-  utf8ToBytes: () => utf8ToBytes7,
-  numberToVarBytesBE: () => numberToVarBytesBE2,
-  numberToHexUnpadded: () => numberToHexUnpadded3,
-  numberToBytesLE: () => numberToBytesLE3,
-  numberToBytesBE: () => numberToBytesBE3,
-  hexToNumber: () => hexToNumber3,
-  hexToBytes: () => hexToBytes4,
-  equalBytes: () => equalBytes3,
-  ensureBytes: () => ensureBytes3,
-  createHmacDrbg: () => createHmacDrbg3,
-  concatBytes: () => concatBytes6,
-  bytesToNumberLE: () => bytesToNumberLE3,
-  bytesToNumberBE: () => bytesToNumberBE3,
-  bytesToHex: () => bytesToHex4,
-  bitSet: () => bitSet2,
-  bitMask: () => bitMask3,
-  bitLen: () => bitLen3,
-  bitGet: () => bitGet2
-});
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var _0n11 = BigInt(0);
-var _1n11 = BigInt(1);
-var _2n8 = BigInt(2);
-var u8a5 = (a) => a instanceof Uint8Array;
-var hexes4 = /* @__PURE__ */ Array.from({ length: 256 }, (_2, i2) => i2.toString(16).padStart(2, "0"));
-function bytesToHex4(bytes5) {
-  if (!u8a5(bytes5))
-    throw new Error("Uint8Array expected");
-  let hex2 = "";
-  for (let i2 = 0;i2 < bytes5.length; i2++) {
-    hex2 += hexes4[bytes5[i2]];
-  }
-  return hex2;
-}
-function numberToHexUnpadded3(num2) {
-  const hex2 = num2.toString(16);
-  return hex2.length & 1 ? `0${hex2}` : hex2;
-}
-function hexToNumber3(hex2) {
-  if (typeof hex2 !== "string")
-    throw new Error("hex string expected, got " + typeof hex2);
-  return BigInt(hex2 === "" ? "0" : `0x${hex2}`);
-}
-function hexToBytes4(hex2) {
-  if (typeof hex2 !== "string")
-    throw new Error("hex string expected, got " + typeof hex2);
-  const len = hex2.length;
-  if (len % 2)
-    throw new Error("padded hex string expected, got unpadded hex of length " + len);
-  const array = new Uint8Array(len / 2);
-  for (let i2 = 0;i2 < array.length; i2++) {
-    const j = i2 * 2;
-    const hexByte = hex2.slice(j, j + 2);
-    const byte = Number.parseInt(hexByte, 16);
-    if (Number.isNaN(byte) || byte < 0)
-      throw new Error("Invalid byte sequence");
-    array[i2] = byte;
-  }
-  return array;
-}
-function bytesToNumberBE3(bytes5) {
-  return hexToNumber3(bytesToHex4(bytes5));
-}
-function bytesToNumberLE3(bytes5) {
-  if (!u8a5(bytes5))
-    throw new Error("Uint8Array expected");
-  return hexToNumber3(bytesToHex4(Uint8Array.from(bytes5).reverse()));
-}
-function numberToBytesBE3(n, len) {
-  return hexToBytes4(n.toString(16).padStart(len * 2, "0"));
-}
-function numberToBytesLE3(n, len) {
-  return numberToBytesBE3(n, len).reverse();
-}
-function numberToVarBytesBE2(n) {
-  return hexToBytes4(numberToHexUnpadded3(n));
-}
-function ensureBytes3(title, hex2, expectedLength) {
-  let res;
-  if (typeof hex2 === "string") {
-    try {
-      res = hexToBytes4(hex2);
-    } catch (e) {
-      throw new Error(`${title} must be valid hex string, got "${hex2}". Cause: ${e}`);
-    }
-  } else if (u8a5(hex2)) {
-    res = Uint8Array.from(hex2);
-  } else {
-    throw new Error(`${title} must be hex string or Uint8Array`);
-  }
-  const len = res.length;
-  if (typeof expectedLength === "number" && len !== expectedLength)
-    throw new Error(`${title} expected ${expectedLength} bytes, got ${len}`);
-  return res;
-}
-function concatBytes6(...arrays) {
-  const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
-  let pad2 = 0;
-  arrays.forEach((a) => {
-    if (!u8a5(a))
-      throw new Error("Uint8Array expected");
-    r.set(a, pad2);
-    pad2 += a.length;
-  });
-  return r;
-}
-function equalBytes3(b1, b2) {
-  if (b1.length !== b2.length)
-    return false;
-  for (let i2 = 0;i2 < b1.length; i2++)
-    if (b1[i2] !== b2[i2])
-      return false;
-  return true;
-}
-function utf8ToBytes7(str) {
-  if (typeof str !== "string")
-    throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
-  return new Uint8Array(new TextEncoder().encode(str));
-}
-function bitLen3(n) {
-  let len;
-  for (len = 0;n > _0n11; n >>= _1n11, len += 1)
-    ;
-  return len;
-}
-function bitGet2(n, pos) {
-  return n >> BigInt(pos) & _1n11;
-}
-var bitSet2 = (n, pos, value) => {
-  return n | (value ? _1n11 : _0n11) << BigInt(pos);
-};
-var bitMask3 = (n) => (_2n8 << BigInt(n - 1)) - _1n11;
-var u8n2 = (data) => new Uint8Array(data);
-var u8fr2 = (arr) => Uint8Array.from(arr);
-function createHmacDrbg3(hashLen, qByteLen, hmacFn) {
-  if (typeof hashLen !== "number" || hashLen < 2)
-    throw new Error("hashLen must be a number");
-  if (typeof qByteLen !== "number" || qByteLen < 2)
-    throw new Error("qByteLen must be a number");
-  if (typeof hmacFn !== "function")
-    throw new Error("hmacFn must be a function");
-  let v = u8n2(hashLen);
-  let k = u8n2(hashLen);
-  let i2 = 0;
-  const reset = () => {
-    v.fill(1);
-    k.fill(0);
-    i2 = 0;
-  };
-  const h = (...b) => hmacFn(k, v, ...b);
-  const reseed = (seed = u8n2()) => {
-    k = h(u8fr2([0]), seed);
-    v = h();
-    if (seed.length === 0)
-      return;
-    k = h(u8fr2([1]), seed);
-    v = h();
-  };
-  const gen = () => {
-    if (i2++ >= 1000)
-      throw new Error("drbg: tried 1000 values");
-    let len = 0;
-    const out = [];
-    while (len < qByteLen) {
-      v = h();
-      const sl = v.slice();
-      out.push(sl);
-      len += v.length;
-    }
-    return concatBytes6(...out);
-  };
-  const genUntil = (seed, pred) => {
-    reset();
-    reseed(seed);
-    let res = undefined;
-    while (!(res = pred(gen())))
-      reseed();
-    reset();
-    return res;
-  };
-  return genUntil;
-}
-var validatorFns2 = {
-  bigint: (val) => typeof val === "bigint",
-  function: (val) => typeof val === "function",
-  boolean: (val) => typeof val === "boolean",
-  string: (val) => typeof val === "string",
-  stringOrUint8Array: (val) => typeof val === "string" || val instanceof Uint8Array,
-  isSafeInteger: (val) => Number.isSafeInteger(val),
-  array: (val) => Array.isArray(val),
-  field: (val, object) => object.Fp.isValid(val),
-  hash: (val) => typeof val === "function" && Number.isSafeInteger(val.outputLen)
-};
-function validateObject3(object, validators, optValidators = {}) {
-  const checkField = (fieldName, type, isOptional) => {
-    const checkVal = validatorFns2[type];
-    if (typeof checkVal !== "function")
-      throw new Error(`Invalid validator "${type}", expected function`);
-    const val = object[fieldName];
-    if (isOptional && val === undefined)
-      return;
-    if (!checkVal(val, object)) {
-      throw new Error(`Invalid param ${String(fieldName)}=${val} (${typeof val}), expected ${type}`);
-    }
-  };
-  for (const [fieldName, type] of Object.entries(validators))
-    checkField(fieldName, type, false);
-  for (const [fieldName, type] of Object.entries(optValidators))
-    checkField(fieldName, type, true);
-  return object;
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/esm/abstract/modular.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var _0n12 = BigInt(0);
-var _1n12 = BigInt(1);
-var _2n9 = BigInt(2);
-var _3n5 = BigInt(3);
-var _4n5 = BigInt(4);
-var _5n3 = BigInt(5);
-var _8n3 = BigInt(8);
-var _9n2 = BigInt(9);
-var _16n2 = BigInt(16);
-function mod3(a, b) {
-  const result = a % b;
-  return result >= _0n12 ? result : b + result;
-}
-function pow3(num2, power, modulo) {
-  if (modulo <= _0n12 || power < _0n12)
-    throw new Error("Expected power/modulo > 0");
-  if (modulo === _1n12)
-    return _0n12;
-  let res = _1n12;
-  while (power > _0n12) {
-    if (power & _1n12)
-      res = res * num2 % modulo;
-    num2 = num2 * num2 % modulo;
-    power >>= _1n12;
-  }
-  return res;
-}
-function pow23(x, power, modulo) {
-  let res = x;
-  while (power-- > _0n12) {
-    res *= res;
-    res %= modulo;
-  }
-  return res;
-}
-function invert3(number5, modulo) {
-  if (number5 === _0n12 || modulo <= _0n12) {
-    throw new Error(`invert: expected positive integers, got n=${number5} mod=${modulo}`);
-  }
-  let a = mod3(number5, modulo);
-  let b = modulo;
-  let x = _0n12, y = _1n12, u = _1n12, v = _0n12;
-  while (a !== _0n12) {
-    const q = b / a;
-    const r = b % a;
-    const m = x - u * q;
-    const n = y - v * q;
-    b = a, a = r, x = u, y = v, u = m, v = n;
-  }
-  const gcd2 = b;
-  if (gcd2 !== _1n12)
-    throw new Error("invert: does not exist");
-  return mod3(x, modulo);
-}
-function tonelliShanks3(P) {
-  const legendreC = (P - _1n12) / _2n9;
-  let Q, S, Z;
-  for (Q = P - _1n12, S = 0;Q % _2n9 === _0n12; Q /= _2n9, S++)
-    ;
-  for (Z = _2n9;Z < P && pow3(Z, legendreC, P) !== P - _1n12; Z++)
-    ;
-  if (S === 1) {
-    const p1div4 = (P + _1n12) / _4n5;
-    return function tonelliFast(Fp2, n) {
-      const root = Fp2.pow(n, p1div4);
-      if (!Fp2.eql(Fp2.sqr(root), n))
-        throw new Error("Cannot find square root");
-      return root;
-    };
-  }
-  const Q1div2 = (Q + _1n12) / _2n9;
-  return function tonelliSlow(Fp2, n) {
-    if (Fp2.pow(n, legendreC) === Fp2.neg(Fp2.ONE))
-      throw new Error("Cannot find square root");
-    let r = S;
-    let g = Fp2.pow(Fp2.mul(Fp2.ONE, Z), Q);
-    let x = Fp2.pow(n, Q1div2);
-    let b = Fp2.pow(n, Q);
-    while (!Fp2.eql(b, Fp2.ONE)) {
-      if (Fp2.eql(b, Fp2.ZERO))
-        return Fp2.ZERO;
-      let m = 1;
-      for (let t2 = Fp2.sqr(b);m < r; m++) {
-        if (Fp2.eql(t2, Fp2.ONE))
-          break;
-        t2 = Fp2.sqr(t2);
-      }
-      const ge2 = Fp2.pow(g, _1n12 << BigInt(r - m - 1));
-      g = Fp2.sqr(ge2);
-      x = Fp2.mul(x, ge2);
-      b = Fp2.mul(b, g);
-      r = m;
-    }
-    return x;
-  };
-}
-function FpSqrt3(P) {
-  if (P % _4n5 === _3n5) {
-    const p1div4 = (P + _1n12) / _4n5;
-    return function sqrt3mod4(Fp2, n) {
-      const root = Fp2.pow(n, p1div4);
-      if (!Fp2.eql(Fp2.sqr(root), n))
-        throw new Error("Cannot find square root");
-      return root;
-    };
-  }
-  if (P % _8n3 === _5n3) {
-    const c1 = (P - _5n3) / _8n3;
-    return function sqrt5mod8(Fp2, n) {
-      const n2 = Fp2.mul(n, _2n9);
-      const v = Fp2.pow(n2, c1);
-      const nv = Fp2.mul(n, v);
-      const i2 = Fp2.mul(Fp2.mul(nv, _2n9), v);
-      const root = Fp2.mul(nv, Fp2.sub(i2, Fp2.ONE));
-      if (!Fp2.eql(Fp2.sqr(root), n))
-        throw new Error("Cannot find square root");
-      return root;
-    };
-  }
-  if (P % _16n2 === _9n2) {}
-  return tonelliShanks3(P);
-}
-var FIELD_FIELDS3 = [
-  "create",
-  "isValid",
-  "is0",
-  "neg",
-  "inv",
-  "sqrt",
-  "sqr",
-  "eql",
-  "add",
-  "sub",
-  "mul",
-  "pow",
-  "div",
-  "addN",
-  "subN",
-  "mulN",
-  "sqrN"
-];
-function validateField3(field) {
-  const initial = {
-    ORDER: "bigint",
-    MASK: "bigint",
-    BYTES: "isSafeInteger",
-    BITS: "isSafeInteger"
-  };
-  const opts = FIELD_FIELDS3.reduce((map8, val) => {
-    map8[val] = "function";
-    return map8;
-  }, initial);
-  return validateObject3(field, opts);
-}
-function FpPow3(f, num2, power) {
-  if (power < _0n12)
-    throw new Error("Expected power > 0");
-  if (power === _0n12)
-    return f.ONE;
-  if (power === _1n12)
-    return num2;
-  let p = f.ONE;
-  let d4 = num2;
-  while (power > _0n12) {
-    if (power & _1n12)
-      p = f.mul(p, d4);
-    d4 = f.sqr(d4);
-    power >>= _1n12;
-  }
-  return p;
-}
-function FpInvertBatch3(f, nums) {
-  const tmp = new Array(nums.length);
-  const lastMultiplied = nums.reduce((acc, num2, i2) => {
-    if (f.is0(num2))
-      return acc;
-    tmp[i2] = acc;
-    return f.mul(acc, num2);
-  }, f.ONE);
-  const inverted = f.inv(lastMultiplied);
-  nums.reduceRight((acc, num2, i2) => {
-    if (f.is0(num2))
-      return acc;
-    tmp[i2] = f.mul(acc, tmp[i2]);
-    return f.mul(acc, num2);
-  }, inverted);
-  return tmp;
-}
-function nLength3(n, nBitLength) {
-  const _nBitLength = nBitLength !== undefined ? nBitLength : n.toString(2).length;
-  const nByteLength = Math.ceil(_nBitLength / 8);
-  return { nBitLength: _nBitLength, nByteLength };
-}
-function Field3(ORDER, bitLen4, isLE5 = false, redef = {}) {
-  if (ORDER <= _0n12)
-    throw new Error(`Expected Field ORDER > 0, got ${ORDER}`);
-  const { nBitLength: BITS, nByteLength: BYTES } = nLength3(ORDER, bitLen4);
-  if (BYTES > 2048)
-    throw new Error("Field lengths over 2048 bytes are not supported");
-  const sqrtP = FpSqrt3(ORDER);
-  const f = Object.freeze({
-    ORDER,
-    BITS,
-    BYTES,
-    MASK: bitMask3(BITS),
-    ZERO: _0n12,
-    ONE: _1n12,
-    create: (num2) => mod3(num2, ORDER),
-    isValid: (num2) => {
-      if (typeof num2 !== "bigint")
-        throw new Error(`Invalid field element: expected bigint, got ${typeof num2}`);
-      return _0n12 <= num2 && num2 < ORDER;
-    },
-    is0: (num2) => num2 === _0n12,
-    isOdd: (num2) => (num2 & _1n12) === _1n12,
-    neg: (num2) => mod3(-num2, ORDER),
-    eql: (lhs, rhs) => lhs === rhs,
-    sqr: (num2) => mod3(num2 * num2, ORDER),
-    add: (lhs, rhs) => mod3(lhs + rhs, ORDER),
-    sub: (lhs, rhs) => mod3(lhs - rhs, ORDER),
-    mul: (lhs, rhs) => mod3(lhs * rhs, ORDER),
-    pow: (num2, power) => FpPow3(f, num2, power),
-    div: (lhs, rhs) => mod3(lhs * invert3(rhs, ORDER), ORDER),
-    sqrN: (num2) => num2 * num2,
-    addN: (lhs, rhs) => lhs + rhs,
-    subN: (lhs, rhs) => lhs - rhs,
-    mulN: (lhs, rhs) => lhs * rhs,
-    inv: (num2) => invert3(num2, ORDER),
-    sqrt: redef.sqrt || ((n) => sqrtP(f, n)),
-    invertBatch: (lst) => FpInvertBatch3(f, lst),
-    cmov: (a, b, c) => c ? b : a,
-    toBytes: (num2) => isLE5 ? numberToBytesLE3(num2, BYTES) : numberToBytesBE3(num2, BYTES),
-    fromBytes: (bytes5) => {
-      if (bytes5.length !== BYTES)
-        throw new Error(`Fp.fromBytes: expected ${BYTES}, got ${bytes5.length}`);
-      return isLE5 ? bytesToNumberLE3(bytes5) : bytesToNumberBE3(bytes5);
-    }
-  });
-  return Object.freeze(f);
-}
-function getFieldBytesLength3(fieldOrder) {
-  if (typeof fieldOrder !== "bigint")
-    throw new Error("field order must be bigint");
-  const bitLength = fieldOrder.toString(2).length;
-  return Math.ceil(bitLength / 8);
-}
-function getMinHashLength3(fieldOrder) {
-  const length = getFieldBytesLength3(fieldOrder);
-  return length + Math.ceil(length / 2);
-}
-function mapHashToField3(key, fieldOrder, isLE5 = false) {
-  const len = key.length;
-  const fieldLen = getFieldBytesLength3(fieldOrder);
-  const minLen = getMinHashLength3(fieldOrder);
-  if (len < 16 || len < minLen || len > 1024)
-    throw new Error(`expected ${minLen}-1024 bytes of input, got ${len}`);
-  const num2 = isLE5 ? bytesToNumberBE3(key) : bytesToNumberLE3(key);
-  const reduced = mod3(num2, fieldOrder - _1n12) + _1n12;
-  return isLE5 ? numberToBytesLE3(reduced, fieldLen) : numberToBytesBE3(reduced, fieldLen);
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/esm/abstract/curve.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var _0n13 = BigInt(0);
-var _1n13 = BigInt(1);
-function wNAF3(c, bits) {
-  const constTimeNegate = (condition, item) => {
-    const neg = item.negate();
-    return condition ? neg : item;
-  };
-  const opts = (W) => {
-    const windows = Math.ceil(bits / W) + 1;
-    const windowSize = 2 ** (W - 1);
-    return { windows, windowSize };
-  };
-  return {
-    constTimeNegate,
-    unsafeLadder(elm, n) {
-      let p = c.ZERO;
-      let d4 = elm;
-      while (n > _0n13) {
-        if (n & _1n13)
-          p = p.add(d4);
-        d4 = d4.double();
-        n >>= _1n13;
-      }
-      return p;
-    },
-    precomputeWindow(elm, W) {
-      const { windows, windowSize } = opts(W);
-      const points = [];
-      let p = elm;
-      let base = p;
-      for (let window2 = 0;window2 < windows; window2++) {
-        base = p;
-        points.push(base);
-        for (let i2 = 1;i2 < windowSize; i2++) {
-          base = base.add(p);
-          points.push(base);
-        }
-        p = base.double();
-      }
-      return points;
-    },
-    wNAF(W, precomputes, n) {
-      const { windows, windowSize } = opts(W);
-      let p = c.ZERO;
-      let f = c.BASE;
-      const mask2 = BigInt(2 ** W - 1);
-      const maxNumber = 2 ** W;
-      const shiftBy = BigInt(W);
-      for (let window2 = 0;window2 < windows; window2++) {
-        const offset = window2 * windowSize;
-        let wbits = Number(n & mask2);
-        n >>= shiftBy;
-        if (wbits > windowSize) {
-          wbits -= maxNumber;
-          n += _1n13;
-        }
-        const offset1 = offset;
-        const offset2 = offset + Math.abs(wbits) - 1;
-        const cond1 = window2 % 2 !== 0;
-        const cond2 = wbits < 0;
-        if (wbits === 0) {
-          f = f.add(constTimeNegate(cond1, precomputes[offset1]));
-        } else {
-          p = p.add(constTimeNegate(cond2, precomputes[offset2]));
-        }
-      }
-      return { p, f };
-    },
-    wNAFCached(P, precomputesMap, n, transform) {
-      const W = P._WINDOW_SIZE || 1;
-      let comp = precomputesMap.get(P);
-      if (!comp) {
-        comp = this.precomputeWindow(P, W);
-        if (W !== 1) {
-          precomputesMap.set(P, transform(comp));
-        }
-      }
-      return this.wNAF(W, comp, n);
-    }
-  };
-}
-function validateBasic2(curve) {
-  validateField3(curve.Fp);
-  validateObject3(curve, {
-    n: "bigint",
-    h: "bigint",
-    Gx: "field",
-    Gy: "field"
-  }, {
-    nBitLength: "isSafeInteger",
-    nByteLength: "isSafeInteger"
-  });
-  return Object.freeze({
-    ...nLength3(curve.n, curve.nBitLength),
-    ...curve,
-    ...{ p: curve.Fp.ORDER }
-  });
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/esm/abstract/weierstrass.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-function validatePointOpts2(curve) {
-  const opts = validateBasic2(curve);
-  validateObject3(opts, {
-    a: "field",
-    b: "field"
-  }, {
-    allowedPrivateKeyLengths: "array",
-    wrapPrivateKey: "boolean",
-    isTorsionFree: "function",
-    clearCofactor: "function",
-    allowInfinityPoint: "boolean",
-    fromBytes: "function",
-    toBytes: "function"
-  });
-  const { endo, Fp: Fp2, a } = opts;
-  if (endo) {
-    if (!Fp2.eql(a, Fp2.ZERO)) {
-      throw new Error("Endomorphism can only be defined for Koblitz curves that have a=0");
-    }
-    if (typeof endo !== "object" || typeof endo.beta !== "bigint" || typeof endo.splitScalar !== "function") {
-      throw new Error("Expected endomorphism with beta: bigint and splitScalar: function");
-    }
-  }
-  return Object.freeze({ ...opts });
-}
-var { bytesToNumberBE: b2n2, hexToBytes: h2b2 } = exports_utils3;
-var DER3 = {
-  Err: class DERErr3 extends Error {
-    constructor(m = "") {
-      super(m);
-    }
-  },
-  _parseInt(data) {
-    const { Err: E } = DER3;
-    if (data.length < 2 || data[0] !== 2)
-      throw new E("Invalid signature integer tag");
-    const len = data[1];
-    const res = data.subarray(2, len + 2);
-    if (!len || res.length !== len)
-      throw new E("Invalid signature integer: wrong length");
-    if (res[0] & 128)
-      throw new E("Invalid signature integer: negative");
-    if (res[0] === 0 && !(res[1] & 128))
-      throw new E("Invalid signature integer: unnecessary leading zero");
-    return { d: b2n2(res), l: data.subarray(len + 2) };
-  },
-  toSig(hex2) {
-    const { Err: E } = DER3;
-    const data = typeof hex2 === "string" ? h2b2(hex2) : hex2;
-    if (!(data instanceof Uint8Array))
-      throw new Error("ui8a expected");
-    let l = data.length;
-    if (l < 2 || data[0] != 48)
-      throw new E("Invalid signature tag");
-    if (data[1] !== l - 2)
-      throw new E("Invalid signature: incorrect length");
-    const { d: r, l: sBytes } = DER3._parseInt(data.subarray(2));
-    const { d: s, l: rBytesLeft } = DER3._parseInt(sBytes);
-    if (rBytesLeft.length)
-      throw new E("Invalid signature: left bytes after parsing");
-    return { r, s };
-  },
-  hexFromSig(sig) {
-    const slice = (s2) => Number.parseInt(s2[0], 16) & 8 ? "00" + s2 : s2;
-    const h = (num2) => {
-      const hex2 = num2.toString(16);
-      return hex2.length & 1 ? `0${hex2}` : hex2;
-    };
-    const s = slice(h(sig.s));
-    const r = slice(h(sig.r));
-    const shl = s.length / 2;
-    const rhl = r.length / 2;
-    const sl = h(shl);
-    const rl = h(rhl);
-    return `30${h(rhl + shl + 4)}02${rl}${r}02${sl}${s}`;
-  }
-};
-var _0n14 = BigInt(0);
-var _1n14 = BigInt(1);
-var _2n10 = BigInt(2);
-var _3n6 = BigInt(3);
-var _4n6 = BigInt(4);
-function weierstrassPoints2(opts) {
-  const CURVE = validatePointOpts2(opts);
-  const { Fp: Fp2 } = CURVE;
-  const toBytes6 = CURVE.toBytes || ((_c, point, _isCompressed) => {
-    const a = point.toAffine();
-    return concatBytes6(Uint8Array.from([4]), Fp2.toBytes(a.x), Fp2.toBytes(a.y));
-  });
-  const fromBytes = CURVE.fromBytes || ((bytes5) => {
-    const tail = bytes5.subarray(1);
-    const x = Fp2.fromBytes(tail.subarray(0, Fp2.BYTES));
-    const y = Fp2.fromBytes(tail.subarray(Fp2.BYTES, 2 * Fp2.BYTES));
-    return { x, y };
-  });
-  function weierstrassEquation(x) {
-    const { a, b } = CURVE;
-    const x2 = Fp2.sqr(x);
-    const x3 = Fp2.mul(x2, x);
-    return Fp2.add(Fp2.add(x3, Fp2.mul(x, a)), b);
-  }
-  if (!Fp2.eql(Fp2.sqr(CURVE.Gy), weierstrassEquation(CURVE.Gx)))
-    throw new Error("bad generator point: equation left != right");
-  function isWithinCurveOrder(num2) {
-    return typeof num2 === "bigint" && _0n14 < num2 && num2 < CURVE.n;
-  }
-  function assertGE(num2) {
-    if (!isWithinCurveOrder(num2))
-      throw new Error("Expected valid bigint: 0 < bigint < curve.n");
-  }
-  function normPrivateKeyToScalar(key) {
-    const { allowedPrivateKeyLengths: lengths, nByteLength, wrapPrivateKey, n } = CURVE;
-    if (lengths && typeof key !== "bigint") {
-      if (key instanceof Uint8Array)
-        key = bytesToHex4(key);
-      if (typeof key !== "string" || !lengths.includes(key.length))
-        throw new Error("Invalid key");
-      key = key.padStart(nByteLength * 2, "0");
-    }
-    let num2;
-    try {
-      num2 = typeof key === "bigint" ? key : bytesToNumberBE3(ensureBytes3("private key", key, nByteLength));
-    } catch (error) {
-      throw new Error(`private key must be ${nByteLength} bytes, hex or bigint, not ${typeof key}`);
-    }
-    if (wrapPrivateKey)
-      num2 = mod3(num2, n);
-    assertGE(num2);
-    return num2;
-  }
-  const pointPrecomputes2 = new Map;
-  function assertPrjPoint(other) {
-    if (!(other instanceof Point3))
-      throw new Error("ProjectivePoint expected");
-  }
-
-  class Point3 {
-    constructor(px, py, pz) {
-      this.px = px;
-      this.py = py;
-      this.pz = pz;
-      if (px == null || !Fp2.isValid(px))
-        throw new Error("x required");
-      if (py == null || !Fp2.isValid(py))
-        throw new Error("y required");
-      if (pz == null || !Fp2.isValid(pz))
-        throw new Error("z required");
-    }
-    static fromAffine(p) {
-      const { x, y } = p || {};
-      if (!p || !Fp2.isValid(x) || !Fp2.isValid(y))
-        throw new Error("invalid affine point");
-      if (p instanceof Point3)
-        throw new Error("projective point not allowed");
-      const is0 = (i2) => Fp2.eql(i2, Fp2.ZERO);
-      if (is0(x) && is0(y))
-        return Point3.ZERO;
-      return new Point3(x, y, Fp2.ONE);
-    }
-    get x() {
-      return this.toAffine().x;
-    }
-    get y() {
-      return this.toAffine().y;
-    }
-    static normalizeZ(points) {
-      const toInv = Fp2.invertBatch(points.map((p) => p.pz));
-      return points.map((p, i2) => p.toAffine(toInv[i2])).map(Point3.fromAffine);
-    }
-    static fromHex(hex2) {
-      const P = Point3.fromAffine(fromBytes(ensureBytes3("pointHex", hex2)));
-      P.assertValidity();
-      return P;
-    }
-    static fromPrivateKey(privateKey) {
-      return Point3.BASE.multiply(normPrivateKeyToScalar(privateKey));
-    }
-    _setWindowSize(windowSize) {
-      this._WINDOW_SIZE = windowSize;
-      pointPrecomputes2.delete(this);
-    }
-    assertValidity() {
-      if (this.is0()) {
-        if (CURVE.allowInfinityPoint && !Fp2.is0(this.py))
-          return;
-        throw new Error("bad point: ZERO");
-      }
-      const { x, y } = this.toAffine();
-      if (!Fp2.isValid(x) || !Fp2.isValid(y))
-        throw new Error("bad point: x or y not FE");
-      const left2 = Fp2.sqr(y);
-      const right2 = weierstrassEquation(x);
-      if (!Fp2.eql(left2, right2))
-        throw new Error("bad point: equation left != right");
-      if (!this.isTorsionFree())
-        throw new Error("bad point: not in prime-order subgroup");
-    }
-    hasEvenY() {
-      const { y } = this.toAffine();
-      if (Fp2.isOdd)
-        return !Fp2.isOdd(y);
-      throw new Error("Field doesn't support isOdd");
-    }
-    equals(other) {
-      assertPrjPoint(other);
-      const { px: X1, py: Y1, pz: Z1 } = this;
-      const { px: X2, py: Y2, pz: Z2 } = other;
-      const U1 = Fp2.eql(Fp2.mul(X1, Z2), Fp2.mul(X2, Z1));
-      const U2 = Fp2.eql(Fp2.mul(Y1, Z2), Fp2.mul(Y2, Z1));
-      return U1 && U2;
-    }
-    negate() {
-      return new Point3(this.px, Fp2.neg(this.py), this.pz);
-    }
-    double() {
-      const { a, b } = CURVE;
-      const b3 = Fp2.mul(b, _3n6);
-      const { px: X1, py: Y1, pz: Z1 } = this;
-      let { ZERO: X3, ZERO: Y3, ZERO: Z3 } = Fp2;
-      let t0 = Fp2.mul(X1, X1);
-      let t1 = Fp2.mul(Y1, Y1);
-      let t2 = Fp2.mul(Z1, Z1);
-      let t3 = Fp2.mul(X1, Y1);
-      t3 = Fp2.add(t3, t3);
-      Z3 = Fp2.mul(X1, Z1);
-      Z3 = Fp2.add(Z3, Z3);
-      X3 = Fp2.mul(a, Z3);
-      Y3 = Fp2.mul(b3, t2);
-      Y3 = Fp2.add(X3, Y3);
-      X3 = Fp2.sub(t1, Y3);
-      Y3 = Fp2.add(t1, Y3);
-      Y3 = Fp2.mul(X3, Y3);
-      X3 = Fp2.mul(t3, X3);
-      Z3 = Fp2.mul(b3, Z3);
-      t2 = Fp2.mul(a, t2);
-      t3 = Fp2.sub(t0, t2);
-      t3 = Fp2.mul(a, t3);
-      t3 = Fp2.add(t3, Z3);
-      Z3 = Fp2.add(t0, t0);
-      t0 = Fp2.add(Z3, t0);
-      t0 = Fp2.add(t0, t2);
-      t0 = Fp2.mul(t0, t3);
-      Y3 = Fp2.add(Y3, t0);
-      t2 = Fp2.mul(Y1, Z1);
-      t2 = Fp2.add(t2, t2);
-      t0 = Fp2.mul(t2, t3);
-      X3 = Fp2.sub(X3, t0);
-      Z3 = Fp2.mul(t2, t1);
-      Z3 = Fp2.add(Z3, Z3);
-      Z3 = Fp2.add(Z3, Z3);
-      return new Point3(X3, Y3, Z3);
-    }
-    add(other) {
-      assertPrjPoint(other);
-      const { px: X1, py: Y1, pz: Z1 } = this;
-      const { px: X2, py: Y2, pz: Z2 } = other;
-      let { ZERO: X3, ZERO: Y3, ZERO: Z3 } = Fp2;
-      const a = CURVE.a;
-      const b3 = Fp2.mul(CURVE.b, _3n6);
-      let t0 = Fp2.mul(X1, X2);
-      let t1 = Fp2.mul(Y1, Y2);
-      let t2 = Fp2.mul(Z1, Z2);
-      let t3 = Fp2.add(X1, Y1);
-      let t4 = Fp2.add(X2, Y2);
-      t3 = Fp2.mul(t3, t4);
-      t4 = Fp2.add(t0, t1);
-      t3 = Fp2.sub(t3, t4);
-      t4 = Fp2.add(X1, Z1);
-      let t5 = Fp2.add(X2, Z2);
-      t4 = Fp2.mul(t4, t5);
-      t5 = Fp2.add(t0, t2);
-      t4 = Fp2.sub(t4, t5);
-      t5 = Fp2.add(Y1, Z1);
-      X3 = Fp2.add(Y2, Z2);
-      t5 = Fp2.mul(t5, X3);
-      X3 = Fp2.add(t1, t2);
-      t5 = Fp2.sub(t5, X3);
-      Z3 = Fp2.mul(a, t4);
-      X3 = Fp2.mul(b3, t2);
-      Z3 = Fp2.add(X3, Z3);
-      X3 = Fp2.sub(t1, Z3);
-      Z3 = Fp2.add(t1, Z3);
-      Y3 = Fp2.mul(X3, Z3);
-      t1 = Fp2.add(t0, t0);
-      t1 = Fp2.add(t1, t0);
-      t2 = Fp2.mul(a, t2);
-      t4 = Fp2.mul(b3, t4);
-      t1 = Fp2.add(t1, t2);
-      t2 = Fp2.sub(t0, t2);
-      t2 = Fp2.mul(a, t2);
-      t4 = Fp2.add(t4, t2);
-      t0 = Fp2.mul(t1, t4);
-      Y3 = Fp2.add(Y3, t0);
-      t0 = Fp2.mul(t5, t4);
-      X3 = Fp2.mul(t3, X3);
-      X3 = Fp2.sub(X3, t0);
-      t0 = Fp2.mul(t3, t1);
-      Z3 = Fp2.mul(t5, Z3);
-      Z3 = Fp2.add(Z3, t0);
-      return new Point3(X3, Y3, Z3);
-    }
-    subtract(other) {
-      return this.add(other.negate());
-    }
-    is0() {
-      return this.equals(Point3.ZERO);
-    }
-    wNAF(n) {
-      return wnaf.wNAFCached(this, pointPrecomputes2, n, (comp) => {
-        const toInv = Fp2.invertBatch(comp.map((p) => p.pz));
-        return comp.map((p, i2) => p.toAffine(toInv[i2])).map(Point3.fromAffine);
-      });
-    }
-    multiplyUnsafe(n) {
-      const I = Point3.ZERO;
-      if (n === _0n14)
-        return I;
-      assertGE(n);
-      if (n === _1n14)
-        return this;
-      const { endo } = CURVE;
-      if (!endo)
-        return wnaf.unsafeLadder(this, n);
-      let { k1neg, k1, k2neg, k2 } = endo.splitScalar(n);
-      let k1p = I;
-      let k2p = I;
-      let d4 = this;
-      while (k1 > _0n14 || k2 > _0n14) {
-        if (k1 & _1n14)
-          k1p = k1p.add(d4);
-        if (k2 & _1n14)
-          k2p = k2p.add(d4);
-        d4 = d4.double();
-        k1 >>= _1n14;
-        k2 >>= _1n14;
-      }
-      if (k1neg)
-        k1p = k1p.negate();
-      if (k2neg)
-        k2p = k2p.negate();
-      k2p = new Point3(Fp2.mul(k2p.px, endo.beta), k2p.py, k2p.pz);
-      return k1p.add(k2p);
-    }
-    multiply(scalar) {
-      assertGE(scalar);
-      let n = scalar;
-      let point, fake;
-      const { endo } = CURVE;
-      if (endo) {
-        const { k1neg, k1, k2neg, k2 } = endo.splitScalar(n);
-        let { p: k1p, f: f1p } = this.wNAF(k1);
-        let { p: k2p, f: f2p } = this.wNAF(k2);
-        k1p = wnaf.constTimeNegate(k1neg, k1p);
-        k2p = wnaf.constTimeNegate(k2neg, k2p);
-        k2p = new Point3(Fp2.mul(k2p.px, endo.beta), k2p.py, k2p.pz);
-        point = k1p.add(k2p);
-        fake = f1p.add(f2p);
-      } else {
-        const { p, f } = this.wNAF(n);
-        point = p;
-        fake = f;
-      }
-      return Point3.normalizeZ([point, fake])[0];
-    }
-    multiplyAndAddUnsafe(Q, a, b) {
-      const G = Point3.BASE;
-      const mul3 = (P, a2) => a2 === _0n14 || a2 === _1n14 || !P.equals(G) ? P.multiplyUnsafe(a2) : P.multiply(a2);
-      const sum = mul3(this, a).add(mul3(Q, b));
-      return sum.is0() ? undefined : sum;
-    }
-    toAffine(iz) {
-      const { px: x, py: y, pz: z } = this;
-      const is0 = this.is0();
-      if (iz == null)
-        iz = is0 ? Fp2.ONE : Fp2.inv(z);
-      const ax = Fp2.mul(x, iz);
-      const ay = Fp2.mul(y, iz);
-      const zz = Fp2.mul(z, iz);
-      if (is0)
-        return { x: Fp2.ZERO, y: Fp2.ZERO };
-      if (!Fp2.eql(zz, Fp2.ONE))
-        throw new Error("invZ was invalid");
-      return { x: ax, y: ay };
-    }
-    isTorsionFree() {
-      const { h: cofactor, isTorsionFree } = CURVE;
-      if (cofactor === _1n14)
-        return true;
-      if (isTorsionFree)
-        return isTorsionFree(Point3, this);
-      throw new Error("isTorsionFree() has not been declared for the elliptic curve");
-    }
-    clearCofactor() {
-      const { h: cofactor, clearCofactor } = CURVE;
-      if (cofactor === _1n14)
-        return this;
-      if (clearCofactor)
-        return clearCofactor(Point3, this);
-      return this.multiplyUnsafe(CURVE.h);
-    }
-    toRawBytes(isCompressed = true) {
-      this.assertValidity();
-      return toBytes6(Point3, this, isCompressed);
-    }
-    toHex(isCompressed = true) {
-      return bytesToHex4(this.toRawBytes(isCompressed));
-    }
-  }
-  Point3.BASE = new Point3(CURVE.Gx, CURVE.Gy, Fp2.ONE);
-  Point3.ZERO = new Point3(Fp2.ZERO, Fp2.ONE, Fp2.ZERO);
-  const _bits = CURVE.nBitLength;
-  const wnaf = wNAF3(Point3, CURVE.endo ? Math.ceil(_bits / 2) : _bits);
-  return {
-    CURVE,
-    ProjectivePoint: Point3,
-    normPrivateKeyToScalar,
-    weierstrassEquation,
-    isWithinCurveOrder
-  };
-}
-function validateOpts2(curve) {
-  const opts = validateBasic2(curve);
-  validateObject3(opts, {
-    hash: "hash",
-    hmac: "function",
-    randomBytes: "function"
-  }, {
-    bits2int: "function",
-    bits2int_modN: "function",
-    lowS: "boolean"
-  });
-  return Object.freeze({ lowS: true, ...opts });
-}
-function weierstrass3(curveDef) {
-  const CURVE = validateOpts2(curveDef);
-  const { Fp: Fp2, n: CURVE_ORDER } = CURVE;
-  const compressedLen = Fp2.BYTES + 1;
-  const uncompressedLen = 2 * Fp2.BYTES + 1;
-  function isValidFieldElement(num2) {
-    return _0n14 < num2 && num2 < Fp2.ORDER;
-  }
-  function modN3(a) {
-    return mod3(a, CURVE_ORDER);
-  }
-  function invN(a) {
-    return invert3(a, CURVE_ORDER);
-  }
-  const { ProjectivePoint: Point3, normPrivateKeyToScalar, weierstrassEquation, isWithinCurveOrder } = weierstrassPoints2({
-    ...CURVE,
-    toBytes(_c, point, isCompressed) {
-      const a = point.toAffine();
-      const x = Fp2.toBytes(a.x);
-      const cat = concatBytes6;
-      if (isCompressed) {
-        return cat(Uint8Array.from([point.hasEvenY() ? 2 : 3]), x);
-      } else {
-        return cat(Uint8Array.from([4]), x, Fp2.toBytes(a.y));
-      }
-    },
-    fromBytes(bytes5) {
-      const len = bytes5.length;
-      const head = bytes5[0];
-      const tail = bytes5.subarray(1);
-      if (len === compressedLen && (head === 2 || head === 3)) {
-        const x = bytesToNumberBE3(tail);
-        if (!isValidFieldElement(x))
-          throw new Error("Point is not on curve");
-        const y2 = weierstrassEquation(x);
-        let y = Fp2.sqrt(y2);
-        const isYOdd = (y & _1n14) === _1n14;
-        const isHeadOdd = (head & 1) === 1;
-        if (isHeadOdd !== isYOdd)
-          y = Fp2.neg(y);
-        return { x, y };
-      } else if (len === uncompressedLen && head === 4) {
-        const x = Fp2.fromBytes(tail.subarray(0, Fp2.BYTES));
-        const y = Fp2.fromBytes(tail.subarray(Fp2.BYTES, 2 * Fp2.BYTES));
-        return { x, y };
-      } else {
-        throw new Error(`Point of length ${len} was invalid. Expected ${compressedLen} compressed bytes or ${uncompressedLen} uncompressed bytes`);
-      }
-    }
-  });
-  const numToNByteStr = (num2) => bytesToHex4(numberToBytesBE3(num2, CURVE.nByteLength));
-  function isBiggerThanHalfOrder(number5) {
-    const HALF = CURVE_ORDER >> _1n14;
-    return number5 > HALF;
-  }
-  function normalizeS(s) {
-    return isBiggerThanHalfOrder(s) ? modN3(-s) : s;
-  }
-  const slcNum = (b, from3, to) => bytesToNumberBE3(b.slice(from3, to));
-
-  class Signature {
-    constructor(r, s, recovery) {
-      this.r = r;
-      this.s = s;
-      this.recovery = recovery;
-      this.assertValidity();
-    }
-    static fromCompact(hex2) {
-      const l = CURVE.nByteLength;
-      hex2 = ensureBytes3("compactSignature", hex2, l * 2);
-      return new Signature(slcNum(hex2, 0, l), slcNum(hex2, l, 2 * l));
-    }
-    static fromDER(hex2) {
-      const { r, s } = DER3.toSig(ensureBytes3("DER", hex2));
-      return new Signature(r, s);
-    }
-    assertValidity() {
-      if (!isWithinCurveOrder(this.r))
-        throw new Error("r must be 0 < r < CURVE.n");
-      if (!isWithinCurveOrder(this.s))
-        throw new Error("s must be 0 < s < CURVE.n");
-    }
-    addRecoveryBit(recovery) {
-      return new Signature(this.r, this.s, recovery);
-    }
-    recoverPublicKey(msgHash) {
-      const { r, s, recovery: rec } = this;
-      const h = bits2int_modN(ensureBytes3("msgHash", msgHash));
-      if (rec == null || ![0, 1, 2, 3].includes(rec))
-        throw new Error("recovery id invalid");
-      const radj = rec === 2 || rec === 3 ? r + CURVE.n : r;
-      if (radj >= Fp2.ORDER)
-        throw new Error("recovery id 2 or 3 invalid");
-      const prefix = (rec & 1) === 0 ? "02" : "03";
-      const R = Point3.fromHex(prefix + numToNByteStr(radj));
-      const ir = invN(radj);
-      const u1 = modN3(-h * ir);
-      const u2 = modN3(s * ir);
-      const Q = Point3.BASE.multiplyAndAddUnsafe(R, u1, u2);
-      if (!Q)
-        throw new Error("point at infinify");
-      Q.assertValidity();
-      return Q;
-    }
-    hasHighS() {
-      return isBiggerThanHalfOrder(this.s);
-    }
-    normalizeS() {
-      return this.hasHighS() ? new Signature(this.r, modN3(-this.s), this.recovery) : this;
-    }
-    toDERRawBytes() {
-      return hexToBytes4(this.toDERHex());
-    }
-    toDERHex() {
-      return DER3.hexFromSig({ r: this.r, s: this.s });
-    }
-    toCompactRawBytes() {
-      return hexToBytes4(this.toCompactHex());
-    }
-    toCompactHex() {
-      return numToNByteStr(this.r) + numToNByteStr(this.s);
-    }
-  }
-  const utils = {
-    isValidPrivateKey(privateKey) {
-      try {
-        normPrivateKeyToScalar(privateKey);
-        return true;
-      } catch (error) {
-        return false;
-      }
-    },
-    normPrivateKeyToScalar,
-    randomPrivateKey: () => {
-      const length = getMinHashLength3(CURVE.n);
-      return mapHashToField3(CURVE.randomBytes(length), CURVE.n);
-    },
-    precompute(windowSize = 8, point = Point3.BASE) {
-      point._setWindowSize(windowSize);
-      point.multiply(BigInt(3));
-      return point;
-    }
-  };
-  function getPublicKey2(privateKey, isCompressed = true) {
-    return Point3.fromPrivateKey(privateKey).toRawBytes(isCompressed);
-  }
-  function isProbPub(item) {
-    const arr = item instanceof Uint8Array;
-    const str = typeof item === "string";
-    const len = (arr || str) && item.length;
-    if (arr)
-      return len === compressedLen || len === uncompressedLen;
-    if (str)
-      return len === 2 * compressedLen || len === 2 * uncompressedLen;
-    if (item instanceof Point3)
-      return true;
-    return false;
-  }
-  function getSharedSecret(privateA, publicB, isCompressed = true) {
-    if (isProbPub(privateA))
-      throw new Error("first arg must be private key");
-    if (!isProbPub(publicB))
-      throw new Error("second arg must be public key");
-    const b = Point3.fromHex(publicB);
-    return b.multiply(normPrivateKeyToScalar(privateA)).toRawBytes(isCompressed);
-  }
-  const bits2int = CURVE.bits2int || function(bytes5) {
-    const num2 = bytesToNumberBE3(bytes5);
-    const delta = bytes5.length * 8 - CURVE.nBitLength;
-    return delta > 0 ? num2 >> BigInt(delta) : num2;
-  };
-  const bits2int_modN = CURVE.bits2int_modN || function(bytes5) {
-    return modN3(bits2int(bytes5));
-  };
-  const ORDER_MASK = bitMask3(CURVE.nBitLength);
-  function int2octets(num2) {
-    if (typeof num2 !== "bigint")
-      throw new Error("bigint expected");
-    if (!(_0n14 <= num2 && num2 < ORDER_MASK))
-      throw new Error(`bigint expected < 2^${CURVE.nBitLength}`);
-    return numberToBytesBE3(num2, CURVE.nByteLength);
-  }
-  function prepSig(msgHash, privateKey, opts = defaultSigOpts) {
-    if (["recovered", "canonical"].some((k) => (k in opts)))
-      throw new Error("sign() legacy options not supported");
-    const { hash: hash4, randomBytes: randomBytes5 } = CURVE;
-    let { lowS, prehash, extraEntropy: ent } = opts;
-    if (lowS == null)
-      lowS = true;
-    msgHash = ensureBytes3("msgHash", msgHash);
-    if (prehash)
-      msgHash = ensureBytes3("prehashed msgHash", hash4(msgHash));
-    const h1int = bits2int_modN(msgHash);
-    const d4 = normPrivateKeyToScalar(privateKey);
-    const seedArgs = [int2octets(d4), int2octets(h1int)];
-    if (ent != null) {
-      const e = ent === true ? randomBytes5(Fp2.BYTES) : ent;
-      seedArgs.push(ensureBytes3("extraEntropy", e));
-    }
-    const seed = concatBytes6(...seedArgs);
-    const m = h1int;
-    function k2sig(kBytes) {
-      const k = bits2int(kBytes);
-      if (!isWithinCurveOrder(k))
-        return;
-      const ik = invN(k);
-      const q = Point3.BASE.multiply(k).toAffine();
-      const r = modN3(q.x);
-      if (r === _0n14)
-        return;
-      const s = modN3(ik * modN3(m + r * d4));
-      if (s === _0n14)
-        return;
-      let recovery = (q.x === r ? 0 : 2) | Number(q.y & _1n14);
-      let normS = s;
-      if (lowS && isBiggerThanHalfOrder(s)) {
-        normS = normalizeS(s);
-        recovery ^= 1;
-      }
-      return new Signature(r, normS, recovery);
-    }
-    return { seed, k2sig };
-  }
-  const defaultSigOpts = { lowS: CURVE.lowS, prehash: false };
-  const defaultVerOpts = { lowS: CURVE.lowS, prehash: false };
-  function sign(msgHash, privKey, opts = defaultSigOpts) {
-    const { seed, k2sig } = prepSig(msgHash, privKey, opts);
-    const C = CURVE;
-    const drbg = createHmacDrbg3(C.hash.outputLen, C.nByteLength, C.hmac);
-    return drbg(seed, k2sig);
-  }
-  Point3.BASE._setWindowSize(8);
-  function verify(signature, msgHash, publicKey, opts = defaultVerOpts) {
-    const sg = signature;
-    msgHash = ensureBytes3("msgHash", msgHash);
-    publicKey = ensureBytes3("publicKey", publicKey);
-    if ("strict" in opts)
-      throw new Error("options.strict was renamed to lowS");
-    const { lowS, prehash } = opts;
-    let _sig = undefined;
-    let P;
-    try {
-      if (typeof sg === "string" || sg instanceof Uint8Array) {
-        try {
-          _sig = Signature.fromDER(sg);
-        } catch (derError) {
-          if (!(derError instanceof DER3.Err))
-            throw derError;
-          _sig = Signature.fromCompact(sg);
-        }
-      } else if (typeof sg === "object" && typeof sg.r === "bigint" && typeof sg.s === "bigint") {
-        const { r: r2, s: s2 } = sg;
-        _sig = new Signature(r2, s2);
-      } else {
-        throw new Error("PARSE");
-      }
-      P = Point3.fromHex(publicKey);
-    } catch (error) {
-      if (error.message === "PARSE")
-        throw new Error(`signature must be Signature instance, Uint8Array or hex string`);
-      return false;
-    }
-    if (lowS && _sig.hasHighS())
-      return false;
-    if (prehash)
-      msgHash = CURVE.hash(msgHash);
-    const { r, s } = _sig;
-    const h = bits2int_modN(msgHash);
-    const is = invN(s);
-    const u1 = modN3(h * is);
-    const u2 = modN3(r * is);
-    const R = Point3.BASE.multiplyAndAddUnsafe(P, u1, u2)?.toAffine();
-    if (!R)
-      return false;
-    const v = modN3(R.x);
-    return v === r;
-  }
-  return {
-    CURVE,
-    getPublicKey: getPublicKey2,
-    getSharedSecret,
-    sign,
-    verify,
-    ProjectivePoint: Point3,
-    Signature,
-    utils
-  };
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/node_modules/@noble/hashes/esm/hmac.js
-class HMAC4 extends Hash4 {
-  constructor(hash4, _key) {
-    super();
-    this.finished = false;
-    this.destroyed = false;
-    hash3(hash4);
-    const key = toBytes5(_key);
-    this.iHash = hash4.create();
-    if (typeof this.iHash.update !== "function")
-      throw new Error("Expected instance of class which extends utils.Hash");
-    this.blockLen = this.iHash.blockLen;
-    this.outputLen = this.iHash.outputLen;
-    const blockLen = this.blockLen;
-    const pad2 = new Uint8Array(blockLen);
-    pad2.set(key.length > blockLen ? hash4.create().update(key).digest() : key);
-    for (let i2 = 0;i2 < pad2.length; i2++)
-      pad2[i2] ^= 54;
-    this.iHash.update(pad2);
-    this.oHash = hash4.create();
-    for (let i2 = 0;i2 < pad2.length; i2++)
-      pad2[i2] ^= 54 ^ 92;
-    this.oHash.update(pad2);
-    pad2.fill(0);
-  }
-  update(buf) {
-    exists4(this);
-    this.iHash.update(buf);
-    return this;
-  }
-  digestInto(out) {
-    exists4(this);
-    bytes4(out, this.outputLen);
-    this.finished = true;
-    this.iHash.digestInto(out);
-    this.oHash.update(out);
-    this.oHash.digestInto(out);
-    this.destroy();
-  }
-  digest() {
-    const out = new Uint8Array(this.oHash.outputLen);
-    this.digestInto(out);
-    return out;
-  }
-  _cloneInto(to) {
-    to || (to = Object.create(Object.getPrototypeOf(this), {}));
-    const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
-    to = to;
-    to.finished = finished;
-    to.destroyed = destroyed;
-    to.blockLen = blockLen;
-    to.outputLen = outputLen;
-    to.oHash = oHash._cloneInto(to.oHash);
-    to.iHash = iHash._cloneInto(to.iHash);
-    return to;
-  }
-  destroy() {
-    this.destroyed = true;
-    this.oHash.destroy();
-    this.iHash.destroy();
-  }
-}
-var hmac4 = (hash4, key, message) => new HMAC4(hash4, key).update(message).digest();
-hmac4.create = (hash4, key) => new HMAC4(hash4, key);
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/esm/_shortw_utils.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-function getHash2(hash4) {
-  return {
-    hash: hash4,
-    hmac: (key, ...msgs) => hmac4(hash4, key, concatBytes5(...msgs)),
-    randomBytes: randomBytes4
-  };
-}
-function createCurve3(curveDef, defHash) {
-  const create = (hash4) => weierstrass3({ ...curveDef, ...getHash2(hash4) });
-  return Object.freeze({ ...create(defHash), create });
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/curves/esm/secp256k1.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var secp256k1P2 = BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
-var secp256k1N2 = BigInt("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
-var _1n15 = BigInt(1);
-var _2n11 = BigInt(2);
-var divNearest3 = (a, b) => (a + b / _2n11) / b;
-function sqrtMod3(y) {
-  const P = secp256k1P2;
-  const _3n7 = BigInt(3), _6n = BigInt(6), _11n = BigInt(11), _22n = BigInt(22);
-  const _23n = BigInt(23), _44n = BigInt(44), _88n = BigInt(88);
-  const b2 = y * y * y % P;
-  const b3 = b2 * b2 * y % P;
-  const b6 = pow23(b3, _3n7, P) * b3 % P;
-  const b9 = pow23(b6, _3n7, P) * b3 % P;
-  const b11 = pow23(b9, _2n11, P) * b2 % P;
-  const b22 = pow23(b11, _11n, P) * b11 % P;
-  const b44 = pow23(b22, _22n, P) * b22 % P;
-  const b88 = pow23(b44, _44n, P) * b44 % P;
-  const b176 = pow23(b88, _88n, P) * b88 % P;
-  const b220 = pow23(b176, _44n, P) * b44 % P;
-  const b223 = pow23(b220, _3n7, P) * b3 % P;
-  const t1 = pow23(b223, _23n, P) * b22 % P;
-  const t2 = pow23(t1, _6n, P) * b2 % P;
-  const root = pow23(t2, _2n11, P);
-  if (!Fp2.eql(Fp2.sqr(root), y))
-    throw new Error("Cannot find square root");
-  return root;
-}
-var Fp2 = Field3(secp256k1P2, undefined, undefined, { sqrt: sqrtMod3 });
-var secp256k13 = createCurve3({
-  a: BigInt(0),
-  b: BigInt(7),
-  Fp: Fp2,
-  n: secp256k1N2,
-  Gx: BigInt("55066263022277343669578718895168534326250603453777594175500187360389116729240"),
-  Gy: BigInt("32670510020758816978083085130507043184471273380659243275938904335757337482424"),
-  h: BigInt(1),
-  lowS: true,
-  endo: {
-    beta: BigInt("0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee"),
-    splitScalar: (k) => {
-      const n = secp256k1N2;
-      const a1 = BigInt("0x3086d221a7d46bcde86c90e49284eb15");
-      const b1 = -_1n15 * BigInt("0xe4437ed6010e88286f547fa90abfe4c3");
-      const a2 = BigInt("0x114ca50f7a8e2f3f657c1108d9d44cfd8");
-      const b2 = a1;
-      const POW_2_128 = BigInt("0x100000000000000000000000000000000");
-      const c1 = divNearest3(b2 * k, n);
-      const c2 = divNearest3(-b1 * k, n);
-      let k1 = mod3(k - c1 * a1 - c2 * a2, n);
-      let k2 = mod3(-c1 * b1 - c2 * b2, n);
-      const k1neg = k1 > POW_2_128;
-      const k2neg = k2 > POW_2_128;
-      if (k1neg)
-        k1 = n - k1;
-      if (k2neg)
-        k2 = n - k2;
-      if (k1 > POW_2_128 || k2 > POW_2_128) {
-        throw new Error("splitScalar: Endomorphism failed, k=" + k);
-      }
-      return { k1neg, k1, k2neg, k2 };
-    }
-  }
-}, sha2565);
-var _0n15 = BigInt(0);
-var fe2 = (x) => typeof x === "bigint" && _0n15 < x && x < secp256k1P2;
-var ge2 = (x) => typeof x === "bigint" && _0n15 < x && x < secp256k1N2;
-var TAGGED_HASH_PREFIXES3 = {};
-function taggedHash3(tag, ...messages) {
-  let tagP = TAGGED_HASH_PREFIXES3[tag];
-  if (tagP === undefined) {
-    const tagH = sha2565(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
-    tagP = concatBytes6(tagH, tagH);
-    TAGGED_HASH_PREFIXES3[tag] = tagP;
-  }
-  return sha2565(concatBytes6(tagP, ...messages));
-}
-var pointToBytes3 = (point) => point.toRawBytes(true).slice(1);
-var numTo32b3 = (n) => numberToBytesBE3(n, 32);
-var modP3 = (x) => mod3(x, secp256k1P2);
-var modN3 = (x) => mod3(x, secp256k1N2);
-var Point3 = secp256k13.ProjectivePoint;
-var GmulAdd2 = (Q, a, b) => Point3.BASE.multiplyAndAddUnsafe(Q, a, b);
-function schnorrGetExtPubKey3(priv) {
-  let d_ = secp256k13.utils.normPrivateKeyToScalar(priv);
-  let p = Point3.fromPrivateKey(d_);
-  const scalar = p.hasEvenY() ? d_ : modN3(-d_);
-  return { scalar, bytes: pointToBytes3(p) };
-}
-function lift_x3(x) {
-  if (!fe2(x))
-    throw new Error("bad x: need 0 < x < p");
-  const xx = modP3(x * x);
-  const c = modP3(xx * x + BigInt(7));
-  let y = sqrtMod3(c);
-  if (y % _2n11 !== _0n15)
-    y = modP3(-y);
-  const p = new Point3(x, y, _1n15);
-  p.assertValidity();
-  return p;
-}
-function challenge3(...args) {
-  return modN3(bytesToNumberBE3(taggedHash3("BIP0340/challenge", ...args)));
-}
-function schnorrGetPublicKey3(privateKey) {
-  return schnorrGetExtPubKey3(privateKey).bytes;
-}
-function schnorrSign3(message, privateKey, auxRand = randomBytes4(32)) {
-  const m = ensureBytes3("message", message);
-  const { bytes: px, scalar: d4 } = schnorrGetExtPubKey3(privateKey);
-  const a = ensureBytes3("auxRand", auxRand, 32);
-  const t = numTo32b3(d4 ^ bytesToNumberBE3(taggedHash3("BIP0340/aux", a)));
-  const rand = taggedHash3("BIP0340/nonce", t, px, m);
-  const k_ = modN3(bytesToNumberBE3(rand));
-  if (k_ === _0n15)
-    throw new Error("sign failed: k is zero");
-  const { bytes: rx, scalar: k } = schnorrGetExtPubKey3(k_);
-  const e = challenge3(rx, px, m);
-  const sig = new Uint8Array(64);
-  sig.set(rx, 0);
-  sig.set(numTo32b3(modN3(k + e * d4)), 32);
-  if (!schnorrVerify3(sig, m, px))
-    throw new Error("sign: Invalid signature produced");
-  return sig;
-}
-function schnorrVerify3(signature, message, publicKey) {
-  const sig = ensureBytes3("signature", signature, 64);
-  const m = ensureBytes3("message", message);
-  const pub = ensureBytes3("publicKey", publicKey, 32);
-  try {
-    const P = lift_x3(bytesToNumberBE3(pub));
-    const r = bytesToNumberBE3(sig.subarray(0, 32));
-    if (!fe2(r))
-      return false;
-    const s = bytesToNumberBE3(sig.subarray(32, 64));
-    if (!ge2(s))
-      return false;
-    const e = challenge3(numTo32b3(r), pointToBytes3(P), m);
-    const R = GmulAdd2(P, s, modN3(-e));
-    if (!R || !R.hasEvenY() || R.toAffine().x !== r)
-      return false;
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-var schnorr3 = /* @__PURE__ */ (() => ({
-  getPublicKey: schnorrGetPublicKey3,
-  sign: schnorrSign3,
-  verify: schnorrVerify3,
-  utils: {
-    randomPrivateKey: secp256k13.utils.randomPrivateKey,
-    lift_x: lift_x3,
-    pointToBytes: pointToBytes3,
-    numberToBytesBE: numberToBytesBE3,
-    bytesToNumberBE: bytesToNumberBE3,
-    taggedHash: taggedHash3,
-    mod: mod3
-  }
-}))();
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/cryptoNode.js
-import * as nc5 from "crypto";
-var crypto5 = nc5 && typeof nc5 === "object" && "webcrypto" in nc5 ? nc5.webcrypto : undefined;
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/utils.js
-/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var u8a6 = (a) => a instanceof Uint8Array;
-var createView6 = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-var rotr5 = (word, shift) => word << 32 - shift | word >>> shift;
-var isLE5 = new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68;
-if (!isLE5)
-  throw new Error("Non little-endian hardware is not supported");
-var hexes5 = Array.from({ length: 256 }, (v, i2) => i2.toString(16).padStart(2, "0"));
-function bytesToHex5(bytes5) {
-  if (!u8a6(bytes5))
-    throw new Error("Uint8Array expected");
-  let hex2 = "";
-  for (let i2 = 0;i2 < bytes5.length; i2++) {
-    hex2 += hexes5[bytes5[i2]];
-  }
-  return hex2;
-}
-function hexToBytes5(hex2) {
-  if (typeof hex2 !== "string")
-    throw new Error("hex string expected, got " + typeof hex2);
-  const len = hex2.length;
-  if (len % 2)
-    throw new Error("padded hex string expected, got unpadded hex of length " + len);
-  const array = new Uint8Array(len / 2);
-  for (let i2 = 0;i2 < array.length; i2++) {
-    const j = i2 * 2;
-    const hexByte = hex2.slice(j, j + 2);
-    const byte = Number.parseInt(hexByte, 16);
-    if (Number.isNaN(byte) || byte < 0)
-      throw new Error("Invalid byte sequence");
-    array[i2] = byte;
-  }
-  return array;
-}
-function utf8ToBytes8(str) {
-  if (typeof str !== "string")
-    throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
-  return new Uint8Array(new TextEncoder().encode(str));
-}
-function toBytes6(data) {
-  if (typeof data === "string")
-    data = utf8ToBytes8(data);
-  if (!u8a6(data))
-    throw new Error(`expected Uint8Array, got ${typeof data}`);
-  return data;
-}
-function concatBytes7(...arrays) {
-  const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
-  let pad2 = 0;
-  arrays.forEach((a) => {
-    if (!u8a6(a))
-      throw new Error("Uint8Array expected");
-    r.set(a, pad2);
-    pad2 += a.length;
-  });
-  return r;
-}
-
-class Hash5 {
-  clone() {
-    return this._cloneInto();
-  }
-}
-function wrapConstructor4(hashCons) {
-  const hashC = (msg) => hashCons().update(toBytes6(msg)).digest();
-  const tmp = hashCons();
-  hashC.outputLen = tmp.outputLen;
-  hashC.blockLen = tmp.blockLen;
-  hashC.create = () => hashCons();
-  return hashC;
-}
-function randomBytes5(bytesLength = 32) {
-  if (crypto5 && typeof crypto5.getRandomValues === "function") {
-    return crypto5.getRandomValues(new Uint8Array(bytesLength));
-  }
-  throw new Error("crypto.getRandomValues must be defined");
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/_assert.js
-function number5(n) {
-  if (!Number.isSafeInteger(n) || n < 0)
-    throw new Error(`Wrong positive integer: ${n}`);
-}
-function bool3(b) {
-  if (typeof b !== "boolean")
-    throw new Error(`Expected boolean, not ${b}`);
-}
-function bytes5(b, ...lengths) {
-  if (!(b instanceof Uint8Array))
-    throw new Error("Expected Uint8Array");
-  if (lengths.length > 0 && !lengths.includes(b.length))
-    throw new Error(`Expected Uint8Array of length ${lengths}, not of length=${b.length}`);
-}
-function hash4(hash5) {
-  if (typeof hash5 !== "function" || typeof hash5.create !== "function")
-    throw new Error("Hash should be wrapped by utils.wrapConstructor");
-  number5(hash5.outputLen);
-  number5(hash5.blockLen);
-}
-function exists5(instance, checkFinished = true) {
-  if (instance.destroyed)
-    throw new Error("Hash instance has been destroyed");
-  if (checkFinished && instance.finished)
-    throw new Error("Hash#digest() has already been called");
-}
-function output5(out, instance) {
-  bytes5(out);
-  const min = instance.outputLen;
-  if (out.length < min) {
-    throw new Error(`digestInto() expects output buffer of length at least ${min}`);
-  }
-}
-var assert3 = {
-  number: number5,
-  bool: bool3,
-  bytes: bytes5,
-  hash: hash4,
-  exists: exists5,
-  output: output5
-};
-var _assert_default2 = assert3;
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/_sha2.js
-function setBigUint646(view, byteOffset, value, isLE6) {
-  if (typeof view.setBigUint64 === "function")
-    return view.setBigUint64(byteOffset, value, isLE6);
-  const _32n = BigInt(32);
-  const _u32_max = BigInt(4294967295);
-  const wh = Number(value >> _32n & _u32_max);
-  const wl = Number(value & _u32_max);
-  const h = isLE6 ? 4 : 0;
-  const l = isLE6 ? 0 : 4;
-  view.setUint32(byteOffset + h, wh, isLE6);
-  view.setUint32(byteOffset + l, wl, isLE6);
-}
-
-class SHA24 extends Hash5 {
-  constructor(blockLen, outputLen, padOffset, isLE6) {
-    super();
-    this.blockLen = blockLen;
-    this.outputLen = outputLen;
-    this.padOffset = padOffset;
-    this.isLE = isLE6;
-    this.finished = false;
-    this.length = 0;
-    this.pos = 0;
-    this.destroyed = false;
-    this.buffer = new Uint8Array(blockLen);
-    this.view = createView6(this.buffer);
-  }
-  update(data) {
-    _assert_default2.exists(this);
-    const { view, buffer, blockLen } = this;
-    data = toBytes6(data);
-    const len = data.length;
-    for (let pos = 0;pos < len; ) {
-      const take4 = Math.min(blockLen - this.pos, len - pos);
-      if (take4 === blockLen) {
-        const dataView = createView6(data);
-        for (;blockLen <= len - pos; pos += blockLen)
-          this.process(dataView, pos);
-        continue;
-      }
-      buffer.set(data.subarray(pos, pos + take4), this.pos);
-      this.pos += take4;
-      pos += take4;
-      if (this.pos === blockLen) {
-        this.process(view, 0);
-        this.pos = 0;
-      }
-    }
-    this.length += data.length;
-    this.roundClean();
-    return this;
-  }
-  digestInto(out) {
-    _assert_default2.exists(this);
-    _assert_default2.output(out, this);
-    this.finished = true;
-    const { buffer, view, blockLen, isLE: isLE6 } = this;
-    let { pos } = this;
-    buffer[pos++] = 128;
-    this.buffer.subarray(pos).fill(0);
-    if (this.padOffset > blockLen - pos) {
-      this.process(view, 0);
-      pos = 0;
-    }
-    for (let i2 = pos;i2 < blockLen; i2++)
-      buffer[i2] = 0;
-    setBigUint646(view, blockLen - 8, BigInt(this.length * 8), isLE6);
-    this.process(view, 0);
-    const oview = createView6(out);
-    const len = this.outputLen;
-    if (len % 4)
-      throw new Error("_sha2: outputLen should be aligned to 32bit");
-    const outLen = len / 4;
-    const state = this.get();
-    if (outLen > state.length)
-      throw new Error("_sha2: outputLen bigger than state");
-    for (let i2 = 0;i2 < outLen; i2++)
-      oview.setUint32(4 * i2, state[i2], isLE6);
-  }
-  digest() {
-    const { buffer, outputLen } = this;
-    this.digestInto(buffer);
-    const res = buffer.slice(0, outputLen);
-    this.destroy();
-    return res;
-  }
-  _cloneInto(to) {
-    to || (to = new this.constructor);
-    to.set(...this.get());
-    const { blockLen, buffer, length, finished, destroyed, pos } = this;
-    to.length = length;
-    to.pos = pos;
-    to.finished = finished;
-    to.destroyed = destroyed;
-    if (length % blockLen)
-      to.buffer.set(buffer);
-    return to;
-  }
-}
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/sha256.js
-var Chi5 = (a, b, c) => a & b ^ ~a & c;
-var Maj5 = (a, b, c) => a & b ^ a & c ^ b & c;
-var SHA256_K5 = new Uint32Array([
-  1116352408,
-  1899447441,
-  3049323471,
-  3921009573,
-  961987163,
-  1508970993,
-  2453635748,
-  2870763221,
-  3624381080,
-  310598401,
-  607225278,
-  1426881987,
-  1925078388,
-  2162078206,
-  2614888103,
-  3248222580,
-  3835390401,
-  4022224774,
-  264347078,
-  604807628,
-  770255983,
-  1249150122,
-  1555081692,
-  1996064986,
-  2554220882,
-  2821834349,
-  2952996808,
-  3210313671,
-  3336571891,
-  3584528711,
-  113926993,
-  338241895,
-  666307205,
-  773529912,
-  1294757372,
-  1396182291,
-  1695183700,
-  1986661051,
-  2177026350,
-  2456956037,
-  2730485921,
-  2820302411,
-  3259730800,
-  3345764771,
-  3516065817,
-  3600352804,
-  4094571909,
-  275423344,
-  430227734,
-  506948616,
-  659060556,
-  883997877,
-  958139571,
-  1322822218,
-  1537002063,
-  1747873779,
-  1955562222,
-  2024104815,
-  2227730452,
-  2361852424,
-  2428436474,
-  2756734187,
-  3204031479,
-  3329325298
-]);
-var IV4 = new Uint32Array([
-  1779033703,
-  3144134277,
-  1013904242,
-  2773480762,
-  1359893119,
-  2600822924,
-  528734635,
-  1541459225
-]);
-var SHA256_W5 = new Uint32Array(64);
-
-class SHA2565 extends SHA24 {
-  constructor() {
-    super(64, 32, 8, false);
-    this.A = IV4[0] | 0;
-    this.B = IV4[1] | 0;
-    this.C = IV4[2] | 0;
-    this.D = IV4[3] | 0;
-    this.E = IV4[4] | 0;
-    this.F = IV4[5] | 0;
-    this.G = IV4[6] | 0;
-    this.H = IV4[7] | 0;
-  }
-  get() {
-    const { A, B, C, D, E, F, G, H } = this;
-    return [A, B, C, D, E, F, G, H];
-  }
-  set(A, B, C, D, E, F, G, H) {
-    this.A = A | 0;
-    this.B = B | 0;
-    this.C = C | 0;
-    this.D = D | 0;
-    this.E = E | 0;
-    this.F = F | 0;
-    this.G = G | 0;
-    this.H = H | 0;
-  }
-  process(view, offset) {
-    for (let i2 = 0;i2 < 16; i2++, offset += 4)
-      SHA256_W5[i2] = view.getUint32(offset, false);
-    for (let i2 = 16;i2 < 64; i2++) {
-      const W15 = SHA256_W5[i2 - 15];
-      const W2 = SHA256_W5[i2 - 2];
-      const s0 = rotr5(W15, 7) ^ rotr5(W15, 18) ^ W15 >>> 3;
-      const s1 = rotr5(W2, 17) ^ rotr5(W2, 19) ^ W2 >>> 10;
-      SHA256_W5[i2] = s1 + SHA256_W5[i2 - 7] + s0 + SHA256_W5[i2 - 16] | 0;
-    }
-    let { A, B, C, D, E, F, G, H } = this;
-    for (let i2 = 0;i2 < 64; i2++) {
-      const sigma1 = rotr5(E, 6) ^ rotr5(E, 11) ^ rotr5(E, 25);
-      const T1 = H + sigma1 + Chi5(E, F, G) + SHA256_K5[i2] + SHA256_W5[i2] | 0;
-      const sigma0 = rotr5(A, 2) ^ rotr5(A, 13) ^ rotr5(A, 22);
-      const T2 = sigma0 + Maj5(A, B, C) | 0;
-      H = G;
-      G = F;
-      F = E;
-      E = D + T1 | 0;
-      D = C;
-      C = B;
-      B = A;
-      A = T1 + T2 | 0;
-    }
-    A = A + this.A | 0;
-    B = B + this.B | 0;
-    C = C + this.C | 0;
-    D = D + this.D | 0;
-    E = E + this.E | 0;
-    F = F + this.F | 0;
-    G = G + this.G | 0;
-    H = H + this.H | 0;
-    this.set(A, B, C, D, E, F, G, H);
-  }
-  roundClean() {
-    SHA256_W5.fill(0);
-  }
-  destroy() {
-    this.set(0, 0, 0, 0, 0, 0, 0, 0);
-    this.buffer.fill(0);
-  }
-}
-
-class SHA2243 extends SHA2565 {
-  constructor() {
-    super();
-    this.A = 3238371032 | 0;
-    this.B = 914150663 | 0;
-    this.C = 812702999 | 0;
-    this.D = 4144912697 | 0;
-    this.E = 4290775857 | 0;
-    this.F = 1750603025 | 0;
-    this.G = 1694076839 | 0;
-    this.H = 3204075428 | 0;
-    this.outputLen = 28;
-  }
-}
-var sha2566 = wrapConstructor4(() => new SHA2565);
-var sha2243 = wrapConstructor4(() => new SHA2243);
-
-// ../shared/node_modules/nostr-tools/node_modules/@scure/base/lib/esm/index.js
-/*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-function assertNumber2(n) {
-  if (!Number.isSafeInteger(n))
-    throw new Error(`Wrong integer: ${n}`);
-}
-function chain2(...args) {
-  const wrap = (a, b) => (c) => a(b(c));
-  const encode2 = Array.from(args).reverse().reduce((acc, i2) => acc ? wrap(acc, i2.encode) : i2.encode, undefined);
-  const decode3 = args.reduce((acc, i2) => acc ? wrap(acc, i2.decode) : i2.decode, undefined);
-  return { encode: encode2, decode: decode3 };
-}
-function alphabet2(alphabet3) {
-  return {
-    encode: (digits) => {
-      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-        throw new Error("alphabet.encode input should be an array of numbers");
-      return digits.map((i2) => {
-        assertNumber2(i2);
-        if (i2 < 0 || i2 >= alphabet3.length)
-          throw new Error(`Digit index outside alphabet: ${i2} (alphabet: ${alphabet3.length})`);
-        return alphabet3[i2];
-      });
-    },
-    decode: (input) => {
-      if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
-        throw new Error("alphabet.decode input should be array of strings");
-      return input.map((letter) => {
-        if (typeof letter !== "string")
-          throw new Error(`alphabet.decode: not string element=${letter}`);
-        const index = alphabet3.indexOf(letter);
-        if (index === -1)
-          throw new Error(`Unknown letter: "${letter}". Allowed: ${alphabet3}`);
-        return index;
-      });
-    }
-  };
-}
-function join2(separator = "") {
-  if (typeof separator !== "string")
-    throw new Error("join separator should be string");
-  return {
-    encode: (from3) => {
-      if (!Array.isArray(from3) || from3.length && typeof from3[0] !== "string")
-        throw new Error("join.encode input should be array of strings");
-      for (let i2 of from3)
-        if (typeof i2 !== "string")
-          throw new Error(`join.encode: non-string input=${i2}`);
-      return from3.join(separator);
-    },
-    decode: (to) => {
-      if (typeof to !== "string")
-        throw new Error("join.decode input should be string");
-      return to.split(separator);
-    }
-  };
-}
-function padding2(bits, chr = "=") {
-  assertNumber2(bits);
-  if (typeof chr !== "string")
-    throw new Error("padding chr should be string");
-  return {
-    encode(data) {
-      if (!Array.isArray(data) || data.length && typeof data[0] !== "string")
-        throw new Error("padding.encode input should be array of strings");
-      for (let i2 of data)
-        if (typeof i2 !== "string")
-          throw new Error(`padding.encode: non-string input=${i2}`);
-      while (data.length * bits % 8)
-        data.push(chr);
-      return data;
-    },
-    decode(input) {
-      if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
-        throw new Error("padding.encode input should be array of strings");
-      for (let i2 of input)
-        if (typeof i2 !== "string")
-          throw new Error(`padding.decode: non-string input=${i2}`);
-      let end = input.length;
-      if (end * bits % 8)
-        throw new Error("Invalid padding: string should have whole number of bytes");
-      for (;end > 0 && input[end - 1] === chr; end--) {
-        if (!((end - 1) * bits % 8))
-          throw new Error("Invalid padding: string has too much padding");
-      }
-      return input.slice(0, end);
-    }
-  };
-}
-function normalize3(fn) {
-  if (typeof fn !== "function")
-    throw new Error("normalize fn should be function");
-  return { encode: (from3) => from3, decode: (to) => fn(to) };
-}
-function convertRadix3(data, from3, to) {
-  if (from3 < 2)
-    throw new Error(`convertRadix: wrong from=${from3}, base cannot be less than 2`);
-  if (to < 2)
-    throw new Error(`convertRadix: wrong to=${to}, base cannot be less than 2`);
-  if (!Array.isArray(data))
-    throw new Error("convertRadix: data should be array");
-  if (!data.length)
-    return [];
-  let pos = 0;
-  const res = [];
-  const digits = Array.from(data);
-  digits.forEach((d4) => {
-    assertNumber2(d4);
-    if (d4 < 0 || d4 >= from3)
-      throw new Error(`Wrong integer: ${d4}`);
-  });
-  while (true) {
-    let carry = 0;
-    let done = true;
-    for (let i2 = pos;i2 < digits.length; i2++) {
-      const digit = digits[i2];
-      const digitBase = from3 * carry + digit;
-      if (!Number.isSafeInteger(digitBase) || from3 * carry / from3 !== carry || digitBase - digit !== from3 * carry) {
-        throw new Error("convertRadix: carry overflow");
-      }
-      carry = digitBase % to;
-      digits[i2] = Math.floor(digitBase / to);
-      if (!Number.isSafeInteger(digits[i2]) || digits[i2] * to + carry !== digitBase)
-        throw new Error("convertRadix: carry overflow");
-      if (!done)
-        continue;
-      else if (!digits[i2])
-        pos = i2;
-      else
-        done = false;
-    }
-    res.push(carry);
-    if (done)
-      break;
-  }
-  for (let i2 = 0;i2 < data.length - 1 && data[i2] === 0; i2++)
-    res.push(0);
-  return res.reverse();
-}
-var gcd2 = (a, b) => !b ? a : gcd2(b, a % b);
-var radix2carry2 = (from3, to) => from3 + (to - gcd2(from3, to));
-function convertRadix22(data, from3, to, padding3) {
-  if (!Array.isArray(data))
-    throw new Error("convertRadix2: data should be array");
-  if (from3 <= 0 || from3 > 32)
-    throw new Error(`convertRadix2: wrong from=${from3}`);
-  if (to <= 0 || to > 32)
-    throw new Error(`convertRadix2: wrong to=${to}`);
-  if (radix2carry2(from3, to) > 32) {
-    throw new Error(`convertRadix2: carry overflow from=${from3} to=${to} carryBits=${radix2carry2(from3, to)}`);
-  }
-  let carry = 0;
-  let pos = 0;
-  const mask2 = 2 ** to - 1;
-  const res = [];
-  for (const n of data) {
-    assertNumber2(n);
-    if (n >= 2 ** from3)
-      throw new Error(`convertRadix2: invalid data word=${n} from=${from3}`);
-    carry = carry << from3 | n;
-    if (pos + from3 > 32)
-      throw new Error(`convertRadix2: carry overflow pos=${pos} from=${from3}`);
-    pos += from3;
-    for (;pos >= to; pos -= to)
-      res.push((carry >> pos - to & mask2) >>> 0);
-    carry &= 2 ** pos - 1;
-  }
-  carry = carry << to - pos & mask2;
-  if (!padding3 && pos >= from3)
-    throw new Error("Excess padding");
-  if (!padding3 && carry)
-    throw new Error(`Non-zero padding: ${carry}`);
-  if (padding3 && pos > 0)
-    res.push(carry >>> 0);
-  return res;
-}
-function radix3(num2) {
-  assertNumber2(num2);
-  return {
-    encode: (bytes6) => {
-      if (!(bytes6 instanceof Uint8Array))
-        throw new Error("radix.encode input should be Uint8Array");
-      return convertRadix3(Array.from(bytes6), 2 ** 8, num2);
-    },
-    decode: (digits) => {
-      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-        throw new Error("radix.decode input should be array of strings");
-      return Uint8Array.from(convertRadix3(digits, num2, 2 ** 8));
-    }
-  };
-}
-function radix22(bits, revPadding = false) {
-  assertNumber2(bits);
-  if (bits <= 0 || bits > 32)
-    throw new Error("radix2: bits should be in (0..32]");
-  if (radix2carry2(8, bits) > 32 || radix2carry2(bits, 8) > 32)
-    throw new Error("radix2: carry overflow");
-  return {
-    encode: (bytes6) => {
-      if (!(bytes6 instanceof Uint8Array))
-        throw new Error("radix2.encode input should be Uint8Array");
-      return convertRadix22(Array.from(bytes6), 8, bits, !revPadding);
-    },
-    decode: (digits) => {
-      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-        throw new Error("radix2.decode input should be array of strings");
-      return Uint8Array.from(convertRadix22(digits, bits, 8, revPadding));
-    }
-  };
-}
-function unsafeWrapper2(fn) {
-  if (typeof fn !== "function")
-    throw new Error("unsafeWrapper fn should be function");
-  return function(...args) {
-    try {
-      return fn.apply(null, args);
-    } catch (e) {}
-  };
-}
-var base162 = chain2(radix22(4), alphabet2("0123456789ABCDEF"), join2(""));
-var base322 = chain2(radix22(5), alphabet2("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"), padding2(5), join2(""));
-var base32hex2 = chain2(radix22(5), alphabet2("0123456789ABCDEFGHIJKLMNOPQRSTUV"), padding2(5), join2(""));
-var base32crockford2 = chain2(radix22(5), alphabet2("0123456789ABCDEFGHJKMNPQRSTVWXYZ"), join2(""), normalize3((s) => s.toUpperCase().replace(/O/g, "0").replace(/[IL]/g, "1")));
-var base642 = chain2(radix22(6), alphabet2("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"), padding2(6), join2(""));
-var base64url2 = chain2(radix22(6), alphabet2("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), padding2(6), join2(""));
-var genBase582 = (abc) => chain2(radix3(58), alphabet2(abc), join2(""));
-var base582 = genBase582("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
-var base58flickr2 = genBase582("123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ");
-var base58xrp2 = genBase582("rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz");
-var XMR_BLOCK_LEN2 = [0, 2, 3, 5, 6, 7, 9, 10, 11];
-var base58xmr2 = {
-  encode(data) {
-    let res = "";
-    for (let i2 = 0;i2 < data.length; i2 += 8) {
-      const block = data.subarray(i2, i2 + 8);
-      res += base582.encode(block).padStart(XMR_BLOCK_LEN2[block.length], "1");
-    }
-    return res;
-  },
-  decode(str) {
-    let res = [];
-    for (let i2 = 0;i2 < str.length; i2 += 11) {
-      const slice = str.slice(i2, i2 + 11);
-      const blockLen = XMR_BLOCK_LEN2.indexOf(slice.length);
-      const block = base582.decode(slice);
-      for (let j = 0;j < block.length - blockLen; j++) {
-        if (block[j] !== 0)
-          throw new Error("base58xmr: wrong padding");
-      }
-      res = res.concat(Array.from(block.slice(block.length - blockLen)));
-    }
-    return Uint8Array.from(res);
-  }
-};
-var BECH_ALPHABET2 = chain2(alphabet2("qpzry9x8gf2tvdw0s3jn54khce6mua7l"), join2(""));
-var POLYMOD_GENERATORS2 = [996825010, 642813549, 513874426, 1027748829, 705979059];
-function bech32Polymod2(pre) {
-  const b = pre >> 25;
-  let chk = (pre & 33554431) << 5;
-  for (let i2 = 0;i2 < POLYMOD_GENERATORS2.length; i2++) {
-    if ((b >> i2 & 1) === 1)
-      chk ^= POLYMOD_GENERATORS2[i2];
-  }
-  return chk;
-}
-function bechChecksum2(prefix, words, encodingConst = 1) {
-  const len = prefix.length;
-  let chk = 1;
-  for (let i2 = 0;i2 < len; i2++) {
-    const c = prefix.charCodeAt(i2);
-    if (c < 33 || c > 126)
-      throw new Error(`Invalid prefix (${prefix})`);
-    chk = bech32Polymod2(chk) ^ c >> 5;
-  }
-  chk = bech32Polymod2(chk);
-  for (let i2 = 0;i2 < len; i2++)
-    chk = bech32Polymod2(chk) ^ prefix.charCodeAt(i2) & 31;
-  for (let v of words)
-    chk = bech32Polymod2(chk) ^ v;
-  for (let i2 = 0;i2 < 6; i2++)
-    chk = bech32Polymod2(chk);
-  chk ^= encodingConst;
-  return BECH_ALPHABET2.encode(convertRadix22([chk % 2 ** 30], 30, 5, false));
-}
-function genBech322(encoding) {
-  const ENCODING_CONST = encoding === "bech32" ? 1 : 734539939;
-  const _words = radix22(5);
-  const fromWords = _words.decode;
-  const toWords = _words.encode;
-  const fromWordsUnsafe = unsafeWrapper2(fromWords);
-  function encode2(prefix, words, limit2 = 90) {
-    if (typeof prefix !== "string")
-      throw new Error(`bech32.encode prefix should be string, not ${typeof prefix}`);
-    if (!Array.isArray(words) || words.length && typeof words[0] !== "number")
-      throw new Error(`bech32.encode words should be array of numbers, not ${typeof words}`);
-    const actualLength = prefix.length + 7 + words.length;
-    if (limit2 !== false && actualLength > limit2)
-      throw new TypeError(`Length ${actualLength} exceeds limit ${limit2}`);
-    prefix = prefix.toLowerCase();
-    return `${prefix}1${BECH_ALPHABET2.encode(words)}${bechChecksum2(prefix, words, ENCODING_CONST)}`;
-  }
-  function decode3(str, limit2 = 90) {
-    if (typeof str !== "string")
-      throw new Error(`bech32.decode input should be string, not ${typeof str}`);
-    if (str.length < 8 || limit2 !== false && str.length > limit2)
-      throw new TypeError(`Wrong string length: ${str.length} (${str}). Expected (8..${limit2})`);
-    const lowered = str.toLowerCase();
-    if (str !== lowered && str !== str.toUpperCase())
-      throw new Error(`String must be lowercase or uppercase`);
-    str = lowered;
-    const sepIndex = str.lastIndexOf("1");
-    if (sepIndex === 0 || sepIndex === -1)
-      throw new Error(`Letter "1" must be present between prefix and data only`);
-    const prefix = str.slice(0, sepIndex);
-    const _words2 = str.slice(sepIndex + 1);
-    if (_words2.length < 6)
-      throw new Error("Data must be at least 6 characters long");
-    const words = BECH_ALPHABET2.decode(_words2).slice(0, -6);
-    const sum = bechChecksum2(prefix, words, ENCODING_CONST);
-    if (!_words2.endsWith(sum))
-      throw new Error(`Invalid checksum in ${str}: expected "${sum}"`);
-    return { prefix, words };
-  }
-  const decodeUnsafe = unsafeWrapper2(decode3);
-  function decodeToBytes(str) {
-    const { prefix, words } = decode3(str, false);
-    return { prefix, words, bytes: fromWords(words) };
-  }
-  return { encode: encode2, decode: decode3, decodeToBytes, decodeUnsafe, fromWords, fromWordsUnsafe, toWords };
-}
-var bech322 = genBech322("bech32");
-var bech32m2 = genBech322("bech32m");
-var utf82 = {
-  encode: (data) => new TextDecoder().decode(data),
-  decode: (str) => new TextEncoder().encode(str)
-};
-var hex2 = chain2(radix22(4), alphabet2("0123456789abcdef"), join2(""), normalize3((s) => {
-  if (typeof s !== "string" || s.length % 2)
-    throw new TypeError(`hex.decode: expected string, got ${typeof s} with length ${s.length}`);
-  return s.toLowerCase();
-}));
-var CODERS2 = {
-  utf8: utf82,
-  hex: hex2,
-  base16: base162,
-  base32: base322,
-  base64: base642,
-  base64url: base64url2,
-  base58: base582,
-  base58xmr: base58xmr2
-};
-var coderTypeError2 = `Invalid encoding type. Available types: ${Object.keys(CODERS2).join(", ")}`;
-
-// ../shared/node_modules/@noble/ciphers/esm/_assert.js
-function number6(n) {
-  if (!Number.isSafeInteger(n) || n < 0)
-    throw new Error(`positive integer expected, not ${n}`);
-}
-function bool4(b) {
-  if (typeof b !== "boolean")
-    throw new Error(`boolean expected, not ${b}`);
-}
-function isBytes3(a) {
-  return a instanceof Uint8Array || a != null && typeof a === "object" && a.constructor.name === "Uint8Array";
-}
-function bytes6(b, ...lengths) {
-  if (!isBytes3(b))
-    throw new Error("Uint8Array expected");
-  if (lengths.length > 0 && !lengths.includes(b.length))
-    throw new Error(`Uint8Array expected of length ${lengths}, not of length=${b.length}`);
-}
-function exists6(instance, checkFinished = true) {
-  if (instance.destroyed)
-    throw new Error("Hash instance has been destroyed");
-  if (checkFinished && instance.finished)
-    throw new Error("Hash#digest() has already been called");
-}
-function output6(out, instance) {
-  bytes6(out);
-  const min = instance.outputLen;
-  if (out.length < min) {
-    throw new Error(`digestInto() expects output buffer of length at least ${min}`);
-  }
-}
-
-// ../shared/node_modules/@noble/ciphers/esm/utils.js
-/*! noble-ciphers - MIT License (c) 2023 Paul Miller (paulmillr.com) */
-var u82 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-var u322 = (arr) => new Uint32Array(arr.buffer, arr.byteOffset, Math.floor(arr.byteLength / 4));
-var createView7 = (arr) => new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-var isLE6 = new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68;
-if (!isLE6)
-  throw new Error("Non little-endian hardware is not supported");
-function utf8ToBytes9(str) {
-  if (typeof str !== "string")
-    throw new Error(`string expected, got ${typeof str}`);
-  return new Uint8Array(new TextEncoder().encode(str));
-}
-function toBytes7(data) {
-  if (typeof data === "string")
-    data = utf8ToBytes9(data);
-  else if (isBytes3(data))
-    data = data.slice();
-  else
-    throw new Error(`Uint8Array expected, got ${typeof data}`);
-  return data;
-}
-function checkOpts2(defaults, opts) {
-  if (opts == null || typeof opts !== "object")
-    throw new Error("options must be defined");
-  const merged = Object.assign(defaults, opts);
-  return merged;
-}
-function equalBytes4(a, b) {
-  if (a.length !== b.length)
-    return false;
-  let diff = 0;
-  for (let i2 = 0;i2 < a.length; i2++)
-    diff |= a[i2] ^ b[i2];
-  return diff === 0;
-}
-var wrapCipher2 = (params, c) => {
-  Object.assign(c, params);
-  return c;
-};
-function setBigUint647(view, byteOffset, value, isLE7) {
-  if (typeof view.setBigUint64 === "function")
-    return view.setBigUint64(byteOffset, value, isLE7);
-  const _32n = BigInt(32);
-  const _u32_max = BigInt(4294967295);
-  const wh = Number(value >> _32n & _u32_max);
-  const wl = Number(value & _u32_max);
-  const h = isLE7 ? 4 : 0;
-  const l = isLE7 ? 0 : 4;
-  view.setUint32(byteOffset + h, wh, isLE7);
-  view.setUint32(byteOffset + l, wl, isLE7);
-}
-
-// ../shared/node_modules/@noble/ciphers/esm/_polyval.js
-var BLOCK_SIZE3 = 16;
-var ZEROS163 = /* @__PURE__ */ new Uint8Array(16);
-var ZEROS323 = u322(ZEROS163);
-var POLY3 = 225;
-var mul23 = (s0, s1, s2, s3) => {
-  const hiBit = s3 & 1;
-  return {
-    s3: s2 << 31 | s3 >>> 1,
-    s2: s1 << 31 | s2 >>> 1,
-    s1: s0 << 31 | s1 >>> 1,
-    s0: s0 >>> 1 ^ POLY3 << 24 & -(hiBit & 1)
-  };
-};
-var swapLE2 = (n) => (n >>> 0 & 255) << 24 | (n >>> 8 & 255) << 16 | (n >>> 16 & 255) << 8 | n >>> 24 & 255 | 0;
-function _toGHASHKey2(k) {
-  k.reverse();
-  const hiBit = k[15] & 1;
-  let carry = 0;
-  for (let i2 = 0;i2 < k.length; i2++) {
-    const t = k[i2];
-    k[i2] = t >>> 1 | carry;
-    carry = (t & 1) << 7;
-  }
-  k[0] ^= -hiBit & 225;
-  return k;
-}
-var estimateWindow2 = (bytes7) => {
-  if (bytes7 > 64 * 1024)
-    return 8;
-  if (bytes7 > 1024)
-    return 4;
-  return 2;
-};
-
-class GHASH2 {
-  constructor(key, expectedLength) {
-    this.blockLen = BLOCK_SIZE3;
-    this.outputLen = BLOCK_SIZE3;
-    this.s0 = 0;
-    this.s1 = 0;
-    this.s2 = 0;
-    this.s3 = 0;
-    this.finished = false;
-    key = toBytes7(key);
-    bytes6(key, 16);
-    const kView = createView7(key);
-    let k0 = kView.getUint32(0, false);
-    let k1 = kView.getUint32(4, false);
-    let k2 = kView.getUint32(8, false);
-    let k3 = kView.getUint32(12, false);
-    const doubles = [];
-    for (let i2 = 0;i2 < 128; i2++) {
-      doubles.push({ s0: swapLE2(k0), s1: swapLE2(k1), s2: swapLE2(k2), s3: swapLE2(k3) });
-      ({ s0: k0, s1: k1, s2: k2, s3: k3 } = mul23(k0, k1, k2, k3));
-    }
-    const W = estimateWindow2(expectedLength || 1024);
-    if (![1, 2, 4, 8].includes(W))
-      throw new Error(`ghash: wrong window size=${W}, should be 2, 4 or 8`);
-    this.W = W;
-    const bits = 128;
-    const windows = bits / W;
-    const windowSize = this.windowSize = 2 ** W;
-    const items = [];
-    for (let w = 0;w < windows; w++) {
-      for (let byte = 0;byte < windowSize; byte++) {
-        let s0 = 0, s1 = 0, s2 = 0, s3 = 0;
-        for (let j = 0;j < W; j++) {
-          const bit = byte >>> W - j - 1 & 1;
-          if (!bit)
-            continue;
-          const { s0: d0, s1: d1, s2: d22, s3: d32 } = doubles[W * w + j];
-          s0 ^= d0, s1 ^= d1, s2 ^= d22, s3 ^= d32;
-        }
-        items.push({ s0, s1, s2, s3 });
-      }
-    }
-    this.t = items;
-  }
-  _updateBlock(s0, s1, s2, s3) {
-    s0 ^= this.s0, s1 ^= this.s1, s2 ^= this.s2, s3 ^= this.s3;
-    const { W, t, windowSize } = this;
-    let o0 = 0, o1 = 0, o2 = 0, o3 = 0;
-    const mask2 = (1 << W) - 1;
-    let w = 0;
-    for (const num2 of [s0, s1, s2, s3]) {
-      for (let bytePos = 0;bytePos < 4; bytePos++) {
-        const byte = num2 >>> 8 * bytePos & 255;
-        for (let bitPos = 8 / W - 1;bitPos >= 0; bitPos--) {
-          const bit = byte >>> W * bitPos & mask2;
-          const { s0: e0, s1: e1, s2: e2, s3: e3 } = t[w * windowSize + bit];
-          o0 ^= e0, o1 ^= e1, o2 ^= e2, o3 ^= e3;
-          w += 1;
-        }
-      }
-    }
-    this.s0 = o0;
-    this.s1 = o1;
-    this.s2 = o2;
-    this.s3 = o3;
-  }
-  update(data) {
-    data = toBytes7(data);
-    exists6(this);
-    const b32 = u322(data);
-    const blocks = Math.floor(data.length / BLOCK_SIZE3);
-    const left2 = data.length % BLOCK_SIZE3;
-    for (let i2 = 0;i2 < blocks; i2++) {
-      this._updateBlock(b32[i2 * 4 + 0], b32[i2 * 4 + 1], b32[i2 * 4 + 2], b32[i2 * 4 + 3]);
-    }
-    if (left2) {
-      ZEROS163.set(data.subarray(blocks * BLOCK_SIZE3));
-      this._updateBlock(ZEROS323[0], ZEROS323[1], ZEROS323[2], ZEROS323[3]);
-      ZEROS323.fill(0);
-    }
-    return this;
-  }
-  destroy() {
-    const { t } = this;
-    for (const elm of t) {
-      elm.s0 = 0, elm.s1 = 0, elm.s2 = 0, elm.s3 = 0;
-    }
-  }
-  digestInto(out) {
-    exists6(this);
-    output6(out, this);
-    this.finished = true;
-    const { s0, s1, s2, s3 } = this;
-    const o32 = u322(out);
-    o32[0] = s0;
-    o32[1] = s1;
-    o32[2] = s2;
-    o32[3] = s3;
-    return out;
-  }
-  digest() {
-    const res = new Uint8Array(BLOCK_SIZE3);
-    this.digestInto(res);
-    this.destroy();
-    return res;
-  }
-}
-
-class Polyval2 extends GHASH2 {
-  constructor(key, expectedLength) {
-    key = toBytes7(key);
-    const ghKey = _toGHASHKey2(key.slice());
-    super(ghKey, expectedLength);
-    ghKey.fill(0);
-  }
-  update(data) {
-    data = toBytes7(data);
-    exists6(this);
-    const b32 = u322(data);
-    const left2 = data.length % BLOCK_SIZE3;
-    const blocks = Math.floor(data.length / BLOCK_SIZE3);
-    for (let i2 = 0;i2 < blocks; i2++) {
-      this._updateBlock(swapLE2(b32[i2 * 4 + 3]), swapLE2(b32[i2 * 4 + 2]), swapLE2(b32[i2 * 4 + 1]), swapLE2(b32[i2 * 4 + 0]));
-    }
-    if (left2) {
-      ZEROS163.set(data.subarray(blocks * BLOCK_SIZE3));
-      this._updateBlock(swapLE2(ZEROS323[3]), swapLE2(ZEROS323[2]), swapLE2(ZEROS323[1]), swapLE2(ZEROS323[0]));
-      ZEROS323.fill(0);
-    }
-    return this;
-  }
-  digestInto(out) {
-    exists6(this);
-    output6(out, this);
-    this.finished = true;
-    const { s0, s1, s2, s3 } = this;
-    const o32 = u322(out);
-    o32[0] = s0;
-    o32[1] = s1;
-    o32[2] = s2;
-    o32[3] = s3;
-    return out.reverse();
-  }
-}
-function wrapConstructorWithKey3(hashCons) {
-  const hashC = (msg, key) => hashCons(key, msg.length).update(toBytes7(msg)).digest();
-  const tmp = hashCons(new Uint8Array(16), 0);
-  hashC.outputLen = tmp.outputLen;
-  hashC.blockLen = tmp.blockLen;
-  hashC.create = (key, expectedLength) => hashCons(key, expectedLength);
-  return hashC;
-}
-var ghash2 = wrapConstructorWithKey3((key, expectedLength) => new GHASH2(key, expectedLength));
-var polyval2 = wrapConstructorWithKey3((key, expectedLength) => new Polyval2(key, expectedLength));
-
-// ../shared/node_modules/@noble/ciphers/esm/aes.js
-var BLOCK_SIZE4 = 16;
-var BLOCK_SIZE322 = 4;
-var EMPTY_BLOCK2 = new Uint8Array(BLOCK_SIZE4);
-var POLY4 = 283;
-function mul24(n) {
-  return n << 1 ^ POLY4 & -(n >> 7);
-}
-function mul3(a, b) {
-  let res = 0;
-  for (;b > 0; b >>= 1) {
-    res ^= a & -(b & 1);
-    a = mul24(a);
-  }
-  return res;
-}
-var sbox2 = /* @__PURE__ */ (() => {
-  let t = new Uint8Array(256);
-  for (let i2 = 0, x = 1;i2 < 256; i2++, x ^= mul24(x))
-    t[i2] = x;
-  const box = new Uint8Array(256);
-  box[0] = 99;
-  for (let i2 = 0;i2 < 255; i2++) {
-    let x = t[255 - i2];
-    x |= x << 8;
-    box[t[i2]] = (x ^ x >> 4 ^ x >> 5 ^ x >> 6 ^ x >> 7 ^ 99) & 255;
-  }
-  return box;
-})();
-var invSbox2 = /* @__PURE__ */ sbox2.map((_2, j) => sbox2.indexOf(j));
-var rotr32_82 = (n) => n << 24 | n >>> 8;
-var rotl32_82 = (n) => n << 8 | n >>> 24;
-function genTtable2(sbox3, fn) {
-  if (sbox3.length !== 256)
-    throw new Error("Wrong sbox length");
-  const T0 = new Uint32Array(256).map((_2, j) => fn(sbox3[j]));
-  const T1 = T0.map(rotl32_82);
-  const T2 = T1.map(rotl32_82);
-  const T3 = T2.map(rotl32_82);
-  const T01 = new Uint32Array(256 * 256);
-  const T23 = new Uint32Array(256 * 256);
-  const sbox22 = new Uint16Array(256 * 256);
-  for (let i2 = 0;i2 < 256; i2++) {
-    for (let j = 0;j < 256; j++) {
-      const idx = i2 * 256 + j;
-      T01[idx] = T0[i2] ^ T1[j];
-      T23[idx] = T2[i2] ^ T3[j];
-      sbox22[idx] = sbox3[i2] << 8 | sbox3[j];
-    }
-  }
-  return { sbox: sbox3, sbox2: sbox22, T0, T1, T2, T3, T01, T23 };
-}
-var tableEncoding2 = /* @__PURE__ */ genTtable2(sbox2, (s) => mul3(s, 3) << 24 | s << 16 | s << 8 | mul3(s, 2));
-var tableDecoding2 = /* @__PURE__ */ genTtable2(invSbox2, (s) => mul3(s, 11) << 24 | mul3(s, 13) << 16 | mul3(s, 9) << 8 | mul3(s, 14));
-var xPowers2 = /* @__PURE__ */ (() => {
-  const p = new Uint8Array(16);
-  for (let i2 = 0, x = 1;i2 < 16; i2++, x = mul24(x))
-    p[i2] = x;
-  return p;
-})();
-function expandKeyLE2(key) {
-  bytes6(key);
-  const len = key.length;
-  if (![16, 24, 32].includes(len))
-    throw new Error(`aes: wrong key size: should be 16, 24 or 32, got: ${len}`);
-  const { sbox2: sbox22 } = tableEncoding2;
-  const k32 = u322(key);
-  const Nk = k32.length;
-  const subByte = (n) => applySbox2(sbox22, n, n, n, n);
-  const xk = new Uint32Array(len + 28);
-  xk.set(k32);
-  for (let i2 = Nk;i2 < xk.length; i2++) {
-    let t = xk[i2 - 1];
-    if (i2 % Nk === 0)
-      t = subByte(rotr32_82(t)) ^ xPowers2[i2 / Nk - 1];
-    else if (Nk > 6 && i2 % Nk === 4)
-      t = subByte(t);
-    xk[i2] = xk[i2 - Nk] ^ t;
-  }
-  return xk;
-}
-function expandKeyDecLE2(key) {
-  const encKey = expandKeyLE2(key);
-  const xk = encKey.slice();
-  const Nk = encKey.length;
-  const { sbox2: sbox22 } = tableEncoding2;
-  const { T0, T1, T2, T3 } = tableDecoding2;
-  for (let i2 = 0;i2 < Nk; i2 += 4) {
-    for (let j = 0;j < 4; j++)
-      xk[i2 + j] = encKey[Nk - i2 - 4 + j];
-  }
-  encKey.fill(0);
-  for (let i2 = 4;i2 < Nk - 4; i2++) {
-    const x = xk[i2];
-    const w = applySbox2(sbox22, x, x, x, x);
-    xk[i2] = T0[w & 255] ^ T1[w >>> 8 & 255] ^ T2[w >>> 16 & 255] ^ T3[w >>> 24];
-  }
-  return xk;
-}
-function apply01232(T01, T23, s0, s1, s2, s3) {
-  return T01[s0 << 8 & 65280 | s1 >>> 8 & 255] ^ T23[s2 >>> 8 & 65280 | s3 >>> 24 & 255];
-}
-function applySbox2(sbox22, s0, s1, s2, s3) {
-  return sbox22[s0 & 255 | s1 & 65280] | sbox22[s2 >>> 16 & 255 | s3 >>> 16 & 65280] << 16;
-}
-function encrypt4(xk, s0, s1, s2, s3) {
-  const { sbox2: sbox22, T01, T23 } = tableEncoding2;
-  let k = 0;
-  s0 ^= xk[k++], s1 ^= xk[k++], s2 ^= xk[k++], s3 ^= xk[k++];
-  const rounds = xk.length / 4 - 2;
-  for (let i2 = 0;i2 < rounds; i2++) {
-    const t02 = xk[k++] ^ apply01232(T01, T23, s0, s1, s2, s3);
-    const t12 = xk[k++] ^ apply01232(T01, T23, s1, s2, s3, s0);
-    const t22 = xk[k++] ^ apply01232(T01, T23, s2, s3, s0, s1);
-    const t32 = xk[k++] ^ apply01232(T01, T23, s3, s0, s1, s2);
-    s0 = t02, s1 = t12, s2 = t22, s3 = t32;
-  }
-  const t0 = xk[k++] ^ applySbox2(sbox22, s0, s1, s2, s3);
-  const t1 = xk[k++] ^ applySbox2(sbox22, s1, s2, s3, s0);
-  const t2 = xk[k++] ^ applySbox2(sbox22, s2, s3, s0, s1);
-  const t3 = xk[k++] ^ applySbox2(sbox22, s3, s0, s1, s2);
-  return { s0: t0, s1: t1, s2: t2, s3: t3 };
-}
-function decrypt4(xk, s0, s1, s2, s3) {
-  const { sbox2: sbox22, T01, T23 } = tableDecoding2;
-  let k = 0;
-  s0 ^= xk[k++], s1 ^= xk[k++], s2 ^= xk[k++], s3 ^= xk[k++];
-  const rounds = xk.length / 4 - 2;
-  for (let i2 = 0;i2 < rounds; i2++) {
-    const t02 = xk[k++] ^ apply01232(T01, T23, s0, s3, s2, s1);
-    const t12 = xk[k++] ^ apply01232(T01, T23, s1, s0, s3, s2);
-    const t22 = xk[k++] ^ apply01232(T01, T23, s2, s1, s0, s3);
-    const t32 = xk[k++] ^ apply01232(T01, T23, s3, s2, s1, s0);
-    s0 = t02, s1 = t12, s2 = t22, s3 = t32;
-  }
-  const t0 = xk[k++] ^ applySbox2(sbox22, s0, s3, s2, s1);
-  const t1 = xk[k++] ^ applySbox2(sbox22, s1, s0, s3, s2);
-  const t2 = xk[k++] ^ applySbox2(sbox22, s2, s1, s0, s3);
-  const t3 = xk[k++] ^ applySbox2(sbox22, s3, s2, s1, s0);
-  return { s0: t0, s1: t1, s2: t2, s3: t3 };
-}
-function getDst2(len, dst) {
-  if (!dst)
-    return new Uint8Array(len);
-  bytes6(dst);
-  if (dst.length < len)
-    throw new Error(`aes: wrong destination length, expected at least ${len}, got: ${dst.length}`);
-  return dst;
-}
-function ctrCounter2(xk, nonce, src, dst) {
-  bytes6(nonce, BLOCK_SIZE4);
-  bytes6(src);
-  const srcLen = src.length;
-  dst = getDst2(srcLen, dst);
-  const ctr3 = nonce;
-  const c32 = u322(ctr3);
-  let { s0, s1, s2, s3 } = encrypt4(xk, c32[0], c32[1], c32[2], c32[3]);
-  const src32 = u322(src);
-  const dst32 = u322(dst);
-  for (let i2 = 0;i2 + 4 <= src32.length; i2 += 4) {
-    dst32[i2 + 0] = src32[i2 + 0] ^ s0;
-    dst32[i2 + 1] = src32[i2 + 1] ^ s1;
-    dst32[i2 + 2] = src32[i2 + 2] ^ s2;
-    dst32[i2 + 3] = src32[i2 + 3] ^ s3;
-    let carry = 1;
-    for (let i3 = ctr3.length - 1;i3 >= 0; i3--) {
-      carry = carry + (ctr3[i3] & 255) | 0;
-      ctr3[i3] = carry & 255;
-      carry >>>= 8;
-    }
-    ({ s0, s1, s2, s3 } = encrypt4(xk, c32[0], c32[1], c32[2], c32[3]));
-  }
-  const start = BLOCK_SIZE4 * Math.floor(src32.length / BLOCK_SIZE322);
-  if (start < srcLen) {
-    const b32 = new Uint32Array([s0, s1, s2, s3]);
-    const buf = u82(b32);
-    for (let i2 = start, pos = 0;i2 < srcLen; i2++, pos++)
-      dst[i2] = src[i2] ^ buf[pos];
-  }
-  return dst;
-}
-function ctr322(xk, isLE7, nonce, src, dst) {
-  bytes6(nonce, BLOCK_SIZE4);
-  bytes6(src);
-  dst = getDst2(src.length, dst);
-  const ctr3 = nonce;
-  const c32 = u322(ctr3);
-  const view = createView7(ctr3);
-  const src32 = u322(src);
-  const dst32 = u322(dst);
-  const ctrPos = isLE7 ? 0 : 12;
-  const srcLen = src.length;
-  let ctrNum = view.getUint32(ctrPos, isLE7);
-  let { s0, s1, s2, s3 } = encrypt4(xk, c32[0], c32[1], c32[2], c32[3]);
-  for (let i2 = 0;i2 + 4 <= src32.length; i2 += 4) {
-    dst32[i2 + 0] = src32[i2 + 0] ^ s0;
-    dst32[i2 + 1] = src32[i2 + 1] ^ s1;
-    dst32[i2 + 2] = src32[i2 + 2] ^ s2;
-    dst32[i2 + 3] = src32[i2 + 3] ^ s3;
-    ctrNum = ctrNum + 1 >>> 0;
-    view.setUint32(ctrPos, ctrNum, isLE7);
-    ({ s0, s1, s2, s3 } = encrypt4(xk, c32[0], c32[1], c32[2], c32[3]));
-  }
-  const start = BLOCK_SIZE4 * Math.floor(src32.length / BLOCK_SIZE322);
-  if (start < srcLen) {
-    const b32 = new Uint32Array([s0, s1, s2, s3]);
-    const buf = u82(b32);
-    for (let i2 = start, pos = 0;i2 < srcLen; i2++, pos++)
-      dst[i2] = src[i2] ^ buf[pos];
-  }
-  return dst;
-}
-var ctr3 = wrapCipher2({ blockSize: 16, nonceLength: 16 }, function ctr4(key, nonce) {
-  bytes6(key);
-  bytes6(nonce, BLOCK_SIZE4);
-  function processCtr(buf, dst) {
-    const xk = expandKeyLE2(key);
-    const n = nonce.slice();
-    const out = ctrCounter2(xk, n, buf, dst);
-    xk.fill(0);
-    n.fill(0);
-    return out;
-  }
-  return {
-    encrypt: (plaintext, dst) => processCtr(plaintext, dst),
-    decrypt: (ciphertext, dst) => processCtr(ciphertext, dst)
-  };
-});
-function validateBlockDecrypt2(data) {
-  bytes6(data);
-  if (data.length % BLOCK_SIZE4 !== 0) {
-    throw new Error(`aes/(cbc-ecb).decrypt ciphertext should consist of blocks with size ${BLOCK_SIZE4}`);
-  }
-}
-function validateBlockEncrypt2(plaintext, pcks5, dst) {
-  let outLen = plaintext.length;
-  const remaining = outLen % BLOCK_SIZE4;
-  if (!pcks5 && remaining !== 0)
-    throw new Error("aec/(cbc-ecb): unpadded plaintext with disabled padding");
-  const b = u322(plaintext);
-  if (pcks5) {
-    let left2 = BLOCK_SIZE4 - remaining;
-    if (!left2)
-      left2 = BLOCK_SIZE4;
-    outLen = outLen + left2;
-  }
-  const out = getDst2(outLen, dst);
-  const o = u322(out);
-  return { b, o, out };
-}
-function validatePCKS2(data, pcks5) {
-  if (!pcks5)
-    return data;
-  const len = data.length;
-  if (!len)
-    throw new Error(`aes/pcks5: empty ciphertext not allowed`);
-  const lastByte = data[len - 1];
-  if (lastByte <= 0 || lastByte > 16)
-    throw new Error(`aes/pcks5: wrong padding byte: ${lastByte}`);
-  const out = data.subarray(0, -lastByte);
-  for (let i2 = 0;i2 < lastByte; i2++)
-    if (data[len - i2 - 1] !== lastByte)
-      throw new Error(`aes/pcks5: wrong padding`);
-  return out;
-}
-function padPCKS2(left2) {
-  const tmp = new Uint8Array(16);
-  const tmp32 = u322(tmp);
-  tmp.set(left2);
-  const paddingByte = BLOCK_SIZE4 - left2.length;
-  for (let i2 = BLOCK_SIZE4 - paddingByte;i2 < BLOCK_SIZE4; i2++)
-    tmp[i2] = paddingByte;
-  return tmp32;
-}
-var ecb3 = wrapCipher2({ blockSize: 16 }, function ecb4(key, opts = {}) {
-  bytes6(key);
-  const pcks5 = !opts.disablePadding;
-  return {
-    encrypt: (plaintext, dst) => {
-      bytes6(plaintext);
-      const { b, o, out: _out } = validateBlockEncrypt2(plaintext, pcks5, dst);
-      const xk = expandKeyLE2(key);
-      let i2 = 0;
-      for (;i2 + 4 <= b.length; ) {
-        const { s0, s1, s2, s3 } = encrypt4(xk, b[i2 + 0], b[i2 + 1], b[i2 + 2], b[i2 + 3]);
-        o[i2++] = s0, o[i2++] = s1, o[i2++] = s2, o[i2++] = s3;
-      }
-      if (pcks5) {
-        const tmp32 = padPCKS2(plaintext.subarray(i2 * 4));
-        const { s0, s1, s2, s3 } = encrypt4(xk, tmp32[0], tmp32[1], tmp32[2], tmp32[3]);
-        o[i2++] = s0, o[i2++] = s1, o[i2++] = s2, o[i2++] = s3;
-      }
-      xk.fill(0);
-      return _out;
-    },
-    decrypt: (ciphertext, dst) => {
-      validateBlockDecrypt2(ciphertext);
-      const xk = expandKeyDecLE2(key);
-      const out = getDst2(ciphertext.length, dst);
-      const b = u322(ciphertext);
-      const o = u322(out);
-      for (let i2 = 0;i2 + 4 <= b.length; ) {
-        const { s0, s1, s2, s3 } = decrypt4(xk, b[i2 + 0], b[i2 + 1], b[i2 + 2], b[i2 + 3]);
-        o[i2++] = s0, o[i2++] = s1, o[i2++] = s2, o[i2++] = s3;
-      }
-      xk.fill(0);
-      return validatePCKS2(out, pcks5);
-    }
-  };
-});
-var cbc3 = wrapCipher2({ blockSize: 16, nonceLength: 16 }, function cbc4(key, iv, opts = {}) {
-  bytes6(key);
-  bytes6(iv, 16);
-  const pcks5 = !opts.disablePadding;
-  return {
-    encrypt: (plaintext, dst) => {
-      const xk = expandKeyLE2(key);
-      const { b, o, out: _out } = validateBlockEncrypt2(plaintext, pcks5, dst);
-      const n32 = u322(iv);
-      let s0 = n32[0], s1 = n32[1], s2 = n32[2], s3 = n32[3];
-      let i2 = 0;
-      for (;i2 + 4 <= b.length; ) {
-        s0 ^= b[i2 + 0], s1 ^= b[i2 + 1], s2 ^= b[i2 + 2], s3 ^= b[i2 + 3];
-        ({ s0, s1, s2, s3 } = encrypt4(xk, s0, s1, s2, s3));
-        o[i2++] = s0, o[i2++] = s1, o[i2++] = s2, o[i2++] = s3;
-      }
-      if (pcks5) {
-        const tmp32 = padPCKS2(plaintext.subarray(i2 * 4));
-        s0 ^= tmp32[0], s1 ^= tmp32[1], s2 ^= tmp32[2], s3 ^= tmp32[3];
-        ({ s0, s1, s2, s3 } = encrypt4(xk, s0, s1, s2, s3));
-        o[i2++] = s0, o[i2++] = s1, o[i2++] = s2, o[i2++] = s3;
-      }
-      xk.fill(0);
-      return _out;
-    },
-    decrypt: (ciphertext, dst) => {
-      validateBlockDecrypt2(ciphertext);
-      const xk = expandKeyDecLE2(key);
-      const n32 = u322(iv);
-      const out = getDst2(ciphertext.length, dst);
-      const b = u322(ciphertext);
-      const o = u322(out);
-      let s0 = n32[0], s1 = n32[1], s2 = n32[2], s3 = n32[3];
-      for (let i2 = 0;i2 + 4 <= b.length; ) {
-        const ps0 = s0, ps1 = s1, ps2 = s2, ps3 = s3;
-        s0 = b[i2 + 0], s1 = b[i2 + 1], s2 = b[i2 + 2], s3 = b[i2 + 3];
-        const { s0: o0, s1: o1, s2: o2, s3: o3 } = decrypt4(xk, s0, s1, s2, s3);
-        o[i2++] = o0 ^ ps0, o[i2++] = o1 ^ ps1, o[i2++] = o2 ^ ps2, o[i2++] = o3 ^ ps3;
-      }
-      xk.fill(0);
-      return validatePCKS2(out, pcks5);
-    }
-  };
-});
-var cfb3 = wrapCipher2({ blockSize: 16, nonceLength: 16 }, function cfb4(key, iv) {
-  bytes6(key);
-  bytes6(iv, 16);
-  function processCfb(src, isEncrypt, dst) {
-    const xk = expandKeyLE2(key);
-    const srcLen = src.length;
-    dst = getDst2(srcLen, dst);
-    const src32 = u322(src);
-    const dst32 = u322(dst);
-    const next32 = isEncrypt ? dst32 : src32;
-    const n32 = u322(iv);
-    let s0 = n32[0], s1 = n32[1], s2 = n32[2], s3 = n32[3];
-    for (let i2 = 0;i2 + 4 <= src32.length; ) {
-      const { s0: e0, s1: e1, s2: e2, s3: e3 } = encrypt4(xk, s0, s1, s2, s3);
-      dst32[i2 + 0] = src32[i2 + 0] ^ e0;
-      dst32[i2 + 1] = src32[i2 + 1] ^ e1;
-      dst32[i2 + 2] = src32[i2 + 2] ^ e2;
-      dst32[i2 + 3] = src32[i2 + 3] ^ e3;
-      s0 = next32[i2++], s1 = next32[i2++], s2 = next32[i2++], s3 = next32[i2++];
-    }
-    const start = BLOCK_SIZE4 * Math.floor(src32.length / BLOCK_SIZE322);
-    if (start < srcLen) {
-      ({ s0, s1, s2, s3 } = encrypt4(xk, s0, s1, s2, s3));
-      const buf = u82(new Uint32Array([s0, s1, s2, s3]));
-      for (let i2 = start, pos = 0;i2 < srcLen; i2++, pos++)
-        dst[i2] = src[i2] ^ buf[pos];
-      buf.fill(0);
-    }
-    xk.fill(0);
-    return dst;
-  }
-  return {
-    encrypt: (plaintext, dst) => processCfb(plaintext, true, dst),
-    decrypt: (ciphertext, dst) => processCfb(ciphertext, false, dst)
-  };
-});
-function computeTag3(fn, isLE7, key, data, AAD) {
-  const h = fn.create(key, data.length + (AAD?.length || 0));
-  if (AAD)
-    h.update(AAD);
-  h.update(data);
-  const num2 = new Uint8Array(16);
-  const view = createView7(num2);
-  if (AAD)
-    setBigUint647(view, 0, BigInt(AAD.length * 8), isLE7);
-  setBigUint647(view, 8, BigInt(data.length * 8), isLE7);
-  h.update(num2);
-  return h.digest();
-}
-var gcm3 = wrapCipher2({ blockSize: 16, nonceLength: 12, tagLength: 16 }, function gcm4(key, nonce, AAD) {
-  bytes6(nonce);
-  if (nonce.length === 0)
-    throw new Error("aes/gcm: empty nonce");
-  const tagLength = 16;
-  function _computeTag(authKey, tagMask, data) {
-    const tag = computeTag3(ghash2, false, authKey, data, AAD);
-    for (let i2 = 0;i2 < tagMask.length; i2++)
-      tag[i2] ^= tagMask[i2];
-    return tag;
-  }
-  function deriveKeys() {
-    const xk = expandKeyLE2(key);
-    const authKey = EMPTY_BLOCK2.slice();
-    const counter = EMPTY_BLOCK2.slice();
-    ctr322(xk, false, counter, counter, authKey);
-    if (nonce.length === 12) {
-      counter.set(nonce);
-    } else {
-      const nonceLen = EMPTY_BLOCK2.slice();
-      const view = createView7(nonceLen);
-      setBigUint647(view, 8, BigInt(nonce.length * 8), false);
-      ghash2.create(authKey).update(nonce).update(nonceLen).digestInto(counter);
-    }
-    const tagMask = ctr322(xk, false, counter, EMPTY_BLOCK2);
-    return { xk, authKey, counter, tagMask };
-  }
-  return {
-    encrypt: (plaintext) => {
-      bytes6(plaintext);
-      const { xk, authKey, counter, tagMask } = deriveKeys();
-      const out = new Uint8Array(plaintext.length + tagLength);
-      ctr322(xk, false, counter, plaintext, out);
-      const tag = _computeTag(authKey, tagMask, out.subarray(0, out.length - tagLength));
-      out.set(tag, plaintext.length);
-      xk.fill(0);
-      return out;
-    },
-    decrypt: (ciphertext) => {
-      bytes6(ciphertext);
-      if (ciphertext.length < tagLength)
-        throw new Error(`aes/gcm: ciphertext less than tagLen (${tagLength})`);
-      const { xk, authKey, counter, tagMask } = deriveKeys();
-      const data = ciphertext.subarray(0, -tagLength);
-      const passedTag = ciphertext.subarray(-tagLength);
-      const tag = _computeTag(authKey, tagMask, data);
-      if (!equalBytes4(tag, passedTag))
-        throw new Error("aes/gcm: invalid ghash tag");
-      const out = ctr322(xk, false, counter, data);
-      authKey.fill(0);
-      tagMask.fill(0);
-      xk.fill(0);
-      return out;
-    }
-  };
-});
-var limit2 = (name, min, max) => (value) => {
-  if (!Number.isSafeInteger(value) || min > value || value > max)
-    throw new Error(`${name}: invalid value=${value}, must be [${min}..${max}]`);
-};
-var siv3 = wrapCipher2({ blockSize: 16, nonceLength: 12, tagLength: 16 }, function siv4(key, nonce, AAD) {
-  const tagLength = 16;
-  const AAD_LIMIT = limit2("AAD", 0, 2 ** 36);
-  const PLAIN_LIMIT = limit2("plaintext", 0, 2 ** 36);
-  const NONCE_LIMIT = limit2("nonce", 12, 12);
-  const CIPHER_LIMIT = limit2("ciphertext", 16, 2 ** 36 + 16);
-  bytes6(nonce);
-  NONCE_LIMIT(nonce.length);
-  if (AAD) {
-    bytes6(AAD);
-    AAD_LIMIT(AAD.length);
-  }
-  function deriveKeys() {
-    const len = key.length;
-    if (len !== 16 && len !== 24 && len !== 32)
-      throw new Error(`key length must be 16, 24 or 32 bytes, got: ${len} bytes`);
-    const xk = expandKeyLE2(key);
-    const encKey = new Uint8Array(len);
-    const authKey = new Uint8Array(16);
-    const n32 = u322(nonce);
-    let s0 = 0, s1 = n32[0], s2 = n32[1], s3 = n32[2];
-    let counter = 0;
-    for (const derivedKey of [authKey, encKey].map(u322)) {
-      const d32 = u322(derivedKey);
-      for (let i2 = 0;i2 < d32.length; i2 += 2) {
-        const { s0: o0, s1: o1 } = encrypt4(xk, s0, s1, s2, s3);
-        d32[i2 + 0] = o0;
-        d32[i2 + 1] = o1;
-        s0 = ++counter;
-      }
-    }
-    xk.fill(0);
-    return { authKey, encKey: expandKeyLE2(encKey) };
-  }
-  function _computeTag(encKey, authKey, data) {
-    const tag = computeTag3(polyval2, true, authKey, data, AAD);
-    for (let i2 = 0;i2 < 12; i2++)
-      tag[i2] ^= nonce[i2];
-    tag[15] &= 127;
-    const t32 = u322(tag);
-    let s0 = t32[0], s1 = t32[1], s2 = t32[2], s3 = t32[3];
-    ({ s0, s1, s2, s3 } = encrypt4(encKey, s0, s1, s2, s3));
-    t32[0] = s0, t32[1] = s1, t32[2] = s2, t32[3] = s3;
-    return tag;
-  }
-  function processSiv(encKey, tag, input) {
-    let block = tag.slice();
-    block[15] |= 128;
-    return ctr322(encKey, true, block, input);
-  }
-  return {
-    encrypt: (plaintext) => {
-      bytes6(plaintext);
-      PLAIN_LIMIT(plaintext.length);
-      const { encKey, authKey } = deriveKeys();
-      const tag = _computeTag(encKey, authKey, plaintext);
-      const out = new Uint8Array(plaintext.length + tagLength);
-      out.set(tag, plaintext.length);
-      out.set(processSiv(encKey, tag, plaintext));
-      encKey.fill(0);
-      authKey.fill(0);
-      return out;
-    },
-    decrypt: (ciphertext) => {
-      bytes6(ciphertext);
-      CIPHER_LIMIT(ciphertext.length);
-      const tag = ciphertext.subarray(-tagLength);
-      const { encKey, authKey } = deriveKeys();
-      const plaintext = processSiv(encKey, tag, ciphertext.subarray(0, -tagLength));
-      const expectedTag = _computeTag(encKey, authKey, plaintext);
-      encKey.fill(0);
-      authKey.fill(0);
-      if (!equalBytes4(tag, expectedTag))
-        throw new Error("invalid polyval tag");
-      return plaintext;
-    }
-  };
-});
-
-// ../shared/node_modules/@noble/ciphers/esm/_poly1305.js
-var u8to162 = (a, i2) => a[i2++] & 255 | (a[i2++] & 255) << 8;
-
-class Poly13052 {
-  constructor(key) {
-    this.blockLen = 16;
-    this.outputLen = 16;
-    this.buffer = new Uint8Array(16);
-    this.r = new Uint16Array(10);
-    this.h = new Uint16Array(10);
-    this.pad = new Uint16Array(8);
-    this.pos = 0;
-    this.finished = false;
-    key = toBytes7(key);
-    bytes6(key, 32);
-    const t0 = u8to162(key, 0);
-    const t1 = u8to162(key, 2);
-    const t2 = u8to162(key, 4);
-    const t3 = u8to162(key, 6);
-    const t4 = u8to162(key, 8);
-    const t5 = u8to162(key, 10);
-    const t6 = u8to162(key, 12);
-    const t7 = u8to162(key, 14);
-    this.r[0] = t0 & 8191;
-    this.r[1] = (t0 >>> 13 | t1 << 3) & 8191;
-    this.r[2] = (t1 >>> 10 | t2 << 6) & 7939;
-    this.r[3] = (t2 >>> 7 | t3 << 9) & 8191;
-    this.r[4] = (t3 >>> 4 | t4 << 12) & 255;
-    this.r[5] = t4 >>> 1 & 8190;
-    this.r[6] = (t4 >>> 14 | t5 << 2) & 8191;
-    this.r[7] = (t5 >>> 11 | t6 << 5) & 8065;
-    this.r[8] = (t6 >>> 8 | t7 << 8) & 8191;
-    this.r[9] = t7 >>> 5 & 127;
-    for (let i2 = 0;i2 < 8; i2++)
-      this.pad[i2] = u8to162(key, 16 + 2 * i2);
-  }
-  process(data, offset, isLast = false) {
-    const hibit = isLast ? 0 : 1 << 11;
-    const { h, r } = this;
-    const r0 = r[0];
-    const r1 = r[1];
-    const r2 = r[2];
-    const r3 = r[3];
-    const r4 = r[4];
-    const r5 = r[5];
-    const r6 = r[6];
-    const r7 = r[7];
-    const r8 = r[8];
-    const r9 = r[9];
-    const t0 = u8to162(data, offset + 0);
-    const t1 = u8to162(data, offset + 2);
-    const t2 = u8to162(data, offset + 4);
-    const t3 = u8to162(data, offset + 6);
-    const t4 = u8to162(data, offset + 8);
-    const t5 = u8to162(data, offset + 10);
-    const t6 = u8to162(data, offset + 12);
-    const t7 = u8to162(data, offset + 14);
-    let h0 = h[0] + (t0 & 8191);
-    let h1 = h[1] + ((t0 >>> 13 | t1 << 3) & 8191);
-    let h2 = h[2] + ((t1 >>> 10 | t2 << 6) & 8191);
-    let h3 = h[3] + ((t2 >>> 7 | t3 << 9) & 8191);
-    let h4 = h[4] + ((t3 >>> 4 | t4 << 12) & 8191);
-    let h5 = h[5] + (t4 >>> 1 & 8191);
-    let h6 = h[6] + ((t4 >>> 14 | t5 << 2) & 8191);
-    let h7 = h[7] + ((t5 >>> 11 | t6 << 5) & 8191);
-    let h8 = h[8] + ((t6 >>> 8 | t7 << 8) & 8191);
-    let h9 = h[9] + (t7 >>> 5 | hibit);
-    let c = 0;
-    let d0 = c + h0 * r0 + h1 * (5 * r9) + h2 * (5 * r8) + h3 * (5 * r7) + h4 * (5 * r6);
-    c = d0 >>> 13;
-    d0 &= 8191;
-    d0 += h5 * (5 * r5) + h6 * (5 * r4) + h7 * (5 * r3) + h8 * (5 * r2) + h9 * (5 * r1);
-    c += d0 >>> 13;
-    d0 &= 8191;
-    let d1 = c + h0 * r1 + h1 * r0 + h2 * (5 * r9) + h3 * (5 * r8) + h4 * (5 * r7);
-    c = d1 >>> 13;
-    d1 &= 8191;
-    d1 += h5 * (5 * r6) + h6 * (5 * r5) + h7 * (5 * r4) + h8 * (5 * r3) + h9 * (5 * r2);
-    c += d1 >>> 13;
-    d1 &= 8191;
-    let d22 = c + h0 * r2 + h1 * r1 + h2 * r0 + h3 * (5 * r9) + h4 * (5 * r8);
-    c = d22 >>> 13;
-    d22 &= 8191;
-    d22 += h5 * (5 * r7) + h6 * (5 * r6) + h7 * (5 * r5) + h8 * (5 * r4) + h9 * (5 * r3);
-    c += d22 >>> 13;
-    d22 &= 8191;
-    let d32 = c + h0 * r3 + h1 * r2 + h2 * r1 + h3 * r0 + h4 * (5 * r9);
-    c = d32 >>> 13;
-    d32 &= 8191;
-    d32 += h5 * (5 * r8) + h6 * (5 * r7) + h7 * (5 * r6) + h8 * (5 * r5) + h9 * (5 * r4);
-    c += d32 >>> 13;
-    d32 &= 8191;
-    let d4 = c + h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0;
-    c = d4 >>> 13;
-    d4 &= 8191;
-    d4 += h5 * (5 * r9) + h6 * (5 * r8) + h7 * (5 * r7) + h8 * (5 * r6) + h9 * (5 * r5);
-    c += d4 >>> 13;
-    d4 &= 8191;
-    let d5 = c + h0 * r5 + h1 * r4 + h2 * r3 + h3 * r2 + h4 * r1;
-    c = d5 >>> 13;
-    d5 &= 8191;
-    d5 += h5 * r0 + h6 * (5 * r9) + h7 * (5 * r8) + h8 * (5 * r7) + h9 * (5 * r6);
-    c += d5 >>> 13;
-    d5 &= 8191;
-    let d6 = c + h0 * r6 + h1 * r5 + h2 * r4 + h3 * r3 + h4 * r2;
-    c = d6 >>> 13;
-    d6 &= 8191;
-    d6 += h5 * r1 + h6 * r0 + h7 * (5 * r9) + h8 * (5 * r8) + h9 * (5 * r7);
-    c += d6 >>> 13;
-    d6 &= 8191;
-    let d7 = c + h0 * r7 + h1 * r6 + h2 * r5 + h3 * r4 + h4 * r3;
-    c = d7 >>> 13;
-    d7 &= 8191;
-    d7 += h5 * r2 + h6 * r1 + h7 * r0 + h8 * (5 * r9) + h9 * (5 * r8);
-    c += d7 >>> 13;
-    d7 &= 8191;
-    let d8 = c + h0 * r8 + h1 * r7 + h2 * r6 + h3 * r5 + h4 * r4;
-    c = d8 >>> 13;
-    d8 &= 8191;
-    d8 += h5 * r3 + h6 * r2 + h7 * r1 + h8 * r0 + h9 * (5 * r9);
-    c += d8 >>> 13;
-    d8 &= 8191;
-    let d9 = c + h0 * r9 + h1 * r8 + h2 * r7 + h3 * r6 + h4 * r5;
-    c = d9 >>> 13;
-    d9 &= 8191;
-    d9 += h5 * r4 + h6 * r3 + h7 * r2 + h8 * r1 + h9 * r0;
-    c += d9 >>> 13;
-    d9 &= 8191;
-    c = (c << 2) + c | 0;
-    c = c + d0 | 0;
-    d0 = c & 8191;
-    c = c >>> 13;
-    d1 += c;
-    h[0] = d0;
-    h[1] = d1;
-    h[2] = d22;
-    h[3] = d32;
-    h[4] = d4;
-    h[5] = d5;
-    h[6] = d6;
-    h[7] = d7;
-    h[8] = d8;
-    h[9] = d9;
-  }
-  finalize() {
-    const { h, pad: pad2 } = this;
-    const g = new Uint16Array(10);
-    let c = h[1] >>> 13;
-    h[1] &= 8191;
-    for (let i2 = 2;i2 < 10; i2++) {
-      h[i2] += c;
-      c = h[i2] >>> 13;
-      h[i2] &= 8191;
-    }
-    h[0] += c * 5;
-    c = h[0] >>> 13;
-    h[0] &= 8191;
-    h[1] += c;
-    c = h[1] >>> 13;
-    h[1] &= 8191;
-    h[2] += c;
-    g[0] = h[0] + 5;
-    c = g[0] >>> 13;
-    g[0] &= 8191;
-    for (let i2 = 1;i2 < 10; i2++) {
-      g[i2] = h[i2] + c;
-      c = g[i2] >>> 13;
-      g[i2] &= 8191;
-    }
-    g[9] -= 1 << 13;
-    let mask2 = (c ^ 1) - 1;
-    for (let i2 = 0;i2 < 10; i2++)
-      g[i2] &= mask2;
-    mask2 = ~mask2;
-    for (let i2 = 0;i2 < 10; i2++)
-      h[i2] = h[i2] & mask2 | g[i2];
-    h[0] = (h[0] | h[1] << 13) & 65535;
-    h[1] = (h[1] >>> 3 | h[2] << 10) & 65535;
-    h[2] = (h[2] >>> 6 | h[3] << 7) & 65535;
-    h[3] = (h[3] >>> 9 | h[4] << 4) & 65535;
-    h[4] = (h[4] >>> 12 | h[5] << 1 | h[6] << 14) & 65535;
-    h[5] = (h[6] >>> 2 | h[7] << 11) & 65535;
-    h[6] = (h[7] >>> 5 | h[8] << 8) & 65535;
-    h[7] = (h[8] >>> 8 | h[9] << 5) & 65535;
-    let f = h[0] + pad2[0];
-    h[0] = f & 65535;
-    for (let i2 = 1;i2 < 8; i2++) {
-      f = (h[i2] + pad2[i2] | 0) + (f >>> 16) | 0;
-      h[i2] = f & 65535;
-    }
-  }
-  update(data) {
-    exists6(this);
-    const { buffer, blockLen } = this;
-    data = toBytes7(data);
-    const len = data.length;
-    for (let pos = 0;pos < len; ) {
-      const take4 = Math.min(blockLen - this.pos, len - pos);
-      if (take4 === blockLen) {
-        for (;blockLen <= len - pos; pos += blockLen)
-          this.process(data, pos);
-        continue;
-      }
-      buffer.set(data.subarray(pos, pos + take4), this.pos);
-      this.pos += take4;
-      pos += take4;
-      if (this.pos === blockLen) {
-        this.process(buffer, 0, false);
-        this.pos = 0;
-      }
-    }
-    return this;
-  }
-  destroy() {
-    this.h.fill(0);
-    this.r.fill(0);
-    this.buffer.fill(0);
-    this.pad.fill(0);
-  }
-  digestInto(out) {
-    exists6(this);
-    output6(out, this);
-    this.finished = true;
-    const { buffer, h } = this;
-    let { pos } = this;
-    if (pos) {
-      buffer[pos++] = 1;
-      for (;pos < 16; pos++)
-        buffer[pos] = 0;
-      this.process(buffer, 0, true);
-    }
-    this.finalize();
-    let opos = 0;
-    for (let i2 = 0;i2 < 8; i2++) {
-      out[opos++] = h[i2] >>> 0;
-      out[opos++] = h[i2] >>> 8;
-    }
-    return out;
-  }
-  digest() {
-    const { buffer, outputLen } = this;
-    this.digestInto(buffer);
-    const res = buffer.slice(0, outputLen);
-    this.destroy();
-    return res;
-  }
-}
-function wrapConstructorWithKey4(hashCons) {
-  const hashC = (msg, key) => hashCons(key).update(toBytes7(msg)).digest();
-  const tmp = hashCons(new Uint8Array(32));
-  hashC.outputLen = tmp.outputLen;
-  hashC.blockLen = tmp.blockLen;
-  hashC.create = (key) => hashCons(key);
-  return hashC;
-}
-var poly13052 = wrapConstructorWithKey4((key) => new Poly13052(key));
-
-// ../shared/node_modules/@noble/ciphers/esm/_arx.js
-var _utf8ToBytes2 = (str) => Uint8Array.from(str.split("").map((c) => c.charCodeAt(0)));
-var sigma162 = _utf8ToBytes2("expand 16-byte k");
-var sigma322 = _utf8ToBytes2("expand 32-byte k");
-var sigma16_322 = u322(sigma162);
-var sigma32_322 = u322(sigma322);
-var sigma2 = sigma32_322.slice();
-function rotl2(a, b) {
-  return a << b | a >>> 32 - b;
-}
-function isAligned322(b) {
-  return b.byteOffset % 4 === 0;
-}
-var BLOCK_LEN2 = 64;
-var BLOCK_LEN322 = 16;
-var MAX_COUNTER2 = 2 ** 32 - 1;
-var U32_EMPTY2 = new Uint32Array;
-function runCipher2(core, sigma3, key, nonce, data, output7, counter, rounds) {
-  const len = data.length;
-  const block = new Uint8Array(BLOCK_LEN2);
-  const b32 = u322(block);
-  const isAligned = isAligned322(data) && isAligned322(output7);
-  const d32 = isAligned ? u322(data) : U32_EMPTY2;
-  const o32 = isAligned ? u322(output7) : U32_EMPTY2;
-  for (let pos = 0;pos < len; counter++) {
-    core(sigma3, key, nonce, b32, counter, rounds);
-    if (counter >= MAX_COUNTER2)
-      throw new Error("arx: counter overflow");
-    const take4 = Math.min(BLOCK_LEN2, len - pos);
-    if (isAligned && take4 === BLOCK_LEN2) {
-      const pos32 = pos / 4;
-      if (pos % 4 !== 0)
-        throw new Error("arx: invalid block position");
-      for (let j = 0, posj;j < BLOCK_LEN322; j++) {
-        posj = pos32 + j;
-        o32[posj] = d32[posj] ^ b32[j];
-      }
-      pos += BLOCK_LEN2;
-      continue;
-    }
-    for (let j = 0, posj;j < take4; j++) {
-      posj = pos + j;
-      output7[posj] = data[posj] ^ block[j];
-    }
-    pos += take4;
-  }
-}
-function createCipher2(core, opts) {
-  const { allowShortKeys, extendNonceFn, counterLength, counterRight, rounds } = checkOpts2({ allowShortKeys: false, counterLength: 8, counterRight: false, rounds: 20 }, opts);
-  if (typeof core !== "function")
-    throw new Error("core must be a function");
-  number6(counterLength);
-  number6(rounds);
-  bool4(counterRight);
-  bool4(allowShortKeys);
-  return (key, nonce, data, output7, counter = 0) => {
-    bytes6(key);
-    bytes6(nonce);
-    bytes6(data);
-    const len = data.length;
-    if (!output7)
-      output7 = new Uint8Array(len);
-    bytes6(output7);
-    number6(counter);
-    if (counter < 0 || counter >= MAX_COUNTER2)
-      throw new Error("arx: counter overflow");
-    if (output7.length < len)
-      throw new Error(`arx: output (${output7.length}) is shorter than data (${len})`);
-    const toClean = [];
-    let l = key.length, k, sigma3;
-    if (l === 32) {
-      k = key.slice();
-      toClean.push(k);
-      sigma3 = sigma32_322;
-    } else if (l === 16 && allowShortKeys) {
-      k = new Uint8Array(32);
-      k.set(key);
-      k.set(key, 16);
-      sigma3 = sigma16_322;
-      toClean.push(k);
-    } else {
-      throw new Error(`arx: invalid 32-byte key, got length=${l}`);
-    }
-    if (!isAligned322(nonce)) {
-      nonce = nonce.slice();
-      toClean.push(nonce);
-    }
-    const k32 = u322(k);
-    if (extendNonceFn) {
-      if (nonce.length !== 24)
-        throw new Error(`arx: extended nonce must be 24 bytes`);
-      extendNonceFn(sigma3, k32, u322(nonce.subarray(0, 16)), k32);
-      nonce = nonce.subarray(16);
-    }
-    const nonceNcLen = 16 - counterLength;
-    if (nonceNcLen !== nonce.length)
-      throw new Error(`arx: nonce must be ${nonceNcLen} or 16 bytes`);
-    if (nonceNcLen !== 12) {
-      const nc6 = new Uint8Array(12);
-      nc6.set(nonce, counterRight ? 0 : 12 - nonce.length);
-      nonce = nc6;
-      toClean.push(nonce);
-    }
-    const n32 = u322(nonce);
-    runCipher2(core, sigma3, k32, n32, data, output7, counter, rounds);
-    while (toClean.length > 0)
-      toClean.pop().fill(0);
-    return output7;
-  };
-}
-
-// ../shared/node_modules/@noble/ciphers/esm/chacha.js
-function chachaCore2(s, k, n, out, cnt, rounds = 20) {
-  let y00 = s[0], y01 = s[1], y02 = s[2], y03 = s[3], y04 = k[0], y05 = k[1], y06 = k[2], y07 = k[3], y08 = k[4], y09 = k[5], y10 = k[6], y11 = k[7], y12 = cnt, y13 = n[0], y14 = n[1], y15 = n[2];
-  let x00 = y00, x01 = y01, x02 = y02, x03 = y03, x04 = y04, x05 = y05, x06 = y06, x07 = y07, x08 = y08, x09 = y09, x10 = y10, x11 = y11, x12 = y12, x13 = y13, x14 = y14, x15 = y15;
-  for (let r = 0;r < rounds; r += 2) {
-    x00 = x00 + x04 | 0;
-    x12 = rotl2(x12 ^ x00, 16);
-    x08 = x08 + x12 | 0;
-    x04 = rotl2(x04 ^ x08, 12);
-    x00 = x00 + x04 | 0;
-    x12 = rotl2(x12 ^ x00, 8);
-    x08 = x08 + x12 | 0;
-    x04 = rotl2(x04 ^ x08, 7);
-    x01 = x01 + x05 | 0;
-    x13 = rotl2(x13 ^ x01, 16);
-    x09 = x09 + x13 | 0;
-    x05 = rotl2(x05 ^ x09, 12);
-    x01 = x01 + x05 | 0;
-    x13 = rotl2(x13 ^ x01, 8);
-    x09 = x09 + x13 | 0;
-    x05 = rotl2(x05 ^ x09, 7);
-    x02 = x02 + x06 | 0;
-    x14 = rotl2(x14 ^ x02, 16);
-    x10 = x10 + x14 | 0;
-    x06 = rotl2(x06 ^ x10, 12);
-    x02 = x02 + x06 | 0;
-    x14 = rotl2(x14 ^ x02, 8);
-    x10 = x10 + x14 | 0;
-    x06 = rotl2(x06 ^ x10, 7);
-    x03 = x03 + x07 | 0;
-    x15 = rotl2(x15 ^ x03, 16);
-    x11 = x11 + x15 | 0;
-    x07 = rotl2(x07 ^ x11, 12);
-    x03 = x03 + x07 | 0;
-    x15 = rotl2(x15 ^ x03, 8);
-    x11 = x11 + x15 | 0;
-    x07 = rotl2(x07 ^ x11, 7);
-    x00 = x00 + x05 | 0;
-    x15 = rotl2(x15 ^ x00, 16);
-    x10 = x10 + x15 | 0;
-    x05 = rotl2(x05 ^ x10, 12);
-    x00 = x00 + x05 | 0;
-    x15 = rotl2(x15 ^ x00, 8);
-    x10 = x10 + x15 | 0;
-    x05 = rotl2(x05 ^ x10, 7);
-    x01 = x01 + x06 | 0;
-    x12 = rotl2(x12 ^ x01, 16);
-    x11 = x11 + x12 | 0;
-    x06 = rotl2(x06 ^ x11, 12);
-    x01 = x01 + x06 | 0;
-    x12 = rotl2(x12 ^ x01, 8);
-    x11 = x11 + x12 | 0;
-    x06 = rotl2(x06 ^ x11, 7);
-    x02 = x02 + x07 | 0;
-    x13 = rotl2(x13 ^ x02, 16);
-    x08 = x08 + x13 | 0;
-    x07 = rotl2(x07 ^ x08, 12);
-    x02 = x02 + x07 | 0;
-    x13 = rotl2(x13 ^ x02, 8);
-    x08 = x08 + x13 | 0;
-    x07 = rotl2(x07 ^ x08, 7);
-    x03 = x03 + x04 | 0;
-    x14 = rotl2(x14 ^ x03, 16);
-    x09 = x09 + x14 | 0;
-    x04 = rotl2(x04 ^ x09, 12);
-    x03 = x03 + x04 | 0;
-    x14 = rotl2(x14 ^ x03, 8);
-    x09 = x09 + x14 | 0;
-    x04 = rotl2(x04 ^ x09, 7);
-  }
-  let oi = 0;
-  out[oi++] = y00 + x00 | 0;
-  out[oi++] = y01 + x01 | 0;
-  out[oi++] = y02 + x02 | 0;
-  out[oi++] = y03 + x03 | 0;
-  out[oi++] = y04 + x04 | 0;
-  out[oi++] = y05 + x05 | 0;
-  out[oi++] = y06 + x06 | 0;
-  out[oi++] = y07 + x07 | 0;
-  out[oi++] = y08 + x08 | 0;
-  out[oi++] = y09 + x09 | 0;
-  out[oi++] = y10 + x10 | 0;
-  out[oi++] = y11 + x11 | 0;
-  out[oi++] = y12 + x12 | 0;
-  out[oi++] = y13 + x13 | 0;
-  out[oi++] = y14 + x14 | 0;
-  out[oi++] = y15 + x15 | 0;
-}
-function hchacha2(s, k, i2, o32) {
-  let x00 = s[0], x01 = s[1], x02 = s[2], x03 = s[3], x04 = k[0], x05 = k[1], x06 = k[2], x07 = k[3], x08 = k[4], x09 = k[5], x10 = k[6], x11 = k[7], x12 = i2[0], x13 = i2[1], x14 = i2[2], x15 = i2[3];
-  for (let r = 0;r < 20; r += 2) {
-    x00 = x00 + x04 | 0;
-    x12 = rotl2(x12 ^ x00, 16);
-    x08 = x08 + x12 | 0;
-    x04 = rotl2(x04 ^ x08, 12);
-    x00 = x00 + x04 | 0;
-    x12 = rotl2(x12 ^ x00, 8);
-    x08 = x08 + x12 | 0;
-    x04 = rotl2(x04 ^ x08, 7);
-    x01 = x01 + x05 | 0;
-    x13 = rotl2(x13 ^ x01, 16);
-    x09 = x09 + x13 | 0;
-    x05 = rotl2(x05 ^ x09, 12);
-    x01 = x01 + x05 | 0;
-    x13 = rotl2(x13 ^ x01, 8);
-    x09 = x09 + x13 | 0;
-    x05 = rotl2(x05 ^ x09, 7);
-    x02 = x02 + x06 | 0;
-    x14 = rotl2(x14 ^ x02, 16);
-    x10 = x10 + x14 | 0;
-    x06 = rotl2(x06 ^ x10, 12);
-    x02 = x02 + x06 | 0;
-    x14 = rotl2(x14 ^ x02, 8);
-    x10 = x10 + x14 | 0;
-    x06 = rotl2(x06 ^ x10, 7);
-    x03 = x03 + x07 | 0;
-    x15 = rotl2(x15 ^ x03, 16);
-    x11 = x11 + x15 | 0;
-    x07 = rotl2(x07 ^ x11, 12);
-    x03 = x03 + x07 | 0;
-    x15 = rotl2(x15 ^ x03, 8);
-    x11 = x11 + x15 | 0;
-    x07 = rotl2(x07 ^ x11, 7);
-    x00 = x00 + x05 | 0;
-    x15 = rotl2(x15 ^ x00, 16);
-    x10 = x10 + x15 | 0;
-    x05 = rotl2(x05 ^ x10, 12);
-    x00 = x00 + x05 | 0;
-    x15 = rotl2(x15 ^ x00, 8);
-    x10 = x10 + x15 | 0;
-    x05 = rotl2(x05 ^ x10, 7);
-    x01 = x01 + x06 | 0;
-    x12 = rotl2(x12 ^ x01, 16);
-    x11 = x11 + x12 | 0;
-    x06 = rotl2(x06 ^ x11, 12);
-    x01 = x01 + x06 | 0;
-    x12 = rotl2(x12 ^ x01, 8);
-    x11 = x11 + x12 | 0;
-    x06 = rotl2(x06 ^ x11, 7);
-    x02 = x02 + x07 | 0;
-    x13 = rotl2(x13 ^ x02, 16);
-    x08 = x08 + x13 | 0;
-    x07 = rotl2(x07 ^ x08, 12);
-    x02 = x02 + x07 | 0;
-    x13 = rotl2(x13 ^ x02, 8);
-    x08 = x08 + x13 | 0;
-    x07 = rotl2(x07 ^ x08, 7);
-    x03 = x03 + x04 | 0;
-    x14 = rotl2(x14 ^ x03, 16);
-    x09 = x09 + x14 | 0;
-    x04 = rotl2(x04 ^ x09, 12);
-    x03 = x03 + x04 | 0;
-    x14 = rotl2(x14 ^ x03, 8);
-    x09 = x09 + x14 | 0;
-    x04 = rotl2(x04 ^ x09, 7);
-  }
-  let oi = 0;
-  o32[oi++] = x00;
-  o32[oi++] = x01;
-  o32[oi++] = x02;
-  o32[oi++] = x03;
-  o32[oi++] = x12;
-  o32[oi++] = x13;
-  o32[oi++] = x14;
-  o32[oi++] = x15;
-}
-var chacha202 = /* @__PURE__ */ createCipher2(chachaCore2, {
-  counterRight: false,
-  counterLength: 4,
-  allowShortKeys: false
-});
-var xchacha202 = /* @__PURE__ */ createCipher2(chachaCore2, {
-  counterRight: false,
-  counterLength: 8,
-  extendNonceFn: hchacha2,
-  allowShortKeys: false
-});
-var ZEROS164 = /* @__PURE__ */ new Uint8Array(16);
-var updatePadded2 = (h, msg) => {
-  h.update(msg);
-  const left2 = msg.length % 16;
-  if (left2)
-    h.update(ZEROS164.subarray(left2));
-};
-var ZEROS324 = /* @__PURE__ */ new Uint8Array(32);
-function computeTag4(fn, key, nonce, data, AAD) {
-  const authKey = fn(key, nonce, ZEROS324);
-  const h = poly13052.create(authKey);
-  if (AAD)
-    updatePadded2(h, AAD);
-  updatePadded2(h, data);
-  const num2 = new Uint8Array(16);
-  const view = createView7(num2);
-  setBigUint647(view, 0, BigInt(AAD ? AAD.length : 0), true);
-  setBigUint647(view, 8, BigInt(data.length), true);
-  h.update(num2);
-  const res = h.digest();
-  authKey.fill(0);
-  return res;
-}
-var _poly1305_aead2 = (xorStream) => (key, nonce, AAD) => {
-  const tagLength = 16;
-  bytes6(key, 32);
-  bytes6(nonce);
-  return {
-    encrypt: (plaintext, output7) => {
-      const plength = plaintext.length;
-      const clength = plength + tagLength;
-      if (output7) {
-        bytes6(output7, clength);
-      } else {
-        output7 = new Uint8Array(clength);
-      }
-      xorStream(key, nonce, plaintext, output7, 1);
-      const tag = computeTag4(xorStream, key, nonce, output7.subarray(0, -tagLength), AAD);
-      output7.set(tag, plength);
-      return output7;
-    },
-    decrypt: (ciphertext, output7) => {
-      const clength = ciphertext.length;
-      const plength = clength - tagLength;
-      if (clength < tagLength)
-        throw new Error(`encrypted data must be at least ${tagLength} bytes`);
-      if (output7) {
-        bytes6(output7, plength);
-      } else {
-        output7 = new Uint8Array(plength);
-      }
-      const data = ciphertext.subarray(0, -tagLength);
-      const passedTag = ciphertext.subarray(-tagLength);
-      const tag = computeTag4(xorStream, key, nonce, data, AAD);
-      if (!equalBytes4(passedTag, tag))
-        throw new Error("invalid tag");
-      xorStream(key, nonce, data, output7, 1);
-      return output7;
-    }
-  };
-};
-var chacha20poly13052 = /* @__PURE__ */ wrapCipher2({ blockSize: 64, nonceLength: 12, tagLength: 16 }, _poly1305_aead2(chacha202));
-var xchacha20poly13052 = /* @__PURE__ */ wrapCipher2({ blockSize: 64, nonceLength: 24, tagLength: 16 }, _poly1305_aead2(xchacha202));
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/hmac.js
-class HMAC5 extends Hash5 {
-  constructor(hash5, _key) {
-    super();
-    this.finished = false;
-    this.destroyed = false;
-    _assert_default2.hash(hash5);
-    const key = toBytes6(_key);
-    this.iHash = hash5.create();
-    if (typeof this.iHash.update !== "function")
-      throw new Error("Expected instance of class which extends utils.Hash");
-    this.blockLen = this.iHash.blockLen;
-    this.outputLen = this.iHash.outputLen;
-    const blockLen = this.blockLen;
-    const pad2 = new Uint8Array(blockLen);
-    pad2.set(key.length > blockLen ? hash5.create().update(key).digest() : key);
-    for (let i2 = 0;i2 < pad2.length; i2++)
-      pad2[i2] ^= 54;
-    this.iHash.update(pad2);
-    this.oHash = hash5.create();
-    for (let i2 = 0;i2 < pad2.length; i2++)
-      pad2[i2] ^= 54 ^ 92;
-    this.oHash.update(pad2);
-    pad2.fill(0);
-  }
-  update(buf) {
-    _assert_default2.exists(this);
-    this.iHash.update(buf);
-    return this;
-  }
-  digestInto(out) {
-    _assert_default2.exists(this);
-    _assert_default2.bytes(out, this.outputLen);
-    this.finished = true;
-    this.iHash.digestInto(out);
-    this.oHash.update(out);
-    this.oHash.digestInto(out);
-    this.destroy();
-  }
-  digest() {
-    const out = new Uint8Array(this.oHash.outputLen);
-    this.digestInto(out);
-    return out;
-  }
-  _cloneInto(to) {
-    to || (to = Object.create(Object.getPrototypeOf(this), {}));
-    const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
-    to = to;
-    to.finished = finished;
-    to.destroyed = destroyed;
-    to.blockLen = blockLen;
-    to.outputLen = outputLen;
-    to.oHash = oHash._cloneInto(to.oHash);
-    to.iHash = iHash._cloneInto(to.iHash);
-    return to;
-  }
-  destroy() {
-    this.destroyed = true;
-    this.oHash.destroy();
-    this.iHash.destroy();
-  }
-}
-var hmac5 = (hash5, key, message) => new HMAC5(hash5, key).update(message).digest();
-hmac5.create = (hash5, key) => new HMAC5(hash5, key);
-
-// ../shared/node_modules/nostr-tools/node_modules/@noble/hashes/esm/hkdf.js
-function extract2(hash5, ikm, salt) {
-  _assert_default2.hash(hash5);
-  if (salt === undefined)
-    salt = new Uint8Array(hash5.outputLen);
-  return hmac5(hash5, toBytes6(salt), toBytes6(ikm));
-}
-var HKDF_COUNTER2 = new Uint8Array([0]);
-var EMPTY_BUFFER2 = new Uint8Array;
-function expand2(hash5, prk, info, length = 32) {
-  _assert_default2.hash(hash5);
-  _assert_default2.number(length);
-  if (length > 255 * hash5.outputLen)
-    throw new Error("Length should be <= 255*HashLen");
-  const blocks = Math.ceil(length / hash5.outputLen);
-  if (info === undefined)
-    info = EMPTY_BUFFER2;
-  const okm = new Uint8Array(blocks * hash5.outputLen);
-  const HMAC6 = hmac5.create(hash5, prk);
-  const HMACTmp = HMAC6._cloneInto();
-  const T = new Uint8Array(HMAC6.outputLen);
-  for (let counter = 0;counter < blocks; counter++) {
-    HKDF_COUNTER2[0] = counter + 1;
-    HMACTmp.update(counter === 0 ? EMPTY_BUFFER2 : T).update(info).update(HKDF_COUNTER2).digestInto(T);
-    okm.set(T, hash5.outputLen * counter);
-    HMAC6._cloneInto(HMACTmp);
-  }
-  HMAC6.destroy();
-  HMACTmp.destroy();
-  T.fill(0);
-  HKDF_COUNTER2.fill(0);
-  return okm.slice(0, length);
-}
-
-// ../shared/node_modules/nostr-tools/lib/esm/index.js
-var __defProp3 = Object.defineProperty;
-var __export3 = (target, all) => {
-  for (var name in all)
-    __defProp3(target, name, { get: all[name], enumerable: true });
-};
-var verifiedSymbol2 = Symbol("verified");
-var isRecord2 = (obj) => obj instanceof Object;
-function validateEvent3(event) {
-  if (!isRecord2(event))
-    return false;
-  if (typeof event.kind !== "number")
-    return false;
-  if (typeof event.content !== "string")
-    return false;
-  if (typeof event.created_at !== "number")
-    return false;
-  if (typeof event.pubkey !== "string")
-    return false;
-  if (!event.pubkey.match(/^[a-f0-9]{64}$/))
-    return false;
-  if (!Array.isArray(event.tags))
-    return false;
-  for (let i2 = 0;i2 < event.tags.length; i2++) {
-    let tag = event.tags[i2];
-    if (!Array.isArray(tag))
-      return false;
-    for (let j = 0;j < tag.length; j++) {
-      if (typeof tag[j] !== "string")
-        return false;
-    }
-  }
-  return true;
-}
-var utils_exports2 = {};
-__export3(utils_exports2, {
-  Queue: () => Queue3,
-  QueueNode: () => QueueNode2,
-  binarySearch: () => binarySearch2,
-  bytesToHex: () => bytesToHex5,
-  hexToBytes: () => hexToBytes5,
-  insertEventIntoAscendingList: () => insertEventIntoAscendingList2,
-  insertEventIntoDescendingList: () => insertEventIntoDescendingList2,
-  normalizeURL: () => normalizeURL2,
-  utf8Decoder: () => utf8Decoder2,
-  utf8Encoder: () => utf8Encoder2
-});
-var utf8Decoder2 = new TextDecoder("utf-8");
-var utf8Encoder2 = new TextEncoder;
-function normalizeURL2(url) {
-  try {
-    if (url.indexOf("://") === -1)
-      url = "wss://" + url;
-    let p = new URL(url);
-    p.pathname = p.pathname.replace(/\/+/g, "/");
-    if (p.pathname.endsWith("/"))
-      p.pathname = p.pathname.slice(0, -1);
-    if (p.port === "80" && p.protocol === "ws:" || p.port === "443" && p.protocol === "wss:")
-      p.port = "";
-    p.searchParams.sort();
-    p.hash = "";
-    return p.toString();
-  } catch (e) {
-    throw new Error(`Invalid URL: ${url}`);
-  }
-}
-function insertEventIntoDescendingList2(sortedArray, event) {
-  const [idx, found] = binarySearch2(sortedArray, (b) => {
-    if (event.id === b.id)
-      return 0;
-    if (event.created_at === b.created_at)
-      return -1;
-    return b.created_at - event.created_at;
-  });
-  if (!found) {
-    sortedArray.splice(idx, 0, event);
-  }
-  return sortedArray;
-}
-function insertEventIntoAscendingList2(sortedArray, event) {
-  const [idx, found] = binarySearch2(sortedArray, (b) => {
-    if (event.id === b.id)
-      return 0;
-    if (event.created_at === b.created_at)
-      return -1;
-    return event.created_at - b.created_at;
-  });
-  if (!found) {
-    sortedArray.splice(idx, 0, event);
-  }
-  return sortedArray;
-}
-function binarySearch2(arr, compare) {
-  let start = 0;
-  let end = arr.length - 1;
-  while (start <= end) {
-    const mid = Math.floor((start + end) / 2);
-    const cmp = compare(arr[mid]);
-    if (cmp === 0) {
-      return [mid, true];
-    }
-    if (cmp < 0) {
-      end = mid - 1;
-    } else {
-      start = mid + 1;
-    }
-  }
-  return [start, false];
-}
-var QueueNode2 = class {
-  value;
-  next = null;
-  prev = null;
-  constructor(message) {
-    this.value = message;
-  }
-};
-var Queue3 = class {
-  first;
-  last;
-  constructor() {
-    this.first = null;
-    this.last = null;
-  }
-  enqueue(value) {
-    const newNode = new QueueNode2(value);
-    if (!this.last) {
-      this.first = newNode;
-      this.last = newNode;
-    } else if (this.last === this.first) {
-      this.last = newNode;
-      this.last.prev = this.first;
-      this.first.next = newNode;
-    } else {
-      newNode.prev = this.last;
-      this.last.next = newNode;
-      this.last = newNode;
-    }
-    return true;
-  }
-  dequeue() {
-    if (!this.first)
-      return null;
-    if (this.first === this.last) {
-      const target2 = this.first;
-      this.first = null;
-      this.last = null;
-      return target2.value;
-    }
-    const target = this.first;
-    this.first = target.next;
-    if (this.first) {
-      this.first.prev = null;
-    }
-    return target.value;
-  }
-};
-var JS2 = class {
-  generateSecretKey() {
-    return schnorr3.utils.randomPrivateKey();
-  }
-  getPublicKey(secretKey) {
-    return bytesToHex5(schnorr3.getPublicKey(secretKey));
-  }
-  finalizeEvent(t, secretKey) {
-    const event = t;
-    event.pubkey = bytesToHex5(schnorr3.getPublicKey(secretKey));
-    event.id = getEventHash3(event);
-    event.sig = bytesToHex5(schnorr3.sign(getEventHash3(event), secretKey));
-    event[verifiedSymbol2] = true;
-    return event;
-  }
-  verifyEvent(event) {
-    if (typeof event[verifiedSymbol2] === "boolean")
-      return event[verifiedSymbol2];
-    const hash5 = getEventHash3(event);
-    if (hash5 !== event.id) {
-      event[verifiedSymbol2] = false;
-      return false;
-    }
-    try {
-      const valid = schnorr3.verify(event.sig, hash5, event.pubkey);
-      event[verifiedSymbol2] = valid;
-      return valid;
-    } catch (err) {
-      event[verifiedSymbol2] = false;
-      return false;
-    }
-  }
-};
-function serializeEvent2(evt) {
-  if (!validateEvent3(evt))
-    throw new Error("can't serialize event with wrong or missing properties");
-  return JSON.stringify([0, evt.pubkey, evt.created_at, evt.kind, evt.tags, evt.content]);
-}
-function getEventHash3(event) {
-  let eventHash = sha2566(utf8Encoder2.encode(serializeEvent2(event)));
-  return bytesToHex5(eventHash);
-}
-var i2 = new JS2;
-var generateSecretKey2 = i2.generateSecretKey;
-var getPublicKey2 = i2.getPublicKey;
-var finalizeEvent2 = i2.finalizeEvent;
-var verifyEvent2 = i2.verifyEvent;
-var kinds_exports2 = {};
-__export3(kinds_exports2, {
-  Application: () => Application2,
-  BadgeAward: () => BadgeAward2,
-  BadgeDefinition: () => BadgeDefinition2,
-  BlockedRelaysList: () => BlockedRelaysList2,
-  BookmarkList: () => BookmarkList2,
-  Bookmarksets: () => Bookmarksets2,
-  Calendar: () => Calendar2,
-  CalendarEventRSVP: () => CalendarEventRSVP2,
-  ChannelCreation: () => ChannelCreation2,
-  ChannelHideMessage: () => ChannelHideMessage2,
-  ChannelMessage: () => ChannelMessage2,
-  ChannelMetadata: () => ChannelMetadata2,
-  ChannelMuteUser: () => ChannelMuteUser2,
-  ClassifiedListing: () => ClassifiedListing2,
-  ClientAuth: () => ClientAuth2,
-  CommunitiesList: () => CommunitiesList2,
-  CommunityDefinition: () => CommunityDefinition2,
-  CommunityPostApproval: () => CommunityPostApproval2,
-  Contacts: () => Contacts2,
-  CreateOrUpdateProduct: () => CreateOrUpdateProduct2,
-  CreateOrUpdateStall: () => CreateOrUpdateStall2,
-  Curationsets: () => Curationsets2,
-  Date: () => Date22,
-  DirectMessageRelaysList: () => DirectMessageRelaysList2,
-  DraftClassifiedListing: () => DraftClassifiedListing2,
-  DraftLong: () => DraftLong2,
-  Emojisets: () => Emojisets2,
-  EncryptedDirectMessage: () => EncryptedDirectMessage2,
-  EventDeletion: () => EventDeletion2,
-  FileMetadata: () => FileMetadata2,
-  FileServerPreference: () => FileServerPreference2,
-  Followsets: () => Followsets2,
-  GenericRepost: () => GenericRepost2,
-  Genericlists: () => Genericlists2,
-  GiftWrap: () => GiftWrap2,
-  HTTPAuth: () => HTTPAuth2,
-  Handlerinformation: () => Handlerinformation2,
-  Handlerrecommendation: () => Handlerrecommendation2,
-  Highlights: () => Highlights2,
-  InterestsList: () => InterestsList2,
-  Interestsets: () => Interestsets2,
-  JobFeedback: () => JobFeedback2,
-  JobRequest: () => JobRequest2,
-  JobResult: () => JobResult2,
-  Label: () => Label2,
-  LightningPubRPC: () => LightningPubRPC2,
-  LiveChatMessage: () => LiveChatMessage2,
-  LiveEvent: () => LiveEvent2,
-  LongFormArticle: () => LongFormArticle2,
-  Metadata: () => Metadata2,
-  Mutelist: () => Mutelist2,
-  NWCWalletInfo: () => NWCWalletInfo2,
-  NWCWalletRequest: () => NWCWalletRequest2,
-  NWCWalletResponse: () => NWCWalletResponse2,
-  NostrConnect: () => NostrConnect2,
-  OpenTimestamps: () => OpenTimestamps2,
-  Pinlist: () => Pinlist2,
-  PrivateDirectMessage: () => PrivateDirectMessage2,
-  ProblemTracker: () => ProblemTracker2,
-  ProfileBadges: () => ProfileBadges2,
-  PublicChatsList: () => PublicChatsList2,
-  Reaction: () => Reaction2,
-  RecommendRelay: () => RecommendRelay2,
-  RelayList: () => RelayList2,
-  Relaysets: () => Relaysets2,
-  Report: () => Report2,
-  Reporting: () => Reporting2,
-  Repost: () => Repost2,
-  Seal: () => Seal2,
-  SearchRelaysList: () => SearchRelaysList2,
-  ShortTextNote: () => ShortTextNote2,
-  Time: () => Time2,
-  UserEmojiList: () => UserEmojiList2,
-  UserStatuses: () => UserStatuses2,
-  Zap: () => Zap2,
-  ZapGoal: () => ZapGoal2,
-  ZapRequest: () => ZapRequest2,
-  classifyKind: () => classifyKind2,
-  isAddressableKind: () => isAddressableKind2,
-  isEphemeralKind: () => isEphemeralKind2,
-  isKind: () => isKind2,
-  isRegularKind: () => isRegularKind2,
-  isReplaceableKind: () => isReplaceableKind2
-});
-function isRegularKind2(kind) {
-  return 1000 <= kind && kind < 1e4 || [1, 2, 4, 5, 6, 7, 8, 16, 40, 41, 42, 43, 44].includes(kind);
-}
-function isReplaceableKind2(kind) {
-  return [0, 3].includes(kind) || 1e4 <= kind && kind < 20000;
-}
-function isEphemeralKind2(kind) {
-  return 20000 <= kind && kind < 30000;
-}
-function isAddressableKind2(kind) {
-  return 30000 <= kind && kind < 40000;
-}
-function classifyKind2(kind) {
-  if (isRegularKind2(kind))
-    return "regular";
-  if (isReplaceableKind2(kind))
-    return "replaceable";
-  if (isEphemeralKind2(kind))
-    return "ephemeral";
-  if (isAddressableKind2(kind))
-    return "parameterized";
-  return "unknown";
-}
-function isKind2(event, kind) {
-  const kindAsArray = kind instanceof Array ? kind : [kind];
-  return validateEvent3(event) && kindAsArray.includes(event.kind) || false;
-}
-var Metadata2 = 0;
-var ShortTextNote2 = 1;
-var RecommendRelay2 = 2;
-var Contacts2 = 3;
-var EncryptedDirectMessage2 = 4;
-var EventDeletion2 = 5;
-var Repost2 = 6;
-var Reaction2 = 7;
-var BadgeAward2 = 8;
-var Seal2 = 13;
-var PrivateDirectMessage2 = 14;
-var GenericRepost2 = 16;
-var ChannelCreation2 = 40;
-var ChannelMetadata2 = 41;
-var ChannelMessage2 = 42;
-var ChannelHideMessage2 = 43;
-var ChannelMuteUser2 = 44;
-var OpenTimestamps2 = 1040;
-var GiftWrap2 = 1059;
-var FileMetadata2 = 1063;
-var LiveChatMessage2 = 1311;
-var ProblemTracker2 = 1971;
-var Report2 = 1984;
-var Reporting2 = 1984;
-var Label2 = 1985;
-var CommunityPostApproval2 = 4550;
-var JobRequest2 = 5999;
-var JobResult2 = 6999;
-var JobFeedback2 = 7000;
-var ZapGoal2 = 9041;
-var ZapRequest2 = 9734;
-var Zap2 = 9735;
-var Highlights2 = 9802;
-var Mutelist2 = 1e4;
-var Pinlist2 = 10001;
-var RelayList2 = 10002;
-var BookmarkList2 = 10003;
-var CommunitiesList2 = 10004;
-var PublicChatsList2 = 10005;
-var BlockedRelaysList2 = 10006;
-var SearchRelaysList2 = 10007;
-var InterestsList2 = 10015;
-var UserEmojiList2 = 10030;
-var DirectMessageRelaysList2 = 10050;
-var FileServerPreference2 = 10096;
-var NWCWalletInfo2 = 13194;
-var LightningPubRPC2 = 21000;
-var ClientAuth2 = 22242;
-var NWCWalletRequest2 = 23194;
-var NWCWalletResponse2 = 23195;
-var NostrConnect2 = 24133;
-var HTTPAuth2 = 27235;
-var Followsets2 = 30000;
-var Genericlists2 = 30001;
-var Relaysets2 = 30002;
-var Bookmarksets2 = 30003;
-var Curationsets2 = 30004;
-var ProfileBadges2 = 30008;
-var BadgeDefinition2 = 30009;
-var Interestsets2 = 30015;
-var CreateOrUpdateStall2 = 30017;
-var CreateOrUpdateProduct2 = 30018;
-var LongFormArticle2 = 30023;
-var DraftLong2 = 30024;
-var Emojisets2 = 30030;
-var Application2 = 30078;
-var LiveEvent2 = 30311;
-var UserStatuses2 = 30315;
-var ClassifiedListing2 = 30402;
-var DraftClassifiedListing2 = 30403;
-var Date22 = 31922;
-var Time2 = 31923;
-var Calendar2 = 31924;
-var CalendarEventRSVP2 = 31925;
-var Handlerrecommendation2 = 31989;
-var Handlerinformation2 = 31990;
-var CommunityDefinition2 = 34550;
-function matchFilter2(filter4, event) {
-  if (filter4.ids && filter4.ids.indexOf(event.id) === -1) {
-    return false;
-  }
-  if (filter4.kinds && filter4.kinds.indexOf(event.kind) === -1) {
-    return false;
-  }
-  if (filter4.authors && filter4.authors.indexOf(event.pubkey) === -1) {
-    return false;
-  }
-  for (let f in filter4) {
-    if (f[0] === "#") {
-      let tagName = f.slice(1);
-      let values = filter4[`#${tagName}`];
-      if (values && !event.tags.find(([t, v]) => t === f.slice(1) && values.indexOf(v) !== -1))
-        return false;
-    }
-  }
-  if (filter4.since && event.created_at < filter4.since)
-    return false;
-  if (filter4.until && event.created_at > filter4.until)
-    return false;
-  return true;
-}
-function matchFilters2(filters, event) {
-  for (let i22 = 0;i22 < filters.length; i22++) {
-    if (matchFilter2(filters[i22], event)) {
-      return true;
-    }
-  }
-  return false;
-}
-var fakejson_exports2 = {};
-__export3(fakejson_exports2, {
-  getHex64: () => getHex642,
-  getInt: () => getInt2,
-  getSubscriptionId: () => getSubscriptionId2,
-  matchEventId: () => matchEventId2,
-  matchEventKind: () => matchEventKind2,
-  matchEventPubkey: () => matchEventPubkey2
-});
-function getHex642(json, field) {
-  let len = field.length + 3;
-  let idx = json.indexOf(`"${field}":`) + len;
-  let s = json.slice(idx).indexOf(`"`) + idx + 1;
-  return json.slice(s, s + 64);
-}
-function getInt2(json, field) {
-  let len = field.length;
-  let idx = json.indexOf(`"${field}":`) + len + 3;
-  let sliced = json.slice(idx);
-  let end = Math.min(sliced.indexOf(","), sliced.indexOf("}"));
-  return parseInt(sliced.slice(0, end), 10);
-}
-function getSubscriptionId2(json) {
-  let idx = json.slice(0, 22).indexOf(`"EVENT"`);
-  if (idx === -1)
-    return null;
-  let pstart = json.slice(idx + 7 + 1).indexOf(`"`);
-  if (pstart === -1)
-    return null;
-  let start = idx + 7 + 1 + pstart;
-  let pend = json.slice(start + 1, 80).indexOf(`"`);
-  if (pend === -1)
-    return null;
-  let end = start + 1 + pend;
-  return json.slice(start + 1, end);
-}
-function matchEventId2(json, id) {
-  return id === getHex642(json, "id");
-}
-function matchEventPubkey2(json, pubkey) {
-  return pubkey === getHex642(json, "pubkey");
-}
-function matchEventKind2(json, kind) {
-  return kind === getInt2(json, "kind");
-}
-var nip42_exports2 = {};
-__export3(nip42_exports2, {
-  makeAuthEvent: () => makeAuthEvent2
-});
-function makeAuthEvent2(relayURL, challenge4) {
-  return {
-    kind: ClientAuth2,
-    created_at: Math.floor(Date.now() / 1000),
-    tags: [
-      ["relay", relayURL],
-      ["challenge", challenge4]
-    ],
-    content: ""
-  };
-}
-async function yieldThread2() {
-  return new Promise((resolve) => {
-    const ch = new MessageChannel;
-    const handler = () => {
-      ch.port1.removeEventListener("message", handler);
-      resolve();
-    };
-    ch.port1.addEventListener("message", handler);
-    ch.port2.postMessage(0);
-    ch.port1.start();
-  });
-}
-var SendingOnClosedConnection2 = class extends Error {
-  constructor(message, relay) {
-    super(`Tried to send message '${message} on a closed connection to ${relay}.`);
-    this.name = "SendingOnClosedConnection";
-  }
-};
-var AbstractRelay2 = class {
-  url;
-  _connected = false;
-  onclose = null;
-  onnotice = (msg) => console.debug(`NOTICE from ${this.url}: ${msg}`);
-  baseEoseTimeout = 4400;
-  connectionTimeout = 4400;
-  publishTimeout = 4400;
-  openSubs = /* @__PURE__ */ new Map;
-  connectionTimeoutHandle;
-  connectionPromise;
-  openCountRequests = /* @__PURE__ */ new Map;
-  openEventPublishes = /* @__PURE__ */ new Map;
-  ws;
-  incomingMessageQueue = new Queue3;
-  queueRunning = false;
-  challenge;
-  authPromise;
-  serial = 0;
-  verifyEvent;
-  _WebSocket;
-  constructor(url, opts) {
-    this.url = normalizeURL2(url);
-    this.verifyEvent = opts.verifyEvent;
-    this._WebSocket = opts.websocketImplementation || WebSocket;
-  }
-  static async connect(url, opts) {
-    const relay = new AbstractRelay2(url, opts);
-    await relay.connect();
-    return relay;
-  }
-  closeAllSubscriptions(reason) {
-    for (let [_2, sub] of this.openSubs) {
-      sub.close(reason);
-    }
-    this.openSubs.clear();
-    for (let [_2, ep] of this.openEventPublishes) {
-      ep.reject(new Error(reason));
-    }
-    this.openEventPublishes.clear();
-    for (let [_2, cr] of this.openCountRequests) {
-      cr.reject(new Error(reason));
-    }
-    this.openCountRequests.clear();
-  }
-  get connected() {
-    return this._connected;
-  }
-  async connect() {
-    if (this.connectionPromise)
-      return this.connectionPromise;
-    this.challenge = undefined;
-    this.authPromise = undefined;
-    this.connectionPromise = new Promise((resolve, reject) => {
-      this.connectionTimeoutHandle = setTimeout(() => {
-        reject("connection timed out");
-        this.connectionPromise = undefined;
-        this.onclose?.();
-        this.closeAllSubscriptions("relay connection timed out");
-      }, this.connectionTimeout);
-      try {
-        this.ws = new this._WebSocket(this.url);
-      } catch (err) {
-        clearTimeout(this.connectionTimeoutHandle);
-        reject(err);
-        return;
-      }
-      this.ws.onopen = () => {
-        clearTimeout(this.connectionTimeoutHandle);
-        this._connected = true;
-        resolve();
-      };
-      this.ws.onerror = (ev) => {
-        clearTimeout(this.connectionTimeoutHandle);
-        reject(ev.message || "websocket error");
-        if (this._connected) {
-          this._connected = false;
-          this.connectionPromise = undefined;
-          this.onclose?.();
-          this.closeAllSubscriptions("relay connection errored");
-        }
-      };
-      this.ws.onclose = (ev) => {
-        clearTimeout(this.connectionTimeoutHandle);
-        reject(ev.message || "websocket closed");
-        if (this._connected) {
-          this._connected = false;
-          this.connectionPromise = undefined;
-          this.onclose?.();
-          this.closeAllSubscriptions("relay connection closed");
-        }
-      };
-      this.ws.onmessage = this._onmessage.bind(this);
-    });
-    return this.connectionPromise;
-  }
-  async runQueue() {
-    this.queueRunning = true;
-    while (true) {
-      if (this.handleNext() === false) {
-        break;
-      }
-      await yieldThread2();
-    }
-    this.queueRunning = false;
-  }
-  handleNext() {
-    const json = this.incomingMessageQueue.dequeue();
-    if (!json) {
-      return false;
-    }
-    const subid = getSubscriptionId2(json);
-    if (subid) {
-      const so = this.openSubs.get(subid);
-      if (!so) {
-        return;
-      }
-      const id = getHex642(json, "id");
-      const alreadyHave = so.alreadyHaveEvent?.(id);
-      so.receivedEvent?.(this, id);
-      if (alreadyHave) {
-        return;
-      }
-    }
-    try {
-      let data = JSON.parse(json);
-      switch (data[0]) {
-        case "EVENT": {
-          const so = this.openSubs.get(data[1]);
-          const event = data[2];
-          if (this.verifyEvent(event) && matchFilters2(so.filters, event)) {
-            so.onevent(event);
-          }
-          return;
-        }
-        case "COUNT": {
-          const id = data[1];
-          const payload = data[2];
-          const cr = this.openCountRequests.get(id);
-          if (cr) {
-            cr.resolve(payload.count);
-            this.openCountRequests.delete(id);
-          }
-          return;
-        }
-        case "EOSE": {
-          const so = this.openSubs.get(data[1]);
-          if (!so)
-            return;
-          so.receivedEose();
-          return;
-        }
-        case "OK": {
-          const id = data[1];
-          const ok = data[2];
-          const reason = data[3];
-          const ep = this.openEventPublishes.get(id);
-          if (ep) {
-            clearTimeout(ep.timeout);
-            if (ok)
-              ep.resolve(reason);
-            else
-              ep.reject(new Error(reason));
-            this.openEventPublishes.delete(id);
-          }
-          return;
-        }
-        case "CLOSED": {
-          const id = data[1];
-          const so = this.openSubs.get(id);
-          if (!so)
-            return;
-          so.closed = true;
-          so.close(data[2]);
-          return;
-        }
-        case "NOTICE":
-          this.onnotice(data[1]);
-          return;
-        case "AUTH": {
-          this.challenge = data[1];
-          return;
-        }
-      }
-    } catch (err) {
-      return;
-    }
-  }
-  async send(message) {
-    if (!this.connectionPromise)
-      throw new SendingOnClosedConnection2(message, this.url);
-    this.connectionPromise.then(() => {
-      this.ws?.send(message);
-    });
-  }
-  async auth(signAuthEvent) {
-    const challenge4 = this.challenge;
-    if (!challenge4)
-      throw new Error("can't perform auth, no challenge was received");
-    if (this.authPromise)
-      return this.authPromise;
-    this.authPromise = new Promise(async (resolve, reject) => {
-      try {
-        let evt = await signAuthEvent(makeAuthEvent2(this.url, challenge4));
-        let timeout = setTimeout(() => {
-          let ep = this.openEventPublishes.get(evt.id);
-          if (ep) {
-            ep.reject(new Error("auth timed out"));
-            this.openEventPublishes.delete(evt.id);
-          }
-        }, this.publishTimeout);
-        this.openEventPublishes.set(evt.id, { resolve, reject, timeout });
-        this.send('["AUTH",' + JSON.stringify(evt) + "]");
-      } catch (err) {
-        console.warn("subscribe auth function failed:", err);
-      }
-    });
-    return this.authPromise;
-  }
-  async publish(event) {
-    const ret = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        const ep = this.openEventPublishes.get(event.id);
-        if (ep) {
-          ep.reject(new Error("publish timed out"));
-          this.openEventPublishes.delete(event.id);
-        }
-      }, this.publishTimeout);
-      this.openEventPublishes.set(event.id, { resolve, reject, timeout });
-    });
-    this.send('["EVENT",' + JSON.stringify(event) + "]");
-    return ret;
-  }
-  async count(filters, params) {
-    this.serial++;
-    const id = params?.id || "count:" + this.serial;
-    const ret = new Promise((resolve, reject) => {
-      this.openCountRequests.set(id, { resolve, reject });
-    });
-    this.send('["COUNT","' + id + '",' + JSON.stringify(filters).substring(1));
-    return ret;
-  }
-  subscribe(filters, params) {
-    const subscription = this.prepareSubscription(filters, params);
-    subscription.fire();
-    return subscription;
-  }
-  prepareSubscription(filters, params) {
-    this.serial++;
-    const id = params.id || (params.label ? params.label + ":" : "sub:") + this.serial;
-    const subscription = new Subscription2(this, id, filters, params);
-    this.openSubs.set(id, subscription);
-    return subscription;
-  }
-  close() {
-    this.closeAllSubscriptions("relay connection closed by us");
-    this._connected = false;
-    this.ws?.close();
-  }
-  _onmessage(ev) {
-    this.incomingMessageQueue.enqueue(ev.data);
-    if (!this.queueRunning) {
-      this.runQueue();
-    }
-  }
-};
-var Subscription2 = class {
-  relay;
-  id;
-  closed = false;
-  eosed = false;
-  filters;
-  alreadyHaveEvent;
-  receivedEvent;
-  onevent;
-  oneose;
-  onclose;
-  eoseTimeout;
-  eoseTimeoutHandle;
-  constructor(relay, id, filters, params) {
-    this.relay = relay;
-    this.filters = filters;
-    this.id = id;
-    this.alreadyHaveEvent = params.alreadyHaveEvent;
-    this.receivedEvent = params.receivedEvent;
-    this.eoseTimeout = params.eoseTimeout || relay.baseEoseTimeout;
-    this.oneose = params.oneose;
-    this.onclose = params.onclose;
-    this.onevent = params.onevent || ((event) => {
-      console.warn(`onevent() callback not defined for subscription '${this.id}' in relay ${this.relay.url}. event received:`, event);
-    });
-  }
-  fire() {
-    this.relay.send('["REQ","' + this.id + '",' + JSON.stringify(this.filters).substring(1));
-    this.eoseTimeoutHandle = setTimeout(this.receivedEose.bind(this), this.eoseTimeout);
-  }
-  receivedEose() {
-    if (this.eosed)
-      return;
-    clearTimeout(this.eoseTimeoutHandle);
-    this.eosed = true;
-    this.oneose?.();
-  }
-  close(reason = "closed by caller") {
-    if (!this.closed && this.relay.connected) {
-      try {
-        this.relay.send('["CLOSE",' + JSON.stringify(this.id) + "]");
-      } catch (err) {
-        if (err instanceof SendingOnClosedConnection2) {} else {
-          throw err;
-        }
-      }
-      this.closed = true;
-    }
-    this.relay.openSubs.delete(this.id);
-    this.onclose?.(reason);
-  }
-};
-var _WebSocket3;
-try {
-  _WebSocket3 = WebSocket;
-} catch {}
-var _WebSocket22;
-try {
-  _WebSocket22 = WebSocket;
-} catch {}
-var nip19_exports2 = {};
-__export3(nip19_exports2, {
-  BECH32_REGEX: () => BECH32_REGEX3,
-  Bech32MaxSize: () => Bech32MaxSize2,
-  NostrTypeGuard: () => NostrTypeGuard2,
-  decode: () => decode3,
-  decodeNostrURI: () => decodeNostrURI2,
-  encodeBytes: () => encodeBytes2,
-  naddrEncode: () => naddrEncode2,
-  neventEncode: () => neventEncode2,
-  noteEncode: () => noteEncode2,
-  nprofileEncode: () => nprofileEncode2,
-  npubEncode: () => npubEncode2,
-  nsecEncode: () => nsecEncode2
-});
-var NostrTypeGuard2 = {
-  isNProfile: (value) => /^nprofile1[a-z\d]+$/.test(value || ""),
-  isNEvent: (value) => /^nevent1[a-z\d]+$/.test(value || ""),
-  isNAddr: (value) => /^naddr1[a-z\d]+$/.test(value || ""),
-  isNSec: (value) => /^nsec1[a-z\d]{58}$/.test(value || ""),
-  isNPub: (value) => /^npub1[a-z\d]{58}$/.test(value || ""),
-  isNote: (value) => /^note1[a-z\d]+$/.test(value || ""),
-  isNcryptsec: (value) => /^ncryptsec1[a-z\d]+$/.test(value || "")
-};
-var Bech32MaxSize2 = 5000;
-var BECH32_REGEX3 = /[\x21-\x7E]{1,83}1[023456789acdefghjklmnpqrstuvwxyz]{6,}/;
-function integerToUint8Array2(number7) {
-  const uint8Array = new Uint8Array(4);
-  uint8Array[0] = number7 >> 24 & 255;
-  uint8Array[1] = number7 >> 16 & 255;
-  uint8Array[2] = number7 >> 8 & 255;
-  uint8Array[3] = number7 & 255;
-  return uint8Array;
-}
-function decodeNostrURI2(nip19code) {
-  try {
-    if (nip19code.startsWith("nostr:"))
-      nip19code = nip19code.substring(6);
-    return decode3(nip19code);
-  } catch (_err) {
-    return { type: "invalid", data: null };
-  }
-}
-function decode3(code) {
-  let { prefix, words } = bech322.decode(code, Bech32MaxSize2);
-  let data = new Uint8Array(bech322.fromWords(words));
-  switch (prefix) {
-    case "nprofile": {
-      let tlv = parseTLV2(data);
-      if (!tlv[0]?.[0])
-        throw new Error("missing TLV 0 for nprofile");
-      if (tlv[0][0].length !== 32)
-        throw new Error("TLV 0 should be 32 bytes");
-      return {
-        type: "nprofile",
-        data: {
-          pubkey: bytesToHex5(tlv[0][0]),
-          relays: tlv[1] ? tlv[1].map((d4) => utf8Decoder2.decode(d4)) : []
-        }
-      };
-    }
-    case "nevent": {
-      let tlv = parseTLV2(data);
-      if (!tlv[0]?.[0])
-        throw new Error("missing TLV 0 for nevent");
-      if (tlv[0][0].length !== 32)
-        throw new Error("TLV 0 should be 32 bytes");
-      if (tlv[2] && tlv[2][0].length !== 32)
-        throw new Error("TLV 2 should be 32 bytes");
-      if (tlv[3] && tlv[3][0].length !== 4)
-        throw new Error("TLV 3 should be 4 bytes");
-      return {
-        type: "nevent",
-        data: {
-          id: bytesToHex5(tlv[0][0]),
-          relays: tlv[1] ? tlv[1].map((d4) => utf8Decoder2.decode(d4)) : [],
-          author: tlv[2]?.[0] ? bytesToHex5(tlv[2][0]) : undefined,
-          kind: tlv[3]?.[0] ? parseInt(bytesToHex5(tlv[3][0]), 16) : undefined
-        }
-      };
-    }
-    case "naddr": {
-      let tlv = parseTLV2(data);
-      if (!tlv[0]?.[0])
-        throw new Error("missing TLV 0 for naddr");
-      if (!tlv[2]?.[0])
-        throw new Error("missing TLV 2 for naddr");
-      if (tlv[2][0].length !== 32)
-        throw new Error("TLV 2 should be 32 bytes");
-      if (!tlv[3]?.[0])
-        throw new Error("missing TLV 3 for naddr");
-      if (tlv[3][0].length !== 4)
-        throw new Error("TLV 3 should be 4 bytes");
-      return {
-        type: "naddr",
-        data: {
-          identifier: utf8Decoder2.decode(tlv[0][0]),
-          pubkey: bytesToHex5(tlv[2][0]),
-          kind: parseInt(bytesToHex5(tlv[3][0]), 16),
-          relays: tlv[1] ? tlv[1].map((d4) => utf8Decoder2.decode(d4)) : []
-        }
-      };
-    }
-    case "nsec":
-      return { type: prefix, data };
-    case "npub":
-    case "note":
-      return { type: prefix, data: bytesToHex5(data) };
-    default:
-      throw new Error(`unknown prefix ${prefix}`);
-  }
-}
-function parseTLV2(data) {
-  let result = {};
-  let rest = data;
-  while (rest.length > 0) {
-    let t = rest[0];
-    let l = rest[1];
-    let v = rest.slice(2, 2 + l);
-    rest = rest.slice(2 + l);
-    if (v.length < l)
-      throw new Error(`not enough data to read on TLV ${t}`);
-    result[t] = result[t] || [];
-    result[t].push(v);
-  }
-  return result;
-}
-function nsecEncode2(key) {
-  return encodeBytes2("nsec", key);
-}
-function npubEncode2(hex3) {
-  return encodeBytes2("npub", hexToBytes5(hex3));
-}
-function noteEncode2(hex3) {
-  return encodeBytes2("note", hexToBytes5(hex3));
-}
-function encodeBech322(prefix, data) {
-  let words = bech322.toWords(data);
-  return bech322.encode(prefix, words, Bech32MaxSize2);
-}
-function encodeBytes2(prefix, bytes7) {
-  return encodeBech322(prefix, bytes7);
-}
-function nprofileEncode2(profile) {
-  let data = encodeTLV2({
-    0: [hexToBytes5(profile.pubkey)],
-    1: (profile.relays || []).map((url) => utf8Encoder2.encode(url))
-  });
-  return encodeBech322("nprofile", data);
-}
-function neventEncode2(event) {
-  let kindArray;
-  if (event.kind !== undefined) {
-    kindArray = integerToUint8Array2(event.kind);
-  }
-  let data = encodeTLV2({
-    0: [hexToBytes5(event.id)],
-    1: (event.relays || []).map((url) => utf8Encoder2.encode(url)),
-    2: event.author ? [hexToBytes5(event.author)] : [],
-    3: kindArray ? [new Uint8Array(kindArray)] : []
-  });
-  return encodeBech322("nevent", data);
-}
-function naddrEncode2(addr) {
-  let kind = new ArrayBuffer(4);
-  new DataView(kind).setUint32(0, addr.kind, false);
-  let data = encodeTLV2({
-    0: [utf8Encoder2.encode(addr.identifier)],
-    1: (addr.relays || []).map((url) => utf8Encoder2.encode(url)),
-    2: [hexToBytes5(addr.pubkey)],
-    3: [new Uint8Array(kind)]
-  });
-  return encodeBech322("naddr", data);
-}
-function encodeTLV2(tlv) {
-  let entries = [];
-  Object.entries(tlv).reverse().forEach(([t, vs]) => {
-    vs.forEach((v) => {
-      let entry = new Uint8Array(v.length + 2);
-      entry.set([parseInt(t)], 0);
-      entry.set([v.length], 1);
-      entry.set(v, 2);
-      entries.push(entry);
-    });
-  });
-  return concatBytes7(...entries);
-}
-var nip04_exports2 = {};
-__export3(nip04_exports2, {
-  decrypt: () => decrypt5,
-  encrypt: () => encrypt5
-});
-function encrypt5(secretKey, pubkey, text) {
-  const privkey = secretKey instanceof Uint8Array ? bytesToHex5(secretKey) : secretKey;
-  const key = secp256k13.getSharedSecret(privkey, "02" + pubkey);
-  const normalizedKey = getNormalizedX2(key);
-  let iv = Uint8Array.from(randomBytes5(16));
-  let plaintext = utf8Encoder2.encode(text);
-  let ciphertext = cbc3(normalizedKey, iv).encrypt(plaintext);
-  let ctb64 = base642.encode(new Uint8Array(ciphertext));
-  let ivb64 = base642.encode(new Uint8Array(iv.buffer));
-  return `${ctb64}?iv=${ivb64}`;
-}
-function decrypt5(secretKey, pubkey, data) {
-  const privkey = secretKey instanceof Uint8Array ? bytesToHex5(secretKey) : secretKey;
-  let [ctb64, ivb64] = data.split("?iv=");
-  let key = secp256k13.getSharedSecret(privkey, "02" + pubkey);
-  let normalizedKey = getNormalizedX2(key);
-  let iv = base642.decode(ivb64);
-  let ciphertext = base642.decode(ctb64);
-  let plaintext = cbc3(normalizedKey, iv).decrypt(ciphertext);
-  return utf8Decoder2.decode(plaintext);
-}
-function getNormalizedX2(key) {
-  return key.slice(1, 33);
-}
-var nip05_exports2 = {};
-__export3(nip05_exports2, {
-  NIP05_REGEX: () => NIP05_REGEX3,
-  isNip05: () => isNip052,
-  isValid: () => isValid2,
-  queryProfile: () => queryProfile2,
-  searchDomain: () => searchDomain2,
-  useFetchImplementation: () => useFetchImplementation5
-});
-var NIP05_REGEX3 = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
-var isNip052 = (value) => NIP05_REGEX3.test(value || "");
-var _fetch5;
-try {
-  _fetch5 = fetch;
-} catch (_2) {}
-function useFetchImplementation5(fetchImplementation) {
-  _fetch5 = fetchImplementation;
-}
-async function searchDomain2(domain, query = "") {
-  try {
-    const url = `https://${domain}/.well-known/nostr.json?name=${query}`;
-    const res = await _fetch5(url, { redirect: "manual" });
-    if (res.status !== 200) {
-      throw Error("Wrong response code");
-    }
-    const json = await res.json();
-    return json.names;
-  } catch (_2) {
-    return {};
-  }
-}
-async function queryProfile2(fullname) {
-  const match = fullname.match(NIP05_REGEX3);
-  if (!match)
-    return null;
-  const [, name = "_", domain] = match;
-  try {
-    const url = `https://${domain}/.well-known/nostr.json?name=${name}`;
-    const res = await _fetch5(url, { redirect: "manual" });
-    if (res.status !== 200) {
-      throw Error("Wrong response code");
-    }
-    const json = await res.json();
-    const pubkey = json.names[name];
-    return pubkey ? { pubkey, relays: json.relays?.[pubkey] } : null;
-  } catch (_e) {
-    return null;
-  }
-}
-async function isValid2(pubkey, nip05) {
-  const res = await queryProfile2(nip05);
-  return res ? res.pubkey === pubkey : false;
-}
-var nip10_exports2 = {};
-__export3(nip10_exports2, {
-  parse: () => parse4
-});
-function parse4(event) {
-  const result = {
-    reply: undefined,
-    root: undefined,
-    mentions: [],
-    profiles: [],
-    quotes: []
-  };
-  let maybeParent;
-  let maybeRoot;
-  for (let i22 = event.tags.length - 1;i22 >= 0; i22--) {
-    const tag = event.tags[i22];
-    if (tag[0] === "e" && tag[1]) {
-      const [_2, eTagEventId, eTagRelayUrl, eTagMarker, eTagAuthor] = tag;
-      const eventPointer = {
-        id: eTagEventId,
-        relays: eTagRelayUrl ? [eTagRelayUrl] : [],
-        author: eTagAuthor
-      };
-      if (eTagMarker === "root") {
-        result.root = eventPointer;
-        continue;
-      }
-      if (eTagMarker === "reply") {
-        result.reply = eventPointer;
-        continue;
-      }
-      if (eTagMarker === "mention") {
-        result.mentions.push(eventPointer);
-        continue;
-      }
-      if (!maybeParent) {
-        maybeParent = eventPointer;
-      } else {
-        maybeRoot = eventPointer;
-      }
-      result.mentions.push(eventPointer);
-      continue;
-    }
-    if (tag[0] === "q" && tag[1]) {
-      const [_2, eTagEventId, eTagRelayUrl] = tag;
-      result.quotes.push({
-        id: eTagEventId,
-        relays: eTagRelayUrl ? [eTagRelayUrl] : []
-      });
-    }
-    if (tag[0] === "p" && tag[1]) {
-      result.profiles.push({
-        pubkey: tag[1],
-        relays: tag[2] ? [tag[2]] : []
-      });
-      continue;
-    }
-  }
-  if (!result.root) {
-    result.root = maybeRoot || maybeParent || result.reply;
-  }
-  if (!result.reply) {
-    result.reply = maybeParent || result.root;
-  }
-  [result.reply, result.root].forEach((ref) => {
-    if (!ref)
-      return;
-    let idx = result.mentions.indexOf(ref);
-    if (idx !== -1) {
-      result.mentions.splice(idx, 1);
-    }
-    if (ref.author) {
-      let author = result.profiles.find((p) => p.pubkey === ref.author);
-      if (author && author.relays) {
-        if (!ref.relays) {
-          ref.relays = [];
-        }
-        author.relays.forEach((url) => {
-          if (ref.relays?.indexOf(url) === -1)
-            ref.relays.push(url);
-        });
-        author.relays = ref.relays;
-      }
-    }
-  });
-  result.mentions.forEach((ref) => {
-    if (ref.author) {
-      let author = result.profiles.find((p) => p.pubkey === ref.author);
-      if (author && author.relays) {
-        if (!ref.relays) {
-          ref.relays = [];
-        }
-        author.relays.forEach((url) => {
-          if (ref.relays.indexOf(url) === -1)
-            ref.relays.push(url);
-        });
-        author.relays = ref.relays;
-      }
-    }
-  });
-  return result;
-}
-var nip11_exports2 = {};
-__export3(nip11_exports2, {
-  fetchRelayInformation: () => fetchRelayInformation2,
-  useFetchImplementation: () => useFetchImplementation22
-});
-var _fetch22;
-try {
-  _fetch22 = fetch;
-} catch {}
-function useFetchImplementation22(fetchImplementation) {
-  _fetch22 = fetchImplementation;
-}
-async function fetchRelayInformation2(url) {
-  return await (await fetch(url.replace("ws://", "http://").replace("wss://", "https://"), {
-    headers: { Accept: "application/nostr+json" }
-  })).json();
-}
-var nip13_exports2 = {};
-__export3(nip13_exports2, {
-  fastEventHash: () => fastEventHash2,
-  getPow: () => getPow2,
-  minePow: () => minePow2
-});
-function getPow2(hex3) {
-  let count = 0;
-  for (let i22 = 0;i22 < 64; i22 += 8) {
-    const nibble = parseInt(hex3.substring(i22, i22 + 8), 16);
-    if (nibble === 0) {
-      count += 32;
-    } else {
-      count += Math.clz32(nibble);
-      break;
-    }
-  }
-  return count;
-}
-function minePow2(unsigned, difficulty) {
-  let count = 0;
-  const event = unsigned;
-  const tag = ["nonce", count.toString(), difficulty.toString()];
-  event.tags.push(tag);
-  while (true) {
-    const now2 = Math.floor(new Date().getTime() / 1000);
-    if (now2 !== event.created_at) {
-      count = 0;
-      event.created_at = now2;
-    }
-    tag[1] = (++count).toString();
-    event.id = fastEventHash2(event);
-    if (getPow2(event.id) >= difficulty) {
-      break;
-    }
-  }
-  return event;
-}
-function fastEventHash2(evt) {
-  return bytesToHex5(sha2566(utf8Encoder2.encode(JSON.stringify([0, evt.pubkey, evt.created_at, evt.kind, evt.tags, evt.content]))));
-}
-var nip17_exports2 = {};
-__export3(nip17_exports2, {
-  unwrapEvent: () => unwrapEvent22,
-  unwrapManyEvents: () => unwrapManyEvents22,
-  wrapEvent: () => wrapEvent22,
-  wrapManyEvents: () => wrapManyEvents22
-});
-var nip59_exports2 = {};
-__export3(nip59_exports2, {
-  createRumor: () => createRumor2,
-  createSeal: () => createSeal2,
-  createWrap: () => createWrap2,
-  unwrapEvent: () => unwrapEvent3,
-  unwrapManyEvents: () => unwrapManyEvents3,
-  wrapEvent: () => wrapEvent5,
-  wrapManyEvents: () => wrapManyEvents3
-});
-var nip44_exports2 = {};
-__export3(nip44_exports2, {
-  decrypt: () => decrypt24,
-  encrypt: () => encrypt24,
-  getConversationKey: () => getConversationKey2,
-  v2: () => v22
-});
-var minPlaintextSize2 = 1;
-var maxPlaintextSize2 = 65535;
-function getConversationKey2(privkeyA, pubkeyB) {
-  const sharedX = secp256k13.getSharedSecret(privkeyA, "02" + pubkeyB).subarray(1, 33);
-  return extract2(sha2566, sharedX, "nip44-v2");
-}
-function getMessageKeys2(conversationKey, nonce) {
-  const keys = expand2(sha2566, conversationKey, nonce, 76);
-  return {
-    chacha_key: keys.subarray(0, 32),
-    chacha_nonce: keys.subarray(32, 44),
-    hmac_key: keys.subarray(44, 76)
-  };
-}
-function calcPaddedLen2(len) {
-  if (!Number.isSafeInteger(len) || len < 1)
-    throw new Error("expected positive integer");
-  if (len <= 32)
-    return 32;
-  const nextPower = 1 << Math.floor(Math.log2(len - 1)) + 1;
-  const chunk = nextPower <= 256 ? 32 : nextPower / 8;
-  return chunk * (Math.floor((len - 1) / chunk) + 1);
-}
-function writeU16BE2(num2) {
-  if (!Number.isSafeInteger(num2) || num2 < minPlaintextSize2 || num2 > maxPlaintextSize2)
-    throw new Error("invalid plaintext size: must be between 1 and 65535 bytes");
-  const arr = new Uint8Array(2);
-  new DataView(arr.buffer).setUint16(0, num2, false);
-  return arr;
-}
-function pad2(plaintext) {
-  const unpadded = utf8Encoder2.encode(plaintext);
-  const unpaddedLen = unpadded.length;
-  const prefix = writeU16BE2(unpaddedLen);
-  const suffix = new Uint8Array(calcPaddedLen2(unpaddedLen) - unpaddedLen);
-  return concatBytes7(prefix, unpadded, suffix);
-}
-function unpad2(padded) {
-  const unpaddedLen = new DataView(padded.buffer).getUint16(0);
-  const unpadded = padded.subarray(2, 2 + unpaddedLen);
-  if (unpaddedLen < minPlaintextSize2 || unpaddedLen > maxPlaintextSize2 || unpadded.length !== unpaddedLen || padded.length !== 2 + calcPaddedLen2(unpaddedLen))
-    throw new Error("invalid padding");
-  return utf8Decoder2.decode(unpadded);
-}
-function hmacAad2(key, message, aad) {
-  if (aad.length !== 32)
-    throw new Error("AAD associated data must be 32 bytes");
-  const combined = concatBytes7(aad, message);
-  return hmac5(sha2566, key, combined);
-}
-function decodePayload2(payload) {
-  if (typeof payload !== "string")
-    throw new Error("payload must be a valid string");
-  const plen = payload.length;
-  if (plen < 132 || plen > 87472)
-    throw new Error("invalid payload length: " + plen);
-  if (payload[0] === "#")
-    throw new Error("unknown encryption version");
-  let data;
-  try {
-    data = base642.decode(payload);
-  } catch (error) {
-    throw new Error("invalid base64: " + error.message);
-  }
-  const dlen = data.length;
-  if (dlen < 99 || dlen > 65603)
-    throw new Error("invalid data length: " + dlen);
-  const vers = data[0];
-  if (vers !== 2)
-    throw new Error("unknown encryption version " + vers);
-  return {
-    nonce: data.subarray(1, 33),
-    ciphertext: data.subarray(33, -32),
-    mac: data.subarray(-32)
-  };
-}
-function encrypt24(plaintext, conversationKey, nonce = randomBytes5(32)) {
-  const { chacha_key, chacha_nonce, hmac_key } = getMessageKeys2(conversationKey, nonce);
-  const padded = pad2(plaintext);
-  const ciphertext = chacha202(chacha_key, chacha_nonce, padded);
-  const mac = hmacAad2(hmac_key, ciphertext, nonce);
-  return base642.encode(concatBytes7(new Uint8Array([2]), nonce, ciphertext, mac));
-}
-function decrypt24(payload, conversationKey) {
-  const { nonce, ciphertext, mac } = decodePayload2(payload);
-  const { chacha_key, chacha_nonce, hmac_key } = getMessageKeys2(conversationKey, nonce);
-  const calculatedMac = hmacAad2(hmac_key, ciphertext, nonce);
-  if (!equalBytes4(calculatedMac, mac))
-    throw new Error("invalid MAC");
-  const padded = chacha202(chacha_key, chacha_nonce, ciphertext);
-  return unpad2(padded);
-}
-var v22 = {
-  utils: {
-    getConversationKey: getConversationKey2,
-    calcPaddedLen: calcPaddedLen2
-  },
-  encrypt: encrypt24,
-  decrypt: decrypt24
-};
-var TWO_DAYS2 = 2 * 24 * 60 * 60;
-var now2 = () => Math.round(Date.now() / 1000);
-var randomNow2 = () => Math.round(now2() - Math.random() * TWO_DAYS2);
-var nip44ConversationKey2 = (privateKey, publicKey) => getConversationKey2(privateKey, publicKey);
-var nip44Encrypt2 = (data, privateKey, publicKey) => encrypt24(JSON.stringify(data), nip44ConversationKey2(privateKey, publicKey));
-var nip44Decrypt2 = (data, privateKey) => JSON.parse(decrypt24(data.content, nip44ConversationKey2(privateKey, data.pubkey)));
-function createRumor2(event, privateKey) {
-  const rumor = {
-    created_at: now2(),
-    content: "",
-    tags: [],
-    ...event,
-    pubkey: getPublicKey2(privateKey)
-  };
-  rumor.id = getEventHash3(rumor);
-  return rumor;
-}
-function createSeal2(rumor, privateKey, recipientPublicKey) {
-  return finalizeEvent2({
-    kind: Seal2,
-    content: nip44Encrypt2(rumor, privateKey, recipientPublicKey),
-    created_at: randomNow2(),
-    tags: []
-  }, privateKey);
-}
-function createWrap2(seal, recipientPublicKey) {
-  const randomKey = generateSecretKey2();
-  return finalizeEvent2({
-    kind: GiftWrap2,
-    content: nip44Encrypt2(seal, randomKey, recipientPublicKey),
-    created_at: randomNow2(),
-    tags: [["p", recipientPublicKey]]
-  }, randomKey);
-}
-function wrapEvent5(event, senderPrivateKey, recipientPublicKey) {
-  const rumor = createRumor2(event, senderPrivateKey);
-  const seal = createSeal2(rumor, senderPrivateKey, recipientPublicKey);
-  return createWrap2(seal, recipientPublicKey);
-}
-function wrapManyEvents3(event, senderPrivateKey, recipientsPublicKeys) {
-  if (!recipientsPublicKeys || recipientsPublicKeys.length === 0) {
-    throw new Error("At least one recipient is required.");
-  }
-  const senderPublicKey = getPublicKey2(senderPrivateKey);
-  const wrappeds = [wrapEvent5(event, senderPrivateKey, senderPublicKey)];
-  recipientsPublicKeys.forEach((recipientPublicKey) => {
-    wrappeds.push(wrapEvent5(event, senderPrivateKey, recipientPublicKey));
-  });
-  return wrappeds;
-}
-function unwrapEvent3(wrap, recipientPrivateKey) {
-  const unwrappedSeal = nip44Decrypt2(wrap, recipientPrivateKey);
-  return nip44Decrypt2(unwrappedSeal, recipientPrivateKey);
-}
-function unwrapManyEvents3(wrappedEvents, recipientPrivateKey) {
-  let unwrappedEvents = [];
-  wrappedEvents.forEach((e) => {
-    unwrappedEvents.push(unwrapEvent3(e, recipientPrivateKey));
-  });
-  unwrappedEvents.sort((a, b) => a.created_at - b.created_at);
-  return unwrappedEvents;
-}
-function createEvent2(recipients, message, conversationTitle, replyTo) {
-  const baseEvent = {
-    created_at: Math.ceil(Date.now() / 1000),
-    kind: PrivateDirectMessage2,
-    tags: [],
-    content: message
-  };
-  const recipientsArray = Array.isArray(recipients) ? recipients : [recipients];
-  recipientsArray.forEach(({ publicKey, relayUrl }) => {
-    baseEvent.tags.push(relayUrl ? ["p", publicKey, relayUrl] : ["p", publicKey]);
-  });
-  if (replyTo) {
-    baseEvent.tags.push(["e", replyTo.eventId, replyTo.relayUrl || "", "reply"]);
-  }
-  if (conversationTitle) {
-    baseEvent.tags.push(["subject", conversationTitle]);
-  }
-  return baseEvent;
-}
-function wrapEvent22(senderPrivateKey, recipient, message, conversationTitle, replyTo) {
-  const event = createEvent2(recipient, message, conversationTitle, replyTo);
-  return wrapEvent5(event, senderPrivateKey, recipient.publicKey);
-}
-function wrapManyEvents22(senderPrivateKey, recipients, message, conversationTitle, replyTo) {
-  if (!recipients || recipients.length === 0) {
-    throw new Error("At least one recipient is required.");
-  }
-  const senderPublicKey = getPublicKey2(senderPrivateKey);
-  return [{ publicKey: senderPublicKey }, ...recipients].map((recipient) => wrapEvent22(senderPrivateKey, recipient, message, conversationTitle, replyTo));
-}
-var unwrapEvent22 = unwrapEvent3;
-var unwrapManyEvents22 = unwrapManyEvents3;
-var nip18_exports2 = {};
-__export3(nip18_exports2, {
-  finishRepostEvent: () => finishRepostEvent2,
-  getRepostedEvent: () => getRepostedEvent2,
-  getRepostedEventPointer: () => getRepostedEventPointer2
-});
-function finishRepostEvent2(t, reposted, relayUrl, privateKey) {
-  let kind;
-  const tags = [...t.tags ?? [], ["e", reposted.id, relayUrl], ["p", reposted.pubkey]];
-  if (reposted.kind === ShortTextNote2) {
-    kind = Repost2;
-  } else {
-    kind = GenericRepost2;
-    tags.push(["k", String(reposted.kind)]);
-  }
-  return finalizeEvent2({
-    kind,
-    tags,
-    content: t.content === "" || reposted.tags?.find((tag) => tag[0] === "-") ? "" : JSON.stringify(reposted),
-    created_at: t.created_at
-  }, privateKey);
-}
-function getRepostedEventPointer2(event) {
-  if (![Repost2, GenericRepost2].includes(event.kind)) {
-    return;
-  }
-  let lastETag;
-  let lastPTag;
-  for (let i22 = event.tags.length - 1;i22 >= 0 && (lastETag === undefined || lastPTag === undefined); i22--) {
-    const tag = event.tags[i22];
-    if (tag.length >= 2) {
-      if (tag[0] === "e" && lastETag === undefined) {
-        lastETag = tag;
-      } else if (tag[0] === "p" && lastPTag === undefined) {
-        lastPTag = tag;
-      }
-    }
-  }
-  if (lastETag === undefined) {
-    return;
-  }
-  return {
-    id: lastETag[1],
-    relays: [lastETag[2], lastPTag?.[2]].filter((x) => typeof x === "string"),
-    author: lastPTag?.[1]
-  };
-}
-function getRepostedEvent2(event, { skipVerification } = {}) {
-  const pointer = getRepostedEventPointer2(event);
-  if (pointer === undefined || event.content === "") {
-    return;
-  }
-  let repostedEvent;
-  try {
-    repostedEvent = JSON.parse(event.content);
-  } catch (error) {
-    return;
-  }
-  if (repostedEvent.id !== pointer.id) {
-    return;
-  }
-  if (!skipVerification && !verifyEvent2(repostedEvent)) {
-    return;
-  }
-  return repostedEvent;
-}
-var nip21_exports2 = {};
-__export3(nip21_exports2, {
-  NOSTR_URI_REGEX: () => NOSTR_URI_REGEX2,
-  parse: () => parse22,
-  test: () => test2
-});
-var NOSTR_URI_REGEX2 = new RegExp(`nostr:(${BECH32_REGEX3.source})`);
-function test2(value) {
-  return typeof value === "string" && new RegExp(`^${NOSTR_URI_REGEX2.source}$`).test(value);
-}
-function parse22(uri) {
-  const match = uri.match(new RegExp(`^${NOSTR_URI_REGEX2.source}$`));
-  if (!match)
-    throw new Error(`Invalid Nostr URI: ${uri}`);
-  return {
-    uri: match[0],
-    value: match[1],
-    decoded: decode3(match[1])
-  };
-}
-var nip25_exports2 = {};
-__export3(nip25_exports2, {
-  finishReactionEvent: () => finishReactionEvent2,
-  getReactedEventPointer: () => getReactedEventPointer2
-});
-function finishReactionEvent2(t, reacted, privateKey) {
-  const inheritedTags = reacted.tags.filter((tag) => tag.length >= 2 && (tag[0] === "e" || tag[0] === "p"));
-  return finalizeEvent2({
-    ...t,
-    kind: Reaction2,
-    tags: [...t.tags ?? [], ...inheritedTags, ["e", reacted.id], ["p", reacted.pubkey]],
-    content: t.content ?? "+"
-  }, privateKey);
-}
-function getReactedEventPointer2(event) {
-  if (event.kind !== Reaction2) {
-    return;
-  }
-  let lastETag;
-  let lastPTag;
-  for (let i22 = event.tags.length - 1;i22 >= 0 && (lastETag === undefined || lastPTag === undefined); i22--) {
-    const tag = event.tags[i22];
-    if (tag.length >= 2) {
-      if (tag[0] === "e" && lastETag === undefined) {
-        lastETag = tag;
-      } else if (tag[0] === "p" && lastPTag === undefined) {
-        lastPTag = tag;
-      }
-    }
-  }
-  if (lastETag === undefined || lastPTag === undefined) {
-    return;
-  }
-  return {
-    id: lastETag[1],
-    relays: [lastETag[2], lastPTag[2]].filter((x) => x !== undefined),
-    author: lastPTag[1]
-  };
-}
-var nip27_exports2 = {};
-__export3(nip27_exports2, {
-  parse: () => parse32
-});
-var noCharacter2 = /\W/m;
-var noURLCharacter2 = /\W |\W$|$|,| /m;
-function* parse32(content) {
-  const max = content.length;
-  let prevIndex = 0;
-  let index = 0;
-  while (index < max) {
-    let u = content.indexOf(":", index);
-    if (u === -1) {
-      break;
-    }
-    if (content.substring(u - 5, u) === "nostr") {
-      const m = content.substring(u + 60).match(noCharacter2);
-      const end = m ? u + 60 + m.index : max;
-      try {
-        let pointer;
-        let { data, type } = decode3(content.substring(u + 1, end));
-        switch (type) {
-          case "npub":
-            pointer = { pubkey: data };
-            break;
-          case "nsec":
-          case "note":
-            index = end + 1;
-            continue;
-          default:
-            pointer = data;
-        }
-        if (prevIndex !== u - 5) {
-          yield { type: "text", text: content.substring(prevIndex, u - 5) };
-        }
-        yield { type: "reference", pointer };
-        index = end;
-        prevIndex = index;
-        continue;
-      } catch (_err) {
-        index = u + 1;
-        continue;
-      }
-    } else if (content.substring(u - 5, u) === "https" || content.substring(u - 4, u) === "http") {
-      const m = content.substring(u + 4).match(noURLCharacter2);
-      const end = m ? u + 4 + m.index : max;
-      const prefixLen = content[u - 1] === "s" ? 5 : 4;
-      try {
-        let url = new URL(content.substring(u - prefixLen, end));
-        if (url.hostname.indexOf(".") === -1) {
-          throw new Error("invalid url");
-        }
-        if (prevIndex !== u - prefixLen) {
-          yield { type: "text", text: content.substring(prevIndex, u - prefixLen) };
-        }
-        if (url.pathname.endsWith(".png") || url.pathname.endsWith(".jpg") || url.pathname.endsWith(".jpeg") || url.pathname.endsWith(".gif") || url.pathname.endsWith(".webp")) {
-          yield { type: "image", url: url.toString() };
-          index = end;
-          prevIndex = index;
-          continue;
-        }
-        if (url.pathname.endsWith(".mp4") || url.pathname.endsWith(".avi") || url.pathname.endsWith(".webm") || url.pathname.endsWith(".mkv")) {
-          yield { type: "video", url: url.toString() };
-          index = end;
-          prevIndex = index;
-          continue;
-        }
-        if (url.pathname.endsWith(".mp3") || url.pathname.endsWith(".aac") || url.pathname.endsWith(".ogg") || url.pathname.endsWith(".opus")) {
-          yield { type: "audio", url: url.toString() };
-          index = end;
-          prevIndex = index;
-          continue;
-        }
-        yield { type: "url", url: url.toString() };
-        index = end;
-        prevIndex = index;
-        continue;
-      } catch (_err) {
-        index = end + 1;
-        continue;
-      }
-    } else if (content.substring(u - 3, u) === "wss" || content.substring(u - 2, u) === "ws") {
-      const m = content.substring(u + 4).match(noURLCharacter2);
-      const end = m ? u + 4 + m.index : max;
-      const prefixLen = content[u - 1] === "s" ? 3 : 2;
-      try {
-        let url = new URL(content.substring(u - prefixLen, end));
-        if (url.hostname.indexOf(".") === -1) {
-          throw new Error("invalid ws url");
-        }
-        if (prevIndex !== u - prefixLen) {
-          yield { type: "text", text: content.substring(prevIndex, u - prefixLen) };
-        }
-        yield { type: "relay", url: url.toString() };
-        index = end;
-        prevIndex = index;
-        continue;
-      } catch (_err) {
-        index = end + 1;
-        continue;
-      }
-    } else {
-      index = u + 1;
-      continue;
-    }
-  }
-  if (prevIndex !== max) {
-    yield { type: "text", text: content.substring(prevIndex) };
-  }
-}
-var nip28_exports2 = {};
-__export3(nip28_exports2, {
-  channelCreateEvent: () => channelCreateEvent2,
-  channelHideMessageEvent: () => channelHideMessageEvent2,
-  channelMessageEvent: () => channelMessageEvent2,
-  channelMetadataEvent: () => channelMetadataEvent2,
-  channelMuteUserEvent: () => channelMuteUserEvent2
-});
-var channelCreateEvent2 = (t, privateKey) => {
-  let content;
-  if (typeof t.content === "object") {
-    content = JSON.stringify(t.content);
-  } else if (typeof t.content === "string") {
-    content = t.content;
-  } else {
-    return;
-  }
-  return finalizeEvent2({
-    kind: ChannelCreation2,
-    tags: [...t.tags ?? []],
-    content,
-    created_at: t.created_at
-  }, privateKey);
-};
-var channelMetadataEvent2 = (t, privateKey) => {
-  let content;
-  if (typeof t.content === "object") {
-    content = JSON.stringify(t.content);
-  } else if (typeof t.content === "string") {
-    content = t.content;
-  } else {
-    return;
-  }
-  return finalizeEvent2({
-    kind: ChannelMetadata2,
-    tags: [["e", t.channel_create_event_id], ...t.tags ?? []],
-    content,
-    created_at: t.created_at
-  }, privateKey);
-};
-var channelMessageEvent2 = (t, privateKey) => {
-  const tags = [["e", t.channel_create_event_id, t.relay_url, "root"]];
-  if (t.reply_to_channel_message_event_id) {
-    tags.push(["e", t.reply_to_channel_message_event_id, t.relay_url, "reply"]);
-  }
-  return finalizeEvent2({
-    kind: ChannelMessage2,
-    tags: [...tags, ...t.tags ?? []],
-    content: t.content,
-    created_at: t.created_at
-  }, privateKey);
-};
-var channelHideMessageEvent2 = (t, privateKey) => {
-  let content;
-  if (typeof t.content === "object") {
-    content = JSON.stringify(t.content);
-  } else if (typeof t.content === "string") {
-    content = t.content;
-  } else {
-    return;
-  }
-  return finalizeEvent2({
-    kind: ChannelHideMessage2,
-    tags: [["e", t.channel_message_event_id], ...t.tags ?? []],
-    content,
-    created_at: t.created_at
-  }, privateKey);
-};
-var channelMuteUserEvent2 = (t, privateKey) => {
-  let content;
-  if (typeof t.content === "object") {
-    content = JSON.stringify(t.content);
-  } else if (typeof t.content === "string") {
-    content = t.content;
-  } else {
-    return;
-  }
-  return finalizeEvent2({
-    kind: ChannelMuteUser2,
-    tags: [["p", t.pubkey_to_mute], ...t.tags ?? []],
-    content,
-    created_at: t.created_at
-  }, privateKey);
-};
-var nip30_exports2 = {};
-__export3(nip30_exports2, {
-  EMOJI_SHORTCODE_REGEX: () => EMOJI_SHORTCODE_REGEX2,
-  matchAll: () => matchAll2,
-  regex: () => regex3,
-  replaceAll: () => replaceAll2
-});
-var EMOJI_SHORTCODE_REGEX2 = /:(\w+):/;
-var regex3 = () => new RegExp(`\\B${EMOJI_SHORTCODE_REGEX2.source}\\B`, "g");
-function* matchAll2(content) {
-  const matches = content.matchAll(regex3());
-  for (const match of matches) {
-    try {
-      const [shortcode, name] = match;
-      yield {
-        shortcode,
-        name,
-        start: match.index,
-        end: match.index + shortcode.length
-      };
-    } catch (_e) {}
-  }
-}
-function replaceAll2(content, replacer) {
-  return content.replaceAll(regex3(), (shortcode, name) => {
-    return replacer({
-      shortcode,
-      name
-    });
-  });
-}
-var nip39_exports2 = {};
-__export3(nip39_exports2, {
-  useFetchImplementation: () => useFetchImplementation32,
-  validateGithub: () => validateGithub2
-});
-var _fetch32;
-try {
-  _fetch32 = fetch;
-} catch {}
-function useFetchImplementation32(fetchImplementation) {
-  _fetch32 = fetchImplementation;
-}
-async function validateGithub2(pubkey, username, proof) {
-  try {
-    let res = await (await _fetch32(`https://gist.github.com/${username}/${proof}/raw`)).text();
-    return res === `Verifying that I control the following Nostr public key: ${pubkey}`;
-  } catch (_2) {
-    return false;
-  }
-}
-var nip47_exports2 = {};
-__export3(nip47_exports2, {
-  makeNwcRequestEvent: () => makeNwcRequestEvent2,
-  parseConnectionString: () => parseConnectionString2
-});
-function parseConnectionString2(connectionString) {
-  const { pathname, searchParams } = new URL(connectionString);
-  const pubkey = pathname;
-  const relay = searchParams.get("relay");
-  const secret = searchParams.get("secret");
-  if (!pubkey || !relay || !secret) {
-    throw new Error("invalid connection string");
-  }
-  return { pubkey, relay, secret };
-}
-async function makeNwcRequestEvent2(pubkey, secretKey, invoice) {
-  const content = {
-    method: "pay_invoice",
-    params: {
-      invoice
-    }
-  };
-  const encryptedContent = encrypt5(secretKey, pubkey, JSON.stringify(content));
-  const eventTemplate = {
-    kind: NWCWalletRequest2,
-    created_at: Math.round(Date.now() / 1000),
-    content: encryptedContent,
-    tags: [["p", pubkey]]
-  };
-  return finalizeEvent2(eventTemplate, secretKey);
-}
-var nip54_exports2 = {};
-__export3(nip54_exports2, {
-  normalizeIdentifier: () => normalizeIdentifier2
-});
-function normalizeIdentifier2(name) {
-  name = name.trim().toLowerCase();
-  name = name.normalize("NFKC");
-  return Array.from(name).map((char) => {
-    if (/\p{Letter}/u.test(char) || /\p{Number}/u.test(char)) {
-      return char;
-    }
-    return "-";
-  }).join("");
-}
-var nip57_exports2 = {};
-__export3(nip57_exports2, {
-  getSatoshisAmountFromBolt11: () => getSatoshisAmountFromBolt112,
-  getZapEndpoint: () => getZapEndpoint2,
-  makeZapReceipt: () => makeZapReceipt2,
-  makeZapRequest: () => makeZapRequest2,
-  useFetchImplementation: () => useFetchImplementation42,
-  validateZapRequest: () => validateZapRequest2
-});
-var _fetch42;
-try {
-  _fetch42 = fetch;
-} catch {}
-function useFetchImplementation42(fetchImplementation) {
-  _fetch42 = fetchImplementation;
-}
-async function getZapEndpoint2(metadata) {
-  try {
-    let lnurl = "";
-    let { lud06, lud16 } = JSON.parse(metadata.content);
-    if (lud06) {
-      let { words } = bech322.decode(lud06, 1000);
-      let data = bech322.fromWords(words);
-      lnurl = utf8Decoder2.decode(data);
-    } else if (lud16) {
-      let [name, domain] = lud16.split("@");
-      lnurl = new URL(`/.well-known/lnurlp/${name}`, `https://${domain}`).toString();
-    } else {
-      return null;
-    }
-    let res = await _fetch42(lnurl);
-    let body = await res.json();
-    if (body.allowsNostr && body.nostrPubkey) {
-      return body.callback;
-    }
-  } catch (err) {}
-  return null;
-}
-function makeZapRequest2({
-  profile,
-  event,
-  amount,
-  relays,
-  comment = ""
-}) {
-  if (!amount)
-    throw new Error("amount not given");
-  if (!profile)
-    throw new Error("profile not given");
-  let zr = {
-    kind: 9734,
-    created_at: Math.round(Date.now() / 1000),
-    content: comment,
-    tags: [
-      ["p", profile],
-      ["amount", amount.toString()],
-      ["relays", ...relays]
-    ]
-  };
-  if (event && typeof event === "string") {
-    zr.tags.push(["e", event]);
-  }
-  if (event && typeof event === "object") {
-    if (isReplaceableKind2(event.kind)) {
-      const a = ["a", `${event.kind}:${event.pubkey}:`];
-      zr.tags.push(a);
-    } else if (isAddressableKind2(event.kind)) {
-      let d4 = event.tags.find(([t, v]) => t === "d" && v);
-      if (!d4)
-        throw new Error("d tag not found or is empty");
-      const a = ["a", `${event.kind}:${event.pubkey}:${d4[1]}`];
-      zr.tags.push(a);
-    }
-  }
-  return zr;
-}
-function validateZapRequest2(zapRequestString) {
-  let zapRequest;
-  try {
-    zapRequest = JSON.parse(zapRequestString);
-  } catch (err) {
-    return "Invalid zap request JSON.";
-  }
-  if (!validateEvent3(zapRequest))
-    return "Zap request is not a valid Nostr event.";
-  if (!verifyEvent2(zapRequest))
-    return "Invalid signature on zap request.";
-  let p = zapRequest.tags.find(([t, v]) => t === "p" && v);
-  if (!p)
-    return "Zap request doesn't have a 'p' tag.";
-  if (!p[1].match(/^[a-f0-9]{64}$/))
-    return "Zap request 'p' tag is not valid hex.";
-  let e = zapRequest.tags.find(([t, v]) => t === "e" && v);
-  if (e && !e[1].match(/^[a-f0-9]{64}$/))
-    return "Zap request 'e' tag is not valid hex.";
-  let relays = zapRequest.tags.find(([t, v]) => t === "relays" && v);
-  if (!relays)
-    return "Zap request doesn't have a 'relays' tag.";
-  return null;
-}
-function makeZapReceipt2({
-  zapRequest,
-  preimage,
-  bolt11,
-  paidAt
-}) {
-  let zr = JSON.parse(zapRequest);
-  let tagsFromZapRequest = zr.tags.filter(([t]) => t === "e" || t === "p" || t === "a");
-  let zap = {
-    kind: 9735,
-    created_at: Math.round(paidAt.getTime() / 1000),
-    content: "",
-    tags: [...tagsFromZapRequest, ["P", zr.pubkey], ["bolt11", bolt11], ["description", zapRequest]]
-  };
-  if (preimage) {
-    zap.tags.push(["preimage", preimage]);
-  }
-  return zap;
-}
-function getSatoshisAmountFromBolt112(bolt11) {
-  if (bolt11.length < 50) {
-    return 0;
-  }
-  bolt11 = bolt11.substring(0, 50);
-  const idx = bolt11.lastIndexOf("1");
-  if (idx === -1) {
-    return 0;
-  }
-  const hrp = bolt11.substring(0, idx);
-  if (!hrp.startsWith("lnbc")) {
-    return 0;
-  }
-  const amount = hrp.substring(4);
-  if (amount.length < 1) {
-    return 0;
-  }
-  const char = amount[amount.length - 1];
-  const digit = char.charCodeAt(0) - 48;
-  const isDigit = digit >= 0 && digit <= 9;
-  let cutPoint = amount.length - 1;
-  if (isDigit) {
-    cutPoint++;
-  }
-  if (cutPoint < 1) {
-    return 0;
-  }
-  const num2 = parseInt(amount.substring(0, cutPoint));
-  switch (char) {
-    case "m":
-      return num2 * 1e5;
-    case "u":
-      return num2 * 100;
-    case "n":
-      return num2 / 10;
-    case "p":
-      return num2 / 1e4;
-    default:
-      return num2 * 1e8;
-  }
-}
-var nip98_exports2 = {};
-__export3(nip98_exports2, {
-  getToken: () => getToken2,
-  hashPayload: () => hashPayload2,
-  unpackEventFromToken: () => unpackEventFromToken2,
-  validateEvent: () => validateEvent22,
-  validateEventKind: () => validateEventKind2,
-  validateEventMethodTag: () => validateEventMethodTag2,
-  validateEventPayloadTag: () => validateEventPayloadTag2,
-  validateEventTimestamp: () => validateEventTimestamp2,
-  validateEventUrlTag: () => validateEventUrlTag2,
-  validateToken: () => validateToken2
-});
-var _authorizationScheme2 = "Nostr ";
-async function getToken2(loginUrl, httpMethod, sign, includeAuthorizationScheme = false, payload) {
-  const event = {
-    kind: HTTPAuth2,
-    tags: [
-      ["u", loginUrl],
-      ["method", httpMethod]
-    ],
-    created_at: Math.round(new Date().getTime() / 1000),
-    content: ""
-  };
-  if (payload) {
-    event.tags.push(["payload", hashPayload2(payload)]);
-  }
-  const signedEvent = await sign(event);
-  const authorizationScheme = includeAuthorizationScheme ? _authorizationScheme2 : "";
-  return authorizationScheme + base642.encode(utf8Encoder2.encode(JSON.stringify(signedEvent)));
-}
-async function validateToken2(token, url, method) {
-  const event = await unpackEventFromToken2(token).catch((error) => {
-    throw error;
-  });
-  const valid = await validateEvent22(event, url, method).catch((error) => {
-    throw error;
-  });
-  return valid;
-}
-async function unpackEventFromToken2(token) {
-  if (!token) {
-    throw new Error("Missing token");
-  }
-  token = token.replace(_authorizationScheme2, "");
-  const eventB64 = utf8Decoder2.decode(base642.decode(token));
-  if (!eventB64 || eventB64.length === 0 || !eventB64.startsWith("{")) {
-    throw new Error("Invalid token");
-  }
-  const event = JSON.parse(eventB64);
-  return event;
-}
-function validateEventTimestamp2(event) {
-  if (!event.created_at) {
-    return false;
-  }
-  return Math.round(new Date().getTime() / 1000) - event.created_at < 60;
-}
-function validateEventKind2(event) {
-  return event.kind === HTTPAuth2;
-}
-function validateEventUrlTag2(event, url) {
-  const urlTag = event.tags.find((t) => t[0] === "u");
-  if (!urlTag) {
-    return false;
-  }
-  return urlTag.length > 0 && urlTag[1] === url;
-}
-function validateEventMethodTag2(event, method) {
-  const methodTag = event.tags.find((t) => t[0] === "method");
-  if (!methodTag) {
-    return false;
-  }
-  return methodTag.length > 0 && methodTag[1].toLowerCase() === method.toLowerCase();
-}
-function hashPayload2(payload) {
-  const hash5 = sha2566(utf8Encoder2.encode(JSON.stringify(payload)));
-  return bytesToHex5(hash5);
-}
-function validateEventPayloadTag2(event, payload) {
-  const payloadTag = event.tags.find((t) => t[0] === "payload");
-  if (!payloadTag) {
-    return false;
-  }
-  const payloadHash = hashPayload2(payload);
-  return payloadTag.length > 0 && payloadTag[1] === payloadHash;
-}
-async function validateEvent22(event, url, method, body) {
-  if (!verifyEvent2(event)) {
-    throw new Error("Invalid nostr event, signature invalid");
-  }
-  if (!validateEventKind2(event)) {
-    throw new Error("Invalid nostr event, kind invalid");
-  }
-  if (!validateEventTimestamp2(event)) {
-    throw new Error("Invalid nostr event, created_at timestamp invalid");
-  }
-  if (!validateEventUrlTag2(event, url)) {
-    throw new Error("Invalid nostr event, url tag invalid");
-  }
-  if (!validateEventMethodTag2(event, method)) {
-    throw new Error("Invalid nostr event, method tag invalid");
-  }
-  if (Boolean(body) && typeof body === "object" && Object.keys(body).length > 0) {
-    if (!validateEventPayloadTag2(event, body)) {
-      throw new Error("Invalid nostr event, payload tag does not match request body hash");
-    }
-  }
-  return true;
-}
-
-// ../shared/node_modules/@noble/hashes/esm/cryptoNode.js
-import * as nc6 from "crypto";
-var crypto6 = nc6 && typeof nc6 === "object" && "webcrypto" in nc6 ? nc6.webcrypto : nc6 && typeof nc6 === "object" && ("randomBytes" in nc6) ? nc6 : undefined;
-
-// ../shared/node_modules/@noble/hashes/esm/utils.js
-/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-function isBytes4(a) {
-  return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array";
-}
-function anumber2(n) {
-  if (!Number.isSafeInteger(n) || n < 0)
-    throw new Error("positive integer expected, got " + n);
-}
-function abytes2(b, ...lengths) {
-  if (!isBytes4(b))
-    throw new Error("Uint8Array expected");
-  if (lengths.length > 0 && !lengths.includes(b.length))
-    throw new Error("Uint8Array expected of length " + lengths + ", got length=" + b.length);
-}
-function ahash2(h) {
-  if (typeof h !== "function" || typeof h.create !== "function")
-    throw new Error("Hash should be wrapped by utils.createHasher");
-  anumber2(h.outputLen);
-  anumber2(h.blockLen);
-}
-function aexists2(instance, checkFinished = true) {
-  if (instance.destroyed)
-    throw new Error("Hash instance has been destroyed");
-  if (checkFinished && instance.finished)
-    throw new Error("Hash#digest() has already been called");
-}
-function aoutput2(out, instance) {
-  abytes2(out);
-  const min = instance.outputLen;
-  if (out.length < min) {
-    throw new Error("digestInto() expects output buffer of length at least " + min);
-  }
-}
-function clean2(...arrays) {
-  for (let i3 = 0;i3 < arrays.length; i3++) {
-    arrays[i3].fill(0);
-  }
-}
-function createView8(arr) {
-  return new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-}
-function rotr6(word, shift) {
-  return word << 32 - shift | word >>> shift;
-}
-var hasHexBuiltin2 = /* @__PURE__ */ (() => typeof Uint8Array.from([]).toHex === "function" && typeof Uint8Array.fromHex === "function")();
-var hexes6 = /* @__PURE__ */ Array.from({ length: 256 }, (_2, i3) => i3.toString(16).padStart(2, "0"));
-function bytesToHex6(bytes7) {
-  abytes2(bytes7);
-  if (hasHexBuiltin2)
-    return bytes7.toHex();
-  let hex3 = "";
-  for (let i3 = 0;i3 < bytes7.length; i3++) {
-    hex3 += hexes6[bytes7[i3]];
-  }
-  return hex3;
-}
-var asciis2 = { _0: 48, _9: 57, A: 65, F: 70, a: 97, f: 102 };
-function asciiToBase162(ch) {
-  if (ch >= asciis2._0 && ch <= asciis2._9)
-    return ch - asciis2._0;
-  if (ch >= asciis2.A && ch <= asciis2.F)
-    return ch - (asciis2.A - 10);
-  if (ch >= asciis2.a && ch <= asciis2.f)
-    return ch - (asciis2.a - 10);
-  return;
-}
-function hexToBytes6(hex3) {
-  if (typeof hex3 !== "string")
-    throw new Error("hex string expected, got " + typeof hex3);
-  if (hasHexBuiltin2)
-    return Uint8Array.fromHex(hex3);
-  const hl = hex3.length;
-  const al = hl / 2;
-  if (hl % 2)
-    throw new Error("hex string expected, got unpadded hex of length " + hl);
-  const array = new Uint8Array(al);
-  for (let ai = 0, hi = 0;ai < al; ai++, hi += 2) {
-    const n1 = asciiToBase162(hex3.charCodeAt(hi));
-    const n2 = asciiToBase162(hex3.charCodeAt(hi + 1));
-    if (n1 === undefined || n2 === undefined) {
-      const char = hex3[hi] + hex3[hi + 1];
-      throw new Error('hex string expected, got non-hex character "' + char + '" at index ' + hi);
-    }
-    array[ai] = n1 * 16 + n2;
-  }
-  return array;
-}
-function utf8ToBytes10(str) {
-  if (typeof str !== "string")
-    throw new Error("string expected");
-  return new Uint8Array(new TextEncoder().encode(str));
-}
-function toBytes8(data) {
-  if (typeof data === "string")
-    data = utf8ToBytes10(data);
-  abytes2(data);
-  return data;
-}
-function concatBytes8(...arrays) {
-  let sum = 0;
-  for (let i3 = 0;i3 < arrays.length; i3++) {
-    const a = arrays[i3];
-    abytes2(a);
-    sum += a.length;
-  }
-  const res = new Uint8Array(sum);
-  for (let i3 = 0, pad3 = 0;i3 < arrays.length; i3++) {
-    const a = arrays[i3];
-    res.set(a, pad3);
-    pad3 += a.length;
-  }
-  return res;
-}
-class Hash6 {
-}
-function createHasher2(hashCons) {
-  const hashC = (msg) => hashCons().update(toBytes8(msg)).digest();
-  const tmp = hashCons();
-  hashC.outputLen = tmp.outputLen;
-  hashC.blockLen = tmp.blockLen;
-  hashC.create = () => hashCons();
-  return hashC;
-}
-function randomBytes6(bytesLength = 32) {
-  if (crypto6 && typeof crypto6.getRandomValues === "function") {
-    return crypto6.getRandomValues(new Uint8Array(bytesLength));
-  }
-  if (crypto6 && typeof crypto6.randomBytes === "function") {
-    return Uint8Array.from(crypto6.randomBytes(bytesLength));
-  }
-  throw new Error("crypto.getRandomValues must be defined");
-}
-
-// ../shared/node_modules/@noble/hashes/esm/_md.js
-function setBigUint648(view, byteOffset, value, isLE7) {
-  if (typeof view.setBigUint64 === "function")
-    return view.setBigUint64(byteOffset, value, isLE7);
-  const _32n = BigInt(32);
-  const _u32_max = BigInt(4294967295);
-  const wh = Number(value >> _32n & _u32_max);
-  const wl = Number(value & _u32_max);
-  const h = isLE7 ? 4 : 0;
-  const l = isLE7 ? 0 : 4;
-  view.setUint32(byteOffset + h, wh, isLE7);
-  view.setUint32(byteOffset + l, wl, isLE7);
-}
-function Chi6(a, b, c) {
-  return a & b ^ ~a & c;
-}
-function Maj6(a, b, c) {
-  return a & b ^ a & c ^ b & c;
-}
-
-class HashMD2 extends Hash6 {
-  constructor(blockLen, outputLen, padOffset, isLE7) {
-    super();
-    this.finished = false;
-    this.length = 0;
-    this.pos = 0;
-    this.destroyed = false;
-    this.blockLen = blockLen;
-    this.outputLen = outputLen;
-    this.padOffset = padOffset;
-    this.isLE = isLE7;
-    this.buffer = new Uint8Array(blockLen);
-    this.view = createView8(this.buffer);
-  }
-  update(data) {
-    aexists2(this);
-    data = toBytes8(data);
-    abytes2(data);
-    const { view, buffer, blockLen } = this;
-    const len = data.length;
-    for (let pos = 0;pos < len; ) {
-      const take4 = Math.min(blockLen - this.pos, len - pos);
-      if (take4 === blockLen) {
-        const dataView = createView8(data);
-        for (;blockLen <= len - pos; pos += blockLen)
-          this.process(dataView, pos);
-        continue;
-      }
-      buffer.set(data.subarray(pos, pos + take4), this.pos);
-      this.pos += take4;
-      pos += take4;
-      if (this.pos === blockLen) {
-        this.process(view, 0);
-        this.pos = 0;
-      }
-    }
-    this.length += data.length;
-    this.roundClean();
-    return this;
-  }
-  digestInto(out) {
-    aexists2(this);
-    aoutput2(out, this);
-    this.finished = true;
-    const { buffer, view, blockLen, isLE: isLE7 } = this;
-    let { pos } = this;
-    buffer[pos++] = 128;
-    clean2(this.buffer.subarray(pos));
-    if (this.padOffset > blockLen - pos) {
-      this.process(view, 0);
-      pos = 0;
-    }
-    for (let i3 = pos;i3 < blockLen; i3++)
-      buffer[i3] = 0;
-    setBigUint648(view, blockLen - 8, BigInt(this.length * 8), isLE7);
-    this.process(view, 0);
-    const oview = createView8(out);
-    const len = this.outputLen;
-    if (len % 4)
-      throw new Error("_sha2: outputLen should be aligned to 32bit");
-    const outLen = len / 4;
-    const state = this.get();
-    if (outLen > state.length)
-      throw new Error("_sha2: outputLen bigger than state");
-    for (let i3 = 0;i3 < outLen; i3++)
-      oview.setUint32(4 * i3, state[i3], isLE7);
-  }
-  digest() {
-    const { buffer, outputLen } = this;
-    this.digestInto(buffer);
-    const res = buffer.slice(0, outputLen);
-    this.destroy();
-    return res;
-  }
-  _cloneInto(to) {
-    to || (to = new this.constructor);
-    to.set(...this.get());
-    const { blockLen, buffer, length, finished, destroyed, pos } = this;
-    to.destroyed = destroyed;
-    to.finished = finished;
-    to.length = length;
-    to.pos = pos;
-    if (length % blockLen)
-      to.buffer.set(buffer);
-    return to;
-  }
-  clone() {
-    return this._cloneInto();
-  }
-}
-var SHA256_IV2 = /* @__PURE__ */ Uint32Array.from([
-  1779033703,
-  3144134277,
-  1013904242,
-  2773480762,
-  1359893119,
-  2600822924,
-  528734635,
-  1541459225
-]);
-
-// ../shared/node_modules/@noble/hashes/esm/sha2.js
-var SHA256_K6 = /* @__PURE__ */ Uint32Array.from([
-  1116352408,
-  1899447441,
-  3049323471,
-  3921009573,
-  961987163,
-  1508970993,
-  2453635748,
-  2870763221,
-  3624381080,
-  310598401,
-  607225278,
-  1426881987,
-  1925078388,
-  2162078206,
-  2614888103,
-  3248222580,
-  3835390401,
-  4022224774,
-  264347078,
-  604807628,
-  770255983,
-  1249150122,
-  1555081692,
-  1996064986,
-  2554220882,
-  2821834349,
-  2952996808,
-  3210313671,
-  3336571891,
-  3584528711,
-  113926993,
-  338241895,
-  666307205,
-  773529912,
-  1294757372,
-  1396182291,
-  1695183700,
-  1986661051,
-  2177026350,
-  2456956037,
-  2730485921,
-  2820302411,
-  3259730800,
-  3345764771,
-  3516065817,
-  3600352804,
-  4094571909,
-  275423344,
-  430227734,
-  506948616,
-  659060556,
-  883997877,
-  958139571,
-  1322822218,
-  1537002063,
-  1747873779,
-  1955562222,
-  2024104815,
-  2227730452,
-  2361852424,
-  2428436474,
-  2756734187,
-  3204031479,
-  3329325298
-]);
-var SHA256_W6 = /* @__PURE__ */ new Uint32Array(64);
-
-class SHA2566 extends HashMD2 {
-  constructor(outputLen = 32) {
-    super(64, outputLen, 8, false);
-    this.A = SHA256_IV2[0] | 0;
-    this.B = SHA256_IV2[1] | 0;
-    this.C = SHA256_IV2[2] | 0;
-    this.D = SHA256_IV2[3] | 0;
-    this.E = SHA256_IV2[4] | 0;
-    this.F = SHA256_IV2[5] | 0;
-    this.G = SHA256_IV2[6] | 0;
-    this.H = SHA256_IV2[7] | 0;
-  }
-  get() {
-    const { A, B, C, D, E, F, G, H } = this;
-    return [A, B, C, D, E, F, G, H];
-  }
-  set(A, B, C, D, E, F, G, H) {
-    this.A = A | 0;
-    this.B = B | 0;
-    this.C = C | 0;
-    this.D = D | 0;
-    this.E = E | 0;
-    this.F = F | 0;
-    this.G = G | 0;
-    this.H = H | 0;
-  }
-  process(view, offset) {
-    for (let i3 = 0;i3 < 16; i3++, offset += 4)
-      SHA256_W6[i3] = view.getUint32(offset, false);
-    for (let i3 = 16;i3 < 64; i3++) {
-      const W15 = SHA256_W6[i3 - 15];
-      const W2 = SHA256_W6[i3 - 2];
-      const s0 = rotr6(W15, 7) ^ rotr6(W15, 18) ^ W15 >>> 3;
-      const s1 = rotr6(W2, 17) ^ rotr6(W2, 19) ^ W2 >>> 10;
-      SHA256_W6[i3] = s1 + SHA256_W6[i3 - 7] + s0 + SHA256_W6[i3 - 16] | 0;
-    }
-    let { A, B, C, D, E, F, G, H } = this;
-    for (let i3 = 0;i3 < 64; i3++) {
-      const sigma1 = rotr6(E, 6) ^ rotr6(E, 11) ^ rotr6(E, 25);
-      const T1 = H + sigma1 + Chi6(E, F, G) + SHA256_K6[i3] + SHA256_W6[i3] | 0;
-      const sigma0 = rotr6(A, 2) ^ rotr6(A, 13) ^ rotr6(A, 22);
-      const T2 = sigma0 + Maj6(A, B, C) | 0;
-      H = G;
-      G = F;
-      F = E;
-      E = D + T1 | 0;
-      D = C;
-      C = B;
-      B = A;
-      A = T1 + T2 | 0;
-    }
-    A = A + this.A | 0;
-    B = B + this.B | 0;
-    C = C + this.C | 0;
-    D = D + this.D | 0;
-    E = E + this.E | 0;
-    F = F + this.F | 0;
-    G = G + this.G | 0;
-    H = H + this.H | 0;
-    this.set(A, B, C, D, E, F, G, H);
-  }
-  roundClean() {
-    clean2(SHA256_W6);
-  }
-  destroy() {
-    this.set(0, 0, 0, 0, 0, 0, 0, 0);
-    clean2(this.buffer);
-  }
-}
-var sha2567 = /* @__PURE__ */ createHasher2(() => new SHA2566);
-
-// ../shared/node_modules/@noble/hashes/esm/hmac.js
-class HMAC6 extends Hash6 {
-  constructor(hash5, _key) {
-    super();
-    this.finished = false;
-    this.destroyed = false;
-    ahash2(hash5);
-    const key = toBytes8(_key);
-    this.iHash = hash5.create();
-    if (typeof this.iHash.update !== "function")
-      throw new Error("Expected instance of class which extends utils.Hash");
-    this.blockLen = this.iHash.blockLen;
-    this.outputLen = this.iHash.outputLen;
-    const blockLen = this.blockLen;
-    const pad3 = new Uint8Array(blockLen);
-    pad3.set(key.length > blockLen ? hash5.create().update(key).digest() : key);
-    for (let i3 = 0;i3 < pad3.length; i3++)
-      pad3[i3] ^= 54;
-    this.iHash.update(pad3);
-    this.oHash = hash5.create();
-    for (let i3 = 0;i3 < pad3.length; i3++)
-      pad3[i3] ^= 54 ^ 92;
-    this.oHash.update(pad3);
-    clean2(pad3);
-  }
-  update(buf) {
-    aexists2(this);
-    this.iHash.update(buf);
-    return this;
-  }
-  digestInto(out) {
-    aexists2(this);
-    abytes2(out, this.outputLen);
-    this.finished = true;
-    this.iHash.digestInto(out);
-    this.oHash.update(out);
-    this.oHash.digestInto(out);
-    this.destroy();
-  }
-  digest() {
-    const out = new Uint8Array(this.oHash.outputLen);
-    this.digestInto(out);
-    return out;
-  }
-  _cloneInto(to) {
-    to || (to = Object.create(Object.getPrototypeOf(this), {}));
-    const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
-    to = to;
-    to.finished = finished;
-    to.destroyed = destroyed;
-    to.blockLen = blockLen;
-    to.outputLen = outputLen;
-    to.oHash = oHash._cloneInto(to.oHash);
-    to.iHash = iHash._cloneInto(to.iHash);
-    return to;
-  }
-  clone() {
-    return this._cloneInto();
-  }
-  destroy() {
-    this.destroyed = true;
-    this.oHash.destroy();
-    this.iHash.destroy();
-  }
-}
-var hmac6 = (hash5, key, message) => new HMAC6(hash5, key).update(message).digest();
-hmac6.create = (hash5, key) => new HMAC6(hash5, key);
-
-// ../shared/node_modules/@noble/curves/esm/utils.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var _0n16 = /* @__PURE__ */ BigInt(0);
-var _1n16 = /* @__PURE__ */ BigInt(1);
-function abool2(title, value) {
-  if (typeof value !== "boolean")
-    throw new Error(title + " boolean expected, got " + value);
-}
-function numberToHexUnpadded4(num2) {
-  const hex3 = num2.toString(16);
-  return hex3.length & 1 ? "0" + hex3 : hex3;
-}
-function hexToNumber4(hex3) {
-  if (typeof hex3 !== "string")
-    throw new Error("hex string expected, got " + typeof hex3);
-  return hex3 === "" ? _0n16 : BigInt("0x" + hex3);
-}
-function bytesToNumberBE4(bytes7) {
-  return hexToNumber4(bytesToHex6(bytes7));
-}
-function bytesToNumberLE4(bytes7) {
-  abytes2(bytes7);
-  return hexToNumber4(bytesToHex6(Uint8Array.from(bytes7).reverse()));
-}
-function numberToBytesBE4(n, len) {
-  return hexToBytes6(n.toString(16).padStart(len * 2, "0"));
-}
-function numberToBytesLE4(n, len) {
-  return numberToBytesBE4(n, len).reverse();
-}
-function ensureBytes4(title, hex3, expectedLength) {
-  let res;
-  if (typeof hex3 === "string") {
-    try {
-      res = hexToBytes6(hex3);
-    } catch (e) {
-      throw new Error(title + " must be hex string or Uint8Array, cause: " + e);
-    }
-  } else if (isBytes4(hex3)) {
-    res = Uint8Array.from(hex3);
-  } else {
-    throw new Error(title + " must be hex string or Uint8Array");
-  }
-  const len = res.length;
-  if (typeof expectedLength === "number" && len !== expectedLength)
-    throw new Error(title + " of length " + expectedLength + " expected, got " + len);
-  return res;
-}
-var isPosBig2 = (n) => typeof n === "bigint" && _0n16 <= n;
-function inRange2(n, min, max) {
-  return isPosBig2(n) && isPosBig2(min) && isPosBig2(max) && min <= n && n < max;
-}
-function aInRange2(title, n, min, max) {
-  if (!inRange2(n, min, max))
-    throw new Error("expected valid " + title + ": " + min + " <= n < " + max + ", got " + n);
-}
-function bitLen4(n) {
-  let len;
-  for (len = 0;n > _0n16; n >>= _1n16, len += 1)
-    ;
-  return len;
-}
-var bitMask4 = (n) => (_1n16 << BigInt(n)) - _1n16;
-function createHmacDrbg4(hashLen, qByteLen, hmacFn) {
-  if (typeof hashLen !== "number" || hashLen < 2)
-    throw new Error("hashLen must be a number");
-  if (typeof qByteLen !== "number" || qByteLen < 2)
-    throw new Error("qByteLen must be a number");
-  if (typeof hmacFn !== "function")
-    throw new Error("hmacFn must be a function");
-  const u8n3 = (len) => new Uint8Array(len);
-  const u8of = (byte) => Uint8Array.of(byte);
-  let v = u8n3(hashLen);
-  let k = u8n3(hashLen);
-  let i3 = 0;
-  const reset = () => {
-    v.fill(1);
-    k.fill(0);
-    i3 = 0;
-  };
-  const h = (...b) => hmacFn(k, v, ...b);
-  const reseed = (seed = u8n3(0)) => {
-    k = h(u8of(0), seed);
-    v = h();
-    if (seed.length === 0)
-      return;
-    k = h(u8of(1), seed);
-    v = h();
-  };
-  const gen = () => {
-    if (i3++ >= 1000)
-      throw new Error("drbg: tried 1000 values");
-    let len = 0;
-    const out = [];
-    while (len < qByteLen) {
-      v = h();
-      const sl = v.slice();
-      out.push(sl);
-      len += v.length;
-    }
-    return concatBytes8(...out);
-  };
-  const genUntil = (seed, pred) => {
-    reset();
-    reseed(seed);
-    let res = undefined;
-    while (!(res = pred(gen())))
-      reseed();
-    reset();
-    return res;
-  };
-  return genUntil;
-}
-function _validateObject2(object, fields, optFields = {}) {
-  if (!object || typeof object !== "object")
-    throw new Error("expected valid options object");
-  function checkField(fieldName, expectedType, isOpt) {
-    const val = object[fieldName];
-    if (isOpt && val === undefined)
-      return;
-    const current = typeof val;
-    if (current !== expectedType || val === null)
-      throw new Error(`param "${fieldName}" is invalid: expected ${expectedType}, got ${current}`);
-  }
-  Object.entries(fields).forEach(([k, v]) => checkField(k, v, false));
-  Object.entries(optFields).forEach(([k, v]) => checkField(k, v, true));
-}
-function memoized2(fn) {
-  const map8 = new WeakMap;
-  return (arg, ...args) => {
-    const val = map8.get(arg);
-    if (val !== undefined)
-      return val;
-    const computed = fn(arg, ...args);
-    map8.set(arg, computed);
-    return computed;
-  };
-}
-
-// ../shared/node_modules/@noble/curves/esm/abstract/modular.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var _0n17 = BigInt(0);
-var _1n17 = BigInt(1);
-var _2n12 = /* @__PURE__ */ BigInt(2);
-var _3n7 = /* @__PURE__ */ BigInt(3);
-var _4n7 = /* @__PURE__ */ BigInt(4);
-var _5n4 = /* @__PURE__ */ BigInt(5);
-var _8n4 = /* @__PURE__ */ BigInt(8);
-function mod4(a, b) {
-  const result = a % b;
-  return result >= _0n17 ? result : b + result;
-}
-function pow24(x, power, modulo) {
-  let res = x;
-  while (power-- > _0n17) {
-    res *= res;
-    res %= modulo;
-  }
-  return res;
-}
-function invert4(number7, modulo) {
-  if (number7 === _0n17)
-    throw new Error("invert: expected non-zero number");
-  if (modulo <= _0n17)
-    throw new Error("invert: expected positive modulus, got " + modulo);
-  let a = mod4(number7, modulo);
-  let b = modulo;
-  let x = _0n17, y = _1n17, u = _1n17, v = _0n17;
-  while (a !== _0n17) {
-    const q = b / a;
-    const r = b % a;
-    const m = x - u * q;
-    const n = y - v * q;
-    b = a, a = r, x = u, y = v, u = m, v = n;
-  }
-  const gcd3 = b;
-  if (gcd3 !== _1n17)
-    throw new Error("invert: does not exist");
-  return mod4(x, modulo);
-}
-function sqrt3mod42(Fp3, n) {
-  const p1div4 = (Fp3.ORDER + _1n17) / _4n7;
-  const root = Fp3.pow(n, p1div4);
-  if (!Fp3.eql(Fp3.sqr(root), n))
-    throw new Error("Cannot find square root");
-  return root;
-}
-function sqrt5mod82(Fp3, n) {
-  const p5div8 = (Fp3.ORDER - _5n4) / _8n4;
-  const n2 = Fp3.mul(n, _2n12);
-  const v = Fp3.pow(n2, p5div8);
-  const nv = Fp3.mul(n, v);
-  const i3 = Fp3.mul(Fp3.mul(nv, _2n12), v);
-  const root = Fp3.mul(nv, Fp3.sub(i3, Fp3.ONE));
-  if (!Fp3.eql(Fp3.sqr(root), n))
-    throw new Error("Cannot find square root");
-  return root;
-}
-function tonelliShanks4(P) {
-  if (P < BigInt(3))
-    throw new Error("sqrt is not defined for small field");
-  let Q = P - _1n17;
-  let S = 0;
-  while (Q % _2n12 === _0n17) {
-    Q /= _2n12;
-    S++;
-  }
-  let Z = _2n12;
-  const _Fp = Field4(P);
-  while (FpLegendre2(_Fp, Z) === 1) {
-    if (Z++ > 1000)
-      throw new Error("Cannot find square root: probably non-prime P");
-  }
-  if (S === 1)
-    return sqrt3mod42;
-  let cc = _Fp.pow(Z, Q);
-  const Q1div2 = (Q + _1n17) / _2n12;
-  return function tonelliSlow(Fp3, n) {
-    if (Fp3.is0(n))
-      return n;
-    if (FpLegendre2(Fp3, n) !== 1)
-      throw new Error("Cannot find square root");
-    let M = S;
-    let c = Fp3.mul(Fp3.ONE, cc);
-    let t = Fp3.pow(n, Q);
-    let R = Fp3.pow(n, Q1div2);
-    while (!Fp3.eql(t, Fp3.ONE)) {
-      if (Fp3.is0(t))
-        return Fp3.ZERO;
-      let i3 = 1;
-      let t_tmp = Fp3.sqr(t);
-      while (!Fp3.eql(t_tmp, Fp3.ONE)) {
-        i3++;
-        t_tmp = Fp3.sqr(t_tmp);
-        if (i3 === M)
-          throw new Error("Cannot find square root");
-      }
-      const exponent = _1n17 << BigInt(M - i3 - 1);
-      const b = Fp3.pow(c, exponent);
-      M = i3;
-      c = Fp3.sqr(b);
-      t = Fp3.mul(t, c);
-      R = Fp3.mul(R, b);
-    }
-    return R;
-  };
-}
-function FpSqrt4(P) {
-  if (P % _4n7 === _3n7)
-    return sqrt3mod42;
-  if (P % _8n4 === _5n4)
-    return sqrt5mod82;
-  return tonelliShanks4(P);
-}
-var FIELD_FIELDS4 = [
-  "create",
-  "isValid",
-  "is0",
-  "neg",
-  "inv",
-  "sqrt",
-  "sqr",
-  "eql",
-  "add",
-  "sub",
-  "mul",
-  "pow",
-  "div",
-  "addN",
-  "subN",
-  "mulN",
-  "sqrN"
-];
-function validateField4(field) {
-  const initial = {
-    ORDER: "bigint",
-    MASK: "bigint",
-    BYTES: "number",
-    BITS: "number"
-  };
-  const opts = FIELD_FIELDS4.reduce((map8, val) => {
-    map8[val] = "function";
-    return map8;
-  }, initial);
-  _validateObject2(field, opts);
-  return field;
-}
-function FpPow4(Fp3, num2, power) {
-  if (power < _0n17)
-    throw new Error("invalid exponent, negatives unsupported");
-  if (power === _0n17)
-    return Fp3.ONE;
-  if (power === _1n17)
-    return num2;
-  let p = Fp3.ONE;
-  let d4 = num2;
-  while (power > _0n17) {
-    if (power & _1n17)
-      p = Fp3.mul(p, d4);
-    d4 = Fp3.sqr(d4);
-    power >>= _1n17;
-  }
-  return p;
-}
-function FpInvertBatch4(Fp3, nums, passZero = false) {
-  const inverted = new Array(nums.length).fill(passZero ? Fp3.ZERO : undefined);
-  const multipliedAcc = nums.reduce((acc, num2, i3) => {
-    if (Fp3.is0(num2))
-      return acc;
-    inverted[i3] = acc;
-    return Fp3.mul(acc, num2);
-  }, Fp3.ONE);
-  const invertedAcc = Fp3.inv(multipliedAcc);
-  nums.reduceRight((acc, num2, i3) => {
-    if (Fp3.is0(num2))
-      return acc;
-    inverted[i3] = Fp3.mul(acc, inverted[i3]);
-    return Fp3.mul(acc, num2);
-  }, invertedAcc);
-  return inverted;
-}
-function FpLegendre2(Fp3, n) {
-  const p1mod2 = (Fp3.ORDER - _1n17) / _2n12;
-  const powered = Fp3.pow(n, p1mod2);
-  const yes = Fp3.eql(powered, Fp3.ONE);
-  const zero = Fp3.eql(powered, Fp3.ZERO);
-  const no = Fp3.eql(powered, Fp3.neg(Fp3.ONE));
-  if (!yes && !zero && !no)
-    throw new Error("invalid Legendre symbol result");
-  return yes ? 1 : zero ? 0 : -1;
-}
-function nLength4(n, nBitLength) {
-  if (nBitLength !== undefined)
-    anumber2(nBitLength);
-  const _nBitLength = nBitLength !== undefined ? nBitLength : n.toString(2).length;
-  const nByteLength = Math.ceil(_nBitLength / 8);
-  return { nBitLength: _nBitLength, nByteLength };
-}
-function Field4(ORDER, bitLenOrOpts, isLE7 = false, opts = {}) {
-  if (ORDER <= _0n17)
-    throw new Error("invalid field: expected ORDER > 0, got " + ORDER);
-  let _nbitLength = undefined;
-  let _sqrt = undefined;
-  if (typeof bitLenOrOpts === "object" && bitLenOrOpts != null) {
-    if (opts.sqrt || isLE7)
-      throw new Error("cannot specify opts in two arguments");
-    const _opts = bitLenOrOpts;
-    if (_opts.BITS)
-      _nbitLength = _opts.BITS;
-    if (_opts.sqrt)
-      _sqrt = _opts.sqrt;
-    if (typeof _opts.isLE === "boolean")
-      isLE7 = _opts.isLE;
-  } else {
-    if (typeof bitLenOrOpts === "number")
-      _nbitLength = bitLenOrOpts;
-    if (opts.sqrt)
-      _sqrt = opts.sqrt;
-  }
-  const { nBitLength: BITS, nByteLength: BYTES } = nLength4(ORDER, _nbitLength);
-  if (BYTES > 2048)
-    throw new Error("invalid field: expected ORDER of <= 2048 bytes");
-  let sqrtP;
-  const f = Object.freeze({
-    ORDER,
-    isLE: isLE7,
-    BITS,
-    BYTES,
-    MASK: bitMask4(BITS),
-    ZERO: _0n17,
-    ONE: _1n17,
-    create: (num2) => mod4(num2, ORDER),
-    isValid: (num2) => {
-      if (typeof num2 !== "bigint")
-        throw new Error("invalid field element: expected bigint, got " + typeof num2);
-      return _0n17 <= num2 && num2 < ORDER;
-    },
-    is0: (num2) => num2 === _0n17,
-    isValidNot0: (num2) => !f.is0(num2) && f.isValid(num2),
-    isOdd: (num2) => (num2 & _1n17) === _1n17,
-    neg: (num2) => mod4(-num2, ORDER),
-    eql: (lhs, rhs) => lhs === rhs,
-    sqr: (num2) => mod4(num2 * num2, ORDER),
-    add: (lhs, rhs) => mod4(lhs + rhs, ORDER),
-    sub: (lhs, rhs) => mod4(lhs - rhs, ORDER),
-    mul: (lhs, rhs) => mod4(lhs * rhs, ORDER),
-    pow: (num2, power) => FpPow4(f, num2, power),
-    div: (lhs, rhs) => mod4(lhs * invert4(rhs, ORDER), ORDER),
-    sqrN: (num2) => num2 * num2,
-    addN: (lhs, rhs) => lhs + rhs,
-    subN: (lhs, rhs) => lhs - rhs,
-    mulN: (lhs, rhs) => lhs * rhs,
-    inv: (num2) => invert4(num2, ORDER),
-    sqrt: _sqrt || ((n) => {
-      if (!sqrtP)
-        sqrtP = FpSqrt4(ORDER);
-      return sqrtP(f, n);
-    }),
-    toBytes: (num2) => isLE7 ? numberToBytesLE4(num2, BYTES) : numberToBytesBE4(num2, BYTES),
-    fromBytes: (bytes7) => {
-      if (bytes7.length !== BYTES)
-        throw new Error("Field.fromBytes: expected " + BYTES + " bytes, got " + bytes7.length);
-      return isLE7 ? bytesToNumberLE4(bytes7) : bytesToNumberBE4(bytes7);
-    },
-    invertBatch: (lst) => FpInvertBatch4(f, lst),
-    cmov: (a, b, c) => c ? b : a
-  });
-  return Object.freeze(f);
-}
-function getFieldBytesLength4(fieldOrder) {
-  if (typeof fieldOrder !== "bigint")
-    throw new Error("field order must be bigint");
-  const bitLength = fieldOrder.toString(2).length;
-  return Math.ceil(bitLength / 8);
-}
-function getMinHashLength4(fieldOrder) {
-  const length = getFieldBytesLength4(fieldOrder);
-  return length + Math.ceil(length / 2);
-}
-function mapHashToField4(key, fieldOrder, isLE7 = false) {
-  const len = key.length;
-  const fieldLen = getFieldBytesLength4(fieldOrder);
-  const minLen = getMinHashLength4(fieldOrder);
-  if (len < 16 || len < minLen || len > 1024)
-    throw new Error("expected " + minLen + "-1024 bytes of input, got " + len);
-  const num2 = isLE7 ? bytesToNumberLE4(key) : bytesToNumberBE4(key);
-  const reduced = mod4(num2, fieldOrder - _1n17) + _1n17;
-  return isLE7 ? numberToBytesLE4(reduced, fieldLen) : numberToBytesBE4(reduced, fieldLen);
-}
-
-// ../shared/node_modules/@noble/curves/esm/abstract/curve.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var _0n18 = BigInt(0);
-var _1n18 = BigInt(1);
-function negateCt2(condition, item) {
-  const neg = item.negate();
-  return condition ? neg : item;
-}
-function normalizeZ2(c, property, points) {
-  const getz = property === "pz" ? (p) => p.pz : (p) => p.ez;
-  const toInv = FpInvertBatch4(c.Fp, points.map(getz));
-  const affined = points.map((p, i3) => p.toAffine(toInv[i3]));
-  return affined.map(c.fromAffine);
-}
-function validateW2(W, bits) {
-  if (!Number.isSafeInteger(W) || W <= 0 || W > bits)
-    throw new Error("invalid window size, expected [1.." + bits + "], got W=" + W);
-}
-function calcWOpts2(W, scalarBits) {
-  validateW2(W, scalarBits);
-  const windows = Math.ceil(scalarBits / W) + 1;
-  const windowSize = 2 ** (W - 1);
-  const maxNumber = 2 ** W;
-  const mask2 = bitMask4(W);
-  const shiftBy = BigInt(W);
-  return { windows, windowSize, mask: mask2, maxNumber, shiftBy };
-}
-function calcOffsets2(n, window2, wOpts) {
-  const { windowSize, mask: mask2, maxNumber, shiftBy } = wOpts;
-  let wbits = Number(n & mask2);
-  let nextN = n >> shiftBy;
-  if (wbits > windowSize) {
-    wbits -= maxNumber;
-    nextN += _1n18;
-  }
-  const offsetStart = window2 * windowSize;
-  const offset = offsetStart + Math.abs(wbits) - 1;
-  const isZero = wbits === 0;
-  const isNeg = wbits < 0;
-  const isNegF = window2 % 2 !== 0;
-  const offsetF = offsetStart;
-  return { nextN, offset, isZero, isNeg, isNegF, offsetF };
-}
-function validateMSMPoints2(points, c) {
-  if (!Array.isArray(points))
-    throw new Error("array expected");
-  points.forEach((p, i3) => {
-    if (!(p instanceof c))
-      throw new Error("invalid point at index " + i3);
-  });
-}
-function validateMSMScalars2(scalars, field) {
-  if (!Array.isArray(scalars))
-    throw new Error("array of scalars expected");
-  scalars.forEach((s, i3) => {
-    if (!field.isValid(s))
-      throw new Error("invalid scalar at index " + i3);
-  });
-}
-var pointPrecomputes2 = new WeakMap;
-var pointWindowSizes2 = new WeakMap;
-function getW2(P) {
-  return pointWindowSizes2.get(P) || 1;
-}
-function assert02(n) {
-  if (n !== _0n18)
-    throw new Error("invalid wNAF");
-}
-function wNAF4(c, bits) {
-  return {
-    constTimeNegate: negateCt2,
-    hasPrecomputes(elm) {
-      return getW2(elm) !== 1;
-    },
-    unsafeLadder(elm, n, p = c.ZERO) {
-      let d4 = elm;
-      while (n > _0n18) {
-        if (n & _1n18)
-          p = p.add(d4);
-        d4 = d4.double();
-        n >>= _1n18;
-      }
-      return p;
-    },
-    precomputeWindow(elm, W) {
-      const { windows, windowSize } = calcWOpts2(W, bits);
-      const points = [];
-      let p = elm;
-      let base = p;
-      for (let window2 = 0;window2 < windows; window2++) {
-        base = p;
-        points.push(base);
-        for (let i3 = 1;i3 < windowSize; i3++) {
-          base = base.add(p);
-          points.push(base);
-        }
-        p = base.double();
-      }
-      return points;
-    },
-    wNAF(W, precomputes, n) {
-      let p = c.ZERO;
-      let f = c.BASE;
-      const wo = calcWOpts2(W, bits);
-      for (let window2 = 0;window2 < wo.windows; window2++) {
-        const { nextN, offset, isZero, isNeg, isNegF, offsetF } = calcOffsets2(n, window2, wo);
-        n = nextN;
-        if (isZero) {
-          f = f.add(negateCt2(isNegF, precomputes[offsetF]));
-        } else {
-          p = p.add(negateCt2(isNeg, precomputes[offset]));
-        }
-      }
-      assert02(n);
-      return { p, f };
-    },
-    wNAFUnsafe(W, precomputes, n, acc = c.ZERO) {
-      const wo = calcWOpts2(W, bits);
-      for (let window2 = 0;window2 < wo.windows; window2++) {
-        if (n === _0n18)
-          break;
-        const { nextN, offset, isZero, isNeg } = calcOffsets2(n, window2, wo);
-        n = nextN;
-        if (isZero) {
-          continue;
-        } else {
-          const item = precomputes[offset];
-          acc = acc.add(isNeg ? item.negate() : item);
-        }
-      }
-      assert02(n);
-      return acc;
-    },
-    getPrecomputes(W, P, transform) {
-      let comp = pointPrecomputes2.get(P);
-      if (!comp) {
-        comp = this.precomputeWindow(P, W);
-        if (W !== 1) {
-          if (typeof transform === "function")
-            comp = transform(comp);
-          pointPrecomputes2.set(P, comp);
-        }
-      }
-      return comp;
-    },
-    wNAFCached(P, n, transform) {
-      const W = getW2(P);
-      return this.wNAF(W, this.getPrecomputes(W, P, transform), n);
-    },
-    wNAFCachedUnsafe(P, n, transform, prev) {
-      const W = getW2(P);
-      if (W === 1)
-        return this.unsafeLadder(P, n, prev);
-      return this.wNAFUnsafe(W, this.getPrecomputes(W, P, transform), n, prev);
-    },
-    setWindowSize(P, W) {
-      validateW2(W, bits);
-      pointWindowSizes2.set(P, W);
-      pointPrecomputes2.delete(P);
-    }
-  };
-}
-function mulEndoUnsafe2(c, point, k1, k2) {
-  let acc = point;
-  let p1 = c.ZERO;
-  let p2 = c.ZERO;
-  while (k1 > _0n18 || k2 > _0n18) {
-    if (k1 & _1n18)
-      p1 = p1.add(acc);
-    if (k2 & _1n18)
-      p2 = p2.add(acc);
-    acc = acc.double();
-    k1 >>= _1n18;
-    k2 >>= _1n18;
-  }
-  return { p1, p2 };
-}
-function pippenger2(c, fieldN, points, scalars) {
-  validateMSMPoints2(points, c);
-  validateMSMScalars2(scalars, fieldN);
-  const plength = points.length;
-  const slength = scalars.length;
-  if (plength !== slength)
-    throw new Error("arrays of points and scalars must have equal length");
-  const zero = c.ZERO;
-  const wbits = bitLen4(BigInt(plength));
-  let windowSize = 1;
-  if (wbits > 12)
-    windowSize = wbits - 3;
-  else if (wbits > 4)
-    windowSize = wbits - 2;
-  else if (wbits > 0)
-    windowSize = 2;
-  const MASK = bitMask4(windowSize);
-  const buckets = new Array(Number(MASK) + 1).fill(zero);
-  const lastBits = Math.floor((fieldN.BITS - 1) / windowSize) * windowSize;
-  let sum = zero;
-  for (let i3 = lastBits;i3 >= 0; i3 -= windowSize) {
-    buckets.fill(zero);
-    for (let j = 0;j < slength; j++) {
-      const scalar = scalars[j];
-      const wbits2 = Number(scalar >> BigInt(i3) & MASK);
-      buckets[wbits2] = buckets[wbits2].add(points[j]);
-    }
-    let resI = zero;
-    for (let j = buckets.length - 1, sumI = zero;j > 0; j--) {
-      sumI = sumI.add(buckets[j]);
-      resI = resI.add(sumI);
-    }
-    sum = sum.add(resI);
-    if (i3 !== 0)
-      for (let j = 0;j < windowSize; j++)
-        sum = sum.double();
-  }
-  return sum;
-}
-function createField2(order, field) {
-  if (field) {
-    if (field.ORDER !== order)
-      throw new Error("Field.ORDER must match order: Fp == p, Fn == n");
-    validateField4(field);
-    return field;
-  } else {
-    return Field4(order);
-  }
-}
-function _createCurveFields2(type, CURVE, curveOpts = {}) {
-  if (!CURVE || typeof CURVE !== "object")
-    throw new Error(`expected valid ${type} CURVE object`);
-  for (const p of ["p", "n", "h"]) {
-    const val = CURVE[p];
-    if (!(typeof val === "bigint" && val > _0n18))
-      throw new Error(`CURVE.${p} must be positive bigint`);
-  }
-  const Fp3 = createField2(CURVE.p, curveOpts.Fp);
-  const Fn = createField2(CURVE.n, curveOpts.Fn);
-  const _b = type === "weierstrass" ? "b" : "d";
-  const params = ["Gx", "Gy", "a", _b];
-  for (const p of params) {
-    if (!Fp3.isValid(CURVE[p]))
-      throw new Error(`CURVE.${p} must be valid field element of CURVE.Fp`);
-  }
-  return { Fp: Fp3, Fn };
-}
-
-// ../shared/node_modules/@noble/curves/esm/abstract/weierstrass.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-function validateSigVerOpts2(opts) {
-  if (opts.lowS !== undefined)
-    abool2("lowS", opts.lowS);
-  if (opts.prehash !== undefined)
-    abool2("prehash", opts.prehash);
-}
-
-class DERErr4 extends Error {
-  constructor(m = "") {
-    super(m);
-  }
-}
-var DER4 = {
-  Err: DERErr4,
-  _tlv: {
-    encode: (tag, data) => {
-      const { Err: E } = DER4;
-      if (tag < 0 || tag > 256)
-        throw new E("tlv.encode: wrong tag");
-      if (data.length & 1)
-        throw new E("tlv.encode: unpadded data");
-      const dataLen = data.length / 2;
-      const len = numberToHexUnpadded4(dataLen);
-      if (len.length / 2 & 128)
-        throw new E("tlv.encode: long form length too big");
-      const lenLen = dataLen > 127 ? numberToHexUnpadded4(len.length / 2 | 128) : "";
-      const t = numberToHexUnpadded4(tag);
-      return t + lenLen + len + data;
-    },
-    decode(tag, data) {
-      const { Err: E } = DER4;
-      let pos = 0;
-      if (tag < 0 || tag > 256)
-        throw new E("tlv.encode: wrong tag");
-      if (data.length < 2 || data[pos++] !== tag)
-        throw new E("tlv.decode: wrong tlv");
-      const first = data[pos++];
-      const isLong = !!(first & 128);
-      let length = 0;
-      if (!isLong)
-        length = first;
-      else {
-        const lenLen = first & 127;
-        if (!lenLen)
-          throw new E("tlv.decode(long): indefinite length not supported");
-        if (lenLen > 4)
-          throw new E("tlv.decode(long): byte length is too big");
-        const lengthBytes = data.subarray(pos, pos + lenLen);
-        if (lengthBytes.length !== lenLen)
-          throw new E("tlv.decode: length bytes not complete");
-        if (lengthBytes[0] === 0)
-          throw new E("tlv.decode(long): zero leftmost byte");
-        for (const b of lengthBytes)
-          length = length << 8 | b;
-        pos += lenLen;
-        if (length < 128)
-          throw new E("tlv.decode(long): not minimal encoding");
-      }
-      const v = data.subarray(pos, pos + length);
-      if (v.length !== length)
-        throw new E("tlv.decode: wrong value length");
-      return { v, l: data.subarray(pos + length) };
-    }
-  },
-  _int: {
-    encode(num2) {
-      const { Err: E } = DER4;
-      if (num2 < _0n19)
-        throw new E("integer: negative integers are not allowed");
-      let hex3 = numberToHexUnpadded4(num2);
-      if (Number.parseInt(hex3[0], 16) & 8)
-        hex3 = "00" + hex3;
-      if (hex3.length & 1)
-        throw new E("unexpected DER parsing assertion: unpadded hex");
-      return hex3;
-    },
-    decode(data) {
-      const { Err: E } = DER4;
-      if (data[0] & 128)
-        throw new E("invalid signature integer: negative");
-      if (data[0] === 0 && !(data[1] & 128))
-        throw new E("invalid signature integer: unnecessary leading zero");
-      return bytesToNumberBE4(data);
-    }
-  },
-  toSig(hex3) {
-    const { Err: E, _int: int, _tlv: tlv } = DER4;
-    const data = ensureBytes4("signature", hex3);
-    const { v: seqBytes, l: seqLeftBytes } = tlv.decode(48, data);
-    if (seqLeftBytes.length)
-      throw new E("invalid signature: left bytes after parsing");
-    const { v: rBytes, l: rLeftBytes } = tlv.decode(2, seqBytes);
-    const { v: sBytes, l: sLeftBytes } = tlv.decode(2, rLeftBytes);
-    if (sLeftBytes.length)
-      throw new E("invalid signature: left bytes after parsing");
-    return { r: int.decode(rBytes), s: int.decode(sBytes) };
-  },
-  hexFromSig(sig) {
-    const { _tlv: tlv, _int: int } = DER4;
-    const rs = tlv.encode(2, int.encode(sig.r));
-    const ss = tlv.encode(2, int.encode(sig.s));
-    const seq = rs + ss;
-    return tlv.encode(48, seq);
-  }
-};
-var _0n19 = BigInt(0);
-var _1n19 = BigInt(1);
-var _2n13 = BigInt(2);
-var _3n8 = BigInt(3);
-var _4n8 = BigInt(4);
-function _legacyHelperEquat2(Fp3, a, b) {
-  function weierstrassEquation(x) {
-    const x2 = Fp3.sqr(x);
-    const x3 = Fp3.mul(x2, x);
-    return Fp3.add(Fp3.add(x3, Fp3.mul(x, a)), b);
-  }
-  return weierstrassEquation;
-}
-function _legacyHelperNormPriv2(Fn, allowedPrivateKeyLengths, wrapPrivateKey) {
-  const { BYTES: expected } = Fn;
-  function normPrivateKeyToScalar(key) {
-    let num2;
-    if (typeof key === "bigint") {
-      num2 = key;
-    } else {
-      let bytes7 = ensureBytes4("private key", key);
-      if (allowedPrivateKeyLengths) {
-        if (!allowedPrivateKeyLengths.includes(bytes7.length * 2))
-          throw new Error("invalid private key");
-        const padded = new Uint8Array(expected);
-        padded.set(bytes7, padded.length - bytes7.length);
-        bytes7 = padded;
-      }
-      try {
-        num2 = Fn.fromBytes(bytes7);
-      } catch (error) {
-        throw new Error(`invalid private key: expected ui8a of size ${expected}, got ${typeof key}`);
-      }
-    }
-    if (wrapPrivateKey)
-      num2 = Fn.create(num2);
-    if (!Fn.isValidNot0(num2))
-      throw new Error("invalid private key: out of range [1..N-1]");
-    return num2;
-  }
-  return normPrivateKeyToScalar;
-}
-function weierstrassN2(CURVE, curveOpts = {}) {
-  const { Fp: Fp3, Fn } = _createCurveFields2("weierstrass", CURVE, curveOpts);
-  const { h: cofactor, n: CURVE_ORDER } = CURVE;
-  _validateObject2(curveOpts, {}, {
-    allowInfinityPoint: "boolean",
-    clearCofactor: "function",
-    isTorsionFree: "function",
-    fromBytes: "function",
-    toBytes: "function",
-    endo: "object",
-    wrapPrivateKey: "boolean"
-  });
-  const { endo } = curveOpts;
-  if (endo) {
-    if (!Fp3.is0(CURVE.a) || typeof endo.beta !== "bigint" || typeof endo.splitScalar !== "function") {
-      throw new Error('invalid endo: expected "beta": bigint and "splitScalar": function');
-    }
-  }
-  function assertCompressionIsSupported() {
-    if (!Fp3.isOdd)
-      throw new Error("compression is not supported: Field does not have .isOdd()");
-  }
-  function pointToBytes4(_c, point, isCompressed) {
-    const { x, y } = point.toAffine();
-    const bx = Fp3.toBytes(x);
-    abool2("isCompressed", isCompressed);
-    if (isCompressed) {
-      assertCompressionIsSupported();
-      const hasEvenY = !Fp3.isOdd(y);
-      return concatBytes8(pprefix2(hasEvenY), bx);
-    } else {
-      return concatBytes8(Uint8Array.of(4), bx, Fp3.toBytes(y));
-    }
-  }
-  function pointFromBytes(bytes7) {
-    abytes2(bytes7);
-    const L = Fp3.BYTES;
-    const LC = L + 1;
-    const LU = 2 * L + 1;
-    const length = bytes7.length;
-    const head = bytes7[0];
-    const tail = bytes7.subarray(1);
-    if (length === LC && (head === 2 || head === 3)) {
-      const x = Fp3.fromBytes(tail);
-      if (!Fp3.isValid(x))
-        throw new Error("bad point: is not on curve, wrong x");
-      const y2 = weierstrassEquation(x);
-      let y;
-      try {
-        y = Fp3.sqrt(y2);
-      } catch (sqrtError) {
-        const err = sqrtError instanceof Error ? ": " + sqrtError.message : "";
-        throw new Error("bad point: is not on curve, sqrt error" + err);
-      }
-      assertCompressionIsSupported();
-      const isYOdd = Fp3.isOdd(y);
-      const isHeadOdd = (head & 1) === 1;
-      if (isHeadOdd !== isYOdd)
-        y = Fp3.neg(y);
-      return { x, y };
-    } else if (length === LU && head === 4) {
-      const x = Fp3.fromBytes(tail.subarray(L * 0, L * 1));
-      const y = Fp3.fromBytes(tail.subarray(L * 1, L * 2));
-      if (!isValidXY(x, y))
-        throw new Error("bad point: is not on curve");
-      return { x, y };
-    } else {
-      throw new Error(`bad point: got length ${length}, expected compressed=${LC} or uncompressed=${LU}`);
-    }
-  }
-  const toBytes9 = curveOpts.toBytes || pointToBytes4;
-  const fromBytes = curveOpts.fromBytes || pointFromBytes;
-  const weierstrassEquation = _legacyHelperEquat2(Fp3, CURVE.a, CURVE.b);
-  function isValidXY(x, y) {
-    const left2 = Fp3.sqr(y);
-    const right2 = weierstrassEquation(x);
-    return Fp3.eql(left2, right2);
-  }
-  if (!isValidXY(CURVE.Gx, CURVE.Gy))
-    throw new Error("bad curve params: generator point");
-  const _4a3 = Fp3.mul(Fp3.pow(CURVE.a, _3n8), _4n8);
-  const _27b2 = Fp3.mul(Fp3.sqr(CURVE.b), BigInt(27));
-  if (Fp3.is0(Fp3.add(_4a3, _27b2)))
-    throw new Error("bad curve params: a or b");
-  function acoord(title, n, banZero = false) {
-    if (!Fp3.isValid(n) || banZero && Fp3.is0(n))
-      throw new Error(`bad point coordinate ${title}`);
-    return n;
-  }
-  function aprjpoint(other) {
-    if (!(other instanceof Point4))
-      throw new Error("ProjectivePoint expected");
-  }
-  const toAffineMemo = memoized2((p, iz) => {
-    const { px: x, py: y, pz: z } = p;
-    if (Fp3.eql(z, Fp3.ONE))
-      return { x, y };
-    const is0 = p.is0();
-    if (iz == null)
-      iz = is0 ? Fp3.ONE : Fp3.inv(z);
-    const ax = Fp3.mul(x, iz);
-    const ay = Fp3.mul(y, iz);
-    const zz = Fp3.mul(z, iz);
-    if (is0)
-      return { x: Fp3.ZERO, y: Fp3.ZERO };
-    if (!Fp3.eql(zz, Fp3.ONE))
-      throw new Error("invZ was invalid");
-    return { x: ax, y: ay };
-  });
-  const assertValidMemo = memoized2((p) => {
-    if (p.is0()) {
-      if (curveOpts.allowInfinityPoint && !Fp3.is0(p.py))
-        return;
-      throw new Error("bad point: ZERO");
-    }
-    const { x, y } = p.toAffine();
-    if (!Fp3.isValid(x) || !Fp3.isValid(y))
-      throw new Error("bad point: x or y not field elements");
-    if (!isValidXY(x, y))
-      throw new Error("bad point: equation left != right");
-    if (!p.isTorsionFree())
-      throw new Error("bad point: not in prime-order subgroup");
-    return true;
-  });
-  function finishEndo(endoBeta, k1p, k2p, k1neg, k2neg) {
-    k2p = new Point4(Fp3.mul(k2p.px, endoBeta), k2p.py, k2p.pz);
-    k1p = negateCt2(k1neg, k1p);
-    k2p = negateCt2(k2neg, k2p);
-    return k1p.add(k2p);
-  }
-
-  class Point4 {
-    constructor(px, py, pz) {
-      this.px = acoord("x", px);
-      this.py = acoord("y", py, true);
-      this.pz = acoord("z", pz);
-      Object.freeze(this);
-    }
-    static fromAffine(p) {
-      const { x, y } = p || {};
-      if (!p || !Fp3.isValid(x) || !Fp3.isValid(y))
-        throw new Error("invalid affine point");
-      if (p instanceof Point4)
-        throw new Error("projective point not allowed");
-      if (Fp3.is0(x) && Fp3.is0(y))
-        return Point4.ZERO;
-      return new Point4(x, y, Fp3.ONE);
-    }
-    get x() {
-      return this.toAffine().x;
-    }
-    get y() {
-      return this.toAffine().y;
-    }
-    static normalizeZ(points) {
-      return normalizeZ2(Point4, "pz", points);
-    }
-    static fromBytes(bytes7) {
-      abytes2(bytes7);
-      return Point4.fromHex(bytes7);
-    }
-    static fromHex(hex3) {
-      const P = Point4.fromAffine(fromBytes(ensureBytes4("pointHex", hex3)));
-      P.assertValidity();
-      return P;
-    }
-    static fromPrivateKey(privateKey) {
-      const normPrivateKeyToScalar = _legacyHelperNormPriv2(Fn, curveOpts.allowedPrivateKeyLengths, curveOpts.wrapPrivateKey);
-      return Point4.BASE.multiply(normPrivateKeyToScalar(privateKey));
-    }
-    static msm(points, scalars) {
-      return pippenger2(Point4, Fn, points, scalars);
-    }
-    precompute(windowSize = 8, isLazy = true) {
-      wnaf.setWindowSize(this, windowSize);
-      if (!isLazy)
-        this.multiply(_3n8);
-      return this;
-    }
-    _setWindowSize(windowSize) {
-      this.precompute(windowSize);
-    }
-    assertValidity() {
-      assertValidMemo(this);
-    }
-    hasEvenY() {
-      const { y } = this.toAffine();
-      if (!Fp3.isOdd)
-        throw new Error("Field doesn't support isOdd");
-      return !Fp3.isOdd(y);
-    }
-    equals(other) {
-      aprjpoint(other);
-      const { px: X1, py: Y1, pz: Z1 } = this;
-      const { px: X2, py: Y2, pz: Z2 } = other;
-      const U1 = Fp3.eql(Fp3.mul(X1, Z2), Fp3.mul(X2, Z1));
-      const U2 = Fp3.eql(Fp3.mul(Y1, Z2), Fp3.mul(Y2, Z1));
-      return U1 && U2;
-    }
-    negate() {
-      return new Point4(this.px, Fp3.neg(this.py), this.pz);
-    }
-    double() {
-      const { a, b } = CURVE;
-      const b3 = Fp3.mul(b, _3n8);
-      const { px: X1, py: Y1, pz: Z1 } = this;
-      let { ZERO: X3, ZERO: Y3, ZERO: Z3 } = Fp3;
-      let t0 = Fp3.mul(X1, X1);
-      let t1 = Fp3.mul(Y1, Y1);
-      let t2 = Fp3.mul(Z1, Z1);
-      let t3 = Fp3.mul(X1, Y1);
-      t3 = Fp3.add(t3, t3);
-      Z3 = Fp3.mul(X1, Z1);
-      Z3 = Fp3.add(Z3, Z3);
-      X3 = Fp3.mul(a, Z3);
-      Y3 = Fp3.mul(b3, t2);
-      Y3 = Fp3.add(X3, Y3);
-      X3 = Fp3.sub(t1, Y3);
-      Y3 = Fp3.add(t1, Y3);
-      Y3 = Fp3.mul(X3, Y3);
-      X3 = Fp3.mul(t3, X3);
-      Z3 = Fp3.mul(b3, Z3);
-      t2 = Fp3.mul(a, t2);
-      t3 = Fp3.sub(t0, t2);
-      t3 = Fp3.mul(a, t3);
-      t3 = Fp3.add(t3, Z3);
-      Z3 = Fp3.add(t0, t0);
-      t0 = Fp3.add(Z3, t0);
-      t0 = Fp3.add(t0, t2);
-      t0 = Fp3.mul(t0, t3);
-      Y3 = Fp3.add(Y3, t0);
-      t2 = Fp3.mul(Y1, Z1);
-      t2 = Fp3.add(t2, t2);
-      t0 = Fp3.mul(t2, t3);
-      X3 = Fp3.sub(X3, t0);
-      Z3 = Fp3.mul(t2, t1);
-      Z3 = Fp3.add(Z3, Z3);
-      Z3 = Fp3.add(Z3, Z3);
-      return new Point4(X3, Y3, Z3);
-    }
-    add(other) {
-      aprjpoint(other);
-      const { px: X1, py: Y1, pz: Z1 } = this;
-      const { px: X2, py: Y2, pz: Z2 } = other;
-      let { ZERO: X3, ZERO: Y3, ZERO: Z3 } = Fp3;
-      const a = CURVE.a;
-      const b3 = Fp3.mul(CURVE.b, _3n8);
-      let t0 = Fp3.mul(X1, X2);
-      let t1 = Fp3.mul(Y1, Y2);
-      let t2 = Fp3.mul(Z1, Z2);
-      let t3 = Fp3.add(X1, Y1);
-      let t4 = Fp3.add(X2, Y2);
-      t3 = Fp3.mul(t3, t4);
-      t4 = Fp3.add(t0, t1);
-      t3 = Fp3.sub(t3, t4);
-      t4 = Fp3.add(X1, Z1);
-      let t5 = Fp3.add(X2, Z2);
-      t4 = Fp3.mul(t4, t5);
-      t5 = Fp3.add(t0, t2);
-      t4 = Fp3.sub(t4, t5);
-      t5 = Fp3.add(Y1, Z1);
-      X3 = Fp3.add(Y2, Z2);
-      t5 = Fp3.mul(t5, X3);
-      X3 = Fp3.add(t1, t2);
-      t5 = Fp3.sub(t5, X3);
-      Z3 = Fp3.mul(a, t4);
-      X3 = Fp3.mul(b3, t2);
-      Z3 = Fp3.add(X3, Z3);
-      X3 = Fp3.sub(t1, Z3);
-      Z3 = Fp3.add(t1, Z3);
-      Y3 = Fp3.mul(X3, Z3);
-      t1 = Fp3.add(t0, t0);
-      t1 = Fp3.add(t1, t0);
-      t2 = Fp3.mul(a, t2);
-      t4 = Fp3.mul(b3, t4);
-      t1 = Fp3.add(t1, t2);
-      t2 = Fp3.sub(t0, t2);
-      t2 = Fp3.mul(a, t2);
-      t4 = Fp3.add(t4, t2);
-      t0 = Fp3.mul(t1, t4);
-      Y3 = Fp3.add(Y3, t0);
-      t0 = Fp3.mul(t5, t4);
-      X3 = Fp3.mul(t3, X3);
-      X3 = Fp3.sub(X3, t0);
-      t0 = Fp3.mul(t3, t1);
-      Z3 = Fp3.mul(t5, Z3);
-      Z3 = Fp3.add(Z3, t0);
-      return new Point4(X3, Y3, Z3);
-    }
-    subtract(other) {
-      return this.add(other.negate());
-    }
-    is0() {
-      return this.equals(Point4.ZERO);
-    }
-    multiply(scalar) {
-      const { endo: endo2 } = curveOpts;
-      if (!Fn.isValidNot0(scalar))
-        throw new Error("invalid scalar: out of range");
-      let point, fake;
-      const mul4 = (n) => wnaf.wNAFCached(this, n, Point4.normalizeZ);
-      if (endo2) {
-        const { k1neg, k1, k2neg, k2 } = endo2.splitScalar(scalar);
-        const { p: k1p, f: k1f } = mul4(k1);
-        const { p: k2p, f: k2f } = mul4(k2);
-        fake = k1f.add(k2f);
-        point = finishEndo(endo2.beta, k1p, k2p, k1neg, k2neg);
-      } else {
-        const { p, f } = mul4(scalar);
-        point = p;
-        fake = f;
-      }
-      return Point4.normalizeZ([point, fake])[0];
-    }
-    multiplyUnsafe(sc) {
-      const { endo: endo2 } = curveOpts;
-      const p = this;
-      if (!Fn.isValid(sc))
-        throw new Error("invalid scalar: out of range");
-      if (sc === _0n19 || p.is0())
-        return Point4.ZERO;
-      if (sc === _1n19)
-        return p;
-      if (wnaf.hasPrecomputes(this))
-        return this.multiply(sc);
-      if (endo2) {
-        const { k1neg, k1, k2neg, k2 } = endo2.splitScalar(sc);
-        const { p1, p2 } = mulEndoUnsafe2(Point4, p, k1, k2);
-        return finishEndo(endo2.beta, p1, p2, k1neg, k2neg);
-      } else {
-        return wnaf.wNAFCachedUnsafe(p, sc);
-      }
-    }
-    multiplyAndAddUnsafe(Q, a, b) {
-      const sum = this.multiplyUnsafe(a).add(Q.multiplyUnsafe(b));
-      return sum.is0() ? undefined : sum;
-    }
-    toAffine(invertedZ) {
-      return toAffineMemo(this, invertedZ);
-    }
-    isTorsionFree() {
-      const { isTorsionFree } = curveOpts;
-      if (cofactor === _1n19)
-        return true;
-      if (isTorsionFree)
-        return isTorsionFree(Point4, this);
-      return wnaf.wNAFCachedUnsafe(this, CURVE_ORDER).is0();
-    }
-    clearCofactor() {
-      const { clearCofactor } = curveOpts;
-      if (cofactor === _1n19)
-        return this;
-      if (clearCofactor)
-        return clearCofactor(Point4, this);
-      return this.multiplyUnsafe(cofactor);
-    }
-    toBytes(isCompressed = true) {
-      abool2("isCompressed", isCompressed);
-      this.assertValidity();
-      return toBytes9(Point4, this, isCompressed);
-    }
-    toRawBytes(isCompressed = true) {
-      return this.toBytes(isCompressed);
-    }
-    toHex(isCompressed = true) {
-      return bytesToHex6(this.toBytes(isCompressed));
-    }
-    toString() {
-      return `<Point ${this.is0() ? "ZERO" : this.toHex()}>`;
-    }
-  }
-  Point4.BASE = new Point4(CURVE.Gx, CURVE.Gy, Fp3.ONE);
-  Point4.ZERO = new Point4(Fp3.ZERO, Fp3.ONE, Fp3.ZERO);
-  Point4.Fp = Fp3;
-  Point4.Fn = Fn;
-  const bits = Fn.BITS;
-  const wnaf = wNAF4(Point4, curveOpts.endo ? Math.ceil(bits / 2) : bits);
-  return Point4;
-}
-function pprefix2(hasEvenY) {
-  return Uint8Array.of(hasEvenY ? 2 : 3);
-}
-function ecdsa2(Point4, ecdsaOpts, curveOpts = {}) {
-  _validateObject2(ecdsaOpts, { hash: "function" }, {
-    hmac: "function",
-    lowS: "boolean",
-    randomBytes: "function",
-    bits2int: "function",
-    bits2int_modN: "function"
-  });
-  const randomBytes_ = ecdsaOpts.randomBytes || randomBytes6;
-  const hmac_ = ecdsaOpts.hmac || ((key, ...msgs) => hmac6(ecdsaOpts.hash, key, concatBytes8(...msgs)));
-  const { Fp: Fp3, Fn } = Point4;
-  const { ORDER: CURVE_ORDER, BITS: fnBits } = Fn;
-  function isBiggerThanHalfOrder(number7) {
-    const HALF = CURVE_ORDER >> _1n19;
-    return number7 > HALF;
-  }
-  function normalizeS(s) {
-    return isBiggerThanHalfOrder(s) ? Fn.neg(s) : s;
-  }
-  function aValidRS(title, num2) {
-    if (!Fn.isValidNot0(num2))
-      throw new Error(`invalid signature ${title}: out of range 1..CURVE.n`);
-  }
-
-  class Signature {
-    constructor(r, s, recovery) {
-      aValidRS("r", r);
-      aValidRS("s", s);
-      this.r = r;
-      this.s = s;
-      if (recovery != null)
-        this.recovery = recovery;
-      Object.freeze(this);
-    }
-    static fromCompact(hex3) {
-      const L = Fn.BYTES;
-      const b = ensureBytes4("compactSignature", hex3, L * 2);
-      return new Signature(Fn.fromBytes(b.subarray(0, L)), Fn.fromBytes(b.subarray(L, L * 2)));
-    }
-    static fromDER(hex3) {
-      const { r, s } = DER4.toSig(ensureBytes4("DER", hex3));
-      return new Signature(r, s);
-    }
-    assertValidity() {}
-    addRecoveryBit(recovery) {
-      return new Signature(this.r, this.s, recovery);
-    }
-    recoverPublicKey(msgHash) {
-      const FIELD_ORDER = Fp3.ORDER;
-      const { r, s, recovery: rec } = this;
-      if (rec == null || ![0, 1, 2, 3].includes(rec))
-        throw new Error("recovery id invalid");
-      const hasCofactor = CURVE_ORDER * _2n13 < FIELD_ORDER;
-      if (hasCofactor && rec > 1)
-        throw new Error("recovery id is ambiguous for h>1 curve");
-      const radj = rec === 2 || rec === 3 ? r + CURVE_ORDER : r;
-      if (!Fp3.isValid(radj))
-        throw new Error("recovery id 2 or 3 invalid");
-      const x = Fp3.toBytes(radj);
-      const R = Point4.fromHex(concatBytes8(pprefix2((rec & 1) === 0), x));
-      const ir = Fn.inv(radj);
-      const h = bits2int_modN(ensureBytes4("msgHash", msgHash));
-      const u1 = Fn.create(-h * ir);
-      const u2 = Fn.create(s * ir);
-      const Q = Point4.BASE.multiplyUnsafe(u1).add(R.multiplyUnsafe(u2));
-      if (Q.is0())
-        throw new Error("point at infinify");
-      Q.assertValidity();
-      return Q;
-    }
-    hasHighS() {
-      return isBiggerThanHalfOrder(this.s);
-    }
-    normalizeS() {
-      return this.hasHighS() ? new Signature(this.r, Fn.neg(this.s), this.recovery) : this;
-    }
-    toBytes(format) {
-      if (format === "compact")
-        return concatBytes8(Fn.toBytes(this.r), Fn.toBytes(this.s));
-      if (format === "der")
-        return hexToBytes6(DER4.hexFromSig(this));
-      throw new Error("invalid format");
-    }
-    toDERRawBytes() {
-      return this.toBytes("der");
-    }
-    toDERHex() {
-      return bytesToHex6(this.toBytes("der"));
-    }
-    toCompactRawBytes() {
-      return this.toBytes("compact");
-    }
-    toCompactHex() {
-      return bytesToHex6(this.toBytes("compact"));
-    }
-  }
-  const normPrivateKeyToScalar = _legacyHelperNormPriv2(Fn, curveOpts.allowedPrivateKeyLengths, curveOpts.wrapPrivateKey);
-  const utils = {
-    isValidPrivateKey(privateKey) {
-      try {
-        normPrivateKeyToScalar(privateKey);
-        return true;
-      } catch (error) {
-        return false;
-      }
-    },
-    normPrivateKeyToScalar,
-    randomPrivateKey: () => {
-      const n = CURVE_ORDER;
-      return mapHashToField4(randomBytes_(getMinHashLength4(n)), n);
-    },
-    precompute(windowSize = 8, point = Point4.BASE) {
-      return point.precompute(windowSize, false);
-    }
-  };
-  function getPublicKey3(privateKey, isCompressed = true) {
-    return Point4.fromPrivateKey(privateKey).toBytes(isCompressed);
-  }
-  function isProbPub(item) {
-    if (typeof item === "bigint")
-      return false;
-    if (item instanceof Point4)
-      return true;
-    const arr = ensureBytes4("key", item);
-    const length = arr.length;
-    const L = Fp3.BYTES;
-    const LC = L + 1;
-    const LU = 2 * L + 1;
-    if (curveOpts.allowedPrivateKeyLengths || Fn.BYTES === LC) {
-      return;
-    } else {
-      return length === LC || length === LU;
-    }
-  }
-  function getSharedSecret(privateA, publicB, isCompressed = true) {
-    if (isProbPub(privateA) === true)
-      throw new Error("first arg must be private key");
-    if (isProbPub(publicB) === false)
-      throw new Error("second arg must be public key");
-    const b = Point4.fromHex(publicB);
-    return b.multiply(normPrivateKeyToScalar(privateA)).toBytes(isCompressed);
-  }
-  const bits2int = ecdsaOpts.bits2int || function(bytes7) {
-    if (bytes7.length > 8192)
-      throw new Error("input is too large");
-    const num2 = bytesToNumberBE4(bytes7);
-    const delta = bytes7.length * 8 - fnBits;
-    return delta > 0 ? num2 >> BigInt(delta) : num2;
-  };
-  const bits2int_modN = ecdsaOpts.bits2int_modN || function(bytes7) {
-    return Fn.create(bits2int(bytes7));
-  };
-  const ORDER_MASK = bitMask4(fnBits);
-  function int2octets(num2) {
-    aInRange2("num < 2^" + fnBits, num2, _0n19, ORDER_MASK);
-    return Fn.toBytes(num2);
-  }
-  function prepSig(msgHash, privateKey, opts = defaultSigOpts) {
-    if (["recovered", "canonical"].some((k) => (k in opts)))
-      throw new Error("sign() legacy options not supported");
-    const { hash: hash5 } = ecdsaOpts;
-    let { lowS, prehash, extraEntropy: ent } = opts;
-    if (lowS == null)
-      lowS = true;
-    msgHash = ensureBytes4("msgHash", msgHash);
-    validateSigVerOpts2(opts);
-    if (prehash)
-      msgHash = ensureBytes4("prehashed msgHash", hash5(msgHash));
-    const h1int = bits2int_modN(msgHash);
-    const d4 = normPrivateKeyToScalar(privateKey);
-    const seedArgs = [int2octets(d4), int2octets(h1int)];
-    if (ent != null && ent !== false) {
-      const e = ent === true ? randomBytes_(Fp3.BYTES) : ent;
-      seedArgs.push(ensureBytes4("extraEntropy", e));
-    }
-    const seed = concatBytes8(...seedArgs);
-    const m = h1int;
-    function k2sig(kBytes) {
-      const k = bits2int(kBytes);
-      if (!Fn.isValidNot0(k))
-        return;
-      const ik = Fn.inv(k);
-      const q = Point4.BASE.multiply(k).toAffine();
-      const r = Fn.create(q.x);
-      if (r === _0n19)
-        return;
-      const s = Fn.create(ik * Fn.create(m + r * d4));
-      if (s === _0n19)
-        return;
-      let recovery = (q.x === r ? 0 : 2) | Number(q.y & _1n19);
-      let normS = s;
-      if (lowS && isBiggerThanHalfOrder(s)) {
-        normS = normalizeS(s);
-        recovery ^= 1;
-      }
-      return new Signature(r, normS, recovery);
-    }
-    return { seed, k2sig };
-  }
-  const defaultSigOpts = { lowS: ecdsaOpts.lowS, prehash: false };
-  const defaultVerOpts = { lowS: ecdsaOpts.lowS, prehash: false };
-  function sign(msgHash, privKey, opts = defaultSigOpts) {
-    const { seed, k2sig } = prepSig(msgHash, privKey, opts);
-    const drbg = createHmacDrbg4(ecdsaOpts.hash.outputLen, Fn.BYTES, hmac_);
-    return drbg(seed, k2sig);
-  }
-  Point4.BASE.precompute(8);
-  function verify(signature, msgHash, publicKey, opts = defaultVerOpts) {
-    const sg = signature;
-    msgHash = ensureBytes4("msgHash", msgHash);
-    publicKey = ensureBytes4("publicKey", publicKey);
-    validateSigVerOpts2(opts);
-    const { lowS, prehash, format } = opts;
-    if ("strict" in opts)
-      throw new Error("options.strict was renamed to lowS");
-    if (format !== undefined && !["compact", "der", "js"].includes(format))
-      throw new Error('format must be "compact", "der" or "js"');
-    const isHex = typeof sg === "string" || isBytes4(sg);
-    const isObj = !isHex && !format && typeof sg === "object" && sg !== null && typeof sg.r === "bigint" && typeof sg.s === "bigint";
-    if (!isHex && !isObj)
-      throw new Error("invalid signature, expected Uint8Array, hex string or Signature instance");
-    let _sig = undefined;
-    let P;
-    try {
-      if (isObj) {
-        if (format === undefined || format === "js") {
-          _sig = new Signature(sg.r, sg.s);
-        } else {
-          throw new Error("invalid format");
-        }
-      }
-      if (isHex) {
-        try {
-          if (format !== "compact")
-            _sig = Signature.fromDER(sg);
-        } catch (derError) {
-          if (!(derError instanceof DER4.Err))
-            throw derError;
-        }
-        if (!_sig && format !== "der")
-          _sig = Signature.fromCompact(sg);
-      }
-      P = Point4.fromHex(publicKey);
-    } catch (error) {
-      return false;
-    }
-    if (!_sig)
-      return false;
-    if (lowS && _sig.hasHighS())
-      return false;
-    if (prehash)
-      msgHash = ecdsaOpts.hash(msgHash);
-    const { r, s } = _sig;
-    const h = bits2int_modN(msgHash);
-    const is = Fn.inv(s);
-    const u1 = Fn.create(h * is);
-    const u2 = Fn.create(r * is);
-    const R = Point4.BASE.multiplyUnsafe(u1).add(P.multiplyUnsafe(u2));
-    if (R.is0())
-      return false;
-    const v = Fn.create(R.x);
-    return v === r;
-  }
-  return Object.freeze({
-    getPublicKey: getPublicKey3,
-    getSharedSecret,
-    sign,
-    verify,
-    utils,
-    Point: Point4,
-    Signature
-  });
-}
-function _weierstrass_legacy_opts_to_new2(c) {
-  const CURVE = {
-    a: c.a,
-    b: c.b,
-    p: c.Fp.ORDER,
-    n: c.n,
-    h: c.h,
-    Gx: c.Gx,
-    Gy: c.Gy
-  };
-  const Fp3 = c.Fp;
-  const Fn = Field4(CURVE.n, c.nBitLength);
-  const curveOpts = {
-    Fp: Fp3,
-    Fn,
-    allowedPrivateKeyLengths: c.allowedPrivateKeyLengths,
-    allowInfinityPoint: c.allowInfinityPoint,
-    endo: c.endo,
-    wrapPrivateKey: c.wrapPrivateKey,
-    isTorsionFree: c.isTorsionFree,
-    clearCofactor: c.clearCofactor,
-    fromBytes: c.fromBytes,
-    toBytes: c.toBytes
-  };
-  return { CURVE, curveOpts };
-}
-function _ecdsa_legacy_opts_to_new2(c) {
-  const { CURVE, curveOpts } = _weierstrass_legacy_opts_to_new2(c);
-  const ecdsaOpts = {
-    hash: c.hash,
-    hmac: c.hmac,
-    randomBytes: c.randomBytes,
-    lowS: c.lowS,
-    bits2int: c.bits2int,
-    bits2int_modN: c.bits2int_modN
-  };
-  return { CURVE, curveOpts, ecdsaOpts };
-}
-function _ecdsa_new_output_to_legacy2(c, ecdsa3) {
-  return Object.assign({}, ecdsa3, {
-    ProjectivePoint: ecdsa3.Point,
-    CURVE: c
-  });
-}
-function weierstrass4(c) {
-  const { CURVE, curveOpts, ecdsaOpts } = _ecdsa_legacy_opts_to_new2(c);
-  const Point4 = weierstrassN2(CURVE, curveOpts);
-  const signs = ecdsa2(Point4, ecdsaOpts, curveOpts);
-  return _ecdsa_new_output_to_legacy2(c, signs);
-}
-
-// ../shared/node_modules/@noble/curves/esm/_shortw_utils.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-function createCurve4(curveDef, defHash) {
-  const create = (hash5) => weierstrass4({ ...curveDef, hash: hash5 });
-  return { ...create(defHash), create };
-}
-
-// ../shared/node_modules/@noble/curves/esm/secp256k1.js
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-var secp256k1_CURVE2 = {
-  p: BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"),
-  n: BigInt("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"),
-  h: BigInt(1),
-  a: BigInt(0),
-  b: BigInt(7),
-  Gx: BigInt("0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"),
-  Gy: BigInt("0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8")
-};
-var _0n20 = BigInt(0);
-var _1n20 = BigInt(1);
-var _2n14 = BigInt(2);
-var divNearest4 = (a, b) => (a + b / _2n14) / b;
-function sqrtMod4(y) {
-  const P = secp256k1_CURVE2.p;
-  const _3n9 = BigInt(3), _6n = BigInt(6), _11n = BigInt(11), _22n = BigInt(22);
-  const _23n = BigInt(23), _44n = BigInt(44), _88n = BigInt(88);
-  const b2 = y * y * y % P;
-  const b3 = b2 * b2 * y % P;
-  const b6 = pow24(b3, _3n9, P) * b3 % P;
-  const b9 = pow24(b6, _3n9, P) * b3 % P;
-  const b11 = pow24(b9, _2n14, P) * b2 % P;
-  const b22 = pow24(b11, _11n, P) * b11 % P;
-  const b44 = pow24(b22, _22n, P) * b22 % P;
-  const b88 = pow24(b44, _44n, P) * b44 % P;
-  const b176 = pow24(b88, _88n, P) * b88 % P;
-  const b220 = pow24(b176, _44n, P) * b44 % P;
-  const b223 = pow24(b220, _3n9, P) * b3 % P;
-  const t1 = pow24(b223, _23n, P) * b22 % P;
-  const t2 = pow24(t1, _6n, P) * b2 % P;
-  const root = pow24(t2, _2n14, P);
-  if (!Fpk12.eql(Fpk12.sqr(root), y))
-    throw new Error("Cannot find square root");
-  return root;
-}
-var Fpk12 = Field4(secp256k1_CURVE2.p, undefined, undefined, { sqrt: sqrtMod4 });
-var secp256k14 = createCurve4({
-  ...secp256k1_CURVE2,
-  Fp: Fpk12,
-  lowS: true,
-  endo: {
-    beta: BigInt("0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee"),
-    splitScalar: (k) => {
-      const n = secp256k1_CURVE2.n;
-      const a1 = BigInt("0x3086d221a7d46bcde86c90e49284eb15");
-      const b1 = -_1n20 * BigInt("0xe4437ed6010e88286f547fa90abfe4c3");
-      const a2 = BigInt("0x114ca50f7a8e2f3f657c1108d9d44cfd8");
-      const b2 = a1;
-      const POW_2_128 = BigInt("0x100000000000000000000000000000000");
-      const c1 = divNearest4(b2 * k, n);
-      const c2 = divNearest4(-b1 * k, n);
-      let k1 = mod4(k - c1 * a1 - c2 * a2, n);
-      let k2 = mod4(-c1 * b1 - c2 * b2, n);
-      const k1neg = k1 > POW_2_128;
-      const k2neg = k2 > POW_2_128;
-      if (k1neg)
-        k1 = n - k1;
-      if (k2neg)
-        k2 = n - k2;
-      if (k1 > POW_2_128 || k2 > POW_2_128) {
-        throw new Error("splitScalar: Endomorphism failed, k=" + k);
-      }
-      return { k1neg, k1, k2neg, k2 };
-    }
-  }
-}, sha2567);
-var TAGGED_HASH_PREFIXES4 = {};
-function taggedHash4(tag, ...messages) {
-  let tagP = TAGGED_HASH_PREFIXES4[tag];
-  if (tagP === undefined) {
-    const tagH = sha2567(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
-    tagP = concatBytes8(tagH, tagH);
-    TAGGED_HASH_PREFIXES4[tag] = tagP;
-  }
-  return sha2567(concatBytes8(tagP, ...messages));
-}
-var pointToBytes4 = (point) => point.toBytes(true).slice(1);
-var numTo32b4 = (n) => numberToBytesBE4(n, 32);
-var modP4 = (x) => mod4(x, secp256k1_CURVE2.p);
-var modN4 = (x) => mod4(x, secp256k1_CURVE2.n);
-var Point4 = /* @__PURE__ */ (() => secp256k14.Point)();
-var hasEven2 = (y) => y % _2n14 === _0n20;
-function schnorrGetExtPubKey4(priv) {
-  let d_ = secp256k14.utils.normPrivateKeyToScalar(priv);
-  let p = Point4.fromPrivateKey(d_);
-  const scalar = hasEven2(p.y) ? d_ : modN4(-d_);
-  return { scalar, bytes: pointToBytes4(p) };
-}
-function lift_x4(x) {
-  aInRange2("x", x, _1n20, secp256k1_CURVE2.p);
-  const xx = modP4(x * x);
-  const c = modP4(xx * x + BigInt(7));
-  let y = sqrtMod4(c);
-  if (!hasEven2(y))
-    y = modP4(-y);
-  const p = Point4.fromAffine({ x, y });
-  p.assertValidity();
-  return p;
-}
-var num2 = bytesToNumberBE4;
-function challenge4(...args) {
-  return modN4(num2(taggedHash4("BIP0340/challenge", ...args)));
-}
-function schnorrGetPublicKey4(privateKey) {
-  return schnorrGetExtPubKey4(privateKey).bytes;
-}
-function schnorrSign4(message, privateKey, auxRand = randomBytes6(32)) {
-  const m = ensureBytes4("message", message);
-  const { bytes: px, scalar: d4 } = schnorrGetExtPubKey4(privateKey);
-  const a = ensureBytes4("auxRand", auxRand, 32);
-  const t = numTo32b4(d4 ^ num2(taggedHash4("BIP0340/aux", a)));
-  const rand = taggedHash4("BIP0340/nonce", t, px, m);
-  const k_ = modN4(num2(rand));
-  if (k_ === _0n20)
-    throw new Error("sign failed: k is zero");
-  const { bytes: rx, scalar: k } = schnorrGetExtPubKey4(k_);
-  const e = challenge4(rx, px, m);
-  const sig = new Uint8Array(64);
-  sig.set(rx, 0);
-  sig.set(numTo32b4(modN4(k + e * d4)), 32);
-  if (!schnorrVerify4(sig, m, px))
-    throw new Error("sign: Invalid signature produced");
-  return sig;
-}
-function schnorrVerify4(signature, message, publicKey) {
-  const sig = ensureBytes4("signature", signature, 64);
-  const m = ensureBytes4("message", message);
-  const pub = ensureBytes4("publicKey", publicKey, 32);
-  try {
-    const P = lift_x4(num2(pub));
-    const r = num2(sig.subarray(0, 32));
-    if (!inRange2(r, _1n20, secp256k1_CURVE2.p))
-      return false;
-    const s = num2(sig.subarray(32, 64));
-    if (!inRange2(s, _1n20, secp256k1_CURVE2.n))
-      return false;
-    const e = challenge4(numTo32b4(r), pointToBytes4(P), m);
-    const R = Point4.BASE.multiplyUnsafe(s).add(P.multiplyUnsafe(modN4(-e)));
-    const { x, y } = R.toAffine();
-    if (R.is0() || !hasEven2(y) || x !== r)
-      return false;
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-var schnorr4 = /* @__PURE__ */ (() => ({
-  getPublicKey: schnorrGetPublicKey4,
-  sign: schnorrSign4,
-  verify: schnorrVerify4,
-  utils: {
-    randomPrivateKey: secp256k14.utils.randomPrivateKey,
-    lift_x: lift_x4,
-    pointToBytes: pointToBytes4,
-    numberToBytesBE: numberToBytesBE4,
-    bytesToNumberBE: bytesToNumberBE4,
-    taggedHash: taggedHash4,
-    mod: mod4
-  }
-}))();
-
-// ../shared/node_modules/@noble/hashes/esm/sha256.js
-var sha2568 = sha2567;
-
-// ../shared/node_modules/@nostr-dev-kit/ndk/dist/index.mjs
-var import_typescript_lru_cache3 = __toESM(require_dist2(), 1);
-var import_tseep12 = __toESM(require_lib5(), 1);
-var import_tseep13 = __toESM(require_lib5(), 1);
-var import_debug16 = __toESM(require_src2(), 1);
-var import_debug17 = __toESM(require_src2(), 1);
-var import_debug18 = __toESM(require_src2(), 1);
-var import_debug19 = __toESM(require_src2(), 1);
-var import_debug20 = __toESM(require_src2(), 1);
-var import_tseep14 = __toESM(require_lib5(), 1);
-var import_tseep15 = __toESM(require_lib5(), 1);
-var import_debug21 = __toESM(require_src2(), 1);
-var import_tseep16 = __toESM(require_lib5(), 1);
-var import_tseep17 = __toESM(require_lib5(), 1);
-var import_typescript_lru_cache4 = __toESM(require_dist2(), 1);
-var import_debug22 = __toESM(require_src2(), 1);
-var import_light_bolt11_decoder2 = __toESM(require_bolt112(), 1);
-var import_debug23 = __toESM(require_src2(), 1);
-var import_tseep18 = __toESM(require_lib5(), 1);
-var import_debug24 = __toESM(require_src2(), 1);
-function getRelaysForSync2(ndk, author, type = "write") {
-  if (!ndk.outboxTracker)
-    return;
-  const item = ndk.outboxTracker.data.get(author);
-  if (!item)
-    return;
-  if (type === "write") {
-    return item.writeRelays;
-  }
-  return item.readRelays;
-}
-async function getWriteRelaysFor2(ndk, author, type = "write") {
-  if (!ndk.outboxTracker)
-    return;
-  if (!ndk.outboxTracker.data.has(author)) {
-    await ndk.outboxTracker.trackUsers([author]);
-  }
-  return getRelaysForSync2(ndk, author, type);
-}
-function getTopRelaysForAuthors2(ndk, authors) {
-  const relaysWithCount = /* @__PURE__ */ new Map;
-  authors.forEach((author) => {
-    const writeRelays = getRelaysForSync2(ndk, author);
-    if (writeRelays) {
-      writeRelays.forEach((relay) => {
-        const count = relaysWithCount.get(relay) || 0;
-        relaysWithCount.set(relay, count + 1);
-      });
-    }
-  });
-  const sortedRelays = Array.from(relaysWithCount.entries()).sort((a, b) => b[1] - a[1]);
-  return sortedRelays.map((entry) => entry[0]);
-}
-function getAllRelaysForAllPubkeys2(ndk, pubkeys, type = "read") {
-  const pubkeysToRelays = /* @__PURE__ */ new Map;
-  const authorsMissingRelays = /* @__PURE__ */ new Set;
-  pubkeys.forEach((pubkey) => {
-    const relays = getRelaysForSync2(ndk, pubkey, type);
-    if (relays && relays.size > 0) {
-      relays.forEach((relay) => {
-        const pubkeysInRelay = pubkeysToRelays.get(relay) || /* @__PURE__ */ new Set;
-        pubkeysInRelay.add(pubkey);
-      });
-      pubkeysToRelays.set(pubkey, relays);
-    } else {
-      authorsMissingRelays.add(pubkey);
-    }
-  });
-  return { pubkeysToRelays, authorsMissingRelays };
-}
-function chooseRelayCombinationForPubkeys2(ndk, pubkeys, type, { count, preferredRelays } = {}) {
-  count ??= 2;
-  preferredRelays ??= /* @__PURE__ */ new Set;
-  const pool = ndk.pool;
-  const connectedRelays = pool.connectedRelays();
-  connectedRelays.forEach((relay) => {
-    preferredRelays?.add(relay.url);
-  });
-  const relayToAuthorsMap = /* @__PURE__ */ new Map;
-  const { pubkeysToRelays, authorsMissingRelays } = getAllRelaysForAllPubkeys2(ndk, pubkeys, type);
-  const sortedRelays = getTopRelaysForAuthors2(ndk, pubkeys);
-  const addAuthorToRelay = (author, relay) => {
-    const authorsInRelay = relayToAuthorsMap.get(relay) || [];
-    authorsInRelay.push(author);
-    relayToAuthorsMap.set(relay, authorsInRelay);
-  };
-  for (const [author, authorRelays] of pubkeysToRelays.entries()) {
-    let missingRelayCount = count;
-    for (const relay of connectedRelays) {
-      if (authorRelays.has(relay.url)) {
-        addAuthorToRelay(author, relay.url);
-        missingRelayCount--;
-      }
-    }
-    for (const authorRelay of authorRelays) {
-      if (relayToAuthorsMap.has(authorRelay)) {
-        addAuthorToRelay(author, authorRelay);
-        missingRelayCount--;
-      }
-    }
-    if (missingRelayCount <= 0)
-      continue;
-    for (const relay of sortedRelays) {
-      if (missingRelayCount <= 0)
-        break;
-      if (authorRelays.has(relay)) {
-        addAuthorToRelay(author, relay);
-        missingRelayCount--;
-      }
-    }
-  }
-  for (const author of authorsMissingRelays) {
-    pool.permanentAndConnectedRelays().forEach((relay) => {
-      const authorsInRelay = relayToAuthorsMap.get(relay.url) || [];
-      authorsInRelay.push(author);
-      relayToAuthorsMap.set(relay.url, authorsInRelay);
-    });
-  }
-  return relayToAuthorsMap;
-}
-function getRelaysForFilterWithAuthors2(ndk, authors, relayGoalPerAuthor = 2) {
-  return chooseRelayCombinationForPubkeys2(ndk, authors, "write", { count: relayGoalPerAuthor });
-}
-function tryNormalizeRelayUrl2(url) {
-  try {
-    return normalizeRelayUrl2(url);
-  } catch {
-    return;
-  }
-}
-function normalizeRelayUrl2(url) {
-  let r = normalizeUrl2(url, {
-    stripAuthentication: false,
-    stripWWW: false,
-    stripHash: true
-  });
-  if (!r.endsWith("/")) {
-    r += "/";
-  }
-  return r;
-}
-function normalize4(urls) {
-  const normalized = /* @__PURE__ */ new Set;
-  for (const url of urls) {
-    try {
-      normalized.add(normalizeRelayUrl2(url));
-    } catch {}
-  }
-  return Array.from(normalized);
-}
-var DATA_URL_DEFAULT_MIME_TYPE2 = "text/plain";
-var DATA_URL_DEFAULT_CHARSET2 = "us-ascii";
-var testParameter2 = (name, filters) => filters.some((filter4) => filter4 instanceof RegExp ? filter4.test(name) : filter4 === name);
-var supportedProtocols2 = /* @__PURE__ */ new Set(["https:", "http:", "file:"]);
-var hasCustomProtocol2 = (urlString) => {
-  try {
-    const { protocol } = new URL(urlString);
-    return protocol.endsWith(":") && !protocol.includes(".") && !supportedProtocols2.has(protocol);
-  } catch {
-    return false;
-  }
-};
-var normalizeDataURL2 = (urlString, { stripHash }) => {
-  const match = /^data:(?<type>[^,]*?),(?<data>[^#]*?)(?:#(?<hash>.*))?$/.exec(urlString);
-  if (!match) {
-    throw new Error(`Invalid URL: ${urlString}`);
-  }
-  const type = match.groups?.type ?? "";
-  const data = match.groups?.data ?? "";
-  let hash5 = match.groups?.hash ?? "";
-  const mediaType = type.split(";");
-  hash5 = stripHash ? "" : hash5;
-  let isBase64 = false;
-  if (mediaType[mediaType.length - 1] === "base64") {
-    mediaType.pop();
-    isBase64 = true;
-  }
-  const mimeType = mediaType.shift()?.toLowerCase() ?? "";
-  const attributes = mediaType.map((attribute) => {
-    let [key, value = ""] = attribute.split("=").map((string) => string.trim());
-    if (key === "charset") {
-      value = value.toLowerCase();
-      if (value === DATA_URL_DEFAULT_CHARSET2) {
-        return "";
-      }
-    }
-    return `${key}${value ? `=${value}` : ""}`;
-  }).filter(Boolean);
-  const normalizedMediaType = [...attributes];
-  if (isBase64) {
-    normalizedMediaType.push("base64");
-  }
-  if (normalizedMediaType.length > 0 || mimeType && mimeType !== DATA_URL_DEFAULT_MIME_TYPE2) {
-    normalizedMediaType.unshift(mimeType);
-  }
-  return `data:${normalizedMediaType.join(";")},${isBase64 ? data.trim() : data}${hash5 ? `#${hash5}` : ""}`;
-};
-function normalizeUrl2(urlString, options = {}) {
-  options = {
-    defaultProtocol: "http",
-    normalizeProtocol: true,
-    forceHttp: false,
-    forceHttps: false,
-    stripAuthentication: true,
-    stripHash: false,
-    stripTextFragment: true,
-    stripWWW: true,
-    removeQueryParameters: [/^utm_\w+/i],
-    removeTrailingSlash: true,
-    removeSingleSlash: true,
-    removeDirectoryIndex: false,
-    removeExplicitPort: false,
-    sortQueryParameters: true,
-    ...options
-  };
-  if (typeof options.defaultProtocol === "string" && !options.defaultProtocol.endsWith(":")) {
-    options.defaultProtocol = `${options.defaultProtocol}:`;
-  }
-  urlString = urlString.trim();
-  if (/^data:/i.test(urlString)) {
-    return normalizeDataURL2(urlString, options);
-  }
-  if (hasCustomProtocol2(urlString)) {
-    return urlString;
-  }
-  const hasRelativeProtocol = urlString.startsWith("//");
-  const isRelativeUrl = !hasRelativeProtocol && /^\.*\//.test(urlString);
-  if (!isRelativeUrl) {
-    urlString = urlString.replace(/^(?!(?:\w+:)?\/\/)|^\/\//, options.defaultProtocol);
-  }
-  const urlObject = new URL(urlString);
-  urlObject.hostname = urlObject.hostname.toLowerCase();
-  if (options.forceHttp && options.forceHttps) {
-    throw new Error("The `forceHttp` and `forceHttps` options cannot be used together");
-  }
-  if (options.forceHttp && urlObject.protocol === "https:") {
-    urlObject.protocol = "http:";
-  }
-  if (options.forceHttps && urlObject.protocol === "http:") {
-    urlObject.protocol = "https:";
-  }
-  if (options.stripAuthentication) {
-    urlObject.username = "";
-    urlObject.password = "";
-  }
-  if (options.stripHash) {
-    urlObject.hash = "";
-  } else if (options.stripTextFragment) {
-    urlObject.hash = urlObject.hash.replace(/#?:~:text.*?$/i, "");
-  }
-  if (urlObject.pathname) {
-    const protocolRegex = /\b[a-z][a-z\d+\-.]{1,50}:\/\//g;
-    let lastIndex = 0;
-    let result = "";
-    for (;; ) {
-      const match = protocolRegex.exec(urlObject.pathname);
-      if (!match) {
-        break;
-      }
-      const protocol = match[0];
-      const protocolAtIndex = match.index;
-      const intermediate = urlObject.pathname.slice(lastIndex, protocolAtIndex);
-      result += intermediate.replace(/\/{2,}/g, "/");
-      result += protocol;
-      lastIndex = protocolAtIndex + protocol.length;
-    }
-    const remnant = urlObject.pathname.slice(lastIndex, urlObject.pathname.length);
-    result += remnant.replace(/\/{2,}/g, "/");
-    urlObject.pathname = result;
-  }
-  if (urlObject.pathname) {
-    try {
-      urlObject.pathname = decodeURI(urlObject.pathname);
-    } catch {}
-  }
-  if (options.removeDirectoryIndex === true) {
-    options.removeDirectoryIndex = [/^index\.[a-z]+$/];
-  }
-  if (Array.isArray(options.removeDirectoryIndex) && options.removeDirectoryIndex.length > 0) {
-    let pathComponents = urlObject.pathname.split("/");
-    const lastComponent = pathComponents[pathComponents.length - 1];
-    if (testParameter2(lastComponent, options.removeDirectoryIndex)) {
-      pathComponents = pathComponents.slice(0, -1);
-      urlObject.pathname = `${pathComponents.slice(1).join("/")}/`;
-    }
-  }
-  if (urlObject.hostname) {
-    urlObject.hostname = urlObject.hostname.replace(/\.$/, "");
-    if (options.stripWWW && /^www\.(?!www\.)[a-z\-\d]{1,63}\.[a-z.\-\d]{2,63}$/.test(urlObject.hostname)) {
-      urlObject.hostname = urlObject.hostname.replace(/^www\./, "");
-    }
-  }
-  if (Array.isArray(options.removeQueryParameters)) {
-    for (const key of [...urlObject.searchParams.keys()]) {
-      if (testParameter2(key, options.removeQueryParameters)) {
-        urlObject.searchParams.delete(key);
-      }
-    }
-  }
-  if (!Array.isArray(options.keepQueryParameters) && options.removeQueryParameters === true) {
-    urlObject.search = "";
-  }
-  if (Array.isArray(options.keepQueryParameters) && options.keepQueryParameters.length > 0) {
-    for (const key of [...urlObject.searchParams.keys()]) {
-      if (!testParameter2(key, options.keepQueryParameters)) {
-        urlObject.searchParams.delete(key);
-      }
-    }
-  }
-  if (options.sortQueryParameters) {
-    urlObject.searchParams.sort();
-    try {
-      urlObject.search = decodeURIComponent(urlObject.search);
-    } catch {}
-  }
-  if (options.removeTrailingSlash) {
-    urlObject.pathname = urlObject.pathname.replace(/\/$/, "");
-  }
-  if (options.removeExplicitPort && urlObject.port) {
-    urlObject.port = "";
-  }
-  const oldUrlString = urlString;
-  urlString = urlObject.toString();
-  if (!options.removeSingleSlash && urlObject.pathname === "/" && !oldUrlString.endsWith("/") && urlObject.hash === "") {
-    urlString = urlString.replace(/\/$/, "");
-  }
-  if ((options.removeTrailingSlash || urlObject.pathname === "/") && urlObject.hash === "" && options.removeSingleSlash) {
-    urlString = urlString.replace(/\/$/, "");
-  }
-  if (hasRelativeProtocol && !options.normalizeProtocol) {
-    urlString = urlString.replace(/^http:\/\//, "//");
-  }
-  if (options.stripProtocol) {
-    urlString = urlString.replace(/^(?:https?:)?\/\//, "");
-  }
-  return urlString;
-}
-var MAX_RECONNECT_ATTEMPTS2 = 5;
-var FLAPPING_THRESHOLD_MS2 = 1000;
-var NDKRelayConnectivity2 = class {
-  ndkRelay;
-  ws;
-  _status;
-  timeoutMs;
-  connectedAt;
-  _connectionStats = {
-    attempts: 0,
-    success: 0,
-    durations: []
-  };
-  debug;
-  netDebug;
-  connectTimeout;
-  reconnectTimeout;
-  ndk;
-  openSubs = /* @__PURE__ */ new Map;
-  openCountRequests = /* @__PURE__ */ new Map;
-  openEventPublishes = /* @__PURE__ */ new Map;
-  serial = 0;
-  baseEoseTimeout = 4400;
-  constructor(ndkRelay, ndk) {
-    this.ndkRelay = ndkRelay;
-    this._status = 1;
-    const rand = Math.floor(Math.random() * 1000);
-    this.debug = this.ndkRelay.debug.extend(`connectivity${rand}`);
-    this.ndk = ndk;
-  }
-  async connect(timeoutMs, reconnect = true) {
-    if (this._status !== 2 && this._status !== 1) {
-      this.debug("Relay requested to be connected but was in state %s or it had a reconnect timeout", this._status);
-      return;
-    }
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = undefined;
-    }
-    if (this.connectTimeout) {
-      clearTimeout(this.connectTimeout);
-      this.connectTimeout = undefined;
-    }
-    timeoutMs ??= this.timeoutMs;
-    if (!this.timeoutMs && timeoutMs)
-      this.timeoutMs = timeoutMs;
-    if (this.timeoutMs)
-      this.connectTimeout = setTimeout(() => this.onConnectionError(reconnect), this.timeoutMs);
-    try {
-      this.updateConnectionStats.attempt();
-      if (this._status === 1)
-        this._status = 4;
-      else
-        this._status = 2;
-      this.ws = new WebSocket(this.ndkRelay.url);
-      this.ws.onopen = this.onConnect.bind(this);
-      this.ws.onclose = this.onDisconnect.bind(this);
-      this.ws.onmessage = this.onMessage.bind(this);
-      this.ws.onerror = this.onError.bind(this);
-    } catch (e) {
-      this.debug(`Failed to connect to ${this.ndkRelay.url}`, e);
-      this._status = 1;
-      if (reconnect)
-        this.handleReconnection();
-      else
-        this.ndkRelay.emit("delayed-connect", 2 * 24 * 60 * 60 * 1000);
-      throw e;
-    }
-  }
-  disconnect() {
-    this._status = 0;
-    try {
-      this.ws?.close();
-    } catch (e) {
-      this.debug("Failed to disconnect", e);
-      this._status = 1;
-    }
-  }
-  onConnectionError(reconnect) {
-    this.debug(`Error connecting to ${this.ndkRelay.url}`, this.timeoutMs);
-    if (reconnect && !this.reconnectTimeout) {
-      this.handleReconnection();
-    }
-  }
-  onConnect() {
-    this.netDebug?.("connected", this.ndkRelay);
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = undefined;
-    }
-    if (this.connectTimeout) {
-      clearTimeout(this.connectTimeout);
-      this.connectTimeout = undefined;
-    }
-    this.updateConnectionStats.connected();
-    this._status = 5;
-    this.ndkRelay.emit("connect");
-    this.ndkRelay.emit("ready");
-  }
-  onDisconnect() {
-    this.netDebug?.("disconnected", this.ndkRelay);
-    this.updateConnectionStats.disconnected();
-    if (this._status === 5) {
-      this.handleReconnection();
-    }
-    this._status = 1;
-    this.ndkRelay.emit("disconnect");
-  }
-  onMessage(event) {
-    this.netDebug?.(event.data, this.ndkRelay, "recv");
-    try {
-      const data = JSON.parse(event.data);
-      const [cmd, id, ..._rest] = data;
-      switch (cmd) {
-        case "EVENT": {
-          const so = this.openSubs.get(id);
-          const event2 = data[2];
-          if (!so) {
-            this.debug(`Received event for unknown subscription ${id}`);
-            return;
-          }
-          so.onevent(event2);
-          return;
-        }
-        case "COUNT": {
-          const payload = data[2];
-          const cr = this.openCountRequests.get(id);
-          if (cr) {
-            cr.resolve(payload.count);
-            this.openCountRequests.delete(id);
-          }
-          return;
-        }
-        case "EOSE": {
-          const so = this.openSubs.get(id);
-          if (!so)
-            return;
-          so.oneose(id);
-          return;
-        }
-        case "OK": {
-          const ok = data[2];
-          const reason = data[3];
-          const ep = this.openEventPublishes.get(id);
-          const firstEp = ep?.pop();
-          if (!ep || !firstEp) {
-            this.debug("Received OK for unknown event publish", id);
-            return;
-          }
-          if (ok)
-            firstEp.resolve(reason);
-          else
-            firstEp.reject(new Error(reason));
-          if (ep.length === 0) {
-            this.openEventPublishes.delete(id);
-          } else {
-            this.openEventPublishes.set(id, ep);
-          }
-          return;
-        }
-        case "CLOSED": {
-          const so = this.openSubs.get(id);
-          if (!so)
-            return;
-          so.onclosed(data[2]);
-          return;
-        }
-        case "NOTICE":
-          this.onNotice(data[1]);
-          return;
-        case "AUTH": {
-          this.onAuthRequested(data[1]);
-          return;
-        }
-      }
-    } catch (error) {
-      this.debug(`Error parsing message from ${this.ndkRelay.url}: ${error.message}`, error?.stack);
-      return;
-    }
-  }
-  async onAuthRequested(challenge5) {
-    const authPolicy = this.ndkRelay.authPolicy ?? this.ndk?.relayAuthDefaultPolicy;
-    this.debug("Relay requested authentication", {
-      havePolicy: !!authPolicy
-    });
-    if (this._status === 7) {
-      this.debug("Already authenticating, ignoring");
-      return;
-    }
-    this._status = 6;
-    if (authPolicy) {
-      if (this._status >= 5) {
-        this._status = 7;
-        let res;
-        try {
-          res = await authPolicy(this.ndkRelay, challenge5);
-        } catch (e) {
-          this.debug("Authentication policy threw an error", e);
-          res = false;
-        }
-        this.debug("Authentication policy returned", !!res);
-        if (res instanceof NDKEvent3 || res === true) {
-          if (res instanceof NDKEvent3) {
-            await this.auth(res);
-          }
-          const authenticate = async () => {
-            if (this._status >= 5 && this._status < 8) {
-              const event = new NDKEvent3(this.ndk);
-              event.kind = 22242;
-              event.tags = [
-                ["relay", this.ndkRelay.url],
-                ["challenge", challenge5]
-              ];
-              await event.sign();
-              this.auth(event).then(() => {
-                this._status = 8;
-                this.ndkRelay.emit("authed");
-                this.debug("Authentication successful");
-              }).catch((e) => {
-                this._status = 6;
-                this.ndkRelay.emit("auth:failed", e);
-                this.debug("Authentication failed", e);
-              });
-            } else {
-              this.debug("Authentication failed, it changed status, status is %d", this._status);
-            }
-          };
-          if (res === true) {
-            if (!this.ndk?.signer) {
-              this.debug("No signer available for authentication localhost");
-              this.ndk?.once("signer:ready", authenticate);
-            } else {
-              authenticate().catch((e) => {
-                console.error("Error authenticating", e);
-              });
-            }
-          }
-          this._status = 5;
-          this.ndkRelay.emit("authed");
-        }
-      }
-    } else {
-      this.ndkRelay.emit("auth", challenge5);
-    }
-  }
-  onError(error) {
-    this.debug(`WebSocket error on ${this.ndkRelay.url}:`, error);
-  }
-  get status() {
-    return this._status;
-  }
-  isAvailable() {
-    return this._status === 5;
-  }
-  isFlapping() {
-    const durations = this._connectionStats.durations;
-    if (durations.length % 3 !== 0)
-      return false;
-    const sum = durations.reduce((a, b) => a + b, 0);
-    const avg = sum / durations.length;
-    const variance = durations.map((x) => (x - avg) ** 2).reduce((a, b) => a + b, 0) / durations.length;
-    const stdDev = Math.sqrt(variance);
-    const isFlapping = stdDev < FLAPPING_THRESHOLD_MS2;
-    return isFlapping;
-  }
-  async onNotice(notice) {
-    this.ndkRelay.emit("notice", notice);
-  }
-  handleReconnection(attempt = 0) {
-    if (this.reconnectTimeout)
-      return;
-    if (this.isFlapping()) {
-      this.ndkRelay.emit("flapping", this._connectionStats);
-      this._status = 3;
-      return;
-    }
-    const reconnectDelay = this.connectedAt ? Math.max(0, 60000 - (Date.now() - this.connectedAt)) : 5000 * (this._connectionStats.attempts + 1);
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectTimeout = undefined;
-      this._status = 2;
-      this.connect().catch((_err) => {
-        if (attempt < MAX_RECONNECT_ATTEMPTS2) {
-          setTimeout(() => {
-            this.handleReconnection(attempt + 1);
-          }, 1000 * (attempt + 1) ^ 4);
-        } else {
-          this.debug("Reconnect failed");
-        }
-      });
-    }, reconnectDelay);
-    this.ndkRelay.emit("delayed-connect", reconnectDelay);
-    this.debug("Reconnecting in", reconnectDelay);
-    this._connectionStats.nextReconnectAt = Date.now() + reconnectDelay;
-  }
-  async send(message) {
-    if (this._status >= 5 && this.ws?.readyState === WebSocket.OPEN) {
-      this.ws?.send(message);
-      this.netDebug?.(message, this.ndkRelay, "send");
-    } else {
-      this.debug(`Not connected to ${this.ndkRelay.url} (%d), not sending message ${message}`, this._status);
-    }
-  }
-  async auth(event) {
-    const ret = new Promise((resolve, reject) => {
-      const val = this.openEventPublishes.get(event.id) ?? [];
-      val.push({ resolve, reject });
-      this.openEventPublishes.set(event.id, val);
-    });
-    this.send(`["AUTH",${JSON.stringify(event.rawEvent())}]`);
-    return ret;
-  }
-  async publish(event) {
-    const ret = new Promise((resolve, reject) => {
-      const val = this.openEventPublishes.get(event.id) ?? [];
-      if (val.length > 0) {
-        console.warn(`Duplicate event publishing detected, you are publishing event ${event.id} twice`);
-      }
-      val.push({ resolve, reject });
-      this.openEventPublishes.set(event.id, val);
-    });
-    this.send(`["EVENT",${JSON.stringify(event)}]`);
-    return ret;
-  }
-  async count(filters, params) {
-    this.serial++;
-    const id = params?.id || `count:${this.serial}`;
-    const ret = new Promise((resolve, reject) => {
-      this.openCountRequests.set(id, { resolve, reject });
-    });
-    this.send(`["COUNT","${id}",${JSON.stringify(filters).substring(1)}`);
-    return ret;
-  }
-  close(subId, reason) {
-    this.send(`["CLOSE","${subId}"]`);
-    const sub = this.openSubs.get(subId);
-    this.openSubs.delete(subId);
-    if (sub)
-      sub.onclose(reason);
-  }
-  req(relaySub) {
-    `${this.send(`["REQ","${relaySub.subId}",${JSON.stringify(relaySub.executeFilters).substring(1)}`)}]`;
-    this.openSubs.set(relaySub.subId, relaySub);
-  }
-  updateConnectionStats = {
-    connected: () => {
-      this._connectionStats.success++;
-      this._connectionStats.connectedAt = Date.now();
-    },
-    disconnected: () => {
-      if (this._connectionStats.connectedAt) {
-        this._connectionStats.durations.push(Date.now() - this._connectionStats.connectedAt);
-        if (this._connectionStats.durations.length > 100) {
-          this._connectionStats.durations.shift();
-        }
-      }
-      this._connectionStats.connectedAt = undefined;
-    },
-    attempt: () => {
-      this._connectionStats.attempts++;
-      this._connectionStats.connectedAt = Date.now();
-    }
-  };
-  get connectionStats() {
-    return this._connectionStats;
-  }
-  get url() {
-    return this.ndkRelay.url;
-  }
-  get connected() {
-    return this._status >= 5 && this.ws?.readyState === WebSocket.OPEN;
-  }
-};
-var NDKRelayPublisher2 = class {
-  ndkRelay;
-  debug;
-  constructor(ndkRelay) {
-    this.ndkRelay = ndkRelay;
-    this.debug = ndkRelay.debug.extend("publisher");
-  }
-  async publish(event, timeoutMs = 2500) {
-    let timeout;
-    const publishConnected = () => {
-      return new Promise((resolve, reject) => {
-        try {
-          this.publishEvent(event).then((_result) => {
-            this.ndkRelay.emit("published", event);
-            event.emit("relay:published", this.ndkRelay);
-            resolve(true);
-          }).catch(reject);
-        } catch (err) {
-          reject(err);
-        }
-      });
-    };
-    const timeoutPromise = new Promise((_2, reject) => {
-      timeout = setTimeout(() => {
-        timeout = undefined;
-        reject(new Error(`Timeout: ${timeoutMs}ms`));
-      }, timeoutMs);
-    });
-    const onConnectHandler = () => {
-      publishConnected().then((result) => connectResolve(result)).catch((err) => connectReject(err));
-    };
-    let connectResolve;
-    let connectReject;
-    const onError = (err) => {
-      this.ndkRelay.debug("Publish failed", err, event.id);
-      this.ndkRelay.emit("publish:failed", event, err);
-      event.emit("relay:publish:failed", this.ndkRelay, err);
-      throw err;
-    };
-    const onFinally = () => {
-      if (timeout)
-        clearTimeout(timeout);
-      this.ndkRelay.removeListener("connect", onConnectHandler);
-    };
-    if (this.ndkRelay.status >= 5) {
-      return Promise.race([publishConnected(), timeoutPromise]).catch(onError).finally(onFinally);
-    }
-    if (this.ndkRelay.status <= 1) {
-      console.warn("Relay is disconnected, trying to connect to publish an event", this.ndkRelay.url);
-      this.ndkRelay.connect();
-    } else {
-      console.warn("Relay not connected, waiting for connection to publish an event", this.ndkRelay.url);
-    }
-    return Promise.race([
-      new Promise((resolve, reject) => {
-        connectResolve = resolve;
-        connectReject = reject;
-        this.ndkRelay.on("connect", onConnectHandler);
-      }),
-      timeoutPromise
-    ]).catch(onError).finally(onFinally);
-  }
-  async publishEvent(event) {
-    return this.ndkRelay.connectivity.publish(event.rawEvent());
-  }
-};
-function filterFingerprint2(filters, closeOnEose) {
-  const elements = [];
-  for (const filter4 of filters) {
-    const keys = Object.entries(filter4 || {}).map(([key, values]) => {
-      if (["since", "until"].includes(key)) {
-        return `${key}:${values}`;
-      }
-      return key;
-    }).sort().join("-");
-    elements.push(keys);
-  }
-  let id = closeOnEose ? "+" : "";
-  id += elements.join("|");
-  return id;
-}
-function mergeFilters2(filters) {
-  const result = [];
-  const lastResult = {};
-  filters.filter((f) => !!f.limit).forEach((filterWithLimit) => result.push(filterWithLimit));
-  filters = filters.filter((f) => !f.limit);
-  if (filters.length === 0)
-    return result;
-  filters.forEach((filter4) => {
-    Object.entries(filter4).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        if (lastResult[key] === undefined) {
-          lastResult[key] = [...value];
-        } else {
-          lastResult[key] = Array.from(/* @__PURE__ */ new Set([...lastResult[key], ...value]));
-        }
-      } else {
-        lastResult[key] = value;
-      }
-    });
-  });
-  return [...result, lastResult];
-}
-var NDKRelaySubscription2 = class {
-  fingerprint;
-  items = /* @__PURE__ */ new Map;
-  topSubManager;
-  debug;
-  status = 0;
-  onClose;
-  relay;
-  eosed = false;
-  executionTimer;
-  fireTime;
-  delayType;
-  executeFilters;
-  id = Math.random().toString(36).substring(7);
-  constructor(relay, fingerprint, topSubManager) {
-    this.relay = relay;
-    this.topSubManager = topSubManager;
-    this.debug = relay.debug.extend(`sub[${this.id}]`);
-    this.fingerprint = fingerprint || Math.random().toString(36).substring(7);
-  }
-  _subId;
-  get subId() {
-    if (this._subId)
-      return this._subId;
-    this._subId = this.fingerprint.slice(0, 15);
-    return this._subId;
-  }
-  subIdParts = /* @__PURE__ */ new Set;
-  addSubIdPart(part) {
-    this.subIdParts.add(part);
-  }
-  addItem(subscription, filters) {
-    this.debug("Adding item", {
-      filters,
-      internalId: subscription.internalId,
-      status: this.status,
-      fingerprint: this.fingerprint,
-      id: this.subId,
-      items: this.items,
-      itemsSize: this.items.size
-    });
-    if (this.items.has(subscription.internalId))
-      return;
-    subscription.on("close", this.removeItem.bind(this, subscription));
-    this.items.set(subscription.internalId, { subscription, filters });
-    if (this.status !== 3) {
-      if (subscription.subId && (!this._subId || this._subId.length < 48)) {
-        if (this.status === 0 || this.status === 1) {
-          this.addSubIdPart(subscription.subId);
-        }
-      }
-    }
-    switch (this.status) {
-      case 0:
-        this.evaluateExecutionPlan(subscription);
-        break;
-      case 3:
-        break;
-      case 1:
-        this.evaluateExecutionPlan(subscription);
-        break;
-      case 4:
-        this.debug("Subscription is closed, cannot add new items %o (%o)", subscription, filters);
-        throw new Error("Cannot add new items to a closed subscription");
-    }
-  }
-  removeItem(subscription) {
-    this.items.delete(subscription.internalId);
-    if (this.items.size === 0) {
-      if (!this.eosed)
-        return;
-      this.close();
-      this.cleanup();
-    }
-  }
-  close() {
-    if (this.status === 4)
-      return;
-    const prevStatus = this.status;
-    this.status = 4;
-    if (prevStatus === 3) {
-      try {
-        this.relay.close(this.subId);
-      } catch (e) {
-        this.debug("Error closing subscription", e, this);
-      }
-    } else {
-      this.debug("Subscription wanted to close but it wasn't running, this is probably ok", {
-        subId: this.subId,
-        prevStatus,
-        sub: this
-      });
-    }
-    this.cleanup();
-  }
-  cleanup() {
-    if (this.executionTimer)
-      clearTimeout(this.executionTimer);
-    this.relay.off("ready", this.executeOnRelayReady);
-    this.relay.off("authed", this.reExecuteAfterAuth);
-    if (this.onClose)
-      this.onClose(this);
-  }
-  evaluateExecutionPlan(subscription) {
-    if (!subscription.isGroupable()) {
-      this.status = 1;
-      this.execute();
-      return;
-    }
-    if (subscription.filters.find((filter4) => !!filter4.limit)) {
-      this.executeFilters = this.compileFilters();
-      if (this.executeFilters.length >= 10) {
-        this.status = 1;
-        this.execute();
-        return;
-      }
-    }
-    const delay = subscription.groupableDelay;
-    const delayType = subscription.groupableDelayType;
-    if (!delay)
-      throw new Error("Cannot group a subscription without a delay");
-    if (this.status === 0) {
-      this.schedule(delay, delayType);
-    } else {
-      const existingDelayType = this.delayType;
-      const timeUntilFire = this.fireTime - Date.now();
-      if (existingDelayType === "at-least" && delayType === "at-least") {
-        if (timeUntilFire < delay) {
-          if (this.executionTimer)
-            clearTimeout(this.executionTimer);
-          this.schedule(delay, delayType);
-        }
-      } else if (existingDelayType === "at-least" && delayType === "at-most") {
-        if (timeUntilFire > delay) {
-          if (this.executionTimer)
-            clearTimeout(this.executionTimer);
-          this.schedule(delay, delayType);
-        }
-      } else if (existingDelayType === "at-most" && delayType === "at-most") {
-        if (timeUntilFire > delay) {
-          if (this.executionTimer)
-            clearTimeout(this.executionTimer);
-          this.schedule(delay, delayType);
-        }
-      } else if (existingDelayType === "at-most" && delayType === "at-least") {
-        if (timeUntilFire > delay) {
-          if (this.executionTimer)
-            clearTimeout(this.executionTimer);
-          this.schedule(delay, delayType);
-        }
-      } else {
-        throw new Error(`Unknown delay type combination ${existingDelayType} ${delayType}`);
-      }
-    }
-  }
-  schedule(delay, delayType) {
-    this.status = 1;
-    const currentTime = Date.now();
-    this.fireTime = currentTime + delay;
-    this.delayType = delayType;
-    const timer = setTimeout(this.execute.bind(this), delay);
-    if (delayType === "at-least") {
-      this.executionTimer = timer;
-    }
-  }
-  executeOnRelayReady = () => {
-    if (this.status !== 2)
-      return;
-    if (this.items.size === 0) {
-      this.debug("No items to execute; this relay was probably too slow to respond and the caller gave up", {
-        status: this.status,
-        fingerprint: this.fingerprint,
-        items: this.items,
-        itemsSize: this.items.size,
-        id: this.id,
-        subId: this.subId
-      });
-      this.cleanup();
-      return;
-    }
-    this.debug("Executing on relay ready", {
-      status: this.status,
-      fingerprint: this.fingerprint,
-      items: this.items,
-      itemsSize: this.items.size
-    });
-    this.status = 1;
-    this.execute();
-  };
-  finalizeSubId() {
-    if (this.subIdParts.size > 0) {
-      this._subId = Array.from(this.subIdParts).join("-");
-    } else {
-      this._subId = this.fingerprint.slice(0, 15);
-    }
-    this._subId += `-${Math.random().toString(36).substring(2, 7)}`;
-  }
-  reExecuteAfterAuth = (() => {
-    const oldSubId = this.subId;
-    this.debug("Re-executing after auth", this.items.size);
-    if (this.eosed) {
-      this.relay.close(this.subId);
-    } else {
-      this.debug("We are abandoning an opened subscription, once it EOSE's, the handler will close it", {
-        oldSubId
-      });
-    }
-    this._subId = undefined;
-    this.status = 1;
-    this.execute();
-    this.debug("Re-executed after auth %s \uD83D\uDC49 %s", oldSubId, this.subId);
-  }).bind(this);
-  execute() {
-    if (this.status !== 1) {
-      return;
-    }
-    if (!this.relay.connected) {
-      this.status = 2;
-      this.debug("Waiting for relay to be ready", {
-        status: this.status,
-        id: this.subId,
-        fingerprint: this.fingerprint,
-        items: this.items,
-        itemsSize: this.items.size
-      });
-      this.relay.once("ready", this.executeOnRelayReady);
-      return;
-    }
-    if (this.relay.status < 8) {
-      this.relay.once("authed", this.reExecuteAfterAuth);
-    }
-    this.status = 3;
-    this.finalizeSubId();
-    this.executeFilters = this.compileFilters();
-    this.relay.req(this);
-  }
-  onstart() {}
-  onevent(event) {
-    this.topSubManager.dispatchEvent(event, this.relay);
-  }
-  oneose(subId) {
-    this.eosed = true;
-    if (subId !== this.subId) {
-      this.debug("Received EOSE for an abandoned subscription", subId, this.subId);
-      this.relay.close(subId);
-      return;
-    }
-    if (this.items.size === 0) {
-      this.close();
-    }
-    for (const { subscription } of this.items.values()) {
-      subscription.eoseReceived(this.relay);
-      if (subscription.closeOnEose) {
-        this.debug("Removing item because of EOSE", {
-          filters: subscription.filters,
-          internalId: subscription.internalId,
-          status: this.status,
-          fingerprint: this.fingerprint,
-          items: this.items,
-          itemsSize: this.items.size
-        });
-        this.removeItem(subscription);
-      }
-    }
-  }
-  onclose(_reason) {
-    this.status = 4;
-  }
-  onclosed(reason) {
-    if (!reason)
-      return;
-    for (const { subscription } of this.items.values()) {
-      subscription.closedReceived(this.relay, reason);
-    }
-  }
-  compileFilters() {
-    const mergedFilters = [];
-    const filters = Array.from(this.items.values()).map((item) => item.filters);
-    if (!filters[0]) {
-      this.debug("\uD83D\uDC40 No filters to merge", this.items);
-      console.error("BUG: No filters to merge!", this.items);
-      return [];
-    }
-    const filterCount = filters[0].length;
-    for (let i3 = 0;i3 < filterCount; i3++) {
-      const allFiltersAtIndex = filters.map((filter4) => filter4[i3]);
-      mergedFilters.push(...mergeFilters2(allFiltersAtIndex));
-    }
-    return mergedFilters;
-  }
-};
-var NDKRelaySubscriptionManager2 = class {
-  relay;
-  subscriptions;
-  generalSubManager;
-  constructor(relay, generalSubManager) {
-    this.relay = relay;
-    this.subscriptions = /* @__PURE__ */ new Map;
-    this.generalSubManager = generalSubManager;
-  }
-  addSubscription(sub, filters) {
-    let relaySub;
-    if (!sub.isGroupable()) {
-      relaySub = this.createSubscription(sub, filters);
-    } else {
-      const filterFp = filterFingerprint2(filters, sub.closeOnEose);
-      if (filterFp) {
-        const existingSubs = this.subscriptions.get(filterFp);
-        relaySub = (existingSubs || []).find((sub2) => sub2.status < 3);
-      }
-      relaySub ??= this.createSubscription(sub, filters, filterFp);
-    }
-    relaySub.addItem(sub, filters);
-  }
-  createSubscription(_sub, _filters, fingerprint) {
-    const relaySub = new NDKRelaySubscription2(this.relay, fingerprint || null, this.generalSubManager);
-    relaySub.onClose = this.onRelaySubscriptionClose.bind(this);
-    const currentVal = this.subscriptions.get(relaySub.fingerprint) ?? [];
-    this.subscriptions.set(relaySub.fingerprint, [...currentVal, relaySub]);
-    return relaySub;
-  }
-  onRelaySubscriptionClose(sub) {
-    let currentVal = this.subscriptions.get(sub.fingerprint) ?? [];
-    if (!currentVal) {
-      console.warn("Unexpectedly did not find a subscription with fingerprint", sub.fingerprint);
-    } else if (currentVal.length === 1) {
-      this.subscriptions.delete(sub.fingerprint);
-    } else {
-      currentVal = currentVal.filter((s) => s.id !== sub.id);
-      this.subscriptions.set(sub.fingerprint, currentVal);
-    }
-  }
-};
-var NDKRelay2 = class _NDKRelay2 extends import_tseep11.EventEmitter {
-  url;
-  scores;
-  connectivity;
-  subs;
-  publisher;
-  authPolicy;
-  lowestValidationRatio;
-  targetValidationRatio;
-  validationRatioFn;
-  validatedEventCount = 0;
-  nonValidatedEventCount = 0;
-  trusted = false;
-  complaining = false;
-  debug;
-  static defaultValidationRatioUpdateFn = (relay, validatedCount, _nonValidatedCount) => {
-    if (relay.lowestValidationRatio === undefined || relay.targetValidationRatio === undefined)
-      return 1;
-    let newRatio = relay.validationRatio;
-    if (relay.validationRatio > relay.targetValidationRatio) {
-      const factor = validatedCount / 100;
-      newRatio = Math.max(relay.lowestValidationRatio, relay.validationRatio - factor);
-    }
-    if (newRatio < relay.validationRatio) {
-      return newRatio;
-    }
-    return relay.validationRatio;
-  };
-  constructor(url, authPolicy, ndk) {
-    super();
-    this.url = normalizeRelayUrl2(url);
-    this.scores = /* @__PURE__ */ new Map;
-    this.debug = import_debug14.default(`ndk:relay:${url}`);
-    this.connectivity = new NDKRelayConnectivity2(this, ndk);
-    this.connectivity.netDebug = ndk?.netDebug;
-    this.req = this.connectivity.req.bind(this.connectivity);
-    this.close = this.connectivity.close.bind(this.connectivity);
-    this.subs = new NDKRelaySubscriptionManager2(this, ndk.subManager);
-    this.publisher = new NDKRelayPublisher2(this);
-    this.authPolicy = authPolicy;
-    this.targetValidationRatio = ndk?.initialValidationRatio;
-    this.lowestValidationRatio = ndk?.lowestValidationRatio;
-    this.validationRatioFn = (ndk?.validationRatioFn ?? _NDKRelay2.defaultValidationRatioUpdateFn).bind(this);
-    this.updateValidationRatio();
-    if (!ndk) {
-      console.trace("relay created without ndk");
-    }
-  }
-  updateValidationRatio() {
-    if (this.validationRatioFn && this.validatedEventCount > 0) {
-      const newRatio = this.validationRatioFn(this, this.validatedEventCount, this.nonValidatedEventCount);
-      this.targetValidationRatio = newRatio;
-    }
-    setTimeout(() => {
-      this.updateValidationRatio();
-    }, 30000);
-  }
-  get status() {
-    return this.connectivity.status;
-  }
-  get connectionStats() {
-    return this.connectivity.connectionStats;
-  }
-  async connect(timeoutMs, reconnect = true) {
-    return this.connectivity.connect(timeoutMs, reconnect);
-  }
-  disconnect() {
-    if (this.status === 1) {
-      return;
-    }
-    this.connectivity.disconnect();
-  }
-  subscribe(subscription, filters) {
-    this.subs.addSubscription(subscription, filters);
-  }
-  async publish(event, timeoutMs = 2500) {
-    return this.publisher.publish(event, timeoutMs);
-  }
-  referenceTags() {
-    return [["r", this.url]];
-  }
-  addValidatedEvent() {
-    this.validatedEventCount++;
-  }
-  addNonValidatedEvent() {
-    this.nonValidatedEventCount++;
-  }
-  get validationRatio() {
-    if (this.nonValidatedEventCount === 0) {
-      return 1;
-    }
-    return this.validatedEventCount / (this.validatedEventCount + this.nonValidatedEventCount);
-  }
-  shouldValidateEvent() {
-    if (this.trusted) {
-      return false;
-    }
-    if (this.targetValidationRatio === undefined) {
-      return true;
-    }
-    if (this.targetValidationRatio >= 1)
-      return true;
-    return Math.random() < this.targetValidationRatio;
-  }
-  get connected() {
-    return this.connectivity.connected;
-  }
-  req;
-  close;
-};
-var NDKPublishError2 = class extends Error {
-  errors;
-  publishedToRelays;
-  intendedRelaySet;
-  constructor(message, errors, publishedToRelays, intendedRelaySet) {
-    super(message);
-    this.errors = errors;
-    this.publishedToRelays = publishedToRelays;
-    this.intendedRelaySet = intendedRelaySet;
-  }
-  get relayErrors() {
-    const errors = [];
-    for (const [relay, err] of this.errors) {
-      errors.push(`${relay.url}: ${err}`);
-    }
-    return errors.join(`
-`);
-  }
-};
-var NDKRelaySet2 = class _NDKRelaySet2 {
-  relays;
-  debug;
-  ndk;
-  pool;
-  constructor(relays, ndk, pool) {
-    this.relays = relays;
-    this.ndk = ndk;
-    this.pool = pool ?? ndk.pool;
-    this.debug = ndk.debug.extend("relayset");
-  }
-  addRelay(relay) {
-    this.relays.add(relay);
-  }
-  get relayUrls() {
-    return Array.from(this.relays).map((r) => r.url);
-  }
-  static fromRelayUrls(relayUrls, ndk, connect = true, pool) {
-    pool = pool ?? ndk.pool;
-    if (!pool)
-      throw new Error("No pool provided");
-    const relays = /* @__PURE__ */ new Set;
-    for (const url of relayUrls) {
-      const relay = pool.relays.get(normalizeRelayUrl2(url));
-      if (relay) {
-        if (relay.status < 5 && connect) {
-          relay.connect();
-        }
-        relays.add(relay);
-      } else {
-        const temporaryRelay = new NDKRelay2(normalizeRelayUrl2(url), ndk?.relayAuthDefaultPolicy, ndk);
-        pool.useTemporaryRelay(temporaryRelay, undefined, `requested from fromRelayUrls ${relayUrls}`);
-        relays.add(temporaryRelay);
-      }
-    }
-    return new _NDKRelaySet2(new Set(relays), ndk, pool);
-  }
-  async publish(event, timeoutMs, requiredRelayCount = 1) {
-    const publishedToRelays = /* @__PURE__ */ new Set;
-    const errors = /* @__PURE__ */ new Map;
-    const isEphemeral2 = event.isEphemeral();
-    event.publishStatus = "pending";
-    const relayPublishedHandler = (relay) => {
-      publishedToRelays.add(relay);
-    };
-    event.on("relay:published", relayPublishedHandler);
-    try {
-      const promises = Array.from(this.relays).map((relay) => {
-        return new Promise((resolve) => {
-          const timeoutId = timeoutMs ? setTimeout(() => {
-            if (!publishedToRelays.has(relay)) {
-              errors.set(relay, new Error(`Publish timeout after ${timeoutMs}ms`));
-              resolve(false);
-            }
-          }, timeoutMs) : null;
-          relay.publish(event, timeoutMs).then((success) => {
-            if (timeoutId)
-              clearTimeout(timeoutId);
-            if (success) {
-              publishedToRelays.add(relay);
-              resolve(true);
-            } else {
-              resolve(false);
-            }
-          }).catch((err) => {
-            if (timeoutId)
-              clearTimeout(timeoutId);
-            if (!isEphemeral2) {
-              errors.set(relay, err);
-            }
-            resolve(false);
-          });
-        });
-      });
-      await Promise.all(promises);
-      if (publishedToRelays.size < requiredRelayCount) {
-        if (!isEphemeral2) {
-          const error = new NDKPublishError2("Not enough relays received the event (" + publishedToRelays.size + " published, " + requiredRelayCount + " required)", errors, publishedToRelays, this);
-          event.publishStatus = "error";
-          event.publishError = error;
-          this.ndk?.emit("event:publish-failed", event, error, this.relayUrls);
-          throw error;
-        }
-      } else {
-        event.publishStatus = "success";
-        event.emit("published", { relaySet: this, publishedToRelays });
-      }
-      return publishedToRelays;
-    } finally {
-      event.off("relay:published", relayPublishedHandler);
-    }
-  }
-  get size() {
-    return this.relays.size;
-  }
-};
-var d4 = import_debug13.default("ndk:outbox:calculate");
-async function calculateRelaySetFromEvent2(ndk, event, requiredRelayCount) {
-  const relays = /* @__PURE__ */ new Set;
-  const authorWriteRelays = await getWriteRelaysFor2(ndk, event.pubkey);
-  if (authorWriteRelays) {
-    authorWriteRelays.forEach((relayUrl) => {
-      const relay = ndk.pool?.getRelay(relayUrl);
-      if (relay)
-        relays.add(relay);
-    });
-  }
-  let relayHints = event.tags.filter((tag) => ["a", "e"].includes(tag[0])).map((tag) => tag[2]).filter((url) => url?.startsWith("wss://")).filter((url) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  }).map((url) => normalizeRelayUrl2(url));
-  relayHints = Array.from(new Set(relayHints)).slice(0, 5);
-  relayHints.forEach((relayUrl) => {
-    const relay = ndk.pool?.getRelay(relayUrl, true, true);
-    if (relay) {
-      d4("Adding relay hint %s", relayUrl);
-      relays.add(relay);
-    }
-  });
-  const pTags = event.getMatchingTags("p").map((tag) => tag[1]);
-  if (pTags.length < 5) {
-    const pTaggedRelays = Array.from(chooseRelayCombinationForPubkeys2(ndk, pTags, "read", {
-      preferredRelays: new Set(authorWriteRelays)
-    }).keys());
-    pTaggedRelays.forEach((relayUrl) => {
-      const relay = ndk.pool?.getRelay(relayUrl, false, true);
-      if (relay) {
-        d4("Adding p-tagged relay %s", relayUrl);
-        relays.add(relay);
-      }
-    });
-  } else {
-    d4("Too many p-tags to consider %d", pTags.length);
-  }
-  ndk.pool?.permanentAndConnectedRelays().forEach((relay) => relays.add(relay));
-  if (requiredRelayCount && relays.size < requiredRelayCount) {
-    const explicitRelays = ndk.explicitRelayUrls?.filter((url) => !Array.from(relays).some((r) => r.url === url)).slice(0, requiredRelayCount - relays.size);
-    explicitRelays?.forEach((url) => {
-      const relay = ndk.pool?.getRelay(url, false, true);
-      if (relay) {
-        d4("Adding explicit relay %s", url);
-        relays.add(relay);
-      }
-    });
-  }
-  return new NDKRelaySet2(relays, ndk);
-}
-function calculateRelaySetsFromFilter2(ndk, filters, pool) {
-  const result = /* @__PURE__ */ new Map;
-  const authors = /* @__PURE__ */ new Set;
-  filters.forEach((filter4) => {
-    if (filter4.authors) {
-      filter4.authors.forEach((author) => authors.add(author));
-    }
-  });
-  if (authors.size > 0) {
-    const authorToRelaysMap = getRelaysForFilterWithAuthors2(ndk, Array.from(authors));
-    for (const relayUrl of authorToRelaysMap.keys()) {
-      result.set(relayUrl, []);
-    }
-    for (const filter4 of filters) {
-      if (filter4.authors) {
-        for (const [relayUrl, authors2] of authorToRelaysMap.entries()) {
-          const authorFilterAndRelayPubkeyIntersection = filter4.authors.filter((author) => authors2.includes(author));
-          result.set(relayUrl, [
-            ...result.get(relayUrl),
-            {
-              ...filter4,
-              authors: authorFilterAndRelayPubkeyIntersection
-            }
-          ]);
-        }
-      } else {
-        for (const relayUrl of authorToRelaysMap.keys()) {
-          result.set(relayUrl, [...result.get(relayUrl), filter4]);
-        }
-      }
-    }
-  } else {
-    if (ndk.explicitRelayUrls) {
-      ndk.explicitRelayUrls.forEach((relayUrl) => {
-        result.set(relayUrl, filters);
-      });
-    }
-  }
-  if (result.size === 0) {
-    pool.permanentAndConnectedRelays().slice(0, 5).forEach((relay) => {
-      result.set(relay.url, filters);
-    });
-  }
-  return result;
-}
-function calculateRelaySetsFromFilters2(ndk, filters, pool) {
-  const a = calculateRelaySetsFromFilter2(ndk, filters, pool);
-  return a;
-}
-function mergeTags2(tags1, tags2) {
-  const tagMap = /* @__PURE__ */ new Map;
-  const generateKey = (tag) => tag.join(",");
-  const isContained = (smaller, larger) => {
-    return smaller.every((value, index) => value === larger[index]);
-  };
-  const processTag = (tag) => {
-    for (const [key, existingTag] of tagMap) {
-      if (isContained(existingTag, tag) || isContained(tag, existingTag)) {
-        if (tag.length >= existingTag.length) {
-          tagMap.set(key, tag);
-        }
-        return;
-      }
-    }
-    tagMap.set(generateKey(tag), tag);
-  };
-  tags1.concat(tags2).forEach(processTag);
-  return Array.from(tagMap.values());
-}
-var hashtagRegex2 = /(?<=\s|^)(#[^\s!@#$%^&*()=+./,[{\]};:'"?><]+)/g;
-function generateHashtags2(content) {
-  const hashtags = content.match(hashtagRegex2);
-  const tagIds = /* @__PURE__ */ new Set;
-  const tag = /* @__PURE__ */ new Set;
-  if (hashtags) {
-    for (const hashtag of hashtags) {
-      if (tagIds.has(hashtag.slice(1)))
-        continue;
-      tag.add(hashtag.slice(1));
-      tagIds.add(hashtag.slice(1));
-    }
-  }
-  return Array.from(tag);
-}
-async function generateContentTags2(content, tags = []) {
-  const tagRegex = /(@|nostr:)(npub|nprofile|note|nevent|naddr)[a-zA-Z0-9]+/g;
-  const promises = [];
-  const addTagIfNew = (t) => {
-    if (!tags.find((t2) => ["q", t[0]].includes(t2[0]) && t2[1] === t[1])) {
-      tags.push(t);
-    }
-  };
-  content = content.replace(tagRegex, (tag) => {
-    try {
-      const entity = tag.split(/(@|nostr:)/)[2];
-      const { type, data } = nip19_exports2.decode(entity);
-      let t;
-      switch (type) {
-        case "npub":
-          t = ["p", data];
-          break;
-        case "nprofile":
-          t = ["p", data.pubkey];
-          break;
-        case "note":
-          promises.push(new Promise(async (resolve) => {
-            addTagIfNew(["q", data, await maybeGetEventRelayUrl2(entity)]);
-            resolve();
-          }));
-          break;
-        case "nevent":
-          promises.push(new Promise(async (resolve) => {
-            const { id, author } = data;
-            let { relays } = data;
-            if (!relays || relays.length === 0) {
-              relays = [await maybeGetEventRelayUrl2(entity)];
-            }
-            addTagIfNew(["q", id, relays[0]]);
-            if (author)
-              addTagIfNew(["p", author]);
-            resolve();
-          }));
-          break;
-        case "naddr":
-          promises.push(new Promise(async (resolve) => {
-            const id = [data.kind, data.pubkey, data.identifier].join(":");
-            let relays = data.relays ?? [];
-            if (relays.length === 0) {
-              relays = [await maybeGetEventRelayUrl2(entity)];
-            }
-            addTagIfNew(["q", id, relays[0]]);
-            addTagIfNew(["p", data.pubkey]);
-            resolve();
-          }));
-          break;
-        default:
-          return tag;
-      }
-      if (t)
-        addTagIfNew(t);
-      return `nostr:${entity}`;
-    } catch (_error) {
-      return tag;
-    }
-  });
-  await Promise.all(promises);
-  const newTags = generateHashtags2(content).map((hashtag) => ["t", hashtag]);
-  tags = mergeTags2(tags, newTags);
-  return { content, tags };
-}
-async function maybeGetEventRelayUrl2(_nip19Id) {
-  return "";
-}
-async function encrypt6(recipient, signer, scheme = "nip44") {
-  let encrypted;
-  if (!this.ndk)
-    throw new Error("No NDK instance found!");
-  let currentSigner = signer;
-  if (!currentSigner) {
-    this.ndk.assertSigner();
-    currentSigner = this.ndk.signer;
-  }
-  if (!currentSigner)
-    throw new Error("no NDK signer");
-  const currentRecipient = recipient || (() => {
-    const pTags = this.getMatchingTags("p");
-    if (pTags.length !== 1) {
-      throw new Error("No recipient could be determined and no explicit recipient was provided");
-    }
-    return this.ndk.getUser({ pubkey: pTags[0][1] });
-  })();
-  if (scheme === "nip44" && await isEncryptionEnabled2(currentSigner, "nip44")) {
-    encrypted = await currentSigner.encrypt(currentRecipient, this.content, "nip44");
-  }
-  if ((!encrypted || scheme === "nip04") && await isEncryptionEnabled2(currentSigner, "nip04")) {
-    encrypted = await currentSigner.encrypt(currentRecipient, this.content, "nip04");
-  }
-  if (!encrypted)
-    throw new Error("Failed to encrypt event.");
-  this.content = encrypted;
-}
-async function decrypt6(sender, signer, scheme) {
-  if (this.ndk?.cacheAdapter?.getDecryptedEvent) {
-    let cachedEvent = null;
-    if (typeof this.ndk.cacheAdapter.getDecryptedEvent === "function") {
-      cachedEvent = this.ndk.cacheAdapter.getDecryptedEvent(this.id);
-    }
-    if (cachedEvent) {
-      this.content = cachedEvent.content;
-      return;
-    }
-  }
-  let decrypted;
-  if (!this.ndk)
-    throw new Error("No NDK instance found!");
-  let currentSigner = signer;
-  if (!currentSigner) {
-    this.ndk.assertSigner();
-    currentSigner = this.ndk.signer;
-  }
-  if (!currentSigner)
-    throw new Error("no NDK signer");
-  const currentSender = sender || this.author;
-  if (!currentSender)
-    throw new Error("No sender provided and no author available");
-  const currentScheme = scheme || (this.content.match(/\\?iv=/) ? "nip04" : "nip44");
-  if ((currentScheme === "nip04" || this.kind === 4) && await isEncryptionEnabled2(currentSigner, "nip04") && this.content.search("\\?iv=")) {
-    decrypted = await currentSigner.decrypt(currentSender, this.content, "nip04");
-  }
-  if (!decrypted && currentScheme === "nip44" && await isEncryptionEnabled2(currentSigner, "nip44")) {
-    decrypted = await currentSigner.decrypt(currentSender, this.content, "nip44");
-  }
-  if (!decrypted)
-    throw new Error("Failed to decrypt event.");
-  this.content = decrypted;
-  if (this.ndk?.cacheAdapter?.addDecryptedEvent) {
-    this.ndk.cacheAdapter.addDecryptedEvent(this);
-  }
-}
-async function isEncryptionEnabled2(signer, scheme) {
-  if (!signer.encryptionEnabled)
-    return false;
-  if (!scheme)
-    return true;
-  return Boolean(await signer.encryptionEnabled(scheme));
-}
-function eventHasETagMarkers2(event) {
-  for (const tag of event.tags) {
-    if (tag[0] === "e" && (tag[3] ?? "").length > 0)
-      return true;
-  }
-  return false;
-}
-function getRootTag2(event, searchTag) {
-  searchTag ??= event.tagType();
-  const rootEventTag = event.tags.find(isTagRootTag2);
-  if (!rootEventTag) {
-    if (eventHasETagMarkers2(event))
-      return;
-    const matchingTags = event.getMatchingTags(searchTag);
-    if (matchingTags.length < 3)
-      return matchingTags[0];
-  }
-  return rootEventTag;
-}
-var nip22RootTags2 = /* @__PURE__ */ new Set(["A", "E", "I"]);
-var nip22ReplyTags2 = /* @__PURE__ */ new Set(["a", "e", "i"]);
-function getReplyTag2(event, searchTag) {
-  if (event.kind === 1111) {
-    let replyTag2;
-    for (const tag of event.tags) {
-      if (nip22RootTags2.has(tag[0]))
-        replyTag2 = tag;
-      else if (nip22ReplyTags2.has(tag[0])) {
-        replyTag2 = tag;
-        break;
-      }
-    }
-    return replyTag2;
-  }
-  searchTag ??= event.tagType();
-  let hasMarkers2 = false;
-  let replyTag;
-  for (const tag of event.tags) {
-    if (tag[0] !== searchTag)
-      continue;
-    if ((tag[3] ?? "").length > 0)
-      hasMarkers2 = true;
-    if (hasMarkers2 && tag[3] === "reply")
-      return tag;
-    if (hasMarkers2 && tag[3] === "root")
-      replyTag = tag;
-    if (!hasMarkers2)
-      replyTag = tag;
-  }
-  return replyTag;
-}
-function isTagRootTag2(tag) {
-  return tag[0] === "E" || tag[3] === "root";
-}
-async function fetchTaggedEvent2(tag, marker) {
-  if (!this.ndk)
-    throw new Error("NDK instance not found");
-  const t = this.getMatchingTags(tag, marker);
-  if (t.length === 0)
-    return;
-  const [_2, id, hint] = t[0];
-  let relay = hint !== "" ? this.ndk.pool.getRelay(hint) : undefined;
-  const event = await this.ndk.fetchEvent(id, {}, relay);
-  return event;
-}
-async function fetchRootEvent2(subOpts) {
-  if (!this.ndk)
-    throw new Error("NDK instance not found");
-  const rootTag = getRootTag2(this);
-  if (!rootTag)
-    return;
-  return this.ndk.fetchEventFromTag(rootTag, this, subOpts);
-}
-async function fetchReplyEvent2(subOpts) {
-  if (!this.ndk)
-    throw new Error("NDK instance not found");
-  const replyTag = getReplyTag2(this);
-  if (!replyTag)
-    return;
-  return this.ndk.fetchEventFromTag(replyTag, this, subOpts);
-}
-function isReplaceable2() {
-  if (this.kind === undefined)
-    throw new Error("Kind not set");
-  return [0, 3].includes(this.kind) || this.kind >= 1e4 && this.kind < 20000 || this.kind >= 30000 && this.kind < 40000;
-}
-function isEphemeral2() {
-  if (this.kind === undefined)
-    throw new Error("Kind not set");
-  return this.kind >= 20000 && this.kind < 30000;
-}
-function isParamReplaceable2() {
-  if (this.kind === undefined)
-    throw new Error("Kind not set");
-  return this.kind >= 30000 && this.kind < 40000;
-}
-var DEFAULT_RELAY_COUNT2 = 2;
-function encode2(maxRelayCount = DEFAULT_RELAY_COUNT2) {
-  let relays = [];
-  if (this.onRelays.length > 0) {
-    relays = this.onRelays.map((relay) => relay.url);
-  } else if (this.relay) {
-    relays = [this.relay.url];
-  }
-  if (relays.length > maxRelayCount) {
-    relays = relays.slice(0, maxRelayCount);
-  }
-  if (this.isParamReplaceable()) {
-    return nip19_exports2.naddrEncode({
-      kind: this.kind,
-      pubkey: this.pubkey,
-      identifier: this.replaceableDTag(),
-      relays
-    });
-  }
-  if (relays.length > 0) {
-    return nip19_exports2.neventEncode({
-      id: this.tagId(),
-      relays,
-      author: this.pubkey
-    });
-  }
-  return nip19_exports2.noteEncode(this.tagId());
-}
-async function repost2(publish2 = true, signer) {
-  if (!signer && publish2) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    this.ndk.assertSigner();
-    signer = this.ndk.signer;
-  }
-  const e = new NDKEvent3(this.ndk, {
-    kind: getKind2(this)
-  });
-  if (!this.isProtected)
-    e.content = JSON.stringify(this.rawEvent());
-  e.tag(this);
-  if (this.kind !== 1) {
-    e.tags.push(["k", `${this.kind}`]);
-  }
-  if (signer)
-    await e.sign(signer);
-  if (publish2)
-    await e.publish();
-  return e;
-}
-function getKind2(event) {
-  if (event.kind === 1) {
-    return 6;
-  }
-  return 16;
-}
-function serialize2(includeSig = false, includeId = false) {
-  const payload = [0, this.pubkey, this.created_at, this.kind, this.tags, this.content];
-  if (includeSig)
-    payload.push(this.sig);
-  if (includeId)
-    payload.push(this.id);
-  return JSON.stringify(payload);
-}
-function deserialize2(serializedEvent) {
-  const eventArray = JSON.parse(serializedEvent);
-  const ret = {
-    pubkey: eventArray[1],
-    created_at: eventArray[2],
-    kind: eventArray[3],
-    tags: eventArray[4],
-    content: eventArray[5]
-  };
-  if (eventArray.length >= 7) {
-    const first = eventArray[6];
-    const second = eventArray[7];
-    if (first && first.length === 128) {
-      ret.sig = first;
-      if (second && second.length === 64) {
-        ret.id = second;
-      }
-    } else if (first && first.length === 64) {
-      ret.id = first;
-      if (second && second.length === 128) {
-        ret.sig = second;
-      }
-    }
-  }
-  return ret;
-}
-var worker2;
-var processingQueue2 = {};
-function signatureVerificationInit2(w) {
-  worker2 = w;
-  worker2.onmessage = (msg) => {
-    const [eventId, result] = msg.data;
-    const record = processingQueue2[eventId];
-    if (!record) {
-      console.error("No record found for event", eventId);
-      return;
-    }
-    delete processingQueue2[eventId];
-    for (const resolve of record.resolves) {
-      resolve(result);
-    }
-  };
-}
-async function verifySignatureAsync2(event, _persist, relay) {
-  const ndkInstance = event.ndk;
-  const start = Date.now();
-  let result;
-  if (ndkInstance.signatureVerificationFunction) {
-    console.log("[NDK-CORE] Using custom signature verification function async");
-    result = await ndkInstance.signatureVerificationFunction(event);
-    console.log("Custom signature verification result", event.id, { result });
-  } else {
-    console.log("Using worker-based signature verification async");
-    result = await new Promise((resolve) => {
-      const serialized = event.serialize();
-      let enqueue = false;
-      if (!processingQueue2[event.id]) {
-        processingQueue2[event.id] = { event, resolves: [], relay };
-        enqueue = true;
-      }
-      processingQueue2[event.id].resolves.push(resolve);
-      if (!enqueue)
-        return;
-      worker2?.postMessage({
-        serialized,
-        id: event.id,
-        sig: event.sig,
-        pubkey: event.pubkey
-      });
-    });
-  }
-  ndkInstance.signatureVerificationTimeMs += Date.now() - start;
-  return result;
-}
-var PUBKEY_REGEX2 = /^[a-f0-9]{64}$/;
-function validate2() {
-  if (typeof this.kind !== "number")
-    return false;
-  if (typeof this.content !== "string")
-    return false;
-  if (typeof this.created_at !== "number")
-    return false;
-  if (typeof this.pubkey !== "string")
-    return false;
-  if (!this.pubkey.match(PUBKEY_REGEX2))
-    return false;
-  if (!Array.isArray(this.tags))
-    return false;
-  for (let i3 = 0;i3 < this.tags.length; i3++) {
-    const tag = this.tags[i3];
-    if (!Array.isArray(tag))
-      return false;
-    for (let j = 0;j < tag.length; j++) {
-      if (typeof tag[j] === "object")
-        return false;
-    }
-  }
-  return true;
-}
-var verifiedSignatures2 = new import_typescript_lru_cache3.LRUCache({
-  maxSize: 1000,
-  entryExpirationTimeInMS: 60000
-});
-function verifySignature2(persist) {
-  if (typeof this.signatureVerified === "boolean")
-    return this.signatureVerified;
-  const prevVerification = verifiedSignatures2.get(this.id);
-  if (prevVerification !== null) {
-    this.signatureVerified = !!prevVerification;
-    return this.signatureVerified;
-  }
-  try {
-    if (this.ndk?.asyncSigVerification) {
-      verifySignatureAsync2(this, persist, this.relay).then((result) => {
-        if (persist) {
-          this.signatureVerified = result;
-          if (result)
-            verifiedSignatures2.set(this.id, this.sig);
-        }
-        if (!result) {
-          if (this.relay) {
-            this.ndk?.reportInvalidSignature(this, this.relay);
-          } else {
-            this.ndk?.reportInvalidSignature(this);
-          }
-          verifiedSignatures2.set(this.id, false);
-        }
-      }).catch((err) => {
-        console.error("signature verification error", this.id, err);
-      });
-    } else {
-      const hash5 = sha2568(new TextEncoder().encode(this.serialize()));
-      const res = schnorr4.verify(this.sig, hash5, this.pubkey);
-      if (res)
-        verifiedSignatures2.set(this.id, this.sig);
-      else
-        verifiedSignatures2.set(this.id, false);
-      this.signatureVerified = res;
-      return res;
-    }
-  } catch (_err) {
-    this.signatureVerified = false;
-    return false;
-  }
-}
-function getEventHash4() {
-  return getEventHashFromSerializedEvent2(this.serialize());
-}
-function getEventHashFromSerializedEvent2(serializedEvent) {
-  const eventHash = sha2568(new TextEncoder().encode(serializedEvent));
-  return bytesToHex6(eventHash);
-}
-var skipClientTagOnKinds2 = /* @__PURE__ */ new Set([
-  0,
-  4,
-  1059,
-  13,
-  3,
-  9734,
-  5
-]);
-var NDKEvent3 = class _NDKEvent2 extends import_tseep10.EventEmitter {
-  ndk;
-  created_at;
-  content = "";
-  tags = [];
-  kind;
-  id = "";
-  sig;
-  pubkey = "";
-  signatureVerified;
-  _author = undefined;
-  relay;
-  get onRelays() {
-    let res = [];
-    if (!this.ndk) {
-      if (this.relay)
-        res.push(this.relay);
-    } else {
-      res = this.ndk.subManager.seenEvents.get(this.id) || [];
-    }
-    return res;
-  }
-  publishStatus = "success";
-  publishError;
-  constructor(ndk, event) {
-    super();
-    this.ndk = ndk;
-    this.created_at = event?.created_at;
-    this.content = event?.content || "";
-    this.tags = event?.tags || [];
-    this.id = event?.id || "";
-    this.sig = event?.sig;
-    this.pubkey = event?.pubkey || "";
-    this.kind = event?.kind;
-    if (event instanceof _NDKEvent2) {
-      if (this.relay) {
-        this.relay = event.relay;
-        this.ndk?.subManager.seenEvent(event.id, this.relay);
-      }
-      this.publishStatus = event.publishStatus;
-      this.publishError = event.publishError;
-    }
-  }
-  static deserialize(ndk, event) {
-    return new _NDKEvent2(ndk, deserialize2(event));
-  }
-  rawEvent() {
-    return {
-      created_at: this.created_at,
-      content: this.content,
-      tags: this.tags,
-      kind: this.kind,
-      pubkey: this.pubkey,
-      id: this.id,
-      sig: this.sig
-    };
-  }
-  set author(user) {
-    this.pubkey = user.pubkey;
-    this._author = user;
-    this._author.ndk ??= this.ndk;
-  }
-  get author() {
-    if (this._author)
-      return this._author;
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    const user = this.ndk.getUser({ pubkey: this.pubkey });
-    this._author = user;
-    return user;
-  }
-  tagExternal(entity, type, markerUrl) {
-    const iTag = ["i"];
-    const kTag = ["k"];
-    switch (type) {
-      case "url": {
-        const url = new URL(entity);
-        url.hash = "";
-        iTag.push(url.toString());
-        kTag.push(`${url.protocol}//${url.host}`);
-        break;
-      }
-      case "hashtag":
-        iTag.push(`#${entity.toLowerCase()}`);
-        kTag.push("#");
-        break;
-      case "geohash":
-        iTag.push(`geo:${entity.toLowerCase()}`);
-        kTag.push("geo");
-        break;
-      case "isbn":
-        iTag.push(`isbn:${entity.replace(/-/g, "")}`);
-        kTag.push("isbn");
-        break;
-      case "podcast:guid":
-        iTag.push(`podcast:guid:${entity}`);
-        kTag.push("podcast:guid");
-        break;
-      case "podcast:item:guid":
-        iTag.push(`podcast:item:guid:${entity}`);
-        kTag.push("podcast:item:guid");
-        break;
-      case "podcast:publisher:guid":
-        iTag.push(`podcast:publisher:guid:${entity}`);
-        kTag.push("podcast:publisher:guid");
-        break;
-      case "isan":
-        iTag.push(`isan:${entity.split("-").slice(0, 4).join("-")}`);
-        kTag.push("isan");
-        break;
-      case "doi":
-        iTag.push(`doi:${entity.toLowerCase()}`);
-        kTag.push("doi");
-        break;
-      default:
-        throw new Error(`Unsupported NIP-73 entity type: ${type}`);
-    }
-    if (markerUrl) {
-      iTag.push(markerUrl);
-    }
-    this.tags.push(iTag);
-    this.tags.push(kTag);
-  }
-  tag(target, marker, skipAuthorTag, forceTag) {
-    let tags = [];
-    const isNDKUser = target.fetchProfile !== undefined;
-    if (isNDKUser) {
-      forceTag ??= "p";
-      const tag = [forceTag, target.pubkey];
-      if (marker)
-        tag.push(...["", marker]);
-      tags.push(tag);
-    } else if (target instanceof _NDKEvent2) {
-      const event = target;
-      skipAuthorTag ??= event?.pubkey === this.pubkey;
-      tags = event.referenceTags(marker, skipAuthorTag, forceTag);
-      for (const pTag of event.getMatchingTags("p")) {
-        if (pTag[1] === this.pubkey)
-          continue;
-        if (this.tags.find((t) => t[0] === "p" && t[1] === pTag[1]))
-          continue;
-        this.tags.push(["p", pTag[1]]);
-      }
-    } else if (Array.isArray(target)) {
-      tags = [target];
-    } else {
-      throw new Error("Invalid argument", target);
-    }
-    this.tags = mergeTags2(this.tags, tags);
-  }
-  async toNostrEvent(pubkey) {
-    if (!pubkey && this.pubkey === "") {
-      const user = await this.ndk?.signer?.user();
-      this.pubkey = user?.pubkey || "";
-    }
-    if (!this.created_at) {
-      this.created_at = Math.floor(Date.now() / 1000);
-    }
-    const { content, tags } = await this.generateTags();
-    this.content = content || "";
-    this.tags = tags;
-    try {
-      this.id = this.getEventHash();
-    } catch (_e) {}
-    return this.rawEvent();
-  }
-  serialize = serialize2.bind(this);
-  getEventHash = getEventHash4.bind(this);
-  validate = validate2.bind(this);
-  verifySignature = verifySignature2.bind(this);
-  isReplaceable = isReplaceable2.bind(this);
-  isEphemeral = isEphemeral2.bind(this);
-  isDvm = () => this.kind && this.kind >= 5000 && this.kind <= 7000;
-  isParamReplaceable = isParamReplaceable2.bind(this);
-  encode = encode2.bind(this);
-  encrypt = encrypt6.bind(this);
-  decrypt = decrypt6.bind(this);
-  getMatchingTags(tagName, marker) {
-    const t = this.tags.filter((tag) => tag[0] === tagName);
-    if (marker === undefined)
-      return t;
-    return t.filter((tag) => tag[3] === marker);
-  }
-  hasTag(tagName, marker) {
-    return this.tags.some((tag) => tag[0] === tagName && (!marker || tag[3] === marker));
-  }
-  tagValue(tagName, marker) {
-    const tags = this.getMatchingTags(tagName, marker);
-    if (tags.length === 0)
-      return;
-    return tags[0][1];
-  }
-  get alt() {
-    return this.tagValue("alt");
-  }
-  set alt(alt) {
-    this.removeTag("alt");
-    if (alt)
-      this.tags.push(["alt", alt]);
-  }
-  get dTag() {
-    return this.tagValue("d");
-  }
-  set dTag(value) {
-    this.removeTag("d");
-    if (value)
-      this.tags.push(["d", value]);
-  }
-  removeTag(tagName, marker) {
-    const tagNames = Array.isArray(tagName) ? tagName : [tagName];
-    this.tags = this.tags.filter((tag) => {
-      const include = tagNames.includes(tag[0]);
-      const hasMarker = marker ? tag[3] === marker : true;
-      return !(include && hasMarker);
-    });
-  }
-  replaceTag(tag) {
-    this.removeTag(tag[0]);
-    this.tags.push(tag);
-  }
-  async sign(signer) {
-    if (!signer) {
-      this.ndk?.assertSigner();
-      signer = this.ndk?.signer;
-    } else {
-      this.author = await signer.user();
-    }
-    const nostrEvent = await this.toNostrEvent();
-    this.sig = await signer.sign(nostrEvent);
-    return this.sig;
-  }
-  async publishReplaceable(relaySet, timeoutMs, requiredRelayCount) {
-    this.id = "";
-    this.created_at = Math.floor(Date.now() / 1000);
-    this.sig = "";
-    return this.publish(relaySet, timeoutMs, requiredRelayCount);
-  }
-  async publish(relaySet, timeoutMs, requiredRelayCount) {
-    if (!requiredRelayCount)
-      requiredRelayCount = 1;
-    if (!this.sig)
-      await this.sign();
-    if (!this.ndk)
-      throw new Error("NDKEvent must be associated with an NDK instance to publish");
-    if (!relaySet || relaySet.size === 0) {
-      relaySet = this.ndk.devWriteRelaySet || await calculateRelaySetFromEvent2(this.ndk, this, requiredRelayCount);
-    }
-    if (this.kind === 5 && this.ndk.cacheAdapter?.deleteEventIds) {
-      const eTags = this.getMatchingTags("e").map((tag) => tag[1]);
-      this.ndk.cacheAdapter.deleteEventIds(eTags);
-    }
-    const rawEvent = this.rawEvent();
-    if (this.ndk.cacheAdapter?.addUnpublishedEvent && shouldTrackUnpublishedEvent2(this)) {
-      try {
-        this.ndk.cacheAdapter.addUnpublishedEvent(this, relaySet.relayUrls);
-      } catch (e) {
-        console.error("Error adding unpublished event to cache", e);
-      }
-    }
-    if (this.kind === 5 && this.ndk.cacheAdapter?.deleteEventIds) {
-      this.ndk.cacheAdapter.deleteEventIds(this.getMatchingTags("e").map((tag) => tag[1]));
-    }
-    this.ndk.subManager.dispatchEvent(rawEvent, undefined, true);
-    const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount);
-    relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay));
-    return relays;
-  }
-  async generateTags() {
-    let tags = [];
-    const g = await generateContentTags2(this.content, this.tags);
-    const content = g.content;
-    tags = g.tags;
-    if (this.kind && this.isParamReplaceable()) {
-      const dTag = this.getMatchingTags("d")[0];
-      if (!dTag) {
-        const title = this.tagValue("title");
-        const randLength = title ? 6 : 16;
-        let str = [...Array(randLength)].map(() => Math.random().toString(36)[2]).join("");
-        if (title && title.length > 0) {
-          str = `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}-${str}`;
-        }
-        tags.push(["d", str]);
-      }
-    }
-    if (this.shouldAddClientTag) {
-      const clientTag = ["client", this.ndk?.clientName ?? ""];
-      if (this.ndk?.clientNip89)
-        clientTag.push(this.ndk?.clientNip89);
-      tags.push(clientTag);
-    } else if (this.shouldStripClientTag) {
-      tags = tags.filter((tag) => tag[0] !== "client");
-    }
-    return { content: content || "", tags };
-  }
-  get shouldAddClientTag() {
-    if (!this.ndk?.clientName && !this.ndk?.clientNip89)
-      return false;
-    if (skipClientTagOnKinds2.has(this.kind))
-      return false;
-    if (this.isEphemeral())
-      return false;
-    if (this.isReplaceable() && !this.isParamReplaceable())
-      return false;
-    if (this.isDvm())
-      return false;
-    if (this.hasTag("client"))
-      return false;
-    return true;
-  }
-  get shouldStripClientTag() {
-    return skipClientTagOnKinds2.has(this.kind);
-  }
-  muted() {
-    const authorMutedEntry = this.ndk?.mutedIds.get(this.pubkey);
-    if (authorMutedEntry && authorMutedEntry === "p")
-      return "author";
-    const eventTagReference = this.tagReference();
-    const eventMutedEntry = this.ndk?.mutedIds.get(eventTagReference[1]);
-    if (eventMutedEntry && eventMutedEntry === eventTagReference[0])
-      return "event";
-    return null;
-  }
-  replaceableDTag() {
-    if (this.kind && this.kind >= 30000 && this.kind <= 40000) {
-      const dTag = this.getMatchingTags("d")[0];
-      const dTagId = dTag ? dTag[1] : "";
-      return dTagId;
-    }
-    throw new Error("Event is not a parameterized replaceable event");
-  }
-  deduplicationKey() {
-    if (this.kind === 0 || this.kind === 3 || this.kind && this.kind >= 1e4 && this.kind < 20000) {
-      return `${this.kind}:${this.pubkey}`;
-    }
-    return this.tagId();
-  }
-  tagId() {
-    if (this.isParamReplaceable()) {
-      return this.tagAddress();
-    }
-    return this.id;
-  }
-  tagAddress() {
-    if (this.isParamReplaceable()) {
-      const dTagId = this.dTag ?? "";
-      return `${this.kind}:${this.pubkey}:${dTagId}`;
-    }
-    if (this.isReplaceable()) {
-      return `${this.kind}:${this.pubkey}:`;
-    }
-    throw new Error("Event is not a replaceable event");
-  }
-  tagType() {
-    return this.isParamReplaceable() ? "a" : "e";
-  }
-  tagReference(marker) {
-    let tag;
-    if (this.isParamReplaceable()) {
-      tag = ["a", this.tagAddress()];
-    } else {
-      tag = ["e", this.tagId()];
-    }
-    if (this.relay) {
-      tag.push(this.relay.url);
-    } else {
-      tag.push("");
-    }
-    tag.push(marker ?? "");
-    if (!this.isParamReplaceable()) {
-      tag.push(this.pubkey);
-    }
-    return tag;
-  }
-  referenceTags(marker, skipAuthorTag, forceTag) {
-    let tags = [];
-    if (this.isParamReplaceable()) {
-      tags = [
-        [forceTag ?? "a", this.tagAddress()],
-        [forceTag ?? "e", this.id]
-      ];
-    } else {
-      tags = [[forceTag ?? "e", this.id]];
-    }
-    tags = tags.map((tag) => {
-      if (tag[0] === "e" || marker) {
-        tag.push(this.relay?.url ?? "");
-      } else if (this.relay?.url) {
-        tag.push(this.relay?.url);
-      }
-      return tag;
-    });
-    tags.forEach((tag) => {
-      if (tag[0] === "e") {
-        tag.push(marker ?? "");
-        tag.push(this.pubkey);
-      } else if (marker) {
-        tag.push(marker);
-      }
-    });
-    tags = [...tags, ...this.getMatchingTags("h")];
-    if (!skipAuthorTag)
-      tags.push(...this.author.referenceTags());
-    return tags;
-  }
-  filter() {
-    if (this.isParamReplaceable()) {
-      return { "#a": [this.tagId()] };
-    }
-    return { "#e": [this.tagId()] };
-  }
-  nip22Filter() {
-    if (this.isParamReplaceable()) {
-      return { "#A": [this.tagId()] };
-    }
-    return { "#E": [this.tagId()] };
-  }
-  async delete(reason, publish2 = true) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    this.ndk.assertSigner();
-    const e = new _NDKEvent2(this.ndk, {
-      kind: 5,
-      content: reason || ""
-    });
-    e.tag(this, undefined, true);
-    e.tags.push(["k", this.kind?.toString()]);
-    if (publish2) {
-      this.emit("deleted");
-      await e.publish();
-    }
-    return e;
-  }
-  set isProtected(val) {
-    this.removeTag("-");
-    if (val)
-      this.tags.push(["-"]);
-  }
-  get isProtected() {
-    return this.hasTag("-");
-  }
-  fetchTaggedEvent = fetchTaggedEvent2.bind(this);
-  fetchRootEvent = fetchRootEvent2.bind(this);
-  fetchReplyEvent = fetchReplyEvent2.bind(this);
-  repost = repost2.bind(this);
-  async react(content, publish2 = true) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    this.ndk.assertSigner();
-    const e = new _NDKEvent2(this.ndk, {
-      kind: 7,
-      content
-    });
-    e.tag(this);
-    if (this.kind !== 1) {
-      e.tags.push(["k", `${this.kind}`]);
-    }
-    if (publish2)
-      await e.publish();
-    return e;
-  }
-  get isValid() {
-    return this.validate();
-  }
-  get inspect() {
-    return JSON.stringify(this.rawEvent(), null, 4);
-  }
-  dump() {
-    console.debug(JSON.stringify(this.rawEvent(), null, 4));
-    console.debug("Event on relays:", this.onRelays.map((relay) => relay.url).join(", "));
-  }
-  reply(forceNip22) {
-    const reply = new _NDKEvent2(this.ndk);
-    if (this.kind === 1 && !forceNip22) {
-      reply.kind = 1;
-      const opHasETag = this.hasTag("e");
-      if (opHasETag) {
-        reply.tags = [
-          ...reply.tags,
-          ...this.getMatchingTags("e"),
-          ...this.getMatchingTags("p"),
-          ...this.getMatchingTags("a"),
-          ...this.referenceTags("reply")
-        ];
-      } else {
-        reply.tag(this, "root");
-      }
-    } else {
-      reply.kind = 1111;
-      const carryOverTags = ["A", "E", "I", "P"];
-      const rootTags = this.tags.filter((tag) => carryOverTags.includes(tag[0]));
-      if (rootTags.length > 0) {
-        const rootKind = this.tagValue("K");
-        reply.tags.push(...rootTags);
-        if (rootKind)
-          reply.tags.push(["K", rootKind]);
-        const [type, id, _2, ...extra] = this.tagReference();
-        const tag = [type, id, ...extra];
-        reply.tags.push(tag);
-      } else {
-        const [type, id, _2, relayHint] = this.tagReference();
-        const tag = [type, id, relayHint ?? ""];
-        if (type === "e")
-          tag.push(this.pubkey);
-        reply.tags.push(tag);
-        const uppercaseTag = [...tag];
-        uppercaseTag[0] = uppercaseTag[0].toUpperCase();
-        reply.tags.push(uppercaseTag);
-        reply.tags.push(["K", this.kind?.toString()]);
-        reply.tags.push(["P", this.pubkey]);
-      }
-      reply.tags.push(["k", this.kind?.toString()]);
-      reply.tags.push(...this.getMatchingTags("p"));
-      reply.tags.push(["p", this.pubkey]);
-    }
-    return reply;
-  }
-};
-var untrackedUnpublishedEvents2 = /* @__PURE__ */ new Set([
-  24133,
-  13194,
-  23194,
-  23195
-]);
-function shouldTrackUnpublishedEvent2(event) {
-  return !untrackedUnpublishedEvents2.has(event.kind);
-}
-var NDKPool2 = class extends import_tseep12.EventEmitter {
-  _relays = /* @__PURE__ */ new Map;
-  status = "idle";
-  autoConnectRelays = /* @__PURE__ */ new Set;
-  poolBlacklistRelayUrls = /* @__PURE__ */ new Set;
-  debug;
-  temporaryRelayTimers = /* @__PURE__ */ new Map;
-  flappingRelays = /* @__PURE__ */ new Set;
-  backoffTimes = /* @__PURE__ */ new Map;
-  ndk;
-  get blacklistRelayUrls() {
-    const val = new Set(this.ndk.blacklistRelayUrls);
-    this.poolBlacklistRelayUrls.forEach((url) => val.add(url));
-    return val;
-  }
-  constructor(relayUrls, blacklistedRelayUrls, ndk, {
-    debug: debug92,
-    name
-  } = {}) {
-    super();
-    this.debug = debug92 ?? ndk.debug.extend("pool");
-    if (name)
-      this._name = name;
-    this.ndk = ndk;
-    this.relayUrls = relayUrls;
-    this.poolBlacklistRelayUrls = new Set(blacklistedRelayUrls);
-    this.ndk.pools.push(this);
-  }
-  get relays() {
-    return this._relays;
-  }
-  set relayUrls(urls) {
-    this._relays.clear();
-    for (const relayUrl of urls) {
-      const relay = new NDKRelay2(relayUrl, undefined, this.ndk);
-      relay.connectivity.netDebug = this.ndk.netDebug;
-      this.addRelay(relay);
-    }
-  }
-  _name = "unnamed";
-  get name() {
-    return this._name;
-  }
-  set name(name) {
-    this._name = name;
-    this.debug = this.debug.extend(name);
-  }
-  useTemporaryRelay(relay, removeIfUnusedAfter = 30000, filters) {
-    const relayAlreadyInPool = this.relays.has(relay.url);
-    if (!relayAlreadyInPool) {
-      this.addRelay(relay);
-      this.debug("Adding temporary relay %s for filters %o", relay.url, filters);
-    }
-    const existingTimer = this.temporaryRelayTimers.get(relay.url);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
-    }
-    if (!relayAlreadyInPool || existingTimer) {
-      const timer = setTimeout(() => {
-        if (this.ndk.explicitRelayUrls?.includes(relay.url))
-          return;
-        this.removeRelay(relay.url);
-      }, removeIfUnusedAfter);
-      this.temporaryRelayTimers.set(relay.url, timer);
-    }
-  }
-  addRelay(relay, connect = true) {
-    const isAlreadyInPool = this.relays.has(relay.url);
-    const isBlacklisted = this.blacklistRelayUrls?.has(relay.url);
-    const isCustomRelayUrl = relay.url.includes("/npub1");
-    let reconnect = true;
-    const relayUrl = relay.url;
-    if (isAlreadyInPool)
-      return;
-    if (isBlacklisted) {
-      this.debug(`Refusing to add relay ${relayUrl}: blacklisted`);
-      return;
-    }
-    if (isCustomRelayUrl) {
-      this.debug(`Refusing to add relay ${relayUrl}: is a filter relay`);
-      return;
-    }
-    if (this.ndk.cacheAdapter?.getRelayStatus) {
-      const info = this.ndk.cacheAdapter.getRelayStatus(relayUrl);
-      if (info?.dontConnectBefore) {
-        if (info.dontConnectBefore > Date.now()) {
-          const delay = info.dontConnectBefore - Date.now();
-          this.debug(`Refusing to add relay ${relayUrl}: delayed connect for ${delay}ms`);
-          setTimeout(() => {
-            this.addRelay(relay, connect);
-          }, delay);
-          return;
-        }
-        reconnect = false;
-      }
-    }
-    const noticeHandler = (notice) => this.emit("notice", relay, notice);
-    const connectHandler = () => this.handleRelayConnect(relayUrl);
-    const readyHandler = () => this.handleRelayReady(relay);
-    const disconnectHandler = () => this.emit("relay:disconnect", relay);
-    const flappingHandler = () => this.handleFlapping(relay);
-    const authHandler = (challenge5) => this.emit("relay:auth", relay, challenge5);
-    const authedHandler = () => this.emit("relay:authed", relay);
-    relay.off("notice", noticeHandler);
-    relay.off("connect", connectHandler);
-    relay.off("ready", readyHandler);
-    relay.off("disconnect", disconnectHandler);
-    relay.off("flapping", flappingHandler);
-    relay.off("auth", authHandler);
-    relay.off("authed", authedHandler);
-    relay.on("notice", noticeHandler);
-    relay.on("connect", connectHandler);
-    relay.on("ready", readyHandler);
-    relay.on("disconnect", disconnectHandler);
-    relay.on("flapping", flappingHandler);
-    relay.on("auth", authHandler);
-    relay.on("authed", authedHandler);
-    relay.on("delayed-connect", (delay) => {
-      if (this.ndk.cacheAdapter?.updateRelayStatus) {
-        this.ndk.cacheAdapter.updateRelayStatus(relay.url, {
-          dontConnectBefore: Date.now() + delay
-        });
-      }
-    });
-    this._relays.set(relayUrl, relay);
-    if (connect)
-      this.autoConnectRelays.add(relayUrl);
-    if (connect && this.status === "active") {
-      this.emit("relay:connecting", relay);
-      relay.connect(undefined, reconnect).catch((e) => {
-        this.debug(`Failed to connect to relay ${relayUrl}`, e);
-      });
-    }
-  }
-  removeRelay(relayUrl) {
-    const relay = this.relays.get(relayUrl);
-    if (relay) {
-      relay.disconnect();
-      this.relays.delete(relayUrl);
-      this.autoConnectRelays.delete(relayUrl);
-      this.emit("relay:disconnect", relay);
-      return true;
-    }
-    const existingTimer = this.temporaryRelayTimers.get(relayUrl);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
-      this.temporaryRelayTimers.delete(relayUrl);
-    }
-    return false;
-  }
-  isRelayConnected(url) {
-    const normalizedUrl = normalizeRelayUrl2(url);
-    const relay = this.relays.get(normalizedUrl);
-    if (!relay)
-      return false;
-    return relay.status === 5;
-  }
-  getRelay(url, connect = true, temporary = false, filters) {
-    let relay = this.relays.get(normalizeRelayUrl2(url));
-    if (!relay) {
-      relay = new NDKRelay2(url, undefined, this.ndk);
-      relay.connectivity.netDebug = this.ndk.netDebug;
-      if (temporary) {
-        this.useTemporaryRelay(relay, 30000, filters);
-      } else {
-        this.addRelay(relay, connect);
-      }
-    }
-    return relay;
-  }
-  handleRelayConnect(relayUrl) {
-    const relay = this.relays.get(relayUrl);
-    if (!relay) {
-      console.error("NDK BUG: relay not found in pool", { relayUrl });
-      return;
-    }
-    this.emit("relay:connect", relay);
-    if (this.stats().connected === this.relays.size) {
-      this.emit("connect");
-    }
-  }
-  handleRelayReady(relay) {
-    this.emit("relay:ready", relay);
-  }
-  async connect(timeoutMs) {
-    this.status = "active";
-    this.debug(`Connecting to ${this.relays.size} relays${timeoutMs ? `, timeout ${timeoutMs}ms` : ""}...`);
-    const relaysToConnect = Array.from(this.autoConnectRelays.keys()).map((url) => this.relays.get(url)).filter((relay) => !!relay);
-    for (const relay of relaysToConnect) {
-      if (relay.status !== 5 && relay.status !== 4) {
-        this.emit("relay:connecting", relay);
-        relay.connect().catch((e) => {
-          this.debug(`Failed to connect to relay ${relay.url}: ${e ?? "No reason specified"}`);
-        });
-      }
-    }
-    const allConnected = () => relaysToConnect.every((r) => r.status === 5);
-    const allConnectedPromise = new Promise((resolve) => {
-      if (allConnected()) {
-        resolve();
-        return;
-      }
-      const listeners = [];
-      for (const relay of relaysToConnect) {
-        const handler = () => {
-          if (allConnected()) {
-            for (let i3 = 0;i3 < relaysToConnect.length; i3++) {
-              relaysToConnect[i3].off("connect", listeners[i3]);
-            }
-            resolve();
-          }
-        };
-        listeners.push(handler);
-        relay.on("connect", handler);
-      }
-    });
-    const timeoutPromise = typeof timeoutMs === "number" ? new Promise((resolve) => setTimeout(resolve, timeoutMs)) : new Promise(() => {});
-    await Promise.race([allConnectedPromise, timeoutPromise]);
-  }
-  checkOnFlappingRelays() {
-    const flappingRelaysCount = this.flappingRelays.size;
-    const totalRelays = this.relays.size;
-    if (flappingRelaysCount / totalRelays >= 0.8) {
-      for (const relayUrl of this.flappingRelays) {
-        this.backoffTimes.set(relayUrl, 0);
-      }
-    }
-  }
-  handleFlapping(relay) {
-    this.debug(`Relay ${relay.url} is flapping`);
-    let currentBackoff = this.backoffTimes.get(relay.url) || 5000;
-    currentBackoff = currentBackoff * 2;
-    this.backoffTimes.set(relay.url, currentBackoff);
-    this.debug(`Backoff time for ${relay.url} is ${currentBackoff}ms`);
-    setTimeout(() => {
-      this.debug(`Attempting to reconnect to ${relay.url}`);
-      this.emit("relay:connecting", relay);
-      relay.connect();
-      this.checkOnFlappingRelays();
-    }, currentBackoff);
-    relay.disconnect();
-    this.emit("flapping", relay);
-  }
-  size() {
-    return this.relays.size;
-  }
-  stats() {
-    const stats = {
-      total: 0,
-      connected: 0,
-      disconnected: 0,
-      connecting: 0
-    };
-    for (const relay of this.relays.values()) {
-      stats.total++;
-      if (relay.status === 5) {
-        stats.connected++;
-      } else if (relay.status === 1) {
-        stats.disconnected++;
-      } else if (relay.status === 4) {
-        stats.connecting++;
-      }
-    }
-    return stats;
-  }
-  connectedRelays() {
-    return Array.from(this.relays.values()).filter((relay) => relay.status >= 5);
-  }
-  permanentAndConnectedRelays() {
-    return Array.from(this.relays.values()).filter((relay) => relay.status >= 5 && !this.temporaryRelayTimers.has(relay.url));
-  }
-  urls() {
-    return Array.from(this.relays.keys());
-  }
-};
-var NDKCashuMintList2 = class _NDKCashuMintList2 extends NDKEvent3 {
-  static kind = 10019;
-  static kinds = [10019];
-  _p2pk;
-  constructor(ndk, event) {
-    super(ndk, event);
-    this.kind ??= 10019;
-  }
-  static from(event) {
-    return new _NDKCashuMintList2(event.ndk, event);
-  }
-  set relays(urls) {
-    this.tags = this.tags.filter((t) => t[0] !== "relay");
-    for (const url of urls) {
-      this.tags.push(["relay", url]);
-    }
-  }
-  get relays() {
-    const r = [];
-    for (const tag of this.tags) {
-      if (tag[0] === "relay") {
-        r.push(tag[1]);
-      }
-    }
-    return r;
-  }
-  set mints(urls) {
-    this.tags = this.tags.filter((t) => t[0] !== "mint");
-    for (const url of urls) {
-      this.tags.push(["mint", url]);
-    }
-  }
-  get mints() {
-    const r = [];
-    for (const tag of this.tags) {
-      if (tag[0] === "mint") {
-        r.push(tag[1]);
-      }
-    }
-    return Array.from(new Set(r));
-  }
-  get p2pk() {
-    if (this._p2pk) {
-      return this._p2pk;
-    }
-    this._p2pk = this.tagValue("pubkey") ?? this.pubkey;
-    return this._p2pk;
-  }
-  set p2pk(pubkey) {
-    this._p2pk = pubkey;
-    this.removeTag("pubkey");
-    if (pubkey) {
-      this.tags.push(["pubkey", pubkey]);
-    }
-  }
-  get relaySet() {
-    return NDKRelaySet2.fromRelayUrls(this.relays, this.ndk);
-  }
-};
-var NDKArticle2 = class _NDKArticle2 extends NDKEvent3 {
-  static kind = 30023;
-  static kinds = [30023];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 30023;
-  }
-  static from(event) {
-    return new _NDKArticle2(event.ndk, event);
-  }
-  get title() {
-    return this.tagValue("title");
-  }
-  set title(title) {
-    this.removeTag("title");
-    if (title)
-      this.tags.push(["title", title]);
-  }
-  get image() {
-    return this.tagValue("image");
-  }
-  set image(image) {
-    this.removeTag("image");
-    if (image)
-      this.tags.push(["image", image]);
-  }
-  get summary() {
-    return this.tagValue("summary");
-  }
-  set summary(summary) {
-    this.removeTag("summary");
-    if (summary)
-      this.tags.push(["summary", summary]);
-  }
-  get published_at() {
-    const tag = this.tagValue("published_at");
-    if (tag) {
-      let val = Number.parseInt(tag);
-      if (val > 1000000000000) {
-        val = Math.floor(val / 1000);
-      }
-      return val;
-    }
-    return;
-  }
-  set published_at(timestamp) {
-    this.removeTag("published_at");
-    if (timestamp !== undefined) {
-      this.tags.push(["published_at", timestamp.toString()]);
-    }
-  }
-  async generateTags() {
-    super.generateTags();
-    if (!this.published_at) {
-      this.published_at = this.created_at;
-    }
-    return super.generateTags();
-  }
-  get url() {
-    return this.tagValue("url");
-  }
-  set url(url) {
-    if (url) {
-      this.tags.push(["url", url]);
-    } else {
-      this.removeTag("url");
-    }
-  }
-};
-function proofsTotalBalance2(proofs) {
-  return proofs.reduce((acc, proof) => {
-    if (proof.amount < 0) {
-      throw new Error("proof amount is negative");
-    }
-    return acc + proof.amount;
-  }, 0);
-}
-var NDKCashuToken2 = class _NDKCashuToken2 extends NDKEvent3 {
-  _proofs = [];
-  _mint;
-  static kind = 7375;
-  static kinds = [7375];
-  _deletes = [];
-  original;
-  constructor(ndk, event) {
-    super(ndk, event);
-    this.kind ??= 7375;
-  }
-  static async from(event) {
-    const token = new _NDKCashuToken2(event.ndk, event);
-    token.original = event;
-    try {
-      await token.decrypt();
-    } catch {
-      token.content = token.original.content;
-    }
-    try {
-      const content = JSON.parse(token.content);
-      token.proofs = content.proofs;
-      token.mint = content.mint ?? token.tagValue("mint");
-      token.deletedTokens = content.del ?? [];
-      if (!Array.isArray(token.proofs))
-        return;
-    } catch (_e) {
-      return;
-    }
-    return token;
-  }
-  get proofs() {
-    return this._proofs;
-  }
-  set proofs(proofs) {
-    const cs = /* @__PURE__ */ new Set;
-    this._proofs = proofs.filter((proof) => {
-      if (cs.has(proof.C)) {
-        console.warn("Passed in proofs had duplicates, ignoring", proof.C);
-        return false;
-      }
-      if (proof.amount < 0) {
-        console.warn("Invalid proof with negative amount", proof);
-        return false;
-      }
-      cs.add(proof.C);
-      return true;
-    }).map(this.cleanProof);
-  }
-  cleanProof(proof) {
-    return {
-      id: proof.id,
-      amount: proof.amount,
-      C: proof.C,
-      secret: proof.secret
-    };
-  }
-  async toNostrEvent(pubkey) {
-    if (!this.ndk)
-      throw new Error("no ndk");
-    if (!this.ndk.signer)
-      throw new Error("no signer");
-    const payload = {
-      proofs: this.proofs.map(this.cleanProof),
-      mint: this.mint,
-      del: this.deletedTokens ?? []
-    };
-    this.content = JSON.stringify(payload);
-    const user = await this.ndk.signer.user();
-    await this.encrypt(user, undefined, "nip44");
-    return super.toNostrEvent(pubkey);
-  }
-  set mint(mint) {
-    this._mint = mint;
-  }
-  get mint() {
-    return this._mint;
-  }
-  get deletedTokens() {
-    return this._deletes;
-  }
-  set deletedTokens(tokenIds) {
-    this._deletes = tokenIds;
-  }
-  get amount() {
-    return proofsTotalBalance2(this.proofs);
-  }
-  async publish(relaySet, timeoutMs, requiredRelayCount) {
-    if (this.original) {
-      return this.original.publish(relaySet, timeoutMs, requiredRelayCount);
-    }
-    return super.publish(relaySet, timeoutMs, requiredRelayCount);
-  }
-};
-var NDKHighlight2 = class _NDKHighlight2 extends NDKEvent3 {
-  _article;
-  static kind = 9802;
-  static kinds = [9802];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 9802;
-  }
-  static from(event) {
-    return new _NDKHighlight2(event.ndk, event);
-  }
-  get url() {
-    return this.tagValue("r");
-  }
-  set context(context) {
-    if (context === undefined) {
-      this.tags = this.tags.filter(([tag, _value]) => tag !== "context");
-    } else {
-      this.tags = this.tags.filter(([tag, _value]) => tag !== "context");
-      this.tags.push(["context", context]);
-    }
-  }
-  get context() {
-    return this.tags.find(([tag, _value]) => tag === "context")?.[1] ?? undefined;
-  }
-  get article() {
-    return this._article;
-  }
-  set article(article) {
-    this._article = article;
-    if (typeof article === "string") {
-      this.tags.push(["r", article]);
-    } else {
-      this.tag(article);
-    }
-  }
-  getArticleTag() {
-    return this.getMatchingTags("a")[0] || this.getMatchingTags("e")[0] || this.getMatchingTags("r")[0];
-  }
-  async getArticle() {
-    if (this._article !== undefined)
-      return this._article;
-    let taggedBech32;
-    const articleTag = this.getArticleTag();
-    if (!articleTag)
-      return;
-    switch (articleTag[0]) {
-      case "a": {
-        const [kind, pubkey, identifier] = articleTag[1].split(":");
-        taggedBech32 = nip19_exports2.naddrEncode({
-          kind: Number.parseInt(kind),
-          pubkey,
-          identifier
-        });
-        break;
-      }
-      case "e":
-        taggedBech32 = nip19_exports2.noteEncode(articleTag[1]);
-        break;
-      case "r":
-        this._article = articleTag[1];
-        break;
-    }
-    if (taggedBech32) {
-      let a = await this.ndk?.fetchEvent(taggedBech32);
-      if (a) {
-        if (a.kind === 30023) {
-          a = NDKArticle2.from(a);
-        }
-        this._article = a;
-      }
-    }
-    return this._article;
-  }
-};
-function mapImetaTag2(tag) {
-  const data = {};
-  if (tag.length === 2) {
-    const parts = tag[1].split(" ");
-    for (let i3 = 0;i3 < parts.length; i3 += 2) {
-      const key = parts[i3];
-      const value = parts[i3 + 1];
-      if (key === "fallback") {
-        if (!data.fallback)
-          data.fallback = [];
-        data.fallback.push(value);
-      } else {
-        data[key] = value;
-      }
-    }
-    return data;
-  }
-  const tags = tag.slice(1);
-  for (const val of tags) {
-    const parts = val.split(" ");
-    const key = parts[0];
-    const value = parts.slice(1).join(" ");
-    if (key === "fallback") {
-      if (!data.fallback)
-        data.fallback = [];
-      data.fallback.push(value);
-    } else {
-      data[key] = value;
-    }
-  }
-  return data;
-}
-function imetaTagToTag2(imeta) {
-  const tag = ["imeta"];
-  for (const [key, value] of Object.entries(imeta)) {
-    if (Array.isArray(value)) {
-      for (const v of value) {
-        tag.push(`${key} ${v}`);
-      }
-    } else if (value) {
-      tag.push(`${key} ${value}`);
-    }
-  }
-  return tag;
-}
-var NDKImage2 = class _NDKImage2 extends NDKEvent3 {
-  static kind = 20;
-  static kinds = [20];
-  _imetas;
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 20;
-  }
-  static from(event) {
-    return new _NDKImage2(event.ndk, event.rawEvent());
-  }
-  get isValid() {
-    return this.imetas.length > 0;
-  }
-  get imetas() {
-    if (this._imetas)
-      return this._imetas;
-    this._imetas = this.tags.filter((tag) => tag[0] === "imeta").map(mapImetaTag2).filter((imeta) => !!imeta.url);
-    return this._imetas;
-  }
-  set imetas(tags) {
-    this._imetas = tags;
-    this.tags = this.tags.filter((tag) => tag[0] !== "imeta");
-    this.tags.push(...tags.map(imetaTagToTag2));
-  }
-};
-var NDKList2 = class _NDKList2 extends NDKEvent3 {
-  _encryptedTags;
-  static kinds = [
-    10063,
-    30001,
-    10004,
-    10050,
-    10030,
-    10015,
-    10001,
-    10002,
-    10007,
-    10006,
-    10003
-  ];
-  encryptedTagsLength;
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 30001;
-  }
-  static from(ndkEvent) {
-    return new _NDKList2(ndkEvent.ndk, ndkEvent);
-  }
-  get title() {
-    const titleTag = this.tagValue("title") || this.tagValue("name");
-    if (titleTag)
-      return titleTag;
-    if (this.kind === 3) {
-      return "Contacts";
-    }
-    if (this.kind === 1e4) {
-      return "Mute";
-    }
-    if (this.kind === 10001) {
-      return "Pinned Notes";
-    }
-    if (this.kind === 10002) {
-      return "Relay Metadata";
-    }
-    if (this.kind === 10003) {
-      return "Bookmarks";
-    }
-    if (this.kind === 10004) {
-      return "Communities";
-    }
-    if (this.kind === 10005) {
-      return "Public Chats";
-    }
-    if (this.kind === 10006) {
-      return "Blocked Relays";
-    }
-    if (this.kind === 10007) {
-      return "Search Relays";
-    }
-    if (this.kind === 10050) {
-      return "Direct Message Receive Relays";
-    }
-    if (this.kind === 10015) {
-      return "Interests";
-    }
-    if (this.kind === 10030) {
-      return "Emojis";
-    }
-    return this.tagValue("d");
-  }
-  set title(title) {
-    this.removeTag(["title", "name"]);
-    if (title)
-      this.tags.push(["title", title]);
-  }
-  get name() {
-    return this.title;
-  }
-  set name(name) {
-    this.title = name;
-  }
-  get description() {
-    return this.tagValue("description");
-  }
-  set description(name) {
-    this.removeTag("description");
-    if (name)
-      this.tags.push(["description", name]);
-  }
-  get image() {
-    return this.tagValue("image");
-  }
-  set image(name) {
-    this.removeTag("image");
-    if (name)
-      this.tags.push(["image", name]);
-  }
-  isEncryptedTagsCacheValid() {
-    return !!(this._encryptedTags && this.encryptedTagsLength === this.content.length);
-  }
-  async encryptedTags(useCache = true) {
-    if (useCache && this.isEncryptedTagsCacheValid())
-      return this._encryptedTags;
-    if (!this.ndk)
-      throw new Error("NDK instance not set");
-    if (!this.ndk.signer)
-      throw new Error("NDK signer not set");
-    const user = await this.ndk.signer.user();
-    try {
-      if (this.content.length > 0) {
-        try {
-          const decryptedContent = await this.ndk.signer.decrypt(user, this.content);
-          const a = JSON.parse(decryptedContent);
-          if (a?.[0]) {
-            this.encryptedTagsLength = this.content.length;
-            return this._encryptedTags = a;
-          }
-          this.encryptedTagsLength = this.content.length;
-          return this._encryptedTags = [];
-        } catch (_e) {}
-      }
-    } catch (_e) {}
-    return [];
-  }
-  validateTag(_tagValue) {
-    return true;
-  }
-  getItems(type) {
-    return this.tags.filter((tag) => tag[0] === type);
-  }
-  get items() {
-    return this.tags.filter((t) => {
-      return ![
-        "d",
-        "L",
-        "l",
-        "title",
-        "name",
-        "description",
-        "published_at",
-        "summary",
-        "image",
-        "thumb",
-        "alt",
-        "expiration",
-        "subject",
-        "client"
-      ].includes(t[0]);
-    });
-  }
-  async addItem(item, mark = undefined, encrypted = false, position = "bottom") {
-    if (!this.ndk)
-      throw new Error("NDK instance not set");
-    if (!this.ndk.signer)
-      throw new Error("NDK signer not set");
-    let tags;
-    if (item instanceof NDKEvent3) {
-      tags = [item.tagReference(mark)];
-    } else if (item instanceof NDKUser2) {
-      tags = item.referenceTags();
-    } else if (item instanceof NDKRelay2) {
-      tags = item.referenceTags();
-    } else if (Array.isArray(item)) {
-      tags = [item];
-    } else {
-      throw new Error("Invalid object type");
-    }
-    if (mark)
-      tags[0].push(mark);
-    if (encrypted) {
-      const user = await this.ndk.signer.user();
-      const currentList = await this.encryptedTags();
-      if (position === "top")
-        currentList.unshift(...tags);
-      else
-        currentList.push(...tags);
-      this._encryptedTags = currentList;
-      this.encryptedTagsLength = this.content.length;
-      this.content = JSON.stringify(currentList);
-      await this.encrypt(user);
-    } else {
-      if (position === "top")
-        this.tags.unshift(...tags);
-      else
-        this.tags.push(...tags);
-    }
-    this.created_at = Math.floor(Date.now() / 1000);
-    this.emit("change");
-  }
-  async removeItemByValue(value, publish2 = true) {
-    if (!this.ndk)
-      throw new Error("NDK instance not set");
-    if (!this.ndk.signer)
-      throw new Error("NDK signer not set");
-    const index = this.tags.findIndex((tag) => tag[1] === value);
-    if (index >= 0) {
-      this.tags.splice(index, 1);
-    }
-    const user = await this.ndk.signer.user();
-    const encryptedTags = await this.encryptedTags();
-    const encryptedIndex = encryptedTags.findIndex((tag) => tag[1] === value);
-    if (encryptedIndex >= 0) {
-      encryptedTags.splice(encryptedIndex, 1);
-      this._encryptedTags = encryptedTags;
-      this.encryptedTagsLength = this.content.length;
-      this.content = JSON.stringify(encryptedTags);
-      await this.encrypt(user);
-    }
-    if (publish2) {
-      return this.publishReplaceable();
-    }
-    this.created_at = Math.floor(Date.now() / 1000);
-    this.emit("change");
-  }
-  async removeItem(index, encrypted) {
-    if (!this.ndk)
-      throw new Error("NDK instance not set");
-    if (!this.ndk.signer)
-      throw new Error("NDK signer not set");
-    if (encrypted) {
-      const user = await this.ndk.signer.user();
-      const currentList = await this.encryptedTags();
-      currentList.splice(index, 1);
-      this._encryptedTags = currentList;
-      this.encryptedTagsLength = this.content.length;
-      this.content = JSON.stringify(currentList);
-      await this.encrypt(user);
-    } else {
-      this.tags.splice(index, 1);
-    }
-    this.created_at = Math.floor(Date.now() / 1000);
-    this.emit("change");
-    return this;
-  }
-  has(item) {
-    return this.items.some((tag) => tag[1] === item);
-  }
-  filterForItems() {
-    const ids = /* @__PURE__ */ new Set;
-    const nip33Queries = /* @__PURE__ */ new Map;
-    const filters = [];
-    for (const tag of this.items) {
-      if (tag[0] === "e" && tag[1]) {
-        ids.add(tag[1]);
-      } else if (tag[0] === "a" && tag[1]) {
-        const [kind, pubkey, dTag] = tag[1].split(":");
-        if (!kind || !pubkey)
-          continue;
-        const key = `${kind}:${pubkey}`;
-        const item = nip33Queries.get(key) || [];
-        item.push(dTag || "");
-        nip33Queries.set(key, item);
-      }
-    }
-    if (ids.size > 0) {
-      filters.push({ ids: Array.from(ids) });
-    }
-    if (nip33Queries.size > 0) {
-      for (const [key, values] of nip33Queries.entries()) {
-        const [kind, pubkey] = key.split(":");
-        filters.push({
-          kinds: [Number.parseInt(kind)],
-          authors: [pubkey],
-          "#d": values
-        });
-      }
-    }
-    return filters;
-  }
-};
-var lists_default2 = NDKList2;
-var NDKNutzap2 = class _NDKNutzap2 extends NDKEvent3 {
-  debug;
-  _proofs = [];
-  static kind = 9321;
-  static kinds = [_NDKNutzap2.kind];
-  constructor(ndk, event) {
-    super(ndk, event);
-    this.kind ??= 9321;
-    this.debug = ndk?.debug.extend("nutzap") ?? import_debug16.default("ndk:nutzap");
-    if (!this.alt)
-      this.alt = "This is a nutzap";
-    try {
-      const proofTags = this.getMatchingTags("proof");
-      if (proofTags.length) {
-        this._proofs = proofTags.map((tag) => JSON.parse(tag[1]));
-      } else {
-        this._proofs = JSON.parse(this.content);
-      }
-    } catch {
-      return;
-    }
-  }
-  static from(event) {
-    const e = new _NDKNutzap2(event.ndk, event);
-    if (!e._proofs || !e._proofs.length)
-      return;
-    return e;
-  }
-  set comment(comment) {
-    this.content = comment ?? "";
-  }
-  get comment() {
-    const c = this.tagValue("comment");
-    if (c)
-      return c;
-    return this.content;
-  }
-  set proofs(proofs) {
-    this._proofs = proofs;
-    this.tags = this.tags.filter((tag) => tag[0] !== "proof");
-    for (const proof of proofs) {
-      this.tags.push(["proof", JSON.stringify(proof)]);
-    }
-  }
-  get proofs() {
-    return this._proofs;
-  }
-  get rawP2pk() {
-    const firstProof = this.proofs[0];
-    try {
-      const secret = JSON.parse(firstProof.secret);
-      let payload;
-      if (typeof secret === "string") {
-        payload = JSON.parse(secret);
-        this.debug("stringified payload", firstProof.secret);
-      } else if (typeof secret === "object") {
-        payload = secret;
-      }
-      if (Array.isArray(payload) && payload[0] === "P2PK" && payload.length > 1 && typeof payload[1] === "object" && payload[1] !== null) {
-        return payload[1].data;
-      }
-      if (typeof payload === "object" && payload !== null && typeof payload[1]?.data === "string") {
-        return payload[1].data;
-      }
-    } catch (e) {
-      this.debug("error parsing p2pk pubkey", e, this.proofs[0]);
-    }
-    return;
-  }
-  get p2pk() {
-    const rawP2pk = this.rawP2pk;
-    if (!rawP2pk)
-      return;
-    return rawP2pk.startsWith("02") ? rawP2pk.slice(2) : rawP2pk;
-  }
-  get mint() {
-    return this.tagValue("u");
-  }
-  set mint(value) {
-    this.replaceTag(["u", value]);
-  }
-  get unit() {
-    let _unit = this.tagValue("unit") ?? "sat";
-    if (_unit?.startsWith("msat"))
-      _unit = "sat";
-    return _unit;
-  }
-  set unit(value) {
-    this.removeTag("unit");
-    if (value?.startsWith("msat"))
-      throw new Error("msat is not allowed, use sat denomination instead");
-    if (value)
-      this.tag(["unit", value]);
-  }
-  get amount() {
-    const amount = this.proofs.reduce((total, proof) => total + proof.amount, 0);
-    return amount;
-  }
-  sender = this.author;
-  set target(target) {
-    this.tags = this.tags.filter((t) => t[0] !== "p");
-    if (target instanceof NDKEvent3) {
-      this.tags.push(target.tagReference());
-    }
-  }
-  set recipientPubkey(pubkey) {
-    this.removeTag("p");
-    this.tag(["p", pubkey]);
-  }
-  get recipientPubkey() {
-    return this.tagValue("p");
-  }
-  get recipient() {
-    const pubkey = this.recipientPubkey;
-    if (this.ndk)
-      return this.ndk.getUser({ pubkey });
-    return new NDKUser2({ pubkey });
-  }
-  async toNostrEvent() {
-    if (this.unit === "msat") {
-      this.unit = "sat";
-    }
-    this.removeTag("amount");
-    this.tags.push(["amount", this.amount.toString()]);
-    const event = await super.toNostrEvent();
-    event.content = this.comment;
-    return event;
-  }
-  get isValid() {
-    let eTagCount = 0;
-    let pTagCount = 0;
-    let mintTagCount = 0;
-    for (const tag of this.tags) {
-      if (tag[0] === "e")
-        eTagCount++;
-      if (tag[0] === "p")
-        pTagCount++;
-      if (tag[0] === "u")
-        mintTagCount++;
-    }
-    return pTagCount === 1 && mintTagCount === 1 && eTagCount <= 1 && this.proofs.length > 0;
-  }
-};
-var NDKSimpleGroupMemberList2 = class _NDKSimpleGroupMemberList2 extends NDKEvent3 {
-  relaySet;
-  memberSet = /* @__PURE__ */ new Set;
-  static kind = 39002;
-  static kinds = [39002];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 39002;
-    this.memberSet = new Set(this.members);
-  }
-  static from(event) {
-    return new _NDKSimpleGroupMemberList2(event.ndk, event);
-  }
-  get members() {
-    return this.getMatchingTags("p").map((tag) => tag[1]);
-  }
-  hasMember(member) {
-    return this.memberSet.has(member);
-  }
-  async publish(relaySet, timeoutMs, requiredRelayCount) {
-    relaySet ??= this.relaySet;
-    return super.publishReplaceable(relaySet, timeoutMs, requiredRelayCount);
-  }
-};
-var NDKSimpleGroupMetadata2 = class _NDKSimpleGroupMetadata2 extends NDKEvent3 {
-  static kind = 39000;
-  static kinds = [39000];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 39000;
-  }
-  static from(event) {
-    return new _NDKSimpleGroupMetadata2(event.ndk, event);
-  }
-  get name() {
-    return this.tagValue("name");
-  }
-  get picture() {
-    return this.tagValue("picture");
-  }
-  get about() {
-    return this.tagValue("about");
-  }
-  get scope() {
-    if (this.getMatchingTags("public").length > 0)
-      return "public";
-    if (this.getMatchingTags("public").length > 0)
-      return "private";
-    return;
-  }
-  set scope(scope) {
-    this.removeTag("public");
-    this.removeTag("private");
-    if (scope === "public") {
-      this.tags.push(["public", ""]);
-    } else if (scope === "private") {
-      this.tags.push(["private", ""]);
-    }
-  }
-  get access() {
-    if (this.getMatchingTags("open").length > 0)
-      return "open";
-    if (this.getMatchingTags("closed").length > 0)
-      return "closed";
-    return;
-  }
-  set access(access) {
-    this.removeTag("open");
-    this.removeTag("closed");
-    if (access === "open") {
-      this.tags.push(["open", ""]);
-    } else if (access === "closed") {
-      this.tags.push(["closed", ""]);
-    }
-  }
-};
-function strToPosition2(positionStr) {
-  const [x, y] = positionStr.split(",").map(Number);
-  return { x, y };
-}
-function strToDimension2(dimensionStr) {
-  const [width, height2] = dimensionStr.split("x").map(Number);
-  return { width, height: height2 };
-}
-var NDKStorySticker2 = class _NDKStorySticker2 {
-  static Text = "text";
-  static Pubkey = "pubkey";
-  static Event = "event";
-  static Prompt = "prompt";
-  static Countdown = "countdown";
-  type;
-  value;
-  position;
-  dimension;
-  properties;
-  constructor(arg) {
-    if (Array.isArray(arg)) {
-      const tag = arg;
-      if (tag[0] !== "sticker" || tag.length < 5) {
-        throw new Error("Invalid sticker tag");
-      }
-      this.type = tag[1];
-      this.value = tag[2];
-      this.position = strToPosition2(tag[3]);
-      this.dimension = strToDimension2(tag[4]);
-      const props = {};
-      for (let i3 = 5;i3 < tag.length; i3++) {
-        const [key, ...rest] = tag[i3].split(" ");
-        props[key] = rest.join(" ");
-      }
-      if (Object.keys(props).length > 0) {
-        this.properties = props;
-      }
-    } else {
-      this.type = arg;
-      this.value = undefined;
-      this.position = { x: 0, y: 0 };
-      this.dimension = { width: 0, height: 0 };
-    }
-  }
-  static fromTag(tag) {
-    try {
-      return new _NDKStorySticker2(tag);
-    } catch {
-      return null;
-    }
-  }
-  get style() {
-    return this.properties?.style;
-  }
-  set style(style) {
-    if (style)
-      this.properties = { ...this.properties, style };
-    else
-      delete this.properties?.style;
-  }
-  get rotation() {
-    return this.properties?.rot ? Number.parseFloat(this.properties.rot) : undefined;
-  }
-  set rotation(rotation) {
-    if (rotation !== undefined) {
-      this.properties = { ...this.properties, rot: rotation.toString() };
-    } else {
-      delete this.properties?.rot;
-    }
-  }
-  get isValid() {
-    return this.hasValidDimensions() && this.hasValidPosition();
-  }
-  hasValidDimensions = () => {
-    return typeof this.dimension.width === "number" && typeof this.dimension.height === "number" && !Number.isNaN(this.dimension.width) && !Number.isNaN(this.dimension.height);
-  };
-  hasValidPosition = () => {
-    return typeof this.position.x === "number" && typeof this.position.y === "number" && !Number.isNaN(this.position.x) && !Number.isNaN(this.position.y);
-  };
-  toTag() {
-    if (!this.isValid) {
-      const errors = [
-        !this.hasValidDimensions() ? "dimensions is invalid" : undefined,
-        !this.hasValidPosition() ? "position is invalid" : undefined
-      ].filter(Boolean);
-      throw new Error(`Invalid sticker: ${errors.join(", ")}`);
-    }
-    let value;
-    switch (this.type) {
-      case "event":
-        value = this.value.tagId();
-        break;
-      case "pubkey":
-        value = this.value.pubkey;
-        break;
-      default:
-        value = this.value;
-    }
-    const tag = ["sticker", this.type, value, coordinates2(this.position), dimension2(this.dimension)];
-    if (this.properties) {
-      for (const [key, propValue] of Object.entries(this.properties)) {
-        tag.push(`${key} ${propValue}`);
-      }
-    }
-    return tag;
-  }
-};
-var NDKStory2 = class _NDKStory2 extends NDKEvent3 {
-  static kind = 23;
-  static kinds = [23];
-  _imeta;
-  _dimensions;
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 23;
-    if (rawEvent) {
-      for (const tag of rawEvent.tags) {
-        switch (tag[0]) {
-          case "imeta":
-            this._imeta = mapImetaTag2(tag);
-            break;
-          case "dim":
-            this.dimensions = strToDimension2(tag[1]);
-            break;
-        }
-      }
-    }
-  }
-  static from(event) {
-    return new _NDKStory2(event.ndk, event);
-  }
-  get isValid() {
-    return !!this.imeta;
-  }
-  get imeta() {
-    return this._imeta;
-  }
-  set imeta(tag) {
-    this._imeta = tag;
-    this.tags = this.tags.filter((t) => t[0] !== "imeta");
-    if (tag) {
-      this.tags.push(imetaTagToTag2(tag));
-    }
-  }
-  get dimensions() {
-    const dimTag = this.tagValue("dim");
-    if (!dimTag)
-      return;
-    return strToDimension2(dimTag);
-  }
-  set dimensions(dimensions) {
-    this.removeTag("dim");
-    if (dimensions) {
-      this.tags.push(["dim", `${dimensions.width}x${dimensions.height}`]);
-    }
-  }
-  get duration() {
-    const durTag = this.tagValue("dur");
-    if (!durTag)
-      return;
-    return Number.parseInt(durTag);
-  }
-  set duration(duration) {
-    this.removeTag("dur");
-    if (duration !== undefined) {
-      this.tags.push(["dur", duration.toString()]);
-    }
-  }
-  get stickers() {
-    const stickers = [];
-    for (const tag of this.tags) {
-      if (tag[0] !== "sticker" || tag.length < 5)
-        continue;
-      const sticker = NDKStorySticker2.fromTag(tag);
-      if (sticker)
-        stickers.push(sticker);
-    }
-    return stickers;
-  }
-  addSticker(sticker) {
-    let stickerToAdd;
-    if (sticker instanceof NDKStorySticker2) {
-      stickerToAdd = sticker;
-    } else {
-      const tag = [
-        "sticker",
-        sticker.type,
-        typeof sticker.value === "string" ? sticker.value : "",
-        coordinates2(sticker.position),
-        dimension2(sticker.dimension)
-      ];
-      if (sticker.properties) {
-        for (const [key, value] of Object.entries(sticker.properties)) {
-          tag.push(`${key} ${value}`);
-        }
-      }
-      stickerToAdd = new NDKStorySticker2(tag);
-      stickerToAdd.value = sticker.value;
-    }
-    if (stickerToAdd.type === "pubkey") {
-      this.tag(stickerToAdd.value);
-    } else if (stickerToAdd.type === "event") {
-      this.tag(stickerToAdd.value);
-    }
-    this.tags.push(stickerToAdd.toTag());
-  }
-  removeSticker(index) {
-    const stickers = this.stickers;
-    if (index < 0 || index >= stickers.length)
-      return;
-    let stickerCount = 0;
-    for (let i3 = 0;i3 < this.tags.length; i3++) {
-      if (this.tags[i3][0] === "sticker") {
-        if (stickerCount === index) {
-          this.tags.splice(i3, 1);
-          break;
-        }
-        stickerCount++;
-      }
-    }
-  }
-};
-var coordinates2 = (position) => `${position.x},${position.y}`;
-var dimension2 = (dimension22) => `${dimension22.width}x${dimension22.height}`;
-var possibleIntervalFrequencies2 = [
-  "daily",
-  "weekly",
-  "monthly",
-  "quarterly",
-  "yearly"
-];
-function newAmount2(amount, currency, term) {
-  return ["amount", amount.toString(), currency, term];
-}
-function parseTagToSubscriptionAmount2(tag) {
-  const amount = Number.parseInt(tag[1]);
-  if (Number.isNaN(amount) || amount === undefined || amount === null || amount <= 0)
-    return;
-  const currency = tag[2];
-  if (currency === undefined || currency === "")
-    return;
-  const term = tag[3];
-  if (term === undefined)
-    return;
-  if (!possibleIntervalFrequencies2.includes(term))
-    return;
-  return {
-    amount,
-    currency,
-    term
-  };
-}
-var NDKSubscriptionTier2 = class _NDKSubscriptionTier2 extends NDKArticle2 {
-  static kind = 37001;
-  static kinds = [37001];
-  constructor(ndk, rawEvent) {
-    const k = rawEvent?.kind ?? 37001;
-    super(ndk, rawEvent);
-    this.kind = k;
-  }
-  static from(event) {
-    return new _NDKSubscriptionTier2(event.ndk, event);
-  }
-  get perks() {
-    return this.getMatchingTags("perk").map((tag) => tag[1]).filter((perk) => perk !== undefined);
-  }
-  addPerk(perk) {
-    this.tags.push(["perk", perk]);
-  }
-  get amounts() {
-    return this.getMatchingTags("amount").map((tag) => parseTagToSubscriptionAmount2(tag)).filter((a) => a !== undefined);
-  }
-  addAmount(amount, currency, term) {
-    this.tags.push(newAmount2(amount, currency, term));
-  }
-  set relayUrl(relayUrl) {
-    this.tags.push(["r", relayUrl]);
-  }
-  get relayUrls() {
-    return this.getMatchingTags("r").map((tag) => tag[1]).filter((relay) => relay !== undefined);
-  }
-  get verifierPubkey() {
-    return this.tagValue("p");
-  }
-  set verifierPubkey(pubkey) {
-    this.removeTag("p");
-    if (pubkey)
-      this.tags.push(["p", pubkey]);
-  }
-  get isValid() {
-    return this.title !== undefined && this.amounts.length > 0;
-  }
-};
-var NDKVideo2 = class _NDKVideo2 extends NDKEvent3 {
-  static kind = 21;
-  static kinds = [34235, 34236, 22, 21];
-  _imetas;
-  static from(event) {
-    return new _NDKVideo2(event.ndk, event.rawEvent());
-  }
-  get title() {
-    return this.tagValue("title");
-  }
-  set title(title) {
-    this.removeTag("title");
-    if (title)
-      this.tags.push(["title", title]);
-  }
-  get thumbnail() {
-    let thumbnail;
-    if (this.imetas && this.imetas.length > 0) {
-      thumbnail = this.imetas[0].image?.[0];
-    }
-    return thumbnail ?? this.tagValue("thumb");
-  }
-  get imetas() {
-    if (this._imetas)
-      return this._imetas;
-    this._imetas = this.tags.filter((tag) => tag[0] === "imeta").map(mapImetaTag2);
-    return this._imetas;
-  }
-  set imetas(tags) {
-    this._imetas = tags;
-    this.tags = this.tags.filter((tag) => tag[0] !== "imeta");
-    this.tags.push(...tags.map(imetaTagToTag2));
-  }
-  get url() {
-    if (this.imetas && this.imetas.length > 0) {
-      return this.imetas[0].url;
-    }
-    return this.tagValue("url");
-  }
-  get published_at() {
-    const tag = this.tagValue("published_at");
-    if (tag) {
-      return Number.parseInt(tag);
-    }
-    return;
-  }
-  async generateTags() {
-    super.generateTags();
-    if (!this.kind) {
-      if (this.imetas?.[0]?.dim) {
-        const [width, height2] = this.imetas[0].dim.split("x");
-        const isPortrait = width && height2 && Number.parseInt(width) < Number.parseInt(height2);
-        const isShort = this.duration && this.duration < 120;
-        if (isShort && isPortrait)
-          this.kind = 22;
-        else
-          this.kind = 21;
-      }
-    }
-    return super.generateTags();
-  }
-  get duration() {
-    const tag = this.tagValue("duration");
-    if (tag) {
-      return Number.parseInt(tag);
-    }
-    return;
-  }
-  set duration(dur) {
-    this.removeTag("duration");
-    if (dur !== undefined) {
-      this.tags.push(["duration", Math.floor(dur).toString()]);
-    }
-  }
-};
-var NDKWiki2 = class _NDKWiki2 extends NDKArticle2 {
-  static kind = 30818;
-  static kinds = [30818];
-  static from(event) {
-    return new _NDKWiki2(event.ndk, event.rawEvent());
-  }
-  get isDefered() {
-    return this.hasTag("a", "defer");
-  }
-  get deferedId() {
-    return this.tagValue("a", "defer");
-  }
-  set defer(deferedTo) {
-    this.removeTag("a", "defer");
-    this.tag(deferedTo, "defer");
-  }
-};
-var NDKBlossomList2 = class _NDKBlossomList2 extends NDKEvent3 {
-  static kinds = [10063];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 10063;
-  }
-  static from(ndkEvent) {
-    return new _NDKBlossomList2(ndkEvent.ndk, ndkEvent.rawEvent());
-  }
-  get servers() {
-    return this.tags.filter((tag) => tag[0] === "server").map((tag) => tag[1]);
-  }
-  set servers(servers) {
-    this.tags = this.tags.filter((tag) => tag[0] !== "server");
-    for (const server of servers) {
-      this.tags.push(["server", server]);
-    }
-  }
-  get default() {
-    const servers = this.servers;
-    return servers.length > 0 ? servers[0] : undefined;
-  }
-  set default(server) {
-    if (!server)
-      return;
-    const currentServers = this.servers;
-    const filteredServers = currentServers.filter((s) => s !== server);
-    this.servers = [server, ...filteredServers];
-  }
-  addServer(server) {
-    if (!server)
-      return;
-    const currentServers = this.servers;
-    if (!currentServers.includes(server)) {
-      this.servers = [...currentServers, server];
-    }
-  }
-  removeServer(server) {
-    if (!server)
-      return;
-    const currentServers = this.servers;
-    this.servers = currentServers.filter((s) => s !== server);
-  }
-};
-var NDKFollowPack2 = class _NDKFollowPack2 extends NDKEvent3 {
-  static kind = 39089;
-  static kinds = [39089, 39092];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 39089;
-  }
-  static from(ndkEvent) {
-    return new _NDKFollowPack2(ndkEvent.ndk, ndkEvent);
-  }
-  get title() {
-    return this.tagValue("title");
-  }
-  set title(value) {
-    this.removeTag("title");
-    if (value)
-      this.tags.push(["title", value]);
-  }
-  get image() {
-    const imetaTag = this.tags.find((tag) => tag[0] === "imeta");
-    if (imetaTag) {
-      const imeta = mapImetaTag2(imetaTag);
-      if (imeta.url)
-        return imeta.url;
-    }
-    return this.tagValue("image");
-  }
-  set image(value) {
-    this.tags = this.tags.filter((tag) => tag[0] !== "imeta" && tag[0] !== "image");
-    if (typeof value === "string") {
-      if (value !== undefined) {
-        this.tags.push(["image", value]);
-      }
-    } else if (value && typeof value === "object") {
-      this.tags.push(imetaTagToTag2(value));
-      if (value.url) {
-        this.tags.push(["image", value.url]);
-      }
-    }
-  }
-  get pubkeys() {
-    return Array.from(new Set(this.tags.filter((tag) => tag[0] === "p").map((tag) => tag[1])));
-  }
-  set pubkeys(pubkeys) {
-    this.tags = this.tags.filter((tag) => tag[0] !== "p");
-    for (const pubkey of pubkeys) {
-      this.tags.push(["p", pubkey]);
-    }
-  }
-  get description() {
-    return this.tagValue("description");
-  }
-  set description(value) {
-    this.removeTag("description");
-    if (value)
-      this.tags.push(["description", value]);
-  }
-};
-var signerRegistry2 = /* @__PURE__ */ new Map;
-function registerSigner2(type, signerClass) {
-  signerRegistry2.set(type, signerClass);
-}
-var NDKPrivateKeySigner2 = class _NDKPrivateKeySigner2 {
-  _user;
-  _privateKey;
-  _pubkey;
-  constructor(privateKeyOrNsec, ndk) {
-    if (typeof privateKeyOrNsec === "string") {
-      if (privateKeyOrNsec.startsWith("nsec1")) {
-        const { type, data } = nip19_exports2.decode(privateKeyOrNsec);
-        if (type === "nsec")
-          this._privateKey = data;
-        else
-          throw new Error("Invalid private key provided.");
-      } else if (privateKeyOrNsec.length === 64) {
-        this._privateKey = hexToBytes6(privateKeyOrNsec);
-      } else {
-        throw new Error("Invalid private key provided.");
-      }
-    } else {
-      this._privateKey = privateKeyOrNsec;
-    }
-    this._pubkey = getPublicKey2(this._privateKey);
-    if (ndk)
-      this._user = ndk.getUser({ pubkey: this._pubkey });
-    this._user ??= new NDKUser2({ pubkey: this._pubkey });
-  }
-  get privateKey() {
-    if (!this._privateKey)
-      throw new Error("Not ready");
-    return bytesToHex6(this._privateKey);
-  }
-  get pubkey() {
-    if (!this._pubkey)
-      throw new Error("Not ready");
-    return this._pubkey;
-  }
-  get nsec() {
-    if (!this._privateKey)
-      throw new Error("Not ready");
-    return nip19_exports2.nsecEncode(this._privateKey);
-  }
-  get npub() {
-    if (!this._pubkey)
-      throw new Error("Not ready");
-    return nip19_exports2.npubEncode(this._pubkey);
-  }
-  static generate() {
-    const privateKey = generateSecretKey2();
-    return new _NDKPrivateKeySigner2(privateKey);
-  }
-  async blockUntilReady() {
-    return this._user;
-  }
-  async user() {
-    return this._user;
-  }
-  get userSync() {
-    return this._user;
-  }
-  async sign(event) {
-    if (!this._privateKey) {
-      throw Error("Attempted to sign without a private key");
-    }
-    return finalizeEvent2(event, this._privateKey).sig;
-  }
-  async encryptionEnabled(scheme) {
-    const enabled = [];
-    if (!scheme || scheme === "nip04")
-      enabled.push("nip04");
-    if (!scheme || scheme === "nip44")
-      enabled.push("nip44");
-    return enabled;
-  }
-  async encrypt(recipient, value, scheme) {
-    if (!this._privateKey || !this.privateKey) {
-      throw Error("Attempted to encrypt without a private key");
-    }
-    const recipientHexPubKey = recipient.pubkey;
-    if (scheme === "nip44") {
-      const conversationKey = nip44_exports2.v2.utils.getConversationKey(this._privateKey, recipientHexPubKey);
-      return await nip44_exports2.v2.encrypt(value, conversationKey);
-    }
-    return await nip04_exports2.encrypt(this._privateKey, recipientHexPubKey, value);
-  }
-  async decrypt(sender, value, scheme) {
-    if (!this._privateKey || !this.privateKey) {
-      throw Error("Attempted to decrypt without a private key");
-    }
-    const senderHexPubKey = sender.pubkey;
-    if (scheme === "nip44") {
-      const conversationKey = nip44_exports2.v2.utils.getConversationKey(this._privateKey, senderHexPubKey);
-      return await nip44_exports2.v2.decrypt(value, conversationKey);
-    }
-    return await nip04_exports2.decrypt(this._privateKey, senderHexPubKey, value);
-  }
-  toPayload() {
-    if (!this._privateKey)
-      throw new Error("Private key not available");
-    const payload = {
-      type: "private-key",
-      payload: this.privateKey
-    };
-    return JSON.stringify(payload);
-  }
-  static async fromPayload(payloadString, ndk) {
-    const payload = JSON.parse(payloadString);
-    if (payload.type !== "private-key") {
-      throw new Error(`Invalid payload type: expected 'private-key', got ${payload.type}`);
-    }
-    if (!payload.payload || typeof payload.payload !== "string") {
-      throw new Error("Invalid payload content for private-key signer");
-    }
-    return new _NDKPrivateKeySigner2(payload.payload, ndk);
-  }
-};
-registerSigner2("private-key", NDKPrivateKeySigner2);
-var NDKProject2 = class _NDKProject2 extends NDKEvent3 {
-  static kind = 31933;
-  static kinds = [_NDKProject2.kind];
-  _signer;
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind = 31933;
-  }
-  static from(event) {
-    return new _NDKProject2(event.ndk, event.rawEvent());
-  }
-  set repo(value) {
-    this.removeTag("repo");
-    if (value)
-      this.tags.push(["repo", value]);
-  }
-  set hashtags(values) {
-    this.removeTag("hashtags");
-    if (values.filter((t) => t.length > 0).length)
-      this.tags.push(["hashtags", ...values]);
-  }
-  get hashtags() {
-    const tag = this.tags.find((tag2) => tag2[0] === "hashtags");
-    return tag ? tag.slice(1) : [];
-  }
-  get repo() {
-    return this.tagValue("repo");
-  }
-  get title() {
-    return this.tagValue("title");
-  }
-  set title(value) {
-    this.removeTag("title");
-    if (value)
-      this.tags.push(["title", value]);
-  }
-  get picture() {
-    return this.tagValue("picture");
-  }
-  set picture(value) {
-    this.removeTag("picture");
-    if (value)
-      this.tags.push(["picture", value]);
-  }
-  set description(value) {
-    this.content = value;
-  }
-  get description() {
-    return this.content;
-  }
-  get slug() {
-    return this.dTag ?? "empty-dtag";
-  }
-  async getSigner() {
-    if (this._signer)
-      return this._signer;
-    const encryptedKey = this.tagValue("key");
-    if (!encryptedKey) {
-      this._signer = NDKPrivateKeySigner2.generate();
-      await this.encryptAndSaveNsec();
-    } else {
-      const decryptedKey = await this.ndk?.signer?.decrypt(this.ndk.activeUser, encryptedKey);
-      if (!decryptedKey) {
-        throw new Error("Failed to decrypt project key or missing signer context.");
-      }
-      this._signer = new NDKPrivateKeySigner2(decryptedKey);
-    }
-    return this._signer;
-  }
-  async getNsec() {
-    const signer = await this.getSigner();
-    return signer.privateKey;
-  }
-  async setNsec(value) {
-    this._signer = new NDKPrivateKeySigner2(value);
-    await this.encryptAndSaveNsec();
-  }
-  async encryptAndSaveNsec() {
-    if (!this._signer)
-      throw new Error("Signer is not set.");
-    const key = this._signer.privateKey;
-    const encryptedKey = await this.ndk?.signer?.encrypt(this.ndk.activeUser, key);
-    if (encryptedKey) {
-      this.removeTag("key");
-      this.tags.push(["key", encryptedKey]);
-    }
-  }
-};
-var registeredEventClasses2 = /* @__PURE__ */ new Set;
-function wrapEvent6(event) {
-  const eventWrappingMap = /* @__PURE__ */ new Map;
-  const builtInClasses = [
-    NDKImage2,
-    NDKVideo2,
-    NDKCashuMintList2,
-    NDKArticle2,
-    NDKHighlight2,
-    NDKDraft2,
-    NDKWiki2,
-    NDKNutzap2,
-    NDKProject2,
-    NDKTask2,
-    NDKProjectTemplate2,
-    NDKSimpleGroupMemberList2,
-    NDKSimpleGroupMetadata2,
-    NDKSubscriptionTier2,
-    NDKCashuToken2,
-    NDKList2,
-    NDKStory2,
-    NDKBlossomList2,
-    NDKFollowPack2
-  ];
-  const allClasses = [...builtInClasses, ...registeredEventClasses2];
-  for (const klass2 of allClasses) {
-    for (const kind of klass2.kinds) {
-      eventWrappingMap.set(kind, klass2);
-    }
-  }
-  const klass = eventWrappingMap.get(event.kind);
-  if (klass)
-    return klass.from(event);
-  return event;
-}
-function queryFullyFilled2(subscription) {
-  if (filterIncludesIds2(subscription.filter)) {
-    if (resultHasAllRequestedIds2(subscription)) {
-      return true;
-    }
-  }
-  return false;
-}
-function filterIncludesIds2(filter4) {
-  return !!filter4.ids;
-}
-function resultHasAllRequestedIds2(subscription) {
-  const ids = subscription.filter.ids;
-  return !!ids && ids.length === subscription.eventFirstSeen.size;
-}
-function filterFromId2(id) {
-  let decoded;
-  if (id.match(NIP33_A_REGEX2)) {
-    const [kind, pubkey, identifier] = id.split(":");
-    const filter4 = {
-      authors: [pubkey],
-      kinds: [Number.parseInt(kind)]
-    };
-    if (identifier) {
-      filter4["#d"] = [identifier];
-    }
-    return filter4;
-  }
-  if (id.match(BECH32_REGEX4)) {
-    try {
-      decoded = nip19_exports2.decode(id);
-      switch (decoded.type) {
-        case "nevent": {
-          const filter4 = { ids: [decoded.data.id] };
-          if (decoded.data.author)
-            filter4.authors = [decoded.data.author];
-          if (decoded.data.kind)
-            filter4.kinds = [decoded.data.kind];
-          return filter4;
-        }
-        case "note":
-          return { ids: [decoded.data] };
-        case "naddr": {
-          const filter4 = {
-            authors: [decoded.data.pubkey],
-            kinds: [decoded.data.kind]
-          };
-          if (decoded.data.identifier)
-            filter4["#d"] = [decoded.data.identifier];
-          return filter4;
-        }
-      }
-    } catch (e) {
-      console.error("Error decoding", id, e);
-    }
-  }
-  return { ids: [id] };
-}
-function isNip33AValue2(value) {
-  return value.match(NIP33_A_REGEX2) !== null;
-}
-var NIP33_A_REGEX2 = /^(\d+):([0-9A-Fa-f]+)(?::(.*))?$/;
-var BECH32_REGEX4 = /^n(event|ote|profile|pub|addr)1[\d\w]+$/;
-function relaysFromBech322(bech3222, ndk) {
-  try {
-    const decoded = nip19_exports2.decode(bech3222);
-    if (["naddr", "nevent"].includes(decoded?.type)) {
-      const data = decoded.data;
-      if (data?.relays) {
-        return data.relays.map((r) => new NDKRelay2(r, ndk.relayAuthDefaultPolicy, ndk));
-      }
-    }
-  } catch (_e) {}
-  return [];
-}
-var defaultOpts2 = {
-  closeOnEose: false,
-  cacheUsage: "CACHE_FIRST",
-  dontSaveToCache: false,
-  groupable: true,
-  groupableDelay: 100,
-  groupableDelayType: "at-most",
-  cacheUnconstrainFilter: ["limit", "since", "until"]
-};
-var NDKSubscription2 = class extends import_tseep13.EventEmitter {
-  subId;
-  filters;
-  opts;
-  pool;
-  skipVerification = false;
-  skipValidation = false;
-  relayFilters;
-  relaySet;
-  ndk;
-  debug;
-  eventFirstSeen = /* @__PURE__ */ new Map;
-  eosesSeen = /* @__PURE__ */ new Set;
-  lastEventReceivedAt;
-  mostRecentCacheEventTimestamp;
-  internalId;
-  closeOnEose;
-  poolMonitor;
-  skipOptimisticPublishEvent = false;
-  cacheUnconstrainFilter;
-  constructor(ndk, filters, opts, subId) {
-    super();
-    this.ndk = ndk;
-    this.opts = { ...defaultOpts2, ...opts || {} };
-    this.pool = this.opts.pool || ndk.pool;
-    this.filters = Array.isArray(filters) ? filters : [filters];
-    this.subId = subId || this.opts.subId;
-    this.internalId = Math.random().toString(36).substring(7);
-    this.debug = ndk.debug.extend(`subscription[${this.opts.subId ?? this.internalId}]`);
-    if (this.opts.relaySet) {
-      this.relaySet = this.opts.relaySet;
-    } else if (this.opts.relayUrls) {
-      this.relaySet = NDKRelaySet2.fromRelayUrls(this.opts.relayUrls, this.ndk);
-    }
-    this.skipVerification = this.opts.skipVerification || false;
-    this.skipValidation = this.opts.skipValidation || false;
-    this.closeOnEose = this.opts.closeOnEose || false;
-    this.skipOptimisticPublishEvent = this.opts.skipOptimisticPublishEvent || false;
-    this.cacheUnconstrainFilter = this.opts.cacheUnconstrainFilter;
-  }
-  relaysMissingEose() {
-    if (!this.relayFilters)
-      return [];
-    const relaysMissingEose = Array.from(this.relayFilters?.keys()).filter((url) => !this.eosesSeen.has(this.pool.getRelay(url, false, false)));
-    return relaysMissingEose;
-  }
-  get filter() {
-    return this.filters[0];
-  }
-  get groupableDelay() {
-    if (!this.isGroupable())
-      return;
-    return this.opts?.groupableDelay;
-  }
-  get groupableDelayType() {
-    return this.opts?.groupableDelayType || "at-most";
-  }
-  isGroupable() {
-    return this.opts?.groupable || false;
-  }
-  shouldQueryCache() {
-    if (this.opts.addSinceFromCache)
-      return true;
-    if (this.opts?.cacheUsage === "ONLY_RELAY")
-      return false;
-    const hasNonEphemeralKind = this.filters.some((f) => f.kinds?.some((k) => kindIsEphemeral2(k)));
-    if (hasNonEphemeralKind)
-      return true;
-    return true;
-  }
-  shouldQueryRelays() {
-    return this.opts?.cacheUsage !== "ONLY_CACHE";
-  }
-  shouldWaitForCache() {
-    if (this.opts.addSinceFromCache)
-      return true;
-    return !!this.opts.closeOnEose && !!this.ndk.cacheAdapter?.locking && this.opts.cacheUsage !== "PARALLEL";
-  }
-  start(emitCachedEvents = true) {
-    let cacheResult;
-    const updateStateFromCacheResults = (events) => {
-      if (emitCachedEvents) {
-        for (const event of events) {
-          if (!this.mostRecentCacheEventTimestamp || event.created_at > this.mostRecentCacheEventTimestamp) {
-            this.mostRecentCacheEventTimestamp = event.created_at;
-          }
-          this.eventReceived(event, undefined, true, false);
-        }
-      } else {
-        cacheResult = [];
-        for (const event of events) {
-          if (!this.mostRecentCacheEventTimestamp || event.created_at > this.mostRecentCacheEventTimestamp) {
-            this.mostRecentCacheEventTimestamp = event.created_at;
-          }
-          event.ndk = this.ndk;
-          const e = this.opts.wrap ? wrapEvent6(event) : event;
-          if (!e)
-            break;
-          if (e instanceof Promise) {
-            e.then((wrappedEvent) => {
-              this.emitEvent(false, wrappedEvent, undefined, true, false);
-            });
-            break;
-          }
-          this.eventFirstSeen.set(e.id, Date.now());
-          cacheResult.push(e);
-        }
-      }
-    };
-    const loadFromRelays = () => {
-      if (this.shouldQueryRelays()) {
-        this.startWithRelays();
-        this.startPoolMonitor();
-      } else {
-        this.emit("eose", this);
-      }
-    };
-    if (this.shouldQueryCache()) {
-      cacheResult = this.startWithCache();
-      if (cacheResult instanceof Promise) {
-        if (this.shouldWaitForCache()) {
-          cacheResult.then((events) => {
-            updateStateFromCacheResults(events);
-            if (queryFullyFilled2(this)) {
-              this.emit("eose", this);
-              return;
-            }
-            loadFromRelays();
-          });
-          return null;
-        }
-        cacheResult.then((events) => {
-          updateStateFromCacheResults(events);
-        });
-        loadFromRelays();
-        return null;
-      }
-      updateStateFromCacheResults(cacheResult);
-      if (queryFullyFilled2(this)) {
-        this.emit("eose", this);
-      } else {
-        loadFromRelays();
-      }
-      return cacheResult;
-    }
-    loadFromRelays();
-    return null;
-  }
-  startPoolMonitor() {
-    const _d = this.debug.extend("pool-monitor");
-    this.poolMonitor = (relay) => {
-      if (this.relayFilters?.has(relay.url))
-        return;
-      const calc = calculateRelaySetsFromFilters2(this.ndk, this.filters, this.pool);
-      if (calc.get(relay.url)) {
-        this.relayFilters?.set(relay.url, this.filters);
-        relay.subscribe(this, this.filters);
-      }
-    };
-    this.pool.on("relay:connect", this.poolMonitor);
-  }
-  onStopped;
-  stop() {
-    this.emit("close", this);
-    this.poolMonitor && this.pool.off("relay:connect", this.poolMonitor);
-    this.onStopped?.();
-  }
-  hasAuthorsFilter() {
-    return this.filters.some((f) => f.authors?.length);
-  }
-  startWithCache() {
-    if (this.ndk.cacheAdapter?.query) {
-      return this.ndk.cacheAdapter.query(this);
-    }
-    return [];
-  }
-  startWithRelays() {
-    let filters = this.filters;
-    if (this.opts.addSinceFromCache && this.mostRecentCacheEventTimestamp) {
-      const sinceTimestamp = this.mostRecentCacheEventTimestamp + 1;
-      filters = filters.map((filter4) => ({
-        ...filter4,
-        since: Math.max(filter4.since || 0, sinceTimestamp)
-      }));
-    }
-    if (!this.relaySet || this.relaySet.relays.size === 0) {
-      this.relayFilters = calculateRelaySetsFromFilters2(this.ndk, filters, this.pool);
-    } else {
-      this.relayFilters = /* @__PURE__ */ new Map;
-      for (const relay of this.relaySet.relays) {
-        this.relayFilters.set(relay.url, filters);
-      }
-    }
-    for (const [relayUrl, filters2] of this.relayFilters) {
-      const relay = this.pool.getRelay(relayUrl, true, true, filters2);
-      relay.subscribe(this, filters2);
-    }
-  }
-  eventReceived(event, relay, fromCache = false, optimisticPublish = false) {
-    const eventId = event.id;
-    const eventAlreadySeen = this.eventFirstSeen.has(eventId);
-    let ndkEvent;
-    if (event instanceof NDKEvent3)
-      ndkEvent = event;
-    if (!eventAlreadySeen) {
-      ndkEvent ??= new NDKEvent3(this.ndk, event);
-      ndkEvent.ndk = this.ndk;
-      ndkEvent.relay = relay;
-      if (!fromCache && !optimisticPublish) {
-        if (!this.skipValidation) {
-          if (!ndkEvent.isValid) {
-            this.debug("Event failed validation %s from relay %s", eventId, relay?.url);
-            return;
-          }
-        }
-        if (relay) {
-          const shouldVerify = relay.shouldValidateEvent();
-          if (shouldVerify && !this.skipVerification) {
-            ndkEvent.relay = relay;
-            if (!this.ndk.asyncSigVerification) {
-              if (!ndkEvent.verifySignature(true)) {
-                this.debug("Event failed signature validation", event);
-                this.ndk.reportInvalidSignature(ndkEvent, relay);
-                return;
-              }
-              relay.addValidatedEvent();
-            }
-          } else {
-            relay.addNonValidatedEvent();
-          }
-        }
-        if (this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
-          this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay);
-        }
-      }
-      if (!optimisticPublish || this.skipOptimisticPublishEvent !== true) {
-        this.emitEvent(this.opts?.wrap ?? false, ndkEvent, relay, fromCache, optimisticPublish);
-        this.eventFirstSeen.set(eventId, Date.now());
-      }
-    } else {
-      const timeSinceFirstSeen = Date.now() - (this.eventFirstSeen.get(eventId) || 0);
-      this.emit("event:dup", event, relay, timeSinceFirstSeen, this, fromCache, optimisticPublish);
-      if (relay) {
-        const signature = verifiedSignatures2.get(eventId);
-        if (signature && typeof signature === "string") {
-          if (event.sig === signature) {
-            relay.addValidatedEvent();
-          } else {
-            const eventToReport = event instanceof NDKEvent3 ? event : new NDKEvent3(this.ndk, event);
-            this.ndk.reportInvalidSignature(eventToReport, relay);
-          }
-        }
-      }
-    }
-    this.lastEventReceivedAt = Date.now();
-  }
-  emitEvent(wrap, evt, relay, fromCache, optimisticPublish) {
-    const wrapped = wrap ? wrapEvent6(evt) : evt;
-    if (wrapped instanceof Promise) {
-      wrapped.then((e) => this.emitEvent(false, e, relay, fromCache, optimisticPublish));
-    } else if (wrapped) {
-      this.emit("event", wrapped, relay, this, fromCache, optimisticPublish);
-    }
-  }
-  closedReceived(relay, reason) {
-    this.emit("closed", relay, reason);
-  }
-  eoseTimeout;
-  eosed = false;
-  eoseReceived(relay) {
-    this.debug("EOSE received from %s", relay.url);
-    this.eosesSeen.add(relay);
-    let lastEventSeen = this.lastEventReceivedAt ? Date.now() - this.lastEventReceivedAt : undefined;
-    const hasSeenAllEoses = this.eosesSeen.size === this.relayFilters?.size;
-    const queryFilled = queryFullyFilled2(this);
-    const performEose = (reason) => {
-      this.debug("Performing EOSE: %s %d", reason, this.eosed);
-      if (this.eosed)
-        return;
-      if (this.eoseTimeout)
-        clearTimeout(this.eoseTimeout);
-      this.emit("eose", this);
-      this.eosed = true;
-      if (this.opts?.closeOnEose)
-        this.stop();
-    };
-    if (queryFilled || hasSeenAllEoses) {
-      performEose("query filled or seen all");
-    } else if (this.relayFilters) {
-      let timeToWaitForNextEose = 1000;
-      const connectedRelays = new Set(this.pool.connectedRelays().map((r) => r.url));
-      const connectedRelaysWithFilters = Array.from(this.relayFilters.keys()).filter((url) => connectedRelays.has(url));
-      if (connectedRelaysWithFilters.length === 0) {
-        this.debug("No connected relays, waiting for all relays to connect", Array.from(this.relayFilters.keys()).join(", "));
-        return;
-      }
-      const percentageOfRelaysThatHaveSentEose = this.eosesSeen.size / connectedRelaysWithFilters.length;
-      this.debug("Percentage of relays that have sent EOSE", {
-        subId: this.subId,
-        percentageOfRelaysThatHaveSentEose,
-        seen: this.eosesSeen.size,
-        total: connectedRelaysWithFilters.length
-      });
-      if (this.eosesSeen.size >= 2 && percentageOfRelaysThatHaveSentEose >= 0.5) {
-        timeToWaitForNextEose = timeToWaitForNextEose * (1 - percentageOfRelaysThatHaveSentEose);
-        if (timeToWaitForNextEose === 0) {
-          performEose("time to wait was 0");
-          return;
-        }
-        if (this.eoseTimeout)
-          clearTimeout(this.eoseTimeout);
-        const sendEoseTimeout = () => {
-          lastEventSeen = this.lastEventReceivedAt ? Date.now() - this.lastEventReceivedAt : undefined;
-          if (lastEventSeen !== undefined && lastEventSeen < 20) {
-            this.eoseTimeout = setTimeout(sendEoseTimeout, timeToWaitForNextEose);
-          } else {
-            performEose(`send eose timeout: ${timeToWaitForNextEose}`);
-          }
-        };
-        this.eoseTimeout = setTimeout(sendEoseTimeout, timeToWaitForNextEose);
-      }
-    }
-  }
-};
-var kindIsEphemeral2 = (kind) => kind >= 20000 && kind < 30000;
-async function follows2(opts, outbox, kind = 3) {
-  if (!this.ndk)
-    throw new Error("NDK not set");
-  const contactListEvent = await this.ndk.fetchEvent({ kinds: [kind], authors: [this.pubkey] }, opts || { groupable: false });
-  if (contactListEvent) {
-    const pubkeys = /* @__PURE__ */ new Set;
-    contactListEvent.tags.forEach((tag) => {
-      if (tag[0] === "p")
-        pubkeys.add(tag[1]);
-    });
-    if (outbox) {
-      this.ndk?.outboxTracker?.trackUsers(Array.from(pubkeys));
-    }
-    return [...pubkeys].reduce((acc, pubkey) => {
-      const user = new NDKUser2({ pubkey });
-      user.ndk = this.ndk;
-      acc.add(user);
-      return acc;
-    }, /* @__PURE__ */ new Set);
-  }
-  return /* @__PURE__ */ new Set;
-}
-var NIP05_REGEX4 = /^(?:([\w.+-]+)@)?([\w.-]+)$/;
-async function getNip05For2(ndk, fullname, _fetch6 = fetch, fetchOpts = {}) {
-  return await ndk.queuesNip05.add({
-    id: fullname,
-    func: async () => {
-      if (ndk.cacheAdapter?.loadNip05) {
-        const profile = await ndk.cacheAdapter.loadNip05(fullname);
-        if (profile !== "missing") {
-          if (profile) {
-            const user = new NDKUser2({
-              pubkey: profile.pubkey,
-              relayUrls: profile.relays,
-              nip46Urls: profile.nip46
-            });
-            user.ndk = ndk;
-            return user;
-          }
-          if (fetchOpts.cache !== "no-cache") {
-            return null;
-          }
-        }
-      }
-      const match = fullname.match(NIP05_REGEX4);
-      if (!match)
-        return null;
-      const [_2, name = "_", domain] = match;
-      try {
-        const res = await _fetch6(`https://${domain}/.well-known/nostr.json?name=${name}`, fetchOpts);
-        const { names, relays, nip46 } = parseNIP05Result2(await res.json());
-        const pubkey = names[name.toLowerCase()];
-        let profile = null;
-        if (pubkey) {
-          profile = { pubkey, relays: relays?.[pubkey], nip46: nip46?.[pubkey] };
-        }
-        if (ndk?.cacheAdapter?.saveNip05) {
-          ndk.cacheAdapter.saveNip05(fullname, profile);
-        }
-        return profile;
-      } catch (_e) {
-        if (ndk?.cacheAdapter?.saveNip05) {
-          ndk?.cacheAdapter.saveNip05(fullname, null);
-        }
-        console.error("Failed to fetch NIP05 for", fullname, _e);
-        return null;
-      }
-    }
-  });
-}
-function parseNIP05Result2(json) {
-  const result = {
-    names: {}
-  };
-  for (const [name, pubkey] of Object.entries(json.names)) {
-    if (typeof name === "string" && typeof pubkey === "string") {
-      result.names[name.toLowerCase()] = pubkey;
-    }
-  }
-  if (json.relays) {
-    result.relays = {};
-    for (const [pubkey, relays] of Object.entries(json.relays)) {
-      if (typeof pubkey === "string" && Array.isArray(relays)) {
-        result.relays[pubkey] = relays.filter((relay) => typeof relay === "string");
-      }
-    }
-  }
-  if (json.nip46) {
-    result.nip46 = {};
-    for (const [pubkey, nip46] of Object.entries(json.nip46)) {
-      if (typeof pubkey === "string" && Array.isArray(nip46)) {
-        result.nip46[pubkey] = nip46.filter((relay) => typeof relay === "string");
-      }
-    }
-  }
-  return result;
-}
-function profileFromEvent2(event) {
-  const profile = {};
-  let payload;
-  try {
-    payload = JSON.parse(event.content);
-  } catch (error) {
-    throw new Error(`Failed to parse profile event: ${error}`);
-  }
-  profile.profileEvent = JSON.stringify(event.rawEvent());
-  for (const key of Object.keys(payload)) {
-    switch (key) {
-      case "name":
-        profile.name = payload.name;
-        break;
-      case "display_name":
-        profile.displayName = payload.display_name;
-        break;
-      case "image":
-      case "picture":
-        profile.picture = payload.picture || payload.image;
-        profile.image = profile.picture;
-        break;
-      case "banner":
-        profile.banner = payload.banner;
-        break;
-      case "bio":
-        profile.bio = payload.bio;
-        break;
-      case "nip05":
-        profile.nip05 = payload.nip05;
-        break;
-      case "lud06":
-        profile.lud06 = payload.lud06;
-        break;
-      case "lud16":
-        profile.lud16 = payload.lud16;
-        break;
-      case "about":
-        profile.about = payload.about;
-        break;
-      case "website":
-        profile.website = payload.website;
-        break;
-      default:
-        profile[key] = payload[key];
-        break;
-    }
-  }
-  profile.created_at = event.created_at;
-  return profile;
-}
-function serializeProfile2(profile) {
-  const payload = {};
-  for (const [key, val] of Object.entries(profile)) {
-    switch (key) {
-      case "username":
-      case "name":
-        payload.name = val;
-        break;
-      case "displayName":
-        payload.display_name = val;
-        break;
-      case "image":
-      case "picture":
-        payload.picture = val;
-        break;
-      case "bio":
-      case "about":
-        payload.about = val;
-        break;
-      default:
-        payload[key] = val;
-        break;
-    }
-  }
-  return JSON.stringify(payload);
-}
-var NDKUser2 = class _NDKUser2 {
-  ndk;
-  profile;
-  profileEvent;
-  _npub;
-  _pubkey;
-  relayUrls = [];
-  nip46Urls = [];
-  constructor(opts) {
-    if (opts.npub)
-      this._npub = opts.npub;
-    if (opts.hexpubkey)
-      this._pubkey = opts.hexpubkey;
-    if (opts.pubkey)
-      this._pubkey = opts.pubkey;
-    if (opts.relayUrls)
-      this.relayUrls = opts.relayUrls;
-    if (opts.nip46Urls)
-      this.nip46Urls = opts.nip46Urls;
-    if (opts.nprofile) {
-      try {
-        const decoded = nip19_exports2.decode(opts.nprofile);
-        if (decoded.type === "nprofile") {
-          this._pubkey = decoded.data.pubkey;
-          if (decoded.data.relays && decoded.data.relays.length > 0) {
-            this.relayUrls.push(...decoded.data.relays);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to decode nprofile", e);
-      }
-    }
-  }
-  get npub() {
-    if (!this._npub) {
-      if (!this._pubkey)
-        throw new Error("pubkey not set");
-      this._npub = nip19_exports2.npubEncode(this.pubkey);
-    }
-    return this._npub;
-  }
-  get nprofile() {
-    const relays = this.profileEvent?.onRelays?.map((r) => r.url);
-    return nip19_exports2.nprofileEncode({
-      pubkey: this.pubkey,
-      relays
-    });
-  }
-  set npub(npub2) {
-    this._npub = npub2;
-  }
-  get pubkey() {
-    if (!this._pubkey) {
-      if (!this._npub)
-        throw new Error("npub not set");
-      this._pubkey = nip19_exports2.decode(this.npub).data;
-    }
-    return this._pubkey;
-  }
-  set pubkey(pubkey) {
-    this._pubkey = pubkey;
-  }
-  filter() {
-    return { "#p": [this.pubkey] };
-  }
-  async getZapInfo(timeoutMs) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    const promiseWithTimeout = async (promise) => {
-      if (!timeoutMs)
-        return promise;
-      let timeoutId;
-      const timeoutPromise = new Promise((_2, reject) => {
-        timeoutId = setTimeout(() => reject(new Error("Timeout")), timeoutMs);
-      });
-      try {
-        const result = await Promise.race([promise, timeoutPromise]);
-        if (timeoutId)
-          clearTimeout(timeoutId);
-        return result;
-      } catch (e) {
-        if (e instanceof Error && e.message === "Timeout") {
-          try {
-            const result = await promise;
-            return result;
-          } catch (_originalError) {
-            return;
-          }
-        }
-        return;
-      }
-    };
-    const [userProfile, mintListEvent] = await Promise.all([
-      promiseWithTimeout(this.fetchProfile()),
-      promiseWithTimeout(this.ndk.fetchEvent({ kinds: [10019], authors: [this.pubkey] }))
-    ]);
-    const res = /* @__PURE__ */ new Map;
-    if (mintListEvent) {
-      const mintList = NDKCashuMintList2.from(mintListEvent);
-      if (mintList.mints.length > 0) {
-        res.set("nip61", {
-          mints: mintList.mints,
-          relays: mintList.relays,
-          p2pk: mintList.p2pk
-        });
-      }
-    }
-    if (userProfile) {
-      const { lud06, lud16 } = userProfile;
-      res.set("nip57", { lud06, lud16 });
-    }
-    return res;
-  }
-  static async fromNip05(nip05Id, ndk, skipCache = false) {
-    if (!ndk)
-      throw new Error("No NDK instance found");
-    const opts = {};
-    if (skipCache)
-      opts.cache = "no-cache";
-    const profile = await getNip05For2(ndk, nip05Id, ndk?.httpFetch, opts);
-    if (profile) {
-      const user = new _NDKUser2({
-        pubkey: profile.pubkey,
-        relayUrls: profile.relays,
-        nip46Urls: profile.nip46
-      });
-      user.ndk = ndk;
-      return user;
-    }
-  }
-  async fetchProfile(opts, storeProfileEvent = false) {
-    if (!this.ndk)
-      throw new Error("NDK not set");
-    let setMetadataEvent = null;
-    if (this.ndk.cacheAdapter && (this.ndk.cacheAdapter.fetchProfile || this.ndk.cacheAdapter.fetchProfileSync) && opts?.cacheUsage !== "ONLY_RELAY") {
-      let profile = null;
-      if (this.ndk.cacheAdapter.fetchProfileSync) {
-        profile = this.ndk.cacheAdapter.fetchProfileSync(this.pubkey);
-      } else if (this.ndk.cacheAdapter.fetchProfile) {
-        profile = await this.ndk.cacheAdapter.fetchProfile(this.pubkey);
-      }
-      if (profile) {
-        this.profile = profile;
-        return profile;
-      }
-    }
-    opts ??= {};
-    opts.cacheUsage ??= "ONLY_RELAY";
-    opts.closeOnEose ??= true;
-    opts.groupable ??= true;
-    opts.groupableDelay ??= 250;
-    if (!setMetadataEvent) {
-      setMetadataEvent = await this.ndk.fetchEvent({ kinds: [0], authors: [this.pubkey] }, opts);
-    }
-    if (!setMetadataEvent)
-      return null;
-    this.profile = profileFromEvent2(setMetadataEvent);
-    if (storeProfileEvent && this.profile && this.ndk.cacheAdapter && this.ndk.cacheAdapter.saveProfile) {
-      this.ndk.cacheAdapter.saveProfile(this.pubkey, this.profile);
-    }
-    return this.profile;
-  }
-  follows = follows2.bind(this);
-  async followSet(opts, outbox, kind = 3) {
-    const follows22 = await this.follows(opts, outbox, kind);
-    return new Set(Array.from(follows22).map((f) => f.pubkey));
-  }
-  tagReference() {
-    return ["p", this.pubkey];
-  }
-  referenceTags(marker) {
-    const tag = [["p", this.pubkey]];
-    if (!marker)
-      return tag;
-    tag[0].push("", marker);
-    return tag;
-  }
-  async publish() {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    if (!this.profile)
-      throw new Error("No profile available");
-    this.ndk.assertSigner();
-    const event = new NDKEvent3(this.ndk, {
-      kind: 0,
-      content: serializeProfile2(this.profile)
-    });
-    await event.publish();
-  }
-  async follow(newFollow, currentFollowList, kind = 3) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    this.ndk.assertSigner();
-    if (!currentFollowList) {
-      currentFollowList = await this.follows(undefined, undefined, kind);
-    }
-    if (currentFollowList.has(newFollow)) {
-      return false;
-    }
-    currentFollowList.add(newFollow);
-    const event = new NDKEvent3(this.ndk, { kind });
-    for (const follow of currentFollowList) {
-      event.tag(follow);
-    }
-    await event.publish();
-    return true;
-  }
-  async unfollow(user, currentFollowList, kind = 3) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    this.ndk.assertSigner();
-    if (!currentFollowList) {
-      currentFollowList = await this.follows(undefined, undefined, kind);
-    }
-    const newUserFollowList = /* @__PURE__ */ new Set;
-    let foundUser = false;
-    for (const follow of currentFollowList) {
-      if (follow.pubkey !== user.pubkey) {
-        newUserFollowList.add(follow);
-      } else {
-        foundUser = true;
-      }
-    }
-    if (!foundUser)
-      return false;
-    const event = new NDKEvent3(this.ndk, { kind });
-    for (const follow of newUserFollowList) {
-      event.tag(follow);
-    }
-    return await event.publish();
-  }
-  async validateNip05(nip05Id) {
-    if (!this.ndk)
-      throw new Error("No NDK instance found");
-    const profilePointer = await getNip05For2(this.ndk, nip05Id);
-    if (profilePointer === null)
-      return null;
-    return profilePointer.pubkey === this.pubkey;
-  }
-};
-var NDKDraft2 = class _NDKDraft2 extends NDKEvent3 {
-  _event;
-  static kind = 31234;
-  static kinds = [31234, 1234];
-  counterparty;
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 31234;
-  }
-  static from(event) {
-    return new _NDKDraft2(event.ndk, event);
-  }
-  set identifier(id) {
-    this.removeTag("d");
-    this.tags.push(["d", id]);
-  }
-  get identifier() {
-    return this.dTag;
-  }
-  set event(e) {
-    if (!(e instanceof NDKEvent3))
-      this._event = new NDKEvent3(undefined, e);
-    else
-      this._event = e;
-    this.prepareEvent();
-  }
-  set checkpoint(parent) {
-    if (parent) {
-      this.tags.push(parent.tagReference());
-      this.kind = 1234;
-    } else {
-      this.removeTag("a");
-      this.kind = 31234;
-    }
-  }
-  get isCheckpoint() {
-    return this.kind === 1234;
-  }
-  get isProposal() {
-    const pTag = this.tagValue("p");
-    return !!pTag && pTag !== this.pubkey;
-  }
-  async getEvent(signer) {
-    if (this._event)
-      return this._event;
-    signer ??= this.ndk?.signer;
-    if (!signer)
-      throw new Error("No signer available");
-    if (this.content && this.content.length > 0) {
-      try {
-        const ownPubkey = signer.pubkey;
-        const pubkeys = [this.tagValue("p"), this.pubkey].filter(Boolean);
-        const counterpartyPubkey = pubkeys.find((pubkey) => pubkey !== ownPubkey);
-        let user;
-        user = new NDKUser2({ pubkey: counterpartyPubkey ?? ownPubkey });
-        await this.decrypt(user, signer);
-        const payload = JSON.parse(this.content);
-        this._event = await wrapEvent6(new NDKEvent3(this.ndk, payload));
-        return this._event;
-      } catch (e) {
-        console.error(e);
-        return;
-      }
-    } else {
-      return null;
-    }
-  }
-  prepareEvent() {
-    if (!this._event)
-      throw new Error("No event has been provided");
-    this.removeTag("k");
-    if (this._event.kind)
-      this.tags.push(["k", this._event.kind.toString()]);
-    this.content = JSON.stringify(this._event.rawEvent());
-  }
-  async save({ signer, publish: publish2, relaySet }) {
-    signer ??= this.ndk?.signer;
-    if (!signer)
-      throw new Error("No signer available");
-    const user = this.counterparty || await signer.user();
-    await this.encrypt(user, signer);
-    if (this.counterparty) {
-      const pubkey = this.counterparty.pubkey;
-      this.removeTag("p");
-      this.tags.push(["p", pubkey]);
-    }
-    if (publish2 === false)
-      return;
-    return this.publishReplaceable(relaySet);
-  }
-};
-var READ_MARKER2 = "read";
-var WRITE_MARKER2 = "write";
-var NDKRelayList2 = class _NDKRelayList2 extends NDKEvent3 {
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind ??= 10002;
-  }
-  static from(ndkEvent) {
-    return new _NDKRelayList2(ndkEvent.ndk, ndkEvent.rawEvent());
-  }
-  get readRelayUrls() {
-    return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").filter((tag) => !tag[2] || tag[2] && tag[2] === READ_MARKER2).map((tag) => tryNormalizeRelayUrl2(tag[1])).filter((url) => !!url);
-  }
-  set readRelayUrls(relays) {
-    for (const relay of relays) {
-      this.tags.push(["r", relay, READ_MARKER2]);
-    }
-  }
-  get writeRelayUrls() {
-    return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").filter((tag) => !tag[2] || tag[2] && tag[2] === WRITE_MARKER2).map((tag) => tryNormalizeRelayUrl2(tag[1])).filter((url) => !!url);
-  }
-  set writeRelayUrls(relays) {
-    for (const relay of relays) {
-      this.tags.push(["r", relay, WRITE_MARKER2]);
-    }
-  }
-  get bothRelayUrls() {
-    return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").filter((tag) => !tag[2]).map((tag) => tag[1]);
-  }
-  set bothRelayUrls(relays) {
-    for (const relay of relays) {
-      this.tags.push(["r", relay]);
-    }
-  }
-  get relays() {
-    return this.tags.filter((tag) => tag[0] === "r" || tag[0] === "relay").map((tag) => tag[1]);
-  }
-  get relaySet() {
-    if (!this.ndk)
-      throw new Error("NDKRelayList has no NDK instance");
-    return new NDKRelaySet2(new Set(this.relays.map((u) => this.ndk?.pool.getRelay(u)).filter((r) => !!r)), this.ndk);
-  }
-};
-function relayListFromKind32(ndk, contactList) {
-  try {
-    const content = JSON.parse(contactList.content);
-    const relayList = new NDKRelayList2(ndk);
-    const readRelays = /* @__PURE__ */ new Set;
-    const writeRelays = /* @__PURE__ */ new Set;
-    for (let [key, config] of Object.entries(content)) {
-      try {
-        key = normalizeRelayUrl2(key);
-      } catch {
-        continue;
-      }
-      if (!config) {
-        readRelays.add(key);
-        writeRelays.add(key);
-      } else {
-        const relayConfig = config;
-        if (relayConfig.write)
-          writeRelays.add(key);
-        if (relayConfig.read)
-          readRelays.add(key);
-      }
-    }
-    relayList.readRelayUrls = Array.from(readRelays);
-    relayList.writeRelayUrls = Array.from(writeRelays);
-    return relayList;
-  } catch {}
-  return;
-}
-var NDKTask2 = class _NDKTask2 extends NDKEvent3 {
-  static kind = 1934;
-  static kinds = [1934];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind = 1934;
-  }
-  static from(event) {
-    return new _NDKTask2(event.ndk, event.rawEvent());
-  }
-  set title(value) {
-    this.removeTag("title");
-    if (value)
-      this.tags.push(["title", value]);
-  }
-  get title() {
-    return this.tagValue("title");
-  }
-  set project(project) {
-    this.removeTag("a");
-    this.tags.push(project.tagReference());
-  }
-  get projectSlug() {
-    const tag = this.getMatchingTags("a")[0];
-    return tag ? tag[1].split(/:/)?.[2] : undefined;
-  }
-};
-var NDKProjectTemplate2 = class _NDKProjectTemplate2 extends NDKEvent3 {
-  static kind = 30717;
-  static kinds = [30717];
-  constructor(ndk, rawEvent) {
-    super(ndk, rawEvent);
-    this.kind = 30717;
-  }
-  static from(event) {
-    return new _NDKProjectTemplate2(event.ndk, event.rawEvent());
-  }
-  get templateId() {
-    return this.dTag ?? "";
-  }
-  set templateId(value) {
-    this.dTag = value;
-  }
-  get name() {
-    return this.tagValue("title") ?? "";
-  }
-  set name(value) {
-    this.removeTag("title");
-    if (value)
-      this.tags.push(["title", value]);
-  }
-  get description() {
-    return this.tagValue("description") ?? "";
-  }
-  set description(value) {
-    this.removeTag("description");
-    if (value)
-      this.tags.push(["description", value]);
-  }
-  get repoUrl() {
-    return this.tagValue("uri") ?? "";
-  }
-  set repoUrl(value) {
-    this.removeTag("uri");
-    if (value)
-      this.tags.push(["uri", value]);
-  }
-  get image() {
-    return this.tagValue("image");
-  }
-  set image(value) {
-    this.removeTag("image");
-    if (value)
-      this.tags.push(["image", value]);
-  }
-  get command() {
-    return this.tagValue("command");
-  }
-  set command(value) {
-    this.removeTag("command");
-    if (value)
-      this.tags.push(["command", value]);
-  }
-  get agentConfig() {
-    const agentTag = this.tagValue("agent");
-    if (!agentTag)
-      return;
-    try {
-      return JSON.parse(agentTag);
-    } catch {
-      return;
-    }
-  }
-  set agentConfig(value) {
-    this.removeTag("agent");
-    if (value) {
-      this.tags.push(["agent", JSON.stringify(value)]);
-    }
-  }
-  get templateTags() {
-    return this.getMatchingTags("t").map((tag) => tag[1]).filter(Boolean);
-  }
-  set templateTags(values) {
-    this.tags = this.tags.filter((tag) => tag[0] !== "t");
-    values.forEach((value) => {
-      if (value)
-        this.tags.push(["t", value]);
-    });
-  }
-};
-function disconnect2(pool, debug92) {
-  debug92 ??= import_debug19.default("ndk:relay:auth-policies:disconnect");
-  return async (relay) => {
-    debug92?.(`Relay ${relay.url} requested authentication, disconnecting`);
-    pool.removeRelay(relay.url);
-  };
-}
-async function signAndAuth2(event, relay, signer, debug92, resolve, reject) {
-  try {
-    await event.sign(signer);
-    resolve(event);
-  } catch (e) {
-    debug92?.(`Failed to publish auth event to relay ${relay.url}`, e);
-    reject(event);
-  }
-}
-function signIn2({ ndk, signer, debug: debug92 } = {}) {
-  debug92 ??= import_debug19.default("ndk:auth-policies:signIn");
-  return async (relay, challenge5) => {
-    debug92?.(`Relay ${relay.url} requested authentication, signing in`);
-    const event = new NDKEvent3(ndk);
-    event.kind = 22242;
-    event.tags = [
-      ["relay", relay.url],
-      ["challenge", challenge5]
-    ];
-    signer ??= ndk?.signer;
-    return new Promise(async (resolve, reject) => {
-      if (signer) {
-        await signAndAuth2(event, relay, signer, debug92, resolve, reject);
-      } else {
-        ndk?.once("signer:ready", async (signer2) => {
-          await signAndAuth2(event, relay, signer2, debug92, resolve, reject);
-        });
-      }
-    });
-  };
-}
-var NDKRelayAuthPolicies2 = {
-  disconnect: disconnect2,
-  signIn: signIn2
-};
-var NDKNip07Signer2 = class _NDKNip07Signer2 {
-  _userPromise;
-  encryptionQueue = [];
-  encryptionProcessing = false;
-  debug;
-  waitTimeout;
-  _pubkey;
-  ndk;
-  _user;
-  constructor(waitTimeout = 1000, ndk) {
-    this.debug = import_debug20.default("ndk:nip07");
-    this.waitTimeout = waitTimeout;
-    this.ndk = ndk;
-  }
-  get pubkey() {
-    if (!this._pubkey)
-      throw new Error("Not ready");
-    return this._pubkey;
-  }
-  async blockUntilReady() {
-    await this.waitForExtension();
-    const pubkey = await window.nostr?.getPublicKey();
-    if (!pubkey) {
-      throw new Error("User rejected access");
-    }
-    this._pubkey = pubkey;
-    let user;
-    if (this.ndk)
-      user = this.ndk.getUser({ pubkey });
-    else
-      user = new NDKUser2({ pubkey });
-    this._user = user;
-    return user;
-  }
-  async user() {
-    if (!this._userPromise) {
-      this._userPromise = this.blockUntilReady();
-    }
-    return this._userPromise;
-  }
-  get userSync() {
-    if (!this._user)
-      throw new Error("User not ready");
-    return this._user;
-  }
-  async sign(event) {
-    await this.waitForExtension();
-    const signedEvent = await window.nostr?.signEvent(event);
-    if (!signedEvent)
-      throw new Error("Failed to sign event");
-    return signedEvent.sig;
-  }
-  async relays(ndk) {
-    await this.waitForExtension();
-    const relays = await window.nostr?.getRelays?.() || {};
-    const activeRelays = [];
-    for (const url of Object.keys(relays)) {
-      if (relays[url].read && relays[url].write) {
-        activeRelays.push(url);
-      }
-    }
-    return activeRelays.map((url) => new NDKRelay2(url, ndk?.relayAuthDefaultPolicy, ndk));
-  }
-  async encryptionEnabled(nip) {
-    const enabled = [];
-    if ((!nip || nip === "nip04") && Boolean(window.nostr?.nip04))
-      enabled.push("nip04");
-    if ((!nip || nip === "nip44") && Boolean(window.nostr?.nip44))
-      enabled.push("nip44");
-    return enabled;
-  }
-  async encrypt(recipient, value, nip = "nip04") {
-    if (!await this.encryptionEnabled(nip))
-      throw new Error(`${nip}encryption is not available from your browser extension`);
-    await this.waitForExtension();
-    const recipientHexPubKey = recipient.pubkey;
-    return this.queueEncryption(nip, "encrypt", recipientHexPubKey, value);
-  }
-  async decrypt(sender, value, nip = "nip04") {
-    if (!await this.encryptionEnabled(nip))
-      throw new Error(`${nip}encryption is not available from your browser extension`);
-    await this.waitForExtension();
-    const senderHexPubKey = sender.pubkey;
-    return this.queueEncryption(nip, "decrypt", senderHexPubKey, value);
-  }
-  async queueEncryption(scheme, method, counterpartyHexpubkey, value) {
-    return new Promise((resolve, reject) => {
-      this.encryptionQueue.push({
-        scheme,
-        method,
-        counterpartyHexpubkey,
-        value,
-        resolve,
-        reject
-      });
-      if (!this.encryptionProcessing) {
-        this.processEncryptionQueue();
-      }
-    });
-  }
-  async processEncryptionQueue(item, retries = 0) {
-    if (!item && this.encryptionQueue.length === 0) {
-      this.encryptionProcessing = false;
-      return;
-    }
-    this.encryptionProcessing = true;
-    const currentItem = item || this.encryptionQueue.shift();
-    if (!currentItem) {
-      this.encryptionProcessing = false;
-      return;
-    }
-    const { scheme, method, counterpartyHexpubkey, value, resolve, reject } = currentItem;
-    this.debug("Processing encryption queue item", {
-      method,
-      counterpartyHexpubkey,
-      value
-    });
-    try {
-      const result = await window.nostr?.[scheme]?.[method](counterpartyHexpubkey, value);
-      if (!result)
-        throw new Error("Failed to encrypt/decrypt");
-      resolve(result);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("call already executing") && retries < 5) {
-        this.debug("Retrying encryption queue item", {
-          method,
-          counterpartyHexpubkey,
-          value,
-          retries
-        });
-        setTimeout(() => {
-          this.processEncryptionQueue(currentItem, retries + 1);
-        }, 50 * retries);
-        return;
-      }
-      reject(error instanceof Error ? error : new Error(errorMessage));
-    }
-    this.processEncryptionQueue();
-  }
-  waitForExtension() {
-    return new Promise((resolve, reject) => {
-      if (window.nostr) {
-        resolve();
-        return;
-      }
-      let timerId;
-      const intervalId = setInterval(() => {
-        if (window.nostr) {
-          clearTimeout(timerId);
-          clearInterval(intervalId);
-          resolve();
-        }
-      }, 100);
-      timerId = setTimeout(() => {
-        clearInterval(intervalId);
-        reject(new Error("NIP-07 extension not available"));
-      }, this.waitTimeout);
-    });
-  }
-  toPayload() {
-    const payload = {
-      type: "nip07",
-      payload: ""
-    };
-    return JSON.stringify(payload);
-  }
-  static async fromPayload(payloadString, ndk) {
-    const payload = JSON.parse(payloadString);
-    if (payload.type !== "nip07") {
-      throw new Error(`Invalid payload type: expected 'nip07', got ${payload.type}`);
-    }
-    return new _NDKNip07Signer2(undefined, ndk);
-  }
-};
-registerSigner2("nip07", NDKNip07Signer2);
-var NDKNostrRpc2 = class extends import_tseep14.EventEmitter {
-  ndk;
-  signer;
-  relaySet;
-  debug;
-  encryptionType = "nip04";
-  pool;
-  constructor(ndk, signer, debug92, relayUrls) {
-    super();
-    this.ndk = ndk;
-    this.signer = signer;
-    if (relayUrls) {
-      this.pool = new NDKPool2(relayUrls, [], ndk, {
-        debug: debug92.extend("rpc-pool"),
-        name: "Nostr RPC"
-      });
-      this.relaySet = new NDKRelaySet2(/* @__PURE__ */ new Set, ndk, this.pool);
-      for (const url of relayUrls) {
-        const relay = this.pool.getRelay(url, false, false);
-        relay.authPolicy = NDKRelayAuthPolicies2.signIn({ ndk, signer, debug: debug92 });
-        this.relaySet.addRelay(relay);
-        relay.connect();
-      }
-    }
-    this.debug = debug92.extend("rpc");
-  }
-  subscribe(filter4) {
-    const sub = this.ndk.subscribe(filter4, {
-      closeOnEose: false,
-      groupable: false,
-      cacheUsage: "ONLY_RELAY",
-      pool: this.pool,
-      relaySet: this.relaySet
-    }, false);
-    sub.on("event", async (event) => {
-      try {
-        const parsedEvent = await this.parseEvent(event);
-        if (parsedEvent.method) {
-          this.emit("request", parsedEvent);
-        } else {
-          this.emit(`response-${parsedEvent.id}`, parsedEvent);
-          this.emit("response", parsedEvent);
-        }
-      } catch (e) {
-        this.debug("error parsing event", e, event.rawEvent());
-      }
-    });
-    return new Promise((resolve) => {
-      sub.on("eose", () => {
-        this.debug("eosed");
-        resolve(sub);
-      });
-      sub.start();
-    });
-  }
-  async parseEvent(event) {
-    if (this.encryptionType === "nip44" && event.content.includes("?iv=")) {
-      this.encryptionType = "nip04";
-    } else if (this.encryptionType === "nip04" && !event.content.includes("?iv=")) {
-      this.encryptionType = "nip44";
-    }
-    const remoteUser = this.ndk.getUser({ pubkey: event.pubkey });
-    remoteUser.ndk = this.ndk;
-    let decryptedContent;
-    try {
-      decryptedContent = await this.signer.decrypt(remoteUser, event.content, this.encryptionType);
-    } catch (_e) {
-      const otherEncryptionType = this.encryptionType === "nip04" ? "nip44" : "nip04";
-      decryptedContent = await this.signer.decrypt(remoteUser, event.content, otherEncryptionType);
-      this.encryptionType = otherEncryptionType;
-    }
-    const parsedContent = JSON.parse(decryptedContent);
-    const { id, method, params, result, error } = parsedContent;
-    if (method) {
-      return { id, pubkey: event.pubkey, method, params, event };
-    }
-    return { id, result, error, event };
-  }
-  async sendResponse(id, remotePubkey, result, kind = 24133, error) {
-    const res = { id, result };
-    if (error) {
-      res.error = error;
-    }
-    const localUser = await this.signer.user();
-    const remoteUser = this.ndk.getUser({ pubkey: remotePubkey });
-    const event = new NDKEvent3(this.ndk, {
-      kind,
-      content: JSON.stringify(res),
-      tags: [["p", remotePubkey]],
-      pubkey: localUser.pubkey
-    });
-    event.content = await this.signer.encrypt(remoteUser, event.content, this.encryptionType);
-    await event.sign(this.signer);
-    await event.publish(this.relaySet);
-  }
-  async sendRequest(remotePubkey, method, params = [], kind = 24133, cb) {
-    const id = Math.random().toString(36).substring(7);
-    const localUser = await this.signer.user();
-    const remoteUser = this.ndk.getUser({ pubkey: remotePubkey });
-    const request = { id, method, params };
-    const promise = new Promise(() => {
-      const responseHandler = (response) => {
-        if (response.result === "auth_url") {
-          this.once(`response-${id}`, responseHandler);
-          this.emit("authUrl", response.error);
-        } else if (cb) {
-          cb(response);
-        }
-      };
-      this.once(`response-${id}`, responseHandler);
-    });
-    const event = new NDKEvent3(this.ndk, {
-      kind,
-      content: JSON.stringify(request),
-      tags: [["p", remotePubkey]],
-      pubkey: localUser.pubkey
-    });
-    event.content = await this.signer.encrypt(remoteUser, event.content, this.encryptionType);
-    await event.sign(this.signer);
-    await event.publish(this.relaySet);
-    return promise;
-  }
-};
-var ConnectEventHandlingStrategy2 = class {
-  async handle(backend, id, remotePubkey, params) {
-    const [_2, token] = params;
-    const debug92 = backend.debug.extend("connect");
-    debug92(`connection request from ${remotePubkey}`);
-    if (token && backend.applyToken) {
-      debug92("applying token");
-      await backend.applyToken(remotePubkey, token);
-    }
-    if (await backend.pubkeyAllowed({
-      id,
-      pubkey: remotePubkey,
-      method: "connect",
-      params: token
-    })) {
-      debug92(`connection request from ${remotePubkey} allowed`);
-      return "ack";
-    }
-    debug92(`connection request from ${remotePubkey} rejected`);
-    return;
-  }
-};
-var GetPublicKeyHandlingStrategy2 = class {
-  async handle(backend, _id, _remotePubkey, _params) {
-    return backend.localUser?.pubkey;
-  }
-};
-var Nip04DecryptHandlingStrategy3 = class {
-  async handle(backend, id, remotePubkey, params) {
-    const [senderPubkey, payload] = params;
-    const senderUser = new NDKUser2({ pubkey: senderPubkey });
-    const decryptedPayload = await decrypt25(backend, id, remotePubkey, senderUser, payload);
-    return decryptedPayload;
-  }
-};
-async function decrypt25(backend, id, remotePubkey, senderUser, payload) {
-  if (!await backend.pubkeyAllowed({
-    id,
-    pubkey: remotePubkey,
-    method: "nip04_decrypt",
-    params: payload
-  })) {
-    backend.debug(`decrypt request from ${remotePubkey} rejected`);
-    return;
-  }
-  return await backend.signer.decrypt(senderUser, payload, "nip04");
-}
-var Nip04EncryptHandlingStrategy3 = class {
-  async handle(backend, id, remotePubkey, params) {
-    const [recipientPubkey, payload] = params;
-    const recipientUser = new NDKUser2({ pubkey: recipientPubkey });
-    const encryptedPayload = await encrypt25(backend, id, remotePubkey, recipientUser, payload);
-    return encryptedPayload;
-  }
-};
-async function encrypt25(backend, id, remotePubkey, recipientUser, payload) {
-  if (!await backend.pubkeyAllowed({
-    id,
-    pubkey: remotePubkey,
-    method: "nip04_encrypt",
-    params: payload
-  })) {
-    backend.debug(`encrypt request from ${remotePubkey} rejected`);
-    return;
-  }
-  return await backend.signer.encrypt(recipientUser, payload, "nip04");
-}
-var Nip04DecryptHandlingStrategy22 = class {
-  async handle(backend, id, remotePubkey, params) {
-    const [senderPubkey, payload] = params;
-    const senderUser = new NDKUser2({ pubkey: senderPubkey });
-    const decryptedPayload = await decrypt33(backend, id, remotePubkey, senderUser, payload);
-    return decryptedPayload;
-  }
-};
-async function decrypt33(backend, id, remotePubkey, senderUser, payload) {
-  if (!await backend.pubkeyAllowed({
-    id,
-    pubkey: remotePubkey,
-    method: "nip44_decrypt",
-    params: payload
-  })) {
-    backend.debug(`decrypt request from ${remotePubkey} rejected`);
-    return;
-  }
-  return await backend.signer.decrypt(senderUser, payload, "nip44");
-}
-var Nip04EncryptHandlingStrategy22 = class {
-  async handle(backend, id, remotePubkey, params) {
-    const [recipientPubkey, payload] = params;
-    const recipientUser = new NDKUser2({ pubkey: recipientPubkey });
-    const encryptedPayload = await encrypt33(backend, id, remotePubkey, recipientUser, payload);
-    return encryptedPayload;
-  }
-};
-async function encrypt33(backend, id, remotePubkey, recipientUser, payload) {
-  if (!await backend.pubkeyAllowed({
-    id,
-    pubkey: remotePubkey,
-    method: "nip44_encrypt",
-    params: payload
-  })) {
-    backend.debug(`encrypt request from ${remotePubkey} rejected`);
-    return;
-  }
-  return await backend.signer.encrypt(recipientUser, payload, "nip44");
-}
-var PingEventHandlingStrategy2 = class {
-  async handle(backend, id, remotePubkey, _params) {
-    const debug92 = backend.debug.extend("ping");
-    debug92(`ping request from ${remotePubkey}`);
-    if (await backend.pubkeyAllowed({ id, pubkey: remotePubkey, method: "ping" })) {
-      debug92(`connection request from ${remotePubkey} allowed`);
-      return "pong";
-    }
-    debug92(`connection request from ${remotePubkey} rejected`);
-    return;
-  }
-};
-var SignEventHandlingStrategy2 = class {
-  async handle(backend, id, remotePubkey, params) {
-    const event = await signEvent2(backend, id, remotePubkey, params);
-    if (!event)
-      return;
-    return JSON.stringify(await event.toNostrEvent());
-  }
-};
-async function signEvent2(backend, id, remotePubkey, params) {
-  const [eventString] = params;
-  backend.debug(`sign event request from ${remotePubkey}`);
-  const event = new NDKEvent3(backend.ndk, JSON.parse(eventString));
-  backend.debug("event to sign", event.rawEvent());
-  if (!await backend.pubkeyAllowed({
-    id,
-    pubkey: remotePubkey,
-    method: "sign_event",
-    params: event
-  })) {
-    backend.debug(`sign event request from ${remotePubkey} rejected`);
-    return;
-  }
-  backend.debug(`sign event request from ${remotePubkey} allowed`);
-  await event.sign(backend.signer);
-  return event;
-}
-var NDKNip46Backend2 = class {
-  ndk;
-  signer;
-  localUser;
-  debug;
-  rpc;
-  permitCallback;
-  relayUrls;
-  constructor(ndk, privateKeyOrSigner, permitCallback, relayUrls) {
-    this.ndk = ndk;
-    if (privateKeyOrSigner instanceof Uint8Array) {
-      this.signer = new NDKPrivateKeySigner2(privateKeyOrSigner);
-    } else if (privateKeyOrSigner instanceof String) {
-      this.signer = new NDKPrivateKeySigner2(hexToBytes6(privateKeyOrSigner));
-    } else if (privateKeyOrSigner instanceof NDKPrivateKeySigner2) {
-      this.signer = privateKeyOrSigner;
-    } else {
-      throw new Error("Invalid signer");
-    }
-    this.debug = ndk.debug.extend("nip46:backend");
-    this.relayUrls = relayUrls ?? Array.from(ndk.pool.relays.keys());
-    this.rpc = new NDKNostrRpc2(ndk, this.signer, this.debug, this.relayUrls);
-    this.permitCallback = permitCallback;
-  }
-  async start() {
-    this.localUser = await this.signer.user();
-    const sub = this.ndk.subscribe({
-      kinds: [24133],
-      "#p": [this.localUser.pubkey]
-    }, { closeOnEose: false });
-    sub.on("event", (e) => this.handleIncomingEvent(e));
-  }
-  handlers = {
-    connect: new ConnectEventHandlingStrategy2,
-    sign_event: new SignEventHandlingStrategy2,
-    nip04_encrypt: new Nip04EncryptHandlingStrategy3,
-    nip04_decrypt: new Nip04DecryptHandlingStrategy3,
-    nip44_encrypt: new Nip04EncryptHandlingStrategy22,
-    nip44_decrypt: new Nip04DecryptHandlingStrategy22,
-    get_public_key: new GetPublicKeyHandlingStrategy2,
-    ping: new PingEventHandlingStrategy2
-  };
-  setStrategy(method, strategy) {
-    this.handlers[method] = strategy;
-  }
-  async applyToken(_pubkey, _token) {
-    throw new Error("connection token not supported");
-  }
-  async handleIncomingEvent(event) {
-    const { id, method, params } = await this.rpc.parseEvent(event);
-    const remotePubkey = event.pubkey;
-    let response;
-    this.debug("incoming event", { id, method, params });
-    if (!event.verifySignature(false)) {
-      this.debug("invalid signature", event.rawEvent());
-      return;
-    }
-    const strategy = this.handlers[method];
-    if (strategy) {
-      try {
-        response = await strategy.handle(this, id, remotePubkey, params);
-      } catch (e) {
-        this.debug("error handling event", e, { id, method, params });
-        this.rpc.sendResponse(id, remotePubkey, "error", undefined, e.message);
-      }
-    } else {
-      this.debug("unsupported method", { method, params });
-    }
-    if (response) {
-      this.debug(`sending response to ${remotePubkey}`, response);
-      this.rpc.sendResponse(id, remotePubkey, response);
-    } else {
-      this.rpc.sendResponse(id, remotePubkey, "error", undefined, "Not authorized");
-    }
-  }
-  async pubkeyAllowed(params) {
-    return this.permitCallback(params);
-  }
-};
-async function ndkSignerFromPayload2(payloadString, ndk) {
-  let parsed;
-  try {
-    parsed = JSON.parse(payloadString);
-  } catch (e) {
-    console.error("Failed to parse signer payload string", payloadString, e);
-    return;
-  }
-  if (!parsed || typeof parsed.type !== "string") {
-    console.error("Failed to parse signer payload string", payloadString, new Error("Missing type field"));
-    return;
-  }
-  const SignerClass = signerRegistry2.get(parsed.type);
-  if (!SignerClass) {
-    throw new Error(`Unknown signer type: ${parsed.type}`);
-  }
-  try {
-    return await SignerClass.fromPayload(payloadString, ndk);
-  } catch (e) {
-    const errorMsg = e instanceof Error ? e.message : String(e);
-    throw new Error(`Failed to deserialize signer type ${parsed.type}: ${errorMsg}`);
-  }
-}
-function nostrConnectGenerateSecret2() {
-  return Math.random().toString(36).substring(2, 15);
-}
-function generateNostrConnectUri2(pubkey, secret, relay, options) {
-  const meta = {
-    name: options?.name ? encodeURIComponent(options.name) : "",
-    url: options?.url ? encodeURIComponent(options.url) : "",
-    image: options?.image ? encodeURIComponent(options.image) : "",
-    perms: options?.perms ? encodeURIComponent(options.perms) : ""
-  };
-  let uri = `nostrconnect://${pubkey}?image=${meta.image}&url=${meta.url}&name=${meta.name}&perms=${meta.perms}&secret=${encodeURIComponent(secret)}`;
-  if (relay) {
-    uri += `&relay=${encodeURIComponent(relay)}`;
-  }
-  return uri;
-}
-var NDKNip46Signer2 = class _NDKNip46Signer2 extends import_tseep15.EventEmitter {
-  ndk;
-  _user;
-  bunkerPubkey;
-  userPubkey;
-  get pubkey() {
-    if (!this.userPubkey)
-      throw new Error("Not ready");
-    return this.userPubkey;
-  }
-  secret;
-  localSigner;
-  nip05;
-  rpc;
-  debug;
-  relayUrls;
-  subscription;
-  nostrConnectUri;
-  nostrConnectSecret;
-  constructor(ndk, userOrConnectionToken, localSigner, relayUrls, nostrConnectOptions) {
-    super();
-    this.ndk = ndk;
-    this.debug = ndk.debug.extend("nip46:signer");
-    this.relayUrls = relayUrls;
-    if (!localSigner) {
-      this.localSigner = NDKPrivateKeySigner2.generate();
-    } else {
-      if (typeof localSigner === "string") {
-        this.localSigner = new NDKPrivateKeySigner2(localSigner);
-      } else {
-        this.localSigner = localSigner;
-      }
-    }
-    if (userOrConnectionToken === false) {} else if (!userOrConnectionToken) {
-      this.nostrconnectFlowInit(nostrConnectOptions);
-    } else if (userOrConnectionToken.startsWith("bunker://")) {
-      this.bunkerFlowInit(userOrConnectionToken);
-    } else {
-      this.nip05Init(userOrConnectionToken);
-    }
-    this.rpc = new NDKNostrRpc2(this.ndk, this.localSigner, this.debug, this.relayUrls);
-  }
-  static bunker(ndk, userOrConnectionToken, localSigner) {
-    return new _NDKNip46Signer2(ndk, userOrConnectionToken, localSigner);
-  }
-  static nostrconnect(ndk, relay, localSigner, nostrConnectOptions) {
-    return new _NDKNip46Signer2(ndk, undefined, localSigner, [relay], nostrConnectOptions);
-  }
-  nostrconnectFlowInit(nostrConnectOptions) {
-    this.nostrConnectSecret = nostrConnectGenerateSecret2();
-    const pubkey = this.localSigner.pubkey;
-    this.nostrConnectUri = generateNostrConnectUri2(pubkey, this.nostrConnectSecret, this.relayUrls?.[0], nostrConnectOptions);
-  }
-  bunkerFlowInit(connectionToken) {
-    const bunkerUrl = new URL(connectionToken);
-    const bunkerPubkey = bunkerUrl.hostname || bunkerUrl.pathname.replace(/^\/\//, "");
-    const userPubkey = bunkerUrl.searchParams.get("pubkey");
-    const relayUrls = bunkerUrl.searchParams.getAll("relay");
-    const secret = bunkerUrl.searchParams.get("secret");
-    this.bunkerPubkey = bunkerPubkey;
-    this.userPubkey = userPubkey;
-    this.relayUrls = relayUrls;
-    this.secret = secret;
-  }
-  nip05Init(nip05) {
-    this.nip05 = nip05;
-  }
-  async startListening() {
-    if (this.subscription)
-      return;
-    const localUser = await this.localSigner.user();
-    if (!localUser)
-      throw new Error("Local signer not ready");
-    this.subscription = await this.rpc.subscribe({
-      kinds: [24133],
-      "#p": [localUser.pubkey]
-    });
-  }
-  async user() {
-    if (this._user)
-      return this._user;
-    return this.blockUntilReady();
-  }
-  get userSync() {
-    if (!this._user)
-      throw new Error("Remote user not ready synchronously");
-    return this._user;
-  }
-  async blockUntilReadyNostrConnect() {
-    return new Promise((resolve, reject) => {
-      const connect = (response) => {
-        if (response.result === this.nostrConnectSecret) {
-          this._user = response.event.author;
-          this.userPubkey = response.event.pubkey;
-          this.bunkerPubkey = response.event.pubkey;
-          this.rpc.off("response", connect);
-          resolve(this._user);
-        }
-      };
-      this.startListening();
-      this.rpc.on("response", connect);
-    });
-  }
-  async blockUntilReady() {
-    if (!this.bunkerPubkey && !this.nostrConnectSecret && !this.nip05) {
-      throw new Error("Bunker pubkey not set");
-    }
-    if (this.nostrConnectSecret)
-      return this.blockUntilReadyNostrConnect();
-    if (this.nip05 && !this.userPubkey) {
-      const user = await NDKUser2.fromNip05(this.nip05, this.ndk);
-      if (user) {
-        this._user = user;
-        this.userPubkey = user.pubkey;
-        this.relayUrls = user.nip46Urls;
-        this.rpc = new NDKNostrRpc2(this.ndk, this.localSigner, this.debug, this.relayUrls);
-      }
-    }
-    if (!this.bunkerPubkey && this.userPubkey) {
-      this.bunkerPubkey = this.userPubkey;
-    } else if (!this.bunkerPubkey) {
-      throw new Error("Bunker pubkey not set");
-    }
-    await this.startListening();
-    this.rpc.on("authUrl", (...props) => {
-      this.emit("authUrl", ...props);
-    });
-    return new Promise((resolve, reject) => {
-      const connectParams = [this.userPubkey ?? ""];
-      if (this.secret)
-        connectParams.push(this.secret);
-      if (!this.bunkerPubkey)
-        throw new Error("Bunker pubkey not set");
-      this.rpc.sendRequest(this.bunkerPubkey, "connect", connectParams, 24133, (response) => {
-        if (response.result === "ack") {
-          this.getPublicKey().then((pubkey) => {
-            this.userPubkey = pubkey;
-            this._user = this.ndk.getUser({ pubkey });
-            resolve(this._user);
-          });
-        } else {
-          reject(response.error);
-        }
-      });
-    });
-  }
-  stop() {
-    this.subscription?.stop();
-    this.subscription = undefined;
-  }
-  async getPublicKey() {
-    if (this.userPubkey)
-      return this.userPubkey;
-    return new Promise((resolve, _reject) => {
-      if (!this.bunkerPubkey)
-        throw new Error("Bunker pubkey not set");
-      this.rpc.sendRequest(this.bunkerPubkey, "get_public_key", [], 24133, (response) => {
-        resolve(response.result);
-      });
-    });
-  }
-  async encryptionEnabled(scheme) {
-    if (scheme)
-      return [scheme];
-    return Promise.resolve(["nip04", "nip44"]);
-  }
-  async encrypt(recipient, value, scheme = "nip04") {
-    return this.encryption(recipient, value, scheme, "encrypt");
-  }
-  async decrypt(sender, value, scheme = "nip04") {
-    return this.encryption(sender, value, scheme, "decrypt");
-  }
-  async encryption(peer, value, scheme, method) {
-    const promise = new Promise((resolve, reject) => {
-      if (!this.bunkerPubkey)
-        throw new Error("Bunker pubkey not set");
-      this.rpc.sendRequest(this.bunkerPubkey, `${scheme}_${method}`, [peer.pubkey, value], 24133, (response) => {
-        if (!response.error) {
-          resolve(response.result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
-    return promise;
-  }
-  async sign(event) {
-    const promise = new Promise((resolve, reject) => {
-      if (!this.bunkerPubkey)
-        throw new Error("Bunker pubkey not set");
-      this.rpc.sendRequest(this.bunkerPubkey, "sign_event", [JSON.stringify(event)], 24133, (response) => {
-        if (!response.error) {
-          const json = JSON.parse(response.result);
-          resolve(json.sig);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
-    return promise;
-  }
-  async createAccount(username, domain, email) {
-    await this.startListening();
-    const req = [];
-    if (username)
-      req.push(username);
-    if (domain)
-      req.push(domain);
-    if (email)
-      req.push(email);
-    return new Promise((resolve, reject) => {
-      if (!this.bunkerPubkey)
-        throw new Error("Bunker pubkey not set");
-      this.rpc.sendRequest(this.bunkerPubkey, "create_account", req, 24133, (response) => {
-        if (!response.error) {
-          const pubkey = response.result;
-          resolve(pubkey);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
-  }
-  toPayload() {
-    if (!this.bunkerPubkey || !this.userPubkey) {
-      throw new Error("NIP-46 signer is not fully initialized for serialization");
-    }
-    const payload = {
-      type: "nip46",
-      payload: {
-        bunkerPubkey: this.bunkerPubkey,
-        userPubkey: this.userPubkey,
-        relayUrls: this.relayUrls,
-        secret: this.secret,
-        localSignerPayload: this.localSigner.toPayload(),
-        nip05: this.nip05 || null
-      }
-    };
-    return JSON.stringify(payload);
-  }
-  static async fromPayload(payloadString, ndk) {
-    if (!ndk) {
-      throw new Error("NDK instance is required to deserialize NIP-46 signer");
-    }
-    const parsed = JSON.parse(payloadString);
-    if (parsed.type !== "nip46") {
-      throw new Error(`Invalid payload type: expected 'nip46', got ${parsed.type}`);
-    }
-    const payload = parsed.payload;
-    if (!payload || typeof payload !== "object" || !payload.localSignerPayload) {
-      throw new Error("Invalid payload content for nip46 signer");
-    }
-    const localSigner = await ndkSignerFromPayload2(payload.localSignerPayload, ndk);
-    if (!localSigner) {
-      throw new Error("Failed to deserialize local signer for NIP-46");
-    }
-    if (!(localSigner instanceof NDKPrivateKeySigner2)) {
-      throw new Error("Local signer must be an instance of NDKPrivateKeySigner");
-    }
-    let signer;
-    signer = new _NDKNip46Signer2(ndk, false, localSigner, payload.relayUrls);
-    signer.userPubkey = payload.userPubkey;
-    signer.bunkerPubkey = payload.bunkerPubkey;
-    signer.relayUrls = payload.relayUrls;
-    signer.secret = payload.secret;
-    if (payload.userPubkey) {
-      signer._user = new NDKUser2({ pubkey: payload.userPubkey });
-      if (signer._user)
-        signer._user.ndk = ndk;
-    }
-    return signer;
-  }
-};
-registerSigner2("nip46", NDKNip46Signer2);
-function dedup2(event1, event2) {
-  if (event1.created_at > event2.created_at) {
-    return event1;
-  }
-  return event2;
-}
-async function getRelayListForUser2(pubkey, ndk) {
-  const list = await getRelayListForUsers2([pubkey], ndk);
-  return list.get(pubkey);
-}
-async function getRelayListForUsers2(pubkeys, ndk, skipCache = false, timeout = 1000) {
-  const pool = ndk.outboxPool || ndk.pool;
-  const set = /* @__PURE__ */ new Set;
-  for (const relay of pool.relays.values())
-    set.add(relay);
-  const relayLists = /* @__PURE__ */ new Map;
-  const fromContactList = /* @__PURE__ */ new Map;
-  const relaySet = new NDKRelaySet2(set, ndk);
-  if (ndk.cacheAdapter?.locking && !skipCache) {
-    const cachedList = await ndk.fetchEvents({ kinds: [3, 10002], authors: Array.from(new Set(pubkeys)) }, { cacheUsage: "ONLY_CACHE", subId: "ndk-relay-list-fetch" });
-    for (const relayList of cachedList) {
-      if (relayList.kind === 10002)
-        relayLists.set(relayList.pubkey, NDKRelayList2.from(relayList));
-    }
-    for (const relayList of cachedList) {
-      if (relayList.kind === 3) {
-        if (relayLists.has(relayList.pubkey))
-          continue;
-        const list = relayListFromKind32(ndk, relayList);
-        if (list)
-          fromContactList.set(relayList.pubkey, list);
-      }
-    }
-    pubkeys = pubkeys.filter((pubkey) => !relayLists.has(pubkey) && !fromContactList.has(pubkey));
-  }
-  if (pubkeys.length === 0)
-    return relayLists;
-  const relayListEvents = /* @__PURE__ */ new Map;
-  const contactListEvents = /* @__PURE__ */ new Map;
-  return new Promise((resolve) => {
-    const handleSubscription = async () => {
-      const subscribeOpts = {
-        closeOnEose: true,
-        pool,
-        groupable: true,
-        subId: "ndk-relay-list-fetch",
-        addSinceFromCache: true,
-        relaySet
-      };
-      if (relaySet)
-        subscribeOpts.relaySet = relaySet;
-      ndk.subscribe({ kinds: [3, 10002], authors: pubkeys }, subscribeOpts, {
-        onEvent: (event) => {
-          if (event.kind === 10002) {
-            const existingEvent = relayListEvents.get(event.pubkey);
-            if (existingEvent && existingEvent.created_at > event.created_at)
-              return;
-            relayListEvents.set(event.pubkey, event);
-          } else if (event.kind === 3) {
-            const existingEvent = contactListEvents.get(event.pubkey);
-            if (existingEvent && existingEvent.created_at > event.created_at)
-              return;
-            contactListEvents.set(event.pubkey, event);
-          }
-        },
-        onEose: () => {
-          for (const event of relayListEvents.values()) {
-            relayLists.set(event.pubkey, NDKRelayList2.from(event));
-          }
-          for (const pubkey of pubkeys) {
-            if (relayLists.has(pubkey))
-              continue;
-            const contactList = contactListEvents.get(pubkey);
-            if (!contactList)
-              continue;
-            const list = relayListFromKind32(ndk, contactList);
-            if (list)
-              relayLists.set(pubkey, list);
-          }
-          resolve(relayLists);
-        }
-      });
-      setTimeout(() => {
-        resolve(relayLists);
-      }, timeout);
-    };
-    handleSubscription();
-  });
-}
-var OutboxItem2 = class {
-  type;
-  relayUrlScores;
-  readRelays;
-  writeRelays;
-  constructor(type) {
-    this.type = type;
-    this.relayUrlScores = /* @__PURE__ */ new Map;
-    this.readRelays = /* @__PURE__ */ new Set;
-    this.writeRelays = /* @__PURE__ */ new Set;
-  }
-};
-var OutboxTracker2 = class extends import_tseep17.EventEmitter {
-  data;
-  ndk;
-  debug;
-  constructor(ndk) {
-    super();
-    this.ndk = ndk;
-    this.debug = ndk.debug.extend("outbox-tracker");
-    this.data = new import_typescript_lru_cache4.LRUCache({
-      maxSize: 1e5,
-      entryExpirationTimeInMS: 2 * 60 * 1000
-    });
-  }
-  async trackUsers(items, skipCache = false) {
-    const promises = [];
-    for (let i3 = 0;i3 < items.length; i3 += 400) {
-      const slice = items.slice(i3, i3 + 400);
-      const pubkeys = slice.map((item) => getKeyFromItem2(item)).filter((pubkey) => !this.data.has(pubkey));
-      if (pubkeys.length === 0)
-        continue;
-      for (const pubkey of pubkeys) {
-        this.data.set(pubkey, new OutboxItem2("user"));
-      }
-      promises.push(new Promise((resolve) => {
-        getRelayListForUsers2(pubkeys, this.ndk, skipCache).then((relayLists) => {
-          for (const [pubkey, relayList] of relayLists) {
-            let outboxItem = this.data.get(pubkey);
-            outboxItem ??= new OutboxItem2("user");
-            if (relayList) {
-              outboxItem.readRelays = new Set(normalize4(relayList.readRelayUrls));
-              outboxItem.writeRelays = new Set(normalize4(relayList.writeRelayUrls));
-              for (const relayUrl of outboxItem.readRelays) {
-                if (this.ndk.pool.blacklistRelayUrls.has(relayUrl)) {
-                  outboxItem.readRelays.delete(relayUrl);
-                }
-              }
-              for (const relayUrl of outboxItem.writeRelays) {
-                if (this.ndk.pool.blacklistRelayUrls.has(relayUrl)) {
-                  outboxItem.writeRelays.delete(relayUrl);
-                }
-              }
-              this.data.set(pubkey, outboxItem);
-            }
-          }
-        }).finally(resolve);
-      }));
-    }
-    return Promise.all(promises);
-  }
-  track(item, type, _skipCache = true) {
-    const key = getKeyFromItem2(item);
-    type ??= getTypeFromItem2(item);
-    let outboxItem = this.data.get(key);
-    if (!outboxItem) {
-      outboxItem = new OutboxItem2(type);
-      if (item instanceof NDKUser2) {
-        this.trackUsers([item]);
-      }
-    }
-    return outboxItem;
-  }
-};
-function getKeyFromItem2(item) {
-  if (item instanceof NDKUser2) {
-    return item.pubkey;
-  }
-  return item;
-}
-function getTypeFromItem2(item) {
-  if (item instanceof NDKUser2) {
-    return "user";
-  }
-  return "kind";
-}
-function correctRelaySet2(relaySet, pool) {
-  const connectedRelays = pool.connectedRelays();
-  const includesConnectedRelay = Array.from(relaySet.relays).some((relay) => {
-    return connectedRelays.map((r) => r.url).includes(relay.url);
-  });
-  if (!includesConnectedRelay) {
-    for (const relay of connectedRelays) {
-      relaySet.addRelay(relay);
-    }
-  }
-  if (connectedRelays.length === 0) {
-    for (const relay of pool.relays.values()) {
-      relaySet.addRelay(relay);
-    }
-  }
-  return relaySet;
-}
-var NDKSubscriptionManager2 = class {
-  subscriptions;
-  seenEvents = /* @__PURE__ */ new Map;
-  constructor() {
-    this.subscriptions = /* @__PURE__ */ new Map;
-  }
-  add(sub) {
-    this.subscriptions.set(sub.internalId, sub);
-    if (sub.onStopped) {}
-    sub.onStopped = () => {
-      this.subscriptions.delete(sub.internalId);
-    };
-    sub.on("close", () => {
-      this.subscriptions.delete(sub.internalId);
-    });
-  }
-  seenEvent(eventId, relay) {
-    const current = this.seenEvents.get(eventId) || [];
-    current.push(relay);
-    this.seenEvents.set(eventId, current);
-  }
-  dispatchEvent(event, relay, optimisticPublish = false) {
-    if (relay)
-      this.seenEvent(event.id, relay);
-    const subscriptions = this.subscriptions.values();
-    const matchingSubs = [];
-    for (const sub of subscriptions) {
-      if (matchFilters2(sub.filters, event)) {
-        matchingSubs.push(sub);
-      }
-    }
-    for (const sub of matchingSubs) {
-      sub.eventReceived(event, relay, false, optimisticPublish);
-    }
-  }
-};
-var debug72 = import_debug22.default("ndk:active-user");
-async function getUserRelayList2(user) {
-  if (!this.autoConnectUserRelays)
-    return;
-  const userRelays = await getRelayListForUser2(user.pubkey, this);
-  if (!userRelays)
-    return;
-  for (const url of userRelays.relays) {
-    let relay = this.pool.relays.get(url);
-    if (!relay) {
-      relay = new NDKRelay2(url, this.relayAuthDefaultPolicy, this);
-      this.pool.addRelay(relay);
-    }
-  }
-  return userRelays;
-}
-async function setActiveUser2(user) {
-  const pool = this.outboxPool || this.pool;
-  if (pool.connectedRelays.length > 0) {
-    setActiveUserConnected2.call(this, user);
-  } else {
-    pool.once("connect", () => {
-      setActiveUserConnected2.call(this, user);
-    });
-  }
-}
-async function setActiveUserConnected2(user) {
-  const userRelays = await getUserRelayList2.call(this, user);
-  const filters = [
-    {
-      kinds: [10006],
-      authors: [user.pubkey]
-    }
-  ];
-  if (this.autoFetchUserMutelist) {
-    filters[0].kinds?.push(1e4);
-  }
-  const events = /* @__PURE__ */ new Map;
-  const relaySet = userRelays ? userRelays.relaySet : undefined;
-  this.subscribe(filters, { subId: "active-user-settings", closeOnEose: true, relaySet }, {
-    onEvent: (event) => {
-      const prevEvent = events.get(event.kind);
-      if (prevEvent && prevEvent.created_at >= event.created_at)
-        return;
-      events.set(event.kind, event);
-    },
-    onEose: () => {
-      for (const event of events.values()) {
-        processEvent2.call(this, event);
-      }
-    }
-  });
-}
-async function processEvent2(event) {
-  if (event.kind === 10006) {
-    processBlockRelayList2.call(this, event);
-  } else if (event.kind === 1e4) {
-    processMuteList2.call(this, event);
-  }
-}
-function processBlockRelayList2(event) {
-  const list = lists_default2.from(event);
-  for (const item of list.items) {
-    this.pool.blacklistRelayUrls.add(item[0]);
-  }
-  debug72("Added %d relays to relay blacklist", list.items.length);
-}
-function processMuteList2(muteList) {
-  const list = lists_default2.from(muteList);
-  for (const item of list.items) {
-    this.mutedIds.set(item[1], item[0]);
-  }
-  debug72("Added %d users to mute list", list.items.length);
-}
-function getEntity2(entity) {
-  try {
-    const decoded = nip19_exports2.decode(entity);
-    if (decoded.type === "npub")
-      return npub2(this, decoded.data);
-    if (decoded.type === "nprofile")
-      return nprofile2(this, decoded.data);
-    return decoded;
-  } catch (_e) {
-    return null;
-  }
-}
-function npub2(ndk, pubkey) {
-  return ndk.getUser({ pubkey });
-}
-function nprofile2(ndk, profile) {
-  const user = ndk.getUser({ pubkey: profile.pubkey });
-  if (profile.relays)
-    user.relayUrls = profile.relays;
-  return user;
-}
-function isValidHint2(hint) {
-  if (!hint || hint === "")
-    return false;
-  try {
-    new URL(hint);
-    return true;
-  } catch (_e) {
-    return false;
-  }
-}
-async function fetchEventFromTag2(tag, originalEvent, subOpts, fallback2 = {
-  type: "timeout"
-}) {
-  const d42 = this.debug.extend("fetch-event-from-tag");
-  const [_2, id, hint] = tag;
-  subOpts = {};
-  d42("fetching event from tag", tag, subOpts, fallback2);
-  const authorRelays = getRelaysForSync2(this, originalEvent.pubkey);
-  if (authorRelays && authorRelays.size > 0) {
-    d42("fetching event from author relays %o", Array.from(authorRelays));
-    const relaySet2 = NDKRelaySet2.fromRelayUrls(Array.from(authorRelays), this);
-    const event2 = await this.fetchEvent(id, subOpts, relaySet2);
-    if (event2)
-      return event2;
-  } else {
-    d42("no author relays found for %s", originalEvent.pubkey, originalEvent);
-  }
-  const relaySet = calculateRelaySetsFromFilters2(this, [{ ids: [id] }], this.pool);
-  d42("fetching event without relay hint", relaySet);
-  const event = await this.fetchEvent(id, subOpts);
-  if (event)
-    return event;
-  if (hint && hint !== "") {
-    const event2 = await this.fetchEvent(id, subOpts, this.pool.getRelay(hint, true, true, [{ ids: [id] }]));
-    if (event2)
-      return event2;
-  }
-  let result = undefined;
-  const relay = isValidHint2(hint) ? this.pool.getRelay(hint, false, true, [{ ids: [id] }]) : undefined;
-  const fetchMaybeWithRelayHint = new Promise((resolve) => {
-    this.fetchEvent(id, subOpts, relay).then(resolve);
-  });
-  if (!isValidHint2(hint) || fallback2.type === "none") {
-    return fetchMaybeWithRelayHint;
-  }
-  const fallbackFetchPromise = new Promise(async (resolve) => {
-    const fallbackRelaySet = fallback2.relaySet;
-    const timeout = fallback2.timeout ?? 1500;
-    const timeoutPromise = new Promise((resolve2) => setTimeout(resolve2, timeout));
-    if (fallback2.type === "timeout")
-      await timeoutPromise;
-    if (result) {
-      resolve(result);
-    } else {
-      d42("fallback fetch triggered");
-      const fallbackEvent = await this.fetchEvent(id, subOpts, fallbackRelaySet);
-      resolve(fallbackEvent);
-    }
-  });
-  switch (fallback2.type) {
-    case "timeout":
-      return Promise.race([fetchMaybeWithRelayHint, fallbackFetchPromise]);
-    case "eose":
-      result = await fetchMaybeWithRelayHint;
-      if (result)
-        return result;
-      return fallbackFetchPromise;
-  }
-}
-var Queue4 = class {
-  queue = [];
-  maxConcurrency;
-  processing = /* @__PURE__ */ new Set;
-  promises = /* @__PURE__ */ new Map;
-  constructor(_name, maxConcurrency) {
-    this.maxConcurrency = maxConcurrency;
-  }
-  add(item) {
-    if (this.promises.has(item.id)) {
-      return this.promises.get(item.id);
-    }
-    const promise = new Promise((resolve, reject) => {
-      this.queue.push({
-        ...item,
-        func: () => item.func().then((result) => {
-          resolve(result);
-          return result;
-        }, (error) => {
-          reject(error);
-          throw error;
-        })
-      });
-      this.process();
-    });
-    this.promises.set(item.id, promise);
-    promise.finally(() => {
-      this.promises.delete(item.id);
-      this.processing.delete(item.id);
-      this.process();
-    });
-    return promise;
-  }
-  process() {
-    if (this.processing.size >= this.maxConcurrency || this.queue.length === 0) {
-      return;
-    }
-    const item = this.queue.shift();
-    if (!item || this.processing.has(item.id)) {
-      return;
-    }
-    this.processing.add(item.id);
-    item.func();
-  }
-  clear() {
-    this.queue = [];
-  }
-  clearProcessing() {
-    this.processing.clear();
-  }
-  clearAll() {
-    this.clear();
-    this.clearProcessing();
-  }
-  length() {
-    return this.queue.length;
-  }
-};
-var DEFAULT_OUTBOX_RELAYS2 = ["wss://purplepag.es/", "wss://nos.lol/"];
-var DEFAULT_BLACKLISTED_RELAYS2 = [
-  "wss://brb.io/",
-  "wss://nostr.mutinywallet.com/"
-];
-var NDK2 = class extends import_tseep16.EventEmitter {
-  _explicitRelayUrls;
-  blacklistRelayUrls;
-  pool;
-  outboxPool;
-  _signer;
-  _activeUser;
-  cacheAdapter;
-  debug;
-  devWriteRelaySet;
-  outboxTracker;
-  mutedIds;
-  clientName;
-  clientNip89;
-  queuesZapConfig;
-  queuesNip05;
-  asyncSigVerification = false;
-  initialValidationRatio = 1;
-  lowestValidationRatio = 0.1;
-  validationRatioFn;
-  autoBlacklistInvalidRelays = false;
-  subManager;
-  _signatureVerificationFunction;
-  _signatureVerificationWorker;
-  signatureVerificationTimeMs = 0;
-  publishingFailureHandled = false;
-  pools = [];
-  relayAuthDefaultPolicy;
-  httpFetch;
-  netDebug;
-  autoConnectUserRelays = true;
-  autoFetchUserMutelist = true;
-  walletConfig;
-  constructor(opts = {}) {
-    super();
-    this.debug = opts.debug || import_debug21.default("ndk");
-    this.netDebug = opts.netDebug;
-    this._explicitRelayUrls = opts.explicitRelayUrls || [];
-    this.blacklistRelayUrls = opts.blacklistRelayUrls || DEFAULT_BLACKLISTED_RELAYS2;
-    this.subManager = new NDKSubscriptionManager2;
-    this.pool = new NDKPool2(opts.explicitRelayUrls || [], [], this);
-    this.pool.name = "Main";
-    this.pool.on("relay:auth", async (relay, challenge5) => {
-      if (this.relayAuthDefaultPolicy) {
-        await this.relayAuthDefaultPolicy(relay, challenge5);
-      }
-    });
-    this.autoConnectUserRelays = opts.autoConnectUserRelays ?? true;
-    this.autoFetchUserMutelist = opts.autoFetchUserMutelist ?? true;
-    this.clientName = opts.clientName;
-    this.clientNip89 = opts.clientNip89;
-    this.relayAuthDefaultPolicy = opts.relayAuthDefaultPolicy;
-    if (opts.enableOutboxModel) {
-      this.outboxPool = new NDKPool2(opts.outboxRelayUrls || DEFAULT_OUTBOX_RELAYS2, [], this, {
-        debug: this.debug.extend("outbox-pool"),
-        name: "Outbox Pool"
-      });
-      this.outboxTracker = new OutboxTracker2(this);
-    }
-    this.signer = opts.signer;
-    this.cacheAdapter = opts.cacheAdapter;
-    this.mutedIds = opts.mutedIds || /* @__PURE__ */ new Map;
-    if (opts.devWriteRelayUrls) {
-      this.devWriteRelaySet = NDKRelaySet2.fromRelayUrls(opts.devWriteRelayUrls, this);
-    }
-    this.queuesZapConfig = new Queue4("zaps", 3);
-    this.queuesNip05 = new Queue4("nip05", 10);
-    if (opts.signatureVerificationWorker) {
-      this.signatureVerificationWorker = opts.signatureVerificationWorker;
-    }
-    if (opts.signatureVerificationFunction) {
-      this.signatureVerificationFunction = opts.signatureVerificationFunction;
-    }
-    this.initialValidationRatio = opts.initialValidationRatio || 1;
-    this.lowestValidationRatio = opts.lowestValidationRatio || 0.1;
-    this.autoBlacklistInvalidRelays = opts.autoBlacklistInvalidRelays || false;
-    this.validationRatioFn = opts.validationRatioFn || this.defaultValidationRatioFn;
-    try {
-      this.httpFetch = fetch;
-    } catch {}
-  }
-  set explicitRelayUrls(urls) {
-    this._explicitRelayUrls = urls.map(normalizeRelayUrl2);
-    this.pool.relayUrls = urls;
-  }
-  get explicitRelayUrls() {
-    return this._explicitRelayUrls || [];
-  }
-  set signatureVerificationWorker(worker22) {
-    this._signatureVerificationWorker = worker22;
-    if (worker22) {
-      signatureVerificationInit2(worker22);
-      this.asyncSigVerification = true;
-    } else {
-      this.asyncSigVerification = false;
-    }
-  }
-  set signatureVerificationFunction(fn) {
-    this._signatureVerificationFunction = fn;
-    this.asyncSigVerification = !!fn;
-  }
-  get signatureVerificationFunction() {
-    return this._signatureVerificationFunction;
-  }
-  addExplicitRelay(urlOrRelay, relayAuthPolicy, connect = true) {
-    let relay;
-    if (typeof urlOrRelay === "string") {
-      relay = new NDKRelay2(urlOrRelay, relayAuthPolicy, this);
-    } else {
-      relay = urlOrRelay;
-    }
-    this.pool.addRelay(relay, connect);
-    this.explicitRelayUrls?.push(relay.url);
-    return relay;
-  }
-  toJSON() {
-    return { relayCount: this.pool.relays.size }.toString();
-  }
-  get activeUser() {
-    return this._activeUser;
-  }
-  set activeUser(user) {
-    const differentUser = this._activeUser?.pubkey !== user?.pubkey;
-    this._activeUser = user;
-    if (user && differentUser) {
-      setActiveUser2.call(this, user);
-    } else if (!user) {
-      this.mutedIds = /* @__PURE__ */ new Map;
-    }
-  }
-  get signer() {
-    return this._signer;
-  }
-  set signer(newSigner) {
-    this._signer = newSigner;
-    if (newSigner)
-      this.emit("signer:ready", newSigner);
-    newSigner?.user().then((user) => {
-      user.ndk = this;
-      this.activeUser = user;
-    });
-  }
-  async connect(timeoutMs) {
-    if (this._signer && this.autoConnectUserRelays) {
-      this.debug("Attempting to connect to user relays specified by signer %o", await this._signer.relays?.(this));
-      if (this._signer.relays) {
-        const relays = await this._signer.relays(this);
-        relays.forEach((relay) => this.pool.addRelay(relay));
-      }
-    }
-    const connections = [this.pool.connect(timeoutMs)];
-    if (this.outboxPool) {
-      connections.push(this.outboxPool.connect(timeoutMs));
-    }
-    return Promise.allSettled(connections).then(() => {});
-  }
-  reportInvalidSignature(event, relay) {
-    this.debug(`Invalid signature detected for event ${event.id}${relay ? ` from relay ${relay.url}` : ""}`);
-    this.emit("event:invalid-sig", event, relay);
-    if (this.autoBlacklistInvalidRelays && relay) {
-      this.blacklistRelay(relay.url);
-    }
-  }
-  blacklistRelay(url) {
-    if (!this.blacklistRelayUrls) {
-      this.blacklistRelayUrls = [];
-    }
-    if (!this.blacklistRelayUrls.includes(url)) {
-      this.blacklistRelayUrls.push(url);
-      this.debug(`Added relay to blacklist: ${url}`);
-      const relay = this.pool.getRelay(url, false, false);
-      if (relay) {
-        relay.disconnect();
-        this.debug(`Disconnected from blacklisted relay: ${url}`);
-      }
-    }
-  }
-  defaultValidationRatioFn(relay, validatedCount, nonValidatedCount) {
-    if (validatedCount < 10)
-      return this.initialValidationRatio;
-    const trustFactor = Math.min(validatedCount / 100, 1);
-    const calculatedRatio = this.initialValidationRatio * (1 - trustFactor) + this.lowestValidationRatio * trustFactor;
-    return Math.max(calculatedRatio, this.lowestValidationRatio);
-  }
-  getUser(opts) {
-    const user = new NDKUser2(opts);
-    user.ndk = this;
-    return user;
-  }
-  async getUserFromNip05(nip05, skipCache = false) {
-    return NDKUser2.fromNip05(nip05, this, skipCache);
-  }
-  subscribe(filters, opts, autoStartOrRelaySet = true, _autoStart = true) {
-    let _relaySet = opts?.relaySet;
-    let autoStart = _autoStart;
-    if (autoStartOrRelaySet instanceof NDKRelaySet2) {
-      console.warn("relaySet is deprecated, use opts.relaySet instead. This will be removed in version v2.14.0");
-      _relaySet = autoStartOrRelaySet;
-      autoStart = _autoStart;
-    } else if (typeof autoStartOrRelaySet === "boolean" || typeof autoStartOrRelaySet === "object") {
-      autoStart = autoStartOrRelaySet;
-    }
-    const subscription = new NDKSubscription2(this, filters, { relaySet: _relaySet, ...opts });
-    this.subManager.add(subscription);
-    const pool = subscription.pool;
-    if (subscription.relaySet) {
-      for (const relay of subscription.relaySet.relays) {
-        pool.useTemporaryRelay(relay, undefined, subscription.filters);
-      }
-    }
-    if (this.outboxPool && subscription.hasAuthorsFilter()) {
-      const authors = subscription.filters.filter((filter4) => filter4.authors && filter4.authors?.length > 0).flatMap((filter4) => filter4.authors);
-      this.outboxTracker?.trackUsers(authors);
-    }
-    if (autoStart) {
-      let eventsHandler;
-      if (typeof autoStart === "object") {
-        if (autoStart.onEvent)
-          subscription.on("event", autoStart.onEvent);
-        if (autoStart.onEose)
-          subscription.on("eose", autoStart.onEose);
-        if (autoStart.onEvents)
-          eventsHandler = autoStart.onEvents;
-      }
-      setTimeout(() => {
-        const cachedEvents = subscription.start(!eventsHandler);
-        if (cachedEvents && cachedEvents.length > 0 && !!eventsHandler)
-          eventsHandler(cachedEvents);
-      }, 0);
-    }
-    return subscription;
-  }
-  fetchEventFromTag = fetchEventFromTag2.bind(this);
-  fetchEventSync(idOrFilter) {
-    if (!this.cacheAdapter)
-      throw new Error("Cache adapter not set");
-    let filters;
-    if (typeof idOrFilter === "string")
-      filters = [filterFromId2(idOrFilter)];
-    else
-      filters = idOrFilter;
-    const sub = new NDKSubscription2(this, filters);
-    const events = this.cacheAdapter.query(sub);
-    if (events instanceof Promise)
-      throw new Error("Cache adapter is async");
-    return events.map((e) => {
-      e.ndk = this;
-      return e;
-    });
-  }
-  async fetchEvent(idOrFilter, opts, relaySetOrRelay) {
-    let filters;
-    let relaySet;
-    if (relaySetOrRelay instanceof NDKRelay2) {
-      relaySet = new NDKRelaySet2(/* @__PURE__ */ new Set([relaySetOrRelay]), this);
-    } else if (relaySetOrRelay instanceof NDKRelaySet2) {
-      relaySet = relaySetOrRelay;
-    }
-    if (!relaySetOrRelay && typeof idOrFilter === "string") {
-      if (!isNip33AValue2(idOrFilter)) {
-        const relays = relaysFromBech322(idOrFilter, this);
-        if (relays.length > 0) {
-          relaySet = new NDKRelaySet2(new Set(relays), this);
-          relaySet = correctRelaySet2(relaySet, this.pool);
-        }
-      }
-    }
-    if (typeof idOrFilter === "string") {
-      filters = [filterFromId2(idOrFilter)];
-    } else if (Array.isArray(idOrFilter)) {
-      filters = idOrFilter;
-    } else {
-      filters = [idOrFilter];
-    }
-    if (filters.length === 0) {
-      throw new Error(`Invalid filter: ${JSON.stringify(idOrFilter)}`);
-    }
-    return new Promise((resolve) => {
-      let fetchedEvent = null;
-      const subscribeOpts = {
-        ...opts || {},
-        closeOnEose: true
-      };
-      if (relaySet)
-        subscribeOpts.relaySet = relaySet;
-      const s = this.subscribe(filters, subscribeOpts, false);
-      const t2 = setTimeout(() => {
-        s.stop();
-        resolve(fetchedEvent);
-      }, 1e4);
-      s.on("event", (event) => {
-        event.ndk = this;
-        if (!event.isReplaceable()) {
-          clearTimeout(t2);
-          resolve(event);
-        } else if (!fetchedEvent || fetchedEvent.created_at < event.created_at) {
-          fetchedEvent = event;
-        }
-      });
-      s.on("eose", () => {
-        clearTimeout(t2);
-        resolve(fetchedEvent);
-      });
-      s.start();
-    });
-  }
-  async fetchEvents(filters, opts, relaySet) {
-    return new Promise((resolve) => {
-      const events = /* @__PURE__ */ new Map;
-      const subscribeOpts = {
-        ...opts || {},
-        closeOnEose: true
-      };
-      if (relaySet)
-        subscribeOpts.relaySet = relaySet;
-      const relaySetSubscription = this.subscribe(filters, subscribeOpts, false);
-      const onEvent = (event) => {
-        let _event;
-        if (!(event instanceof NDKEvent3))
-          _event = new NDKEvent3(undefined, event);
-        else
-          _event = event;
-        const dedupKey = _event.deduplicationKey();
-        const existingEvent = events.get(dedupKey);
-        if (existingEvent) {
-          _event = dedup2(existingEvent, _event);
-        }
-        _event.ndk = this;
-        events.set(dedupKey, _event);
-      };
-      relaySetSubscription.on("event", onEvent);
-      relaySetSubscription.on("eose", () => {
-        resolve(new Set(events.values()));
-      });
-      relaySetSubscription.start();
-    });
-  }
-  assertSigner() {
-    if (!this.signer) {
-      this.emit("signer:required");
-      throw new Error("Signer required");
-    }
-  }
-  getEntity = getEntity2.bind(this);
-  set wallet(wallet) {
-    if (!wallet) {
-      this.walletConfig = undefined;
-      return;
-    }
-    this.walletConfig ??= {};
-    this.walletConfig.lnPay = wallet?.lnPay?.bind(wallet);
-    this.walletConfig.cashuPay = wallet?.cashuPay?.bind(wallet);
-  }
-};
-var d22 = import_debug24.default("ndk:zapper:ln");
-var d32 = import_debug23.default("ndk:zapper");
-
-// ../shared/dist/config/ndk.js
-var import_debug25 = __toESM(require_src2(), 1);
-// ../shared/node_modules/chalk/source/vendor/ansi-styles/index.js
-var ANSI_BACKGROUND_OFFSET2 = 10;
-var wrapAnsi162 = (offset = 0) => (code) => `\x1B[${code + offset}m`;
-var wrapAnsi2562 = (offset = 0) => (code) => `\x1B[${38 + offset};5;${code}m`;
-var wrapAnsi16m2 = (offset = 0) => (red, green, blue) => `\x1B[${38 + offset};2;${red};${green};${blue}m`;
-var styles3 = {
-  modifier: {
-    reset: [0, 0],
-    bold: [1, 22],
-    dim: [2, 22],
-    italic: [3, 23],
-    underline: [4, 24],
-    overline: [53, 55],
-    inverse: [7, 27],
-    hidden: [8, 28],
-    strikethrough: [9, 29]
-  },
-  color: {
-    black: [30, 39],
-    red: [31, 39],
-    green: [32, 39],
-    yellow: [33, 39],
-    blue: [34, 39],
-    magenta: [35, 39],
-    cyan: [36, 39],
-    white: [37, 39],
-    blackBright: [90, 39],
-    gray: [90, 39],
-    grey: [90, 39],
-    redBright: [91, 39],
-    greenBright: [92, 39],
-    yellowBright: [93, 39],
-    blueBright: [94, 39],
-    magentaBright: [95, 39],
-    cyanBright: [96, 39],
-    whiteBright: [97, 39]
-  },
-  bgColor: {
-    bgBlack: [40, 49],
-    bgRed: [41, 49],
-    bgGreen: [42, 49],
-    bgYellow: [43, 49],
-    bgBlue: [44, 49],
-    bgMagenta: [45, 49],
-    bgCyan: [46, 49],
-    bgWhite: [47, 49],
-    bgBlackBright: [100, 49],
-    bgGray: [100, 49],
-    bgGrey: [100, 49],
-    bgRedBright: [101, 49],
-    bgGreenBright: [102, 49],
-    bgYellowBright: [103, 49],
-    bgBlueBright: [104, 49],
-    bgMagentaBright: [105, 49],
-    bgCyanBright: [106, 49],
-    bgWhiteBright: [107, 49]
-  }
-};
-var modifierNames2 = Object.keys(styles3.modifier);
-var foregroundColorNames2 = Object.keys(styles3.color);
-var backgroundColorNames2 = Object.keys(styles3.bgColor);
-var colorNames2 = [...foregroundColorNames2, ...backgroundColorNames2];
-function assembleStyles2() {
-  const codes = new Map;
-  for (const [groupName, group] of Object.entries(styles3)) {
-    for (const [styleName, style] of Object.entries(group)) {
-      styles3[styleName] = {
-        open: `\x1B[${style[0]}m`,
-        close: `\x1B[${style[1]}m`
-      };
-      group[styleName] = styles3[styleName];
-      codes.set(style[0], style[1]);
-    }
-    Object.defineProperty(styles3, groupName, {
-      value: group,
-      enumerable: false
-    });
-  }
-  Object.defineProperty(styles3, "codes", {
-    value: codes,
-    enumerable: false
-  });
-  styles3.color.close = "\x1B[39m";
-  styles3.bgColor.close = "\x1B[49m";
-  styles3.color.ansi = wrapAnsi162();
-  styles3.color.ansi256 = wrapAnsi2562();
-  styles3.color.ansi16m = wrapAnsi16m2();
-  styles3.bgColor.ansi = wrapAnsi162(ANSI_BACKGROUND_OFFSET2);
-  styles3.bgColor.ansi256 = wrapAnsi2562(ANSI_BACKGROUND_OFFSET2);
-  styles3.bgColor.ansi16m = wrapAnsi16m2(ANSI_BACKGROUND_OFFSET2);
-  Object.defineProperties(styles3, {
-    rgbToAnsi256: {
-      value(red, green, blue) {
-        if (red === green && green === blue) {
-          if (red < 8) {
-            return 16;
-          }
-          if (red > 248) {
-            return 231;
-          }
-          return Math.round((red - 8) / 247 * 24) + 232;
-        }
-        return 16 + 36 * Math.round(red / 255 * 5) + 6 * Math.round(green / 255 * 5) + Math.round(blue / 255 * 5);
-      },
-      enumerable: false
-    },
-    hexToRgb: {
-      value(hex3) {
-        const matches = /[a-f\d]{6}|[a-f\d]{3}/i.exec(hex3.toString(16));
-        if (!matches) {
-          return [0, 0, 0];
-        }
-        let [colorString] = matches;
-        if (colorString.length === 3) {
-          colorString = [...colorString].map((character) => character + character).join("");
-        }
-        const integer = Number.parseInt(colorString, 16);
-        return [
-          integer >> 16 & 255,
-          integer >> 8 & 255,
-          integer & 255
-        ];
-      },
-      enumerable: false
-    },
-    hexToAnsi256: {
-      value: (hex3) => styles3.rgbToAnsi256(...styles3.hexToRgb(hex3)),
-      enumerable: false
-    },
-    ansi256ToAnsi: {
-      value(code) {
-        if (code < 8) {
-          return 30 + code;
-        }
-        if (code < 16) {
-          return 90 + (code - 8);
-        }
-        let red;
-        let green;
-        let blue;
-        if (code >= 232) {
-          red = ((code - 232) * 10 + 8) / 255;
-          green = red;
-          blue = red;
-        } else {
-          code -= 16;
-          const remainder = code % 36;
-          red = Math.floor(code / 36) / 5;
-          green = Math.floor(remainder / 6) / 5;
-          blue = remainder % 6 / 5;
-        }
-        const value = Math.max(red, green, blue) * 2;
-        if (value === 0) {
-          return 30;
-        }
-        let result = 30 + (Math.round(blue) << 2 | Math.round(green) << 1 | Math.round(red));
-        if (value === 2) {
-          result += 60;
-        }
-        return result;
-      },
-      enumerable: false
-    },
-    rgbToAnsi: {
-      value: (red, green, blue) => styles3.ansi256ToAnsi(styles3.rgbToAnsi256(red, green, blue)),
-      enumerable: false
-    },
-    hexToAnsi: {
-      value: (hex3) => styles3.ansi256ToAnsi(styles3.hexToAnsi256(hex3)),
-      enumerable: false
-    }
-  });
-  return styles3;
-}
-var ansiStyles2 = assembleStyles2();
-var ansi_styles_default2 = ansiStyles2;
-
-// ../shared/node_modules/chalk/source/vendor/supports-color/index.js
-import process9 from "process";
-import os2 from "os";
-import tty2 from "tty";
-function hasFlag2(flag, argv = globalThis.Deno ? globalThis.Deno.args : process9.argv) {
-  const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
-  const position = argv.indexOf(prefix + flag);
-  const terminatorPosition = argv.indexOf("--");
-  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-var { env: env2 } = process9;
-var flagForceColor2;
-if (hasFlag2("no-color") || hasFlag2("no-colors") || hasFlag2("color=false") || hasFlag2("color=never")) {
-  flagForceColor2 = 0;
-} else if (hasFlag2("color") || hasFlag2("colors") || hasFlag2("color=true") || hasFlag2("color=always")) {
-  flagForceColor2 = 1;
-}
-function envForceColor2() {
-  if ("FORCE_COLOR" in env2) {
-    if (env2.FORCE_COLOR === "true") {
-      return 1;
-    }
-    if (env2.FORCE_COLOR === "false") {
-      return 0;
-    }
-    return env2.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env2.FORCE_COLOR, 10), 3);
-  }
-}
-function translateLevel2(level) {
-  if (level === 0) {
-    return false;
-  }
-  return {
-    level,
-    hasBasic: true,
-    has256: level >= 2,
-    has16m: level >= 3
-  };
-}
-function _supportsColor2(haveStream, { streamIsTTY, sniffFlags = true } = {}) {
-  const noFlagForceColor = envForceColor2();
-  if (noFlagForceColor !== undefined) {
-    flagForceColor2 = noFlagForceColor;
-  }
-  const forceColor = sniffFlags ? flagForceColor2 : noFlagForceColor;
-  if (forceColor === 0) {
-    return 0;
-  }
-  if (sniffFlags) {
-    if (hasFlag2("color=16m") || hasFlag2("color=full") || hasFlag2("color=truecolor")) {
-      return 3;
-    }
-    if (hasFlag2("color=256")) {
-      return 2;
-    }
-  }
-  if ("TF_BUILD" in env2 && "AGENT_NAME" in env2) {
-    return 1;
-  }
-  if (haveStream && !streamIsTTY && forceColor === undefined) {
-    return 0;
-  }
-  const min = forceColor || 0;
-  if (env2.TERM === "dumb") {
-    return min;
-  }
-  if (process9.platform === "win32") {
-    const osRelease = os2.release().split(".");
-    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
-      return Number(osRelease[2]) >= 14931 ? 3 : 2;
-    }
-    return 1;
-  }
-  if ("CI" in env2) {
-    if (["GITHUB_ACTIONS", "GITEA_ACTIONS", "CIRCLECI"].some((key) => (key in env2))) {
-      return 3;
-    }
-    if (["TRAVIS", "APPVEYOR", "GITLAB_CI", "BUILDKITE", "DRONE"].some((sign) => (sign in env2)) || env2.CI_NAME === "codeship") {
-      return 1;
-    }
-    return min;
-  }
-  if ("TEAMCITY_VERSION" in env2) {
-    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env2.TEAMCITY_VERSION) ? 1 : 0;
-  }
-  if (env2.COLORTERM === "truecolor") {
-    return 3;
-  }
-  if (env2.TERM === "xterm-kitty") {
-    return 3;
-  }
-  if ("TERM_PROGRAM" in env2) {
-    const version = Number.parseInt((env2.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
-    switch (env2.TERM_PROGRAM) {
-      case "iTerm.app": {
-        return version >= 3 ? 3 : 2;
-      }
-      case "Apple_Terminal": {
-        return 2;
-      }
-    }
-  }
-  if (/-256(color)?$/i.test(env2.TERM)) {
-    return 2;
-  }
-  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env2.TERM)) {
-    return 1;
-  }
-  if ("COLORTERM" in env2) {
-    return 1;
-  }
-  return min;
-}
-function createSupportsColor2(stream, options = {}) {
-  const level = _supportsColor2(stream, {
-    streamIsTTY: stream && stream.isTTY,
-    ...options
-  });
-  return translateLevel2(level);
-}
-var supportsColor2 = {
-  stdout: createSupportsColor2({ isTTY: tty2.isatty(1) }),
-  stderr: createSupportsColor2({ isTTY: tty2.isatty(2) })
-};
-var supports_color_default2 = supportsColor2;
-
-// ../shared/node_modules/chalk/source/utilities.js
-function stringReplaceAll2(string, substring, replacer) {
-  let index = string.indexOf(substring);
-  if (index === -1) {
-    return string;
-  }
-  const substringLength = substring.length;
-  let endIndex = 0;
-  let returnValue = "";
-  do {
-    returnValue += string.slice(endIndex, index) + substring + replacer;
-    endIndex = index + substringLength;
-    index = string.indexOf(substring, endIndex);
-  } while (index !== -1);
-  returnValue += string.slice(endIndex);
-  return returnValue;
-}
-function stringEncaseCRLFWithFirstIndex2(string, prefix, postfix, index) {
-  let endIndex = 0;
-  let returnValue = "";
-  do {
-    const gotCR = string[index - 1] === "\r";
-    returnValue += string.slice(endIndex, gotCR ? index - 1 : index) + prefix + (gotCR ? `\r
-` : `
-`) + postfix;
-    endIndex = index + 1;
-    index = string.indexOf(`
-`, endIndex);
-  } while (index !== -1);
-  returnValue += string.slice(endIndex);
-  return returnValue;
-}
-
-// ../shared/node_modules/chalk/source/index.js
-var { stdout: stdoutColor2, stderr: stderrColor2 } = supports_color_default2;
-var GENERATOR2 = Symbol("GENERATOR");
-var STYLER2 = Symbol("STYLER");
-var IS_EMPTY2 = Symbol("IS_EMPTY");
-var levelMapping2 = [
-  "ansi",
-  "ansi",
-  "ansi256",
-  "ansi16m"
-];
-var styles4 = Object.create(null);
-var applyOptions2 = (object, options = {}) => {
-  if (options.level && !(Number.isInteger(options.level) && options.level >= 0 && options.level <= 3)) {
-    throw new Error("The `level` option should be an integer from 0 to 3");
-  }
-  const colorLevel = stdoutColor2 ? stdoutColor2.level : 0;
-  object.level = options.level === undefined ? colorLevel : options.level;
-};
-var chalkFactory2 = (options) => {
-  const chalk2 = (...strings) => strings.join(" ");
-  applyOptions2(chalk2, options);
-  Object.setPrototypeOf(chalk2, createChalk2.prototype);
-  return chalk2;
-};
-function createChalk2(options) {
-  return chalkFactory2(options);
-}
-Object.setPrototypeOf(createChalk2.prototype, Function.prototype);
-for (const [styleName, style] of Object.entries(ansi_styles_default2)) {
-  styles4[styleName] = {
-    get() {
-      const builder = createBuilder2(this, createStyler2(style.open, style.close, this[STYLER2]), this[IS_EMPTY2]);
-      Object.defineProperty(this, styleName, { value: builder });
-      return builder;
-    }
-  };
-}
-styles4.visible = {
-  get() {
-    const builder = createBuilder2(this, this[STYLER2], true);
-    Object.defineProperty(this, "visible", { value: builder });
-    return builder;
-  }
-};
-var getModelAnsi2 = (model, level, type, ...arguments_) => {
-  if (model === "rgb") {
-    if (level === "ansi16m") {
-      return ansi_styles_default2[type].ansi16m(...arguments_);
-    }
-    if (level === "ansi256") {
-      return ansi_styles_default2[type].ansi256(ansi_styles_default2.rgbToAnsi256(...arguments_));
-    }
-    return ansi_styles_default2[type].ansi(ansi_styles_default2.rgbToAnsi(...arguments_));
-  }
-  if (model === "hex") {
-    return getModelAnsi2("rgb", level, type, ...ansi_styles_default2.hexToRgb(...arguments_));
-  }
-  return ansi_styles_default2[type][model](...arguments_);
-};
-var usedModels2 = ["rgb", "hex", "ansi256"];
-for (const model of usedModels2) {
-  styles4[model] = {
-    get() {
-      const { level } = this;
-      return function(...arguments_) {
-        const styler = createStyler2(getModelAnsi2(model, levelMapping2[level], "color", ...arguments_), ansi_styles_default2.color.close, this[STYLER2]);
-        return createBuilder2(this, styler, this[IS_EMPTY2]);
-      };
-    }
-  };
-  const bgModel = "bg" + model[0].toUpperCase() + model.slice(1);
-  styles4[bgModel] = {
-    get() {
-      const { level } = this;
-      return function(...arguments_) {
-        const styler = createStyler2(getModelAnsi2(model, levelMapping2[level], "bgColor", ...arguments_), ansi_styles_default2.bgColor.close, this[STYLER2]);
-        return createBuilder2(this, styler, this[IS_EMPTY2]);
-      };
-    }
-  };
-}
-var proto2 = Object.defineProperties(() => {}, {
-  ...styles4,
-  level: {
-    enumerable: true,
-    get() {
-      return this[GENERATOR2].level;
-    },
-    set(level) {
-      this[GENERATOR2].level = level;
-    }
-  }
-});
-var createStyler2 = (open, close, parent) => {
-  let openAll;
-  let closeAll;
-  if (parent === undefined) {
-    openAll = open;
-    closeAll = close;
-  } else {
-    openAll = parent.openAll + open;
-    closeAll = close + parent.closeAll;
-  }
-  return {
-    open,
-    close,
-    openAll,
-    closeAll,
-    parent
-  };
-};
-var createBuilder2 = (self2, _styler, _isEmpty) => {
-  const builder = (...arguments_) => applyStyle2(builder, arguments_.length === 1 ? "" + arguments_[0] : arguments_.join(" "));
-  Object.setPrototypeOf(builder, proto2);
-  builder[GENERATOR2] = self2;
-  builder[STYLER2] = _styler;
-  builder[IS_EMPTY2] = _isEmpty;
-  return builder;
-};
-var applyStyle2 = (self2, string) => {
-  if (self2.level <= 0 || !string) {
-    return self2[IS_EMPTY2] ? "" : string;
-  }
-  let styler = self2[STYLER2];
-  if (styler === undefined) {
-    return string;
-  }
-  const { openAll, closeAll } = styler;
-  if (string.includes("\x1B")) {
-    while (styler !== undefined) {
-      string = stringReplaceAll2(string, styler.close, styler.open);
-      styler = styler.parent;
-    }
-  }
-  const lfIndex = string.indexOf(`
-`);
-  if (lfIndex !== -1) {
-    string = stringEncaseCRLFWithFirstIndex2(string, closeAll, openAll, lfIndex);
-  }
-  return openAll + string + closeAll;
-};
-Object.defineProperties(createChalk2.prototype, styles4);
-var chalk2 = createChalk2();
-var chalkStderr2 = createChalk2({ level: stderrColor2 ? stderrColor2.level : 0 });
-var source_default2 = chalk2;
-
-// ../shared/dist/logger.js
-var globalConfig = {
-  useEmoji: true,
-  useLabels: false,
-  debugEnabled: typeof process !== "undefined" && process.env?.DEBUG === "true"
-};
-var agentColors = [
-  source_default2.red,
-  source_default2.green,
-  source_default2.yellow,
-  source_default2.blue,
-  source_default2.magenta,
-  source_default2.cyan,
-  source_default2.white,
-  source_default2.gray,
-  source_default2.redBright,
-  source_default2.greenBright,
-  source_default2.yellowBright,
-  source_default2.blueBright,
-  source_default2.magentaBright,
-  source_default2.cyanBright
-];
-var agentColorMap = new Map;
 // src/ndk-setup.ts
 var ndkInstance = null;
-async function getNDK2(config4 = {}) {
+async function getNDK(config3 = {}) {
   if (!ndkInstance) {
-    const relays2 = config4.relays || getRelayUrls();
+    const relays2 = config3.relays || getRelayUrls();
     ndkInstance = new NDK({
       explicitRelayUrls: [...relays2],
       outboxRelayUrls: [...relays2],
       enableOutboxModel: true
     });
-    if (config4.nsec) {
-      const signer = new NDKPrivateKeySigner(config4.nsec);
+    if (config3.nsec) {
+      const signer = new NDKPrivateKeySigner(config3.nsec);
       ndkInstance.signer = signer;
     }
     await ndkInstance.connect();
-    console.log(`\u2705 Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
+    logger.info(`\u2705 Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
   }
   return ndkInstance;
 }
@@ -68956,8 +50733,8 @@ class TenexCLI {
   chat;
   project;
   async start() {
-    console.log(source_default.blue.bold("\uD83D\uDE80 TENEX CLI Client"));
-    console.log(source_default.gray(`Connect to TENEX projects via CLI
+    logger.info(source_default2.blue.bold("\uD83D\uDE80 TENEX CLI Client"));
+    logger.info(source_default2.gray(`Connect to TENEX projects via CLI
 `));
     await this.authenticate();
     await this.selectMode();
@@ -68965,21 +50742,21 @@ class TenexCLI {
   async authenticate() {
     const nsec = process.env.NSEC;
     if (!nsec) {
-      console.log(source_default.red("\u274C NSEC environment variable not found"));
-      console.log(source_default.gray("Please set your NSEC: export NSEC=nsec1..."));
+      logger.error("\u274C NSEC environment variable not found");
+      logger.info(source_default2.gray("Please set your NSEC: export NSEC=nsec1..."));
       process.exit(1);
     }
     const spinner = ora2("Connecting to Nostr network...").start();
     try {
-      this.ndk = await getNDK2({ nsec });
-      spinner.succeed(source_default.green("Connected to Nostr network"));
+      this.ndk = await getNDK({ nsec });
+      spinner.succeed(source_default2.green("Connected to Nostr network"));
       const user = this.ndk.activeUser;
       if (user) {
-        console.log(source_default.gray(`Authenticated as: ${user.npub}`));
+        logger.info(source_default2.gray(`Authenticated as: ${user.npub}`));
       }
     } catch (error) {
-      spinner.fail(source_default.red("Failed to connect to Nostr"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to connect to Nostr"));
+      logger.error(error);
       process.exit(1);
     }
   }
@@ -69008,7 +50785,7 @@ class TenexCLI {
         break;
       }
       case "exit":
-        console.log(source_default.gray("\uD83D\uDC4B Goodbye!"));
+        logger.info(source_default2.gray("\uD83D\uDC4B Goodbye!"));
         await this.ndk?.disconnect();
         process.exit(0);
     }
@@ -69040,19 +50817,19 @@ class TenexCLI {
         identifier: dTag,
         title
       };
-      spinner.succeed(source_default.green(`Connected to project: ${this.project.title}`));
+      spinner.succeed(source_default2.green(`Connected to project: ${this.project.title}`));
       this.chat = new TenexChat(this.ndk, this.project);
       await this.chat.discoverAgents();
     } catch (error) {
-      spinner.fail(source_default.red("Failed to connect to project"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to connect to project"));
+      logger.error(error);
       process.exit(1);
     }
   }
   async startChatSession() {
     const agents2 = this.chat.getSession().agents;
     if (agents2.length === 0) {
-      console.log(source_default.yellow("\u26A0\uFE0F  No agents discovered. Continuing anyway..."));
+      logger.info(source_default2.yellow("\u26A0\uFE0F  No agents discovered. Continuing anyway..."));
     }
     while (true) {
       const { action } = await lib_default.prompt([
@@ -69083,7 +50860,7 @@ class TenexCLI {
           this.showSession();
           break;
         case "exit":
-          console.log(source_default.gray("\uD83D\uDC4B Goodbye!"));
+          logger.info(source_default2.gray("\uD83D\uDC4B Goodbye!"));
           await this.ndk?.disconnect();
           process.exit(0);
       }
@@ -69109,14 +50886,14 @@ class TenexCLI {
     const spinner = ora2("Creating thread...").start();
     try {
       const threadEvent = await this.chat.createThread(title, cleanContent, mentionedAgents);
-      spinner.succeed(source_default.green(`Thread created: ${title}`));
+      spinner.succeed(source_default2.green(`Thread created: ${title}`));
       if (mentionedAgents.length > 0) {
-        console.log(source_default.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
+        logger.info(source_default2.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
       }
       await this.startListening(threadEvent.id);
     } catch (error) {
-      spinner.fail(source_default.red("Failed to create thread"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to create thread"));
+      logger.error(error);
     }
   }
   async replyToThread() {
@@ -69131,62 +50908,146 @@ class TenexCLI {
     const spinner = ora2("Sending reply...").start();
     try {
       await this.chat.replyToThread(cleanContent, mentionedAgents);
-      spinner.succeed(source_default.green("Reply sent"));
+      spinner.succeed(source_default2.green("Reply sent"));
       if (mentionedAgents.length > 0) {
-        console.log(source_default.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
+        logger.info(source_default2.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
       }
     } catch (error) {
-      spinner.fail(source_default.red("Failed to send reply"));
-      console.error(error);
+      spinner.fail(source_default2.red("Failed to send reply"));
+      logger.error(error);
     }
   }
   async startListening(threadId) {
-    console.log(source_default.blue(`
+    logger.info(source_default2.blue(`
 \uD83D\uDC42 Listening for responses...`));
-    console.log(source_default.gray(`Press Ctrl+C to stop listening
+    logger.info(source_default2.gray(`Press Ctrl+C to stop listening
 `));
     await this.chat.subscribeToThread(threadId, (event) => {
       const timestamp = new Date(event.created_at * 1000).toLocaleTimeString();
       const agentName = this.chat.getSession().agents.find((a) => a.pubkey === event.pubkey)?.name || "Unknown";
-      console.log(source_default.green(`
+      logger.info(source_default2.green(`
 [${timestamp}] ${agentName}:`));
-      console.log(event.content);
+      logger.info(event.content);
     });
     await this.chat.subscribeToTypingIndicators(threadId, (indicator) => {
       if (indicator.kind === 24111) {
-        let typingMsg = source_default.yellow(`\u2328\uFE0F  ${indicator.agentName} is typing...`);
+        let typingMsg = source_default2.yellow(`\u2328\uFE0F  ${indicator.agentName} is typing...`);
         if (indicator.userPrompt) {
-          typingMsg += source_default.gray(`
+          typingMsg += source_default2.gray(`
    Processing: "${indicator.userPrompt.substring(0, 100)}${indicator.userPrompt.length > 100 ? "..." : ""}"`);
         }
-        console.log(typingMsg);
+        logger.info(typingMsg);
       } else {
-        console.log(source_default.gray(`\u270B ${indicator.agentName} stopped typing`));
+        logger.info(source_default2.gray(`\u270B ${indicator.agentName} stopped typing`));
       }
     });
     process.on("SIGINT", () => {
-      console.log(source_default.gray(`
+      logger.info(source_default2.gray(`
 \uD83D\uDC4B Stopped listening`));
       process.exit(0);
     });
   }
   showSession() {
     const session = this.chat.getSession();
-    console.log(source_default.blue(`
+    logger.info(source_default2.blue(`
 \uD83D\uDCCB Current Session`));
-    console.log(source_default.gray("=".repeat(50)));
-    console.log(`Project: ${session.project.title || session.project.identifier}`);
-    console.log(`NADDR: ${session.project.naddr}`);
-    console.log(`Agents: ${session.agents.map((a) => a.name).join(", ")}`);
+    logger.info(source_default2.gray("=".repeat(50)));
+    logger.info(`Project: ${session.project.title || session.project.identifier}`);
+    logger.info(`NADDR: ${session.project.naddr}`);
+    logger.info(`Agents: ${session.agents.map((a) => a.name).join(", ")}`);
     if (session.currentThread) {
-      console.log(`Current Thread: ${session.currentThread.title}`);
+      logger.info(`Current Thread: ${session.currentThread.title}`);
     }
     const typingCount = session.typingIndicators.size;
     if (typingCount > 0) {
-      console.log(`Typing: ${Array.from(session.typingIndicators.values()).map((t) => t.agentName).join(", ")}`);
+      logger.info(`Typing: ${Array.from(session.typingIndicators.values()).map((t) => t.agentName).join(", ")}`);
     }
-    console.log(source_default.gray(`${"=".repeat(50)}
+    logger.info(source_default2.gray(`${"=".repeat(50)}
 `));
+  }
+}
+
+// src/commands/project-create.ts
+async function createProject(options) {
+  try {
+    logger.info(source_default2.blue("\uD83D\uDE80 Creating TENEX project..."));
+    const ndk = await getNDK({ nsec: options.nsec });
+    const user = ndk.activeUser;
+    if (!user) {
+      throw new Error("Failed to authenticate with provided nsec");
+    }
+    const project3 = new NDKProject(ndk);
+    const projectId = `${options.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+    project3.title = options.name;
+    project3.content = options.description || `A TENEX project: ${options.name}`;
+    project3.tags.push(["d", projectId]);
+    if (options.repo) {
+      project3.repo = options.repo;
+    }
+    if (options.hashtags) {
+      const hashtagArray = options.hashtags.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
+      project3.hashtags = hashtagArray;
+    }
+    await project3.publish();
+    const naddr = project3.encode();
+    logger.info(source_default2.green("\u2705 Project created successfully!"));
+    logger.info(source_default2.gray(`Project ID: ${projectId}`));
+    logger.info(source_default2.gray(`NADDR: ${naddr}`));
+    logger.info(source_default2.gray(`Author: ${user.npub}`));
+    console.log(naddr);
+    process.exit(0);
+  } catch (error) {
+    logger.error(source_default2.red("\u274C Failed to create project:"), error);
+    process.exit(1);
+  }
+}
+
+// src/commands/project-start.ts
+async function startProject(options) {
+  try {
+    logger.info(source_default2.blue("\uD83D\uDE80 Sending project start event..."));
+    const ndk = await getNDK({ nsec: options.nsec });
+    const user = ndk.activeUser;
+    if (!user) {
+      throw new Error("Failed to authenticate with provided nsec");
+    }
+    let projectReference;
+    let projectTitle = "Project";
+    if (options.project.startsWith("naddr1")) {
+      try {
+        const projectEvent = await ndk.fetchEvent(options.project);
+        if (!projectEvent) {
+          throw new Error("Project not found");
+        }
+        const dTag = projectEvent.tags.find((tag) => tag[0] === "d")?.[1];
+        if (!dTag) {
+          throw new Error("Project missing d tag");
+        }
+        projectReference = `31933:${projectEvent.pubkey}:${dTag}`;
+        projectTitle = projectEvent.tags.find((tag) => tag[0] === "title")?.[1] || "Project";
+        logger.info(source_default2.gray(`Found project: ${projectTitle}`));
+      } catch (error) {
+        throw new Error(`Failed to fetch project: ${error}`);
+      }
+    } else {
+      projectReference = options.project;
+    }
+    const event = new NDKEvent(ndk);
+    event.kind = 11;
+    event.content = "Starting project...";
+    event.tags = [
+      ["a", projectReference],
+      ["title", "Project Start"]
+    ];
+    await event.publish();
+    logger.info(source_default2.green("\u2705 Project start event sent successfully!"));
+    logger.info(source_default2.gray(`Event ID: ${event.id}`));
+    logger.info(source_default2.gray(`Project: ${projectReference}`));
+    logger.info(source_default2.gray(`Author: ${user.npub}`));
+    process.exit(0);
+  } catch (error) {
+    logger.error(source_default2.red("\u274C Failed to send project start event:"), error);
+    process.exit(1);
   }
 }
 
@@ -69197,21 +51058,33 @@ program2.command("chat").description("Start a chat session with a TENEX project"
   const cli = new TenexCLI;
   await cli.start();
 });
+var projectCommand = program2.command("project").description("Project management commands");
+projectCommand.command("create").description("Create a new TENEX project").requiredOption("--name <name>", "Project name").requiredOption("--nsec <nsec>", "Your Nostr private key").option("--description <description>", "Project description").option("--repo <url>", "Git repository URL").option("--hashtags <tags>", "Comma-separated hashtags").action(createProject);
+projectCommand.command("start").description("Send a project start event (triggers daemon to start project)").requiredOption("--nsec <nsec>", "Your Nostr private key").requiredOption("--project <naddr>", "Project NADDR or identifier").action(startProject);
 program2.command("help").description("Show usage information").action(() => {
-  console.log(`
+  logger.info(`
 \uD83D\uDE80 TENEX CLI Client
 
 Usage:
-  tenex-cli-client chat    Start a chat session
+  tenex-cli-client chat                      Start a chat session
+  tenex-cli-client project create            Create a new project
+  tenex-cli-client project start             Send project start event
 
 Environment Variables:
   NSEC            Your Nostr private key (nsec1...)
   PROJECT_NADDR   Project NADDR to connect to (optional)
 
 Examples:
+  # Interactive chat
   export NSEC=nsec1xyz...
   export PROJECT_NADDR=naddr1abc...
   tenex-cli-client chat
+
+  # Create project
+  tenex-cli-client project create --name "My Project" --nsec nsec1xyz...
+
+  # Start project
+  tenex-cli-client project start --project naddr1abc... --nsec nsec1xyz...
 
 Features:
   \u2022 Start new threads with projects
@@ -69220,6 +51093,7 @@ Features:
   \u2022 Real-time typing indicators
   \u2022 Agent response listening
   \u2022 Session management
+  \u2022 Project creation and management
         `);
 });
 if (process.argv.length <= 2) {
