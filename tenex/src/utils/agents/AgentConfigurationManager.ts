@@ -1,8 +1,11 @@
 import path from "node:path";
+import type { OrchestrationConfig } from "@/core/orchestration/types";
+import { readJsonFile } from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
+import { configurationService } from "@tenex/shared/services";
 import type { AgentConfigEntry, LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
-import type { LLMConfig, LLMConfigs } from "@tenex/types/llm";
-import { fs } from "../fs";
+import type { UnifiedLLMConfig } from "@tenex/types/config";
+import type { LLMConfig } from "@tenex/types/llm";
 
 /**
  * Manages agent and LLM configurations for a project
@@ -11,7 +14,7 @@ import { fs } from "../fs";
 export class AgentConfigurationManager {
     private projectPath: string;
     private llmConfigs: Map<string, LLMConfig>;
-    private defaultLLM?: string;
+    private unifiedLLMConfig?: UnifiedLLMConfig;
 
     constructor(projectPath: string) {
         this.projectPath = projectPath;
@@ -29,45 +32,22 @@ export class AgentConfigurationManager {
      * Load LLM configurations from llms.json
      */
     private async loadLLMConfigs(): Promise<void> {
-        const llmsPath = path.join(this.projectPath, ".tenex", "llms.json");
-
         try {
-            const configs = await fs.readJSON<LLMConfigs>(llmsPath);
-            if (!configs) throw new Error("No llms.json found");
+            const configuration = await configurationService.loadConfiguration(this.projectPath);
+            this.unifiedLLMConfig = configuration.llms;
 
-            logger.debug(`Loading LLM configs from ${llmsPath}`);
-            logger.debug(`Raw configs: ${JSON.stringify(configs, null, 2)}`);
+            logger.debug(`Loading LLM configs from ${this.projectPath}`);
+            logger.debug(`Raw configs: ${JSON.stringify(this.unifiedLLMConfig, null, 2)}`);
 
-            // Handle two possible structures:
-            // 1. { "default": "configName", "configName": {...} }
-            // 2. { "default": {...} }
-            if (configs.default) {
-                if (typeof configs.default === "string") {
-                    // Case 1: default is a reference to another config
-                    this.defaultLLM = configs.default;
-                } else if (typeof configs.default === "object") {
-                    // Case 2: default is the actual config
-                    this.defaultLLM = "default";
-                    this.llmConfigs.set("default", configs.default as LLMConfig);
-                    logger.info("Loaded LLM config: default");
-                }
+            // Load all configurations
+            for (const [name, config] of Object.entries(this.unifiedLLMConfig.configurations)) {
+                this.llmConfigs.set(name, config);
+                logger.info(`Loaded LLM config: ${name}`);
             }
 
-            // Load all configs (both objects and string references)
-            for (const [name, config] of Object.entries(configs)) {
-                if (typeof config === "object") {
-                    // It's an actual config object
-                    this.llmConfigs.set(name, config as LLMConfig);
-                    logger.info(`Loaded LLM config: ${name}`);
-                } else if (typeof config === "string" && name !== "default") {
-                    // It's a reference - we'll resolve it later in getLLMConfig
-                    logger.info(`Found LLM config reference: ${name} -> ${config}`);
-                }
-            }
-
-            if (this.defaultLLM) {
-                logger.info(`Default LLM config name: ${this.defaultLLM}`);
-                const defaultConfig = this.resolveLLMConfig(this.defaultLLM);
+            if (this.unifiedLLMConfig.defaults.default) {
+                logger.info(`Default LLM config name: ${this.unifiedLLMConfig.defaults.default}`);
+                const defaultConfig = this.resolveLLMConfig(this.unifiedLLMConfig.defaults.default);
                 if (defaultConfig) {
                     logger.info(
                         `Default LLM provider: ${defaultConfig.provider}, model: ${defaultConfig.model}`
@@ -76,7 +56,7 @@ export class AgentConfigurationManager {
             }
         } catch (error) {
             logger.error("No llms.json found or failed to load:", error);
-            logger.error(`Attempted to load from: ${llmsPath}`);
+            logger.error(`Attempted to load from project: ${this.projectPath}`);
             // Log the actual error details
             if (error instanceof Error) {
                 logger.error(`Error message: ${error.message}`);
@@ -91,9 +71,8 @@ export class AgentConfigurationManager {
     getLLMConfig(name?: string): LLMConfig | undefined {
         logger.debug(`getLLMConfig called with name: ${name || "undefined"}`);
         logger.debug(`Current llmConfigs size: ${this.llmConfigs.size}`);
-        logger.debug(`Current defaultLLM: ${this.defaultLLM || "undefined"}`);
 
-        // If a specific name is requested, resolve it (handling references)
+        // If a specific name is requested, resolve it
         if (name) {
             const resolved = this.resolveLLMConfig(name);
             logger.debug(`Resolved config for ${name}: ${resolved ? "found" : "not found"}`);
@@ -101,10 +80,10 @@ export class AgentConfigurationManager {
         }
 
         // Otherwise use default
-        if (this.defaultLLM) {
-            const resolved = this.resolveLLMConfig(this.defaultLLM);
+        if (this.unifiedLLMConfig?.defaults.default) {
+            const resolved = this.resolveLLMConfig(this.unifiedLLMConfig.defaults.default);
             logger.debug(
-                `Resolved default config ${this.defaultLLM}: ${resolved ? "found" : "not found"}`
+                `Resolved default config ${this.unifiedLLMConfig.defaults.default}: ${resolved ? "found" : "not found"}`
             );
             return resolved;
         }
@@ -119,10 +98,17 @@ export class AgentConfigurationManager {
      * Get LLM configuration for a specific agent, with fallback to default
      */
     getLLMConfigForAgent(agentName: string): LLMConfig | undefined {
-        // First try agent-specific config
-        const agentConfig = this.resolveLLMConfig(agentName);
-        if (agentConfig) {
-            return agentConfig;
+        if (!this.unifiedLLMConfig) {
+            return this.getLLMConfig();
+        }
+
+        // Check if there's an agent-specific default
+        const agentDefault = this.unifiedLLMConfig.defaults[agentName];
+        if (agentDefault) {
+            const agentConfig = this.resolveLLMConfig(agentDefault);
+            if (agentConfig) {
+                return agentConfig;
+            }
         }
 
         // Fall back to default
@@ -130,41 +116,30 @@ export class AgentConfigurationManager {
     }
 
     /**
-     * Resolve LLM configuration, handling references and circular dependencies
+     * Resolve LLM configuration
      */
-    private resolveLLMConfig(
-        name: string,
-        visited: Set<string> = new Set()
-    ): LLMConfig | undefined {
-        // Check for circular references
-        if (visited.has(name)) {
-            logger.warn(`Circular reference detected in LLM config: ${name}`);
+    private resolveLLMConfig(name: string): LLMConfig | undefined {
+        if (!this.unifiedLLMConfig) {
             return undefined;
         }
-        visited.add(name);
 
+        // Direct lookup in configurations
         const config = this.llmConfigs.get(name);
-
-        // If config not found, check in raw llms.json for string references
-        if (!config) {
-            const llmsPath = path.join(this.projectPath, ".tenex", "llms.json");
-            try {
-                const content = fs.readFileSync(llmsPath, "utf-8");
-                const configs = JSON.parse(content);
-                const rawConfig = configs[name];
-
-                if (typeof rawConfig === "string") {
-                    // It's a reference to another config
-                    logger.info(`Config '${name}' references '${rawConfig}'`);
-                    return this.resolveLLMConfig(rawConfig, visited);
-                }
-            } catch (_error) {
-                // Ignore errors, config not found
+        if (config) {
+            // Apply credentials if available
+            if (this.unifiedLLMConfig.credentials?.[config.provider]) {
+                const creds = this.unifiedLLMConfig.credentials[config.provider];
+                return {
+                    ...config,
+                    apiKey: config.apiKey || creds.apiKey,
+                    baseURL: config.baseURL || creds.baseUrl,
+                };
             }
-            return undefined;
+            return config;
         }
 
-        return config;
+        // Use ConfigurationService's resolver for more complex cases
+        return configurationService.resolveConfigReference(this.unifiedLLMConfig, name);
     }
 
     /**
@@ -178,17 +153,16 @@ export class AgentConfigurationManager {
      * Get the default LLM configuration name
      */
     getDefaultLLMName(): string | undefined {
-        return this.defaultLLM;
+        return this.unifiedLLMConfig?.defaults.default;
     }
 
     /**
      * Load agents configuration from agents.json
      */
     async loadAgentsConfig(): Promise<AgentsConfig> {
-        const agentsPath = path.join(this.projectPath, ".tenex", "agents.json");
         try {
-            const config = await fs.readJSON<AgentsConfig>(agentsPath);
-            return config || {};
+            const configuration = await configurationService.loadConfiguration(this.projectPath);
+            return configuration.agents || {};
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             logger.warn(`No agents.json found or failed to load: ${errorMessage}`);
@@ -205,23 +179,123 @@ export class AgentConfigurationManager {
     }
 
     /**
-     * Load agent definition from cached NDKAgent event file
+     * Load agent configuration file
      */
-    async loadAgentDefinition(configFile: string): Promise<
+    async loadAgentConfigFile(agentName: string): Promise<
         | {
+              name?: string;
               description?: string;
               role?: string;
               instructions?: string;
-              name?: string;
               version?: string;
           }
         | undefined
     > {
-        const defPath = path.join(this.projectPath, ".tenex", "agents", configFile);
+        const agentConfig = await this.getAgentConfigEntry(agentName);
+        if (!agentConfig) return undefined;
+
+        // Handle object format with file reference
+        if (typeof agentConfig === "object" && agentConfig.file) {
+            try {
+                const filePath = path.join(
+                    this.projectPath,
+                    ".tenex",
+                    "agents",
+                    `${agentConfig.file}.json`
+                );
+                return readJsonFile(filePath);
+            } catch (error) {
+                logger.error(
+                    `Failed to load agent config file for ${agentName}: ${agentConfig.file}`,
+                    error
+                );
+                return undefined;
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Get orchestration configuration
+     */
+    async getOrchestrationConfig(): Promise<Partial<OrchestrationConfig> | null> {
+        if (!this.unifiedLLMConfig) {
+            await this.initialize();
+        }
+
+        if (!this.unifiedLLMConfig) {
+            return null;
+        }
+
+        const orchestratorConfigName = 
+            this.unifiedLLMConfig.defaults.orchestrator || 
+            this.unifiedLLMConfig.defaults.default;
+            
+        if (!orchestratorConfigName) {
+            return null;
+        }
+
+        // Return the config name, not the config object
+        return {
+            orchestrator: {
+                llmConfig: orchestratorConfigName,
+                teamFormationLLMConfig: this.unifiedLLMConfig.defaults.orchestrator,
+                maxTeamSize: 5,
+                strategies: {},
+            }
+        };
+    }
+
+    /**
+     * Update an agent's LLM configuration
+     */
+    async updateAgentLLMConfig(agentName: string, newConfigName: string): Promise<boolean> {
         try {
-            return await fs.readJSON(defPath);
+            const configuration = await configurationService.loadConfiguration(this.projectPath);
+            
+            if (!configuration.llms.configurations[newConfigName]) {
+                logger.error(`LLM configuration '${newConfigName}' does not exist`);
+                return false;
+            }
+
+            // Update the agent's default LLM configuration
+            configuration.llms.defaults[agentName] = newConfigName;
+            
+            // Save the updated configuration
+            await configurationService.saveConfiguration(this.projectPath, configuration);
+            
+            // Reload configurations
+            await this.loadLLMConfigs();
+            
+            logger.info(`Updated agent '${agentName}' to use LLM configuration '${newConfigName}'`);
+            return true;
         } catch (error) {
-            logger.warn(`Failed to load agent definition from ${configFile}:`, error);
+            logger.error(`Failed to update agent LLM config: ${error}`);
+            return false;
+        }
+    }
+
+    /**
+     * Load agent definition from .tenex/agents/ directory
+     */
+    async loadAgentDefinition(filename: string): Promise<
+        | {
+              name?: string;
+              description?: string;
+              role?: string;
+              instructions?: string;
+              version?: string;
+          }
+        | undefined
+    > {
+        try {
+            // Add .json extension if not present
+            const fileName = filename.endsWith('.json') ? filename : `${filename}.json`;
+            const filePath = path.join(this.projectPath, ".tenex", "agents", fileName);
+            return readJsonFile(filePath);
+        } catch (error) {
+            logger.debug(`Failed to load agent definition ${filename}:`, error);
             return undefined;
         }
     }
@@ -237,49 +311,19 @@ export class AgentConfigurationManager {
           }
         | undefined
     > {
-        const agentConfigPath = path.join(
-            this.projectPath,
-            ".tenex",
-            "agents",
-            `${agentName}.json`
-        );
         try {
-            return await fs.readJSON(agentConfigPath);
-        } catch (_error) {
-            // Agent might not have a config file
+            const filePath = path.join(this.projectPath, ".tenex", "agents", `${agentName}.json`);
+            return readJsonFile(filePath);
+        } catch (error) {
+            logger.debug(`Failed to load agent-specific config for ${agentName}:`, error);
             return undefined;
         }
     }
 
     /**
-     * Get project path
+     * Get the project path
      */
     getProjectPath(): string {
         return this.projectPath;
-    }
-
-    /**
-     * Update runtime LLM configuration for an agent
-     * This updates the in-memory config but does not persist to disk
-     */
-    updateAgentLLMConfig(agentName: string, newConfigName: string): boolean {
-        // Log available configs for debugging
-        logger.info(`Available LLM configs: ${Array.from(this.llmConfigs.keys()).join(", ")}`);
-
-        // Verify the new config exists
-        const newConfig = this.resolveLLMConfig(newConfigName);
-        if (!newConfig) {
-            logger.error(`LLM config '${newConfigName}' not found`);
-            logger.error(`Available configs: ${Array.from(this.llmConfigs.keys()).join(", ")}`);
-            return false;
-        }
-
-        // Update the agent-specific mapping
-        // This creates an agent-specific config that will be used by getLLMConfigForAgent
-        this.llmConfigs.set(agentName, newConfig);
-        logger.info(`Updated LLM config for agent '${agentName}' to '${newConfigName}'`);
-        logger.info(`Agent ${agentName} will now use: ${newConfig.provider}/${newConfig.model}`);
-
-        return true;
     }
 }
