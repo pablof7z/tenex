@@ -11,7 +11,15 @@ import type { LLMProvider } from "./types";
 
 const providers: Map<string, LLMProvider> = new Map();
 
-export function createLLMProvider(config: LLMConfig, toolRegistry?: ToolRegistry): LLMProvider {
+export function createLLMProvider(config: LLMConfig): LLMProvider;
+export function createLLMProvider(
+    config: LLMConfig,
+    toolRegistry: ToolRegistry
+): ToolEnabledProvider;
+export function createLLMProvider(
+    config: LLMConfig,
+    toolRegistry?: ToolRegistry
+): LLMProvider | ToolEnabledProvider {
     // Include caching preference and tools in cache key to distinguish providers
     const cacheKey = `${config.provider}-${config.model}-${config.baseURL || "default"}-${config.enableCaching !== false}-${toolRegistry ? "tools" : "notools"}`;
 

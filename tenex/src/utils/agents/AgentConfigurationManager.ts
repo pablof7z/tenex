@@ -3,7 +3,7 @@ import type { OrchestrationConfig } from "@/core/orchestration/types";
 import { readJsonFile } from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
 import { configurationService } from "@tenex/shared/services";
-import type { AgentConfigEntry, LegacyAgentsJson } from "@tenex/types/agents";
+import type { AgentConfigEntry, AgentsJson } from "@tenex/types/agents";
 import type { UnifiedLLMConfig } from "@tenex/types/config";
 import type { LLMConfig } from "@tenex/types/llm";
 
@@ -159,7 +159,7 @@ export class AgentConfigurationManager {
     /**
      * Load agents configuration from agents.json
      */
-    async loadAgentsConfig(): Promise<LegacyAgentsJson> {
+    async loadAgentsConfig(): Promise<AgentsJson> {
         try {
             const configuration = await configurationService.loadConfiguration(this.projectPath);
             return configuration.agents || {};
@@ -173,7 +173,7 @@ export class AgentConfigurationManager {
     /**
      * Get agent configuration entry by name
      */
-    async getAgentConfigEntry(agentName: string): Promise<AgentConfigEntry | string | undefined> {
+    async getAgentConfigEntry(agentName: string): Promise<AgentConfigEntry | undefined> {
         const agentsConfig = await this.loadAgentsConfig();
         return agentsConfig[agentName];
     }
@@ -194,8 +194,8 @@ export class AgentConfigurationManager {
         const agentConfig = await this.getAgentConfigEntry(agentName);
         if (!agentConfig) return undefined;
 
-        // Handle object format with file reference
-        if (typeof agentConfig === "object" && agentConfig.file) {
+        // Handle agent config with file reference
+        if (agentConfig && agentConfig.file) {
             try {
                 const filePath = path.join(
                     this.projectPath,

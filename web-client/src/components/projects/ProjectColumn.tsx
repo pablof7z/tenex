@@ -3,6 +3,7 @@ import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom, useAtomValue } from "jotai";
 import { Circle, Plus } from "lucide-react";
 import { useMemo } from "react";
+import { useProjectData } from "../../hooks/useProjectData";
 import { onlineProjectsAtom, selectedTaskAtom } from "../../lib/store";
 import { TaskOverview } from "../tasks/TaskOverview";
 import { ThreadOverview } from "../tasks/ThreadOverview";
@@ -11,9 +12,6 @@ import { Button } from "../ui/button";
 
 interface ProjectColumnProps {
     project: NDKProject;
-    tasks: NDKTask[];
-    statusUpdates: NDKEvent[];
-    threads: NDKEvent[];
     onProjectClick?: (project: NDKProject) => void;
     onTaskCreate?: (project: NDKProject) => void;
     onThreadClick?: (thread: NDKEvent) => void;
@@ -21,9 +19,6 @@ interface ProjectColumnProps {
 
 export function ProjectColumn({
     project,
-    tasks,
-    statusUpdates,
-    threads,
     onProjectClick,
     onTaskCreate,
     onThreadClick,
@@ -37,51 +32,8 @@ export function ProjectColumn({
     const projectDir = project.tagValue("d") || "";
     const isOnline = onlineProjects.has(projectDir);
 
-    // Get tasks for this project
-    const projectTasks = useMemo(() => {
-        return tasks
-            .filter((task) => {
-                const projectReference = task.tags?.find((tag) => tag[0] === "a")?.[1];
-                if (projectReference) {
-                    const parts = projectReference.split(":");
-                    if (parts.length >= 3) {
-                        const projectTagId = parts[2];
-                        return project.tagValue("d") === projectTagId;
-                    }
-                }
-                return false;
-            })
-            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)); // Most recent first
-    }, [tasks, project]);
-
-    // Get status updates for this project
-    const projectStatusUpdates = useMemo(() => {
-        const projectTaskIds = projectTasks.map((task) => task.id);
-        return statusUpdates
-            .filter((update) => {
-                const taskId = update.tags?.find((tag) => tag[0] === "e" && tag[3] === "task")?.[1];
-                return taskId && projectTaskIds.includes(taskId);
-            })
-            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)); // Most recent first
-    }, [statusUpdates, projectTasks]);
-
-    // Get threads for this project
-    const projectThreads = useMemo(() => {
-        return threads
-            .filter((thread) => {
-                // Check if thread has a reference to this project
-                const projectRef = thread.tags?.find((tag) => tag[0] === "a")?.[1];
-                if (projectRef) {
-                    const parts = projectRef.split(":");
-                    if (parts.length >= 3) {
-                        const threadProjectId = parts[2];
-                        return project.tagValue("d") === threadProjectId;
-                    }
-                }
-                return false;
-            })
-            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)); // Most recent first
-    }, [threads, project]);
+    // Use the useProjectData hook to fetch all project-specific data
+    const { tasks: projectTasks, statusUpdates: projectStatusUpdates, threads: projectThreads } = useProjectData(project);
 
     const getProjectAvatar = (project: NDKProject) => {
         if (project.picture) {
@@ -118,13 +70,13 @@ export function ProjectColumn({
 
     // Get thread replies
     const threadReplies = useMemo(() => {
-        return threads.filter((thread) => {
+        return projectThreads.filter((thread) => {
             // Check if this is a reply to another thread
             const rootTag = thread.tags?.find((tag) => tag[0] === "e" && tag[3] === "root")?.[1];
             const replyTag = thread.tags?.find((tag) => tag[0] === "e" && tag[3] === "reply")?.[1];
             return rootTag || replyTag;
         });
-    }, [threads]);
+    }, [projectThreads]);
 
     // Combine tasks and threads into a single list sorted by creation time
     const combinedItems = useMemo(() => {

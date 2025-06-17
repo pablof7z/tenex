@@ -30,6 +30,5 @@ export function getPubkeyFromNsec(nsec: string): string {
 
 export async function getPubkeyFromNsecAsync(nsec: string): Promise<string> {
     const signer = new NDKPrivateKeySigner(nsec);
-    await signer.user();
     return signer.pubkey;
 }

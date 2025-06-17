@@ -2,7 +2,12 @@ import type { EventHandler } from "@/commands/run/EventHandler";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
-import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
+import {
+    NDKArticle,
+    type NDKEvent,
+    type NDKFilter,
+    type NDKSubscription,
+} from "@nostr-dev-kit/ndk";
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { EVENT_KINDS } from "@tenex/types/events";
@@ -26,10 +31,10 @@ export class SubscriptionManager {
         const startupSince = Math.floor(Date.now() / 1000) - STARTUP_FILTER_MINUTES * 60;
 
         // 1. Subscribe to project updates (NDKProject events)
-        await this.subscribeToProjectUpdates(startupSince);
+        await this.subscribeToProjectUpdates();
 
         // 2. Subscribe to spec documents (kind 30023)
-        await this.subscribeToSpecDocuments(startupSince);
+        await this.subscribeToSpecDocuments();
 
         // 3. Subscribe to all project-related events
         await this.subscribeToProjectEvents(startupSince);
@@ -40,13 +45,8 @@ export class SubscriptionManager {
         );
     }
 
-    private async subscribeToProjectUpdates(since: number): Promise<void> {
-        const projectFilter: NDKFilter = {
-            kinds: [this.projectInfo.projectEvent.kind as NDKKind],
-            authors: [this.projectInfo.projectPubkey],
-            "#d": [this.projectInfo.projectId],
-            since,
-        };
+    private async subscribeToProjectUpdates(): Promise<void> {
+        const projectFilter = this.projectInfo.projectEvent.filter();
 
         logger.info(chalk.blue("  • Setting up project update subscription..."));
         logger.debug("Project update filter:", projectFilter);
@@ -65,15 +65,12 @@ export class SubscriptionManager {
         logger.info(chalk.green("    ✓ Project update subscription active"));
     }
 
-    private async subscribeToSpecDocuments(since: number): Promise<void> {
+    private async subscribeToSpecDocuments(): Promise<void> {
         // Filter for spec documents (kind 30023) that tag this project
         const specFilter: NDKFilter = {
-            kinds: [EVENT_KINDS.ARTICLE], // 30023
-            authors: [this.projectInfo.projectPubkey],
-            "#a": [
-                `${this.projectInfo.projectEvent.kind}:${this.projectInfo.projectPubkey}:${this.projectInfo.projectId}`,
-            ],
-            since,
+            kinds: NDKArticle.kinds,
+            authors: [this.projectInfo.projectSigner.pubkey],
+            ...this.projectInfo.projectEvent.filter(),
         };
 
         logger.info(chalk.blue("  • Setting up spec document subscription..."));
@@ -96,9 +93,7 @@ export class SubscriptionManager {
     private async subscribeToProjectEvents(since: number): Promise<void> {
         // Filter for all events that tag this project
         const projectTagFilter: NDKFilter = {
-            "#a": [
-                `${this.projectInfo.projectEvent.kind}:${this.projectInfo.projectPubkey}:${this.projectInfo.projectId}`,
-            ],
+            ...this.projectInfo.projectEvent.filter(),
             since,
         };
 

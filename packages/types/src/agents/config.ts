@@ -11,22 +11,10 @@ export interface AgentConfigEntry {
 }
 
 /**
- * Legacy format: string (nsec) or new format: object
- */
-export type LegacyAgentConfigEntry = string | AgentConfigEntry;
-
-/**
  * agents.json structure
  */
 export interface AgentsJson {
     [agentKey: string]: AgentConfigEntry;
-}
-
-/**
- * Legacy agents.json structure (for backward compatibility)
- */
-export interface LegacyAgentsJson {
-    [agentKey: string]: LegacyAgentConfigEntry;
 }
 
 /**

@@ -83,9 +83,7 @@ export { TeamFormationAnalyzerImpl } from "@/core/orchestration/TeamFormationAna
 export type { PromptBuilder } from "@/core/orchestration/PromptBuilder";
 export { PromptBuilderImpl } from "@/core/orchestration/PromptBuilderImpl";
 
-// Adapter exports
-export { LLMProviderAdapter } from "@/core/orchestration/adapters/LLMProviderAdapter";
-export { ConsoleLoggerAdapter } from "@/core/orchestration/adapters/ConsoleLoggerAdapter";
+// Adapter exports (removed as part of cleanup)
 
 // Error exports
 export {

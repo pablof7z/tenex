@@ -320,7 +320,7 @@ describe("ParallelExecutionStrategy", () => {
 
     describe("getName", () => {
         it("should return correct strategy name", () => {
-            expect(strategy.getName()).toBe("ParallelExecutionStrategy");
+            expect(strategy.name).toBe("ParallelExecutionStrategy");
         });
     });
 

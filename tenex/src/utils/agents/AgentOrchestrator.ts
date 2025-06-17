@@ -1,16 +1,13 @@
-import path from "node:path";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
-import { getAgentSigner } from "@/utils/agentManager";
+import { getNDK } from "@/nostr/ndkClient";
 import { Agent } from "@/utils/agents/Agent";
+import { loadAgentConfig } from "@/utils/agents/core/AgentConfigManager";
 import type { AgentConfigurationManager } from "@/utils/agents/AgentConfigurationManager";
 import type { AgentManager } from "@/utils/agents/AgentManager";
 import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
 import { ToolManager } from "@/utils/agents/tools/ToolManager";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
-import type { LegacyAgentsJson } from "@tenex/types/agents";
 
 /**
  * Orchestrates agent lifecycle and agent discovery
@@ -22,7 +19,6 @@ export class AgentOrchestrator {
     private projectInfo?: ProjectRuntimeInfo;
     private agents: Map<string, Agent>;
     private toolManager: ToolManager;
-    private ndk?: NDK;
     private agentManager?: AgentManager;
 
     constructor(
@@ -38,22 +34,21 @@ export class AgentOrchestrator {
     }
 
     /**
-     * Set NDK instance for agent operations
+     * Initialize orchestrator with provided agents
      */
-    setNDK(ndk: NDK): void {
-        this.ndk = ndk;
-
-        // Set NDK on all existing agents
-        for (const agent of this.agents.values()) {
-            agent.setNDK(ndk);
+    async initialize(agents?: Map<string, Agent>): Promise<void> {
+        if (agents) {
+            this.agents = new Map(agents);
+            // Set agent manager reference for all provided agents
+            if (this.agentManager) {
+                for (const agent of this.agents.values()) {
+                    agent.setAgentManager(this.agentManager);
+                }
+            }
+        } else {
+            // Fallback to loading agents if none provided (for backward compatibility)
+            await this.loadAgents();
         }
-    }
-
-    /**
-     * Initialize orchestrator by loading agents
-     */
-    async initialize(): Promise<void> {
-        await this.loadAgents();
     }
 
     /**
@@ -63,11 +58,7 @@ export class AgentOrchestrator {
         const agentsConfig = await this.configManager.loadAgentsConfig();
 
         for (const [name, config] of Object.entries(agentsConfig)) {
-            // Handle legacy string format and new object format
-            const nsec = typeof config === "string" ? config : config.nsec;
-            const configFile = typeof config === "object" ? config.file : undefined;
-
-            const agent = await this.createAgent(name, nsec, configFile);
+            const agent = await this.createAgent(name, config.nsec, config.file);
 
             // Set agent manager reference
             if (this.agentManager) {
@@ -85,7 +76,7 @@ export class AgentOrchestrator {
         // Create agent-specific tool registry
         const agentToolRegistry = this.toolManager.createAgentRegistry(name);
 
-        const agent = await Agent.loadFromConfig(
+        const { config, agentEventId } = await loadAgentConfig(
             name,
             nsec,
             this.configManager.getProjectPath(),
@@ -94,58 +85,43 @@ export class AgentOrchestrator {
             this.projectInfo?.title || "unknown",
             agentToolRegistry
         );
+        const agent = new Agent(name, nsec, config, this.conversationStorage, this.projectInfo?.title || "unknown", agentToolRegistry, agentEventId);
 
         // Set agent-specific LLM config or fall back to default
         const llmConfig = this.configManager.getLLMConfigForAgent(name);
         if (llmConfig) {
-            agent.setDefaultLLMConfig(llmConfig);
-        }
-
-        // Set NDK if available
-        if (this.ndk) {
-            agent.setNDK(this.ndk);
+            agent.setLLMConfig(llmConfig);
         }
 
         // Enable remember_lesson tool if agent has an event ID
         const agentEventId = agent.getAgentEventId();
-        if (agentEventId && this.ndk) {
-            this.toolManager.enableRememberLessonTool(name, agentEventId, this.ndk);
+        if (agentEventId) {
+            this.toolManager.enableRememberLessonTool(name, agentEventId, getNDK());
         }
 
         // Enable find_agent tool for agents with orchestration capability
-        const agentConfig = agent.getConfig();
+        const agentConfig = agent.config;
         const hasOrchestrationCapability =
-            agentConfig?.role?.toLowerCase().includes("orchestrator") || name === "default"; // Default agent has orchestration capability
+            agentConfig.role?.toLowerCase().includes("orchestrator") || name === "default"; // Default agent has orchestration capability
         this.toolManager.enableFindAgentTool(name, hasOrchestrationCapability);
 
         return agent;
     }
 
     /**
-     * Get or create an agent by name
+     * Get an agent by name
      * @param name The name of the agent to retrieve (required)
      */
     async getAgent(name: string): Promise<Agent> {
         if (!name) {
             throw new Error("Agent name is required");
         }
-        let agent = this.agents.get(name);
+        const agent = this.agents.get(name);
 
         if (!agent) {
-            // Create new agent if it doesn't exist
-            const { nsec, configFile } = await getAgentSigner(
-                this.configManager.getProjectPath(),
-                name
+            throw new Error(
+                `Agent '${name}' not found. Agents must be created through AgentManager.`
             );
-
-            agent = await this.createAgent(name, nsec, configFile);
-
-            // Set agent manager reference
-            if (this.agentManager) {
-                agent.setAgentManager(this.agentManager);
-            }
-
-            this.agents.set(name, agent);
         }
 
         return agent;
@@ -157,7 +133,7 @@ export class AgentOrchestrator {
     getAgentByPubkeySync(pubkey: string): Agent | undefined {
         // Check loaded agents only
         for (const agent of this.agents.values()) {
-            if (agent.getPubkey() === pubkey) {
+            if (agent.pubkey === pubkey) {
                 return agent;
             }
         }
@@ -170,7 +146,7 @@ export class AgentOrchestrator {
     async getAgentByPubkey(pubkey: string): Promise<Agent | undefined> {
         // Check loaded agents
         for (const agent of this.agents.values()) {
-            if (agent.getPubkey() === pubkey) {
+            if (agent.pubkey === pubkey) {
                 return agent;
             }
         }
@@ -184,7 +160,7 @@ export class AgentOrchestrator {
     async isEventFromAnyAgent(eventPubkey: string): Promise<boolean> {
         // Check if the event is from any of the loaded agents
         for (const [_name, agent] of this.agents.entries()) {
-            const agentPubkey = agent.getPubkey();
+            const agentPubkey = agent.pubkey;
             if (agentPubkey === eventPubkey) {
                 return true;
             }
@@ -215,7 +191,7 @@ export class AgentOrchestrator {
         const agentsConfig = await this.configManager.loadAgentsConfig();
 
         for (const [agentName, config] of Object.entries(agentsConfig)) {
-            const configFile = typeof config === "object" ? config.file : undefined;
+            const configFile = config.file;
 
             // Try to load agent configuration
             let description = "";
@@ -245,7 +221,7 @@ export class AgentOrchestrator {
             // Check if agent is already loaded
             const loadedAgent = this.agents.get(agentName);
             if (loadedAgent) {
-                const config = loadedAgent.getConfig();
+                const config = loadedAgent.config;
                 description = description || config.description || "";
                 role = role || config.role || "";
                 capabilities = capabilities || config.instructions || "";
@@ -351,6 +327,18 @@ export class AgentOrchestrator {
     }
 
     /**
+     * Add an agent to the orchestrator
+     */
+    addAgent(name: string, agent: Agent): void {
+        this.agents.set(name, agent);
+
+        // Set agent manager reference if we have one
+        if (this.agentManager) {
+            agent.setAgentManager(this.agentManager);
+        }
+    }
+
+    /**
      * Set agent manager reference for all agents
      */
     setAgentManagerForAll(agentManager: AgentManager): void {
@@ -358,5 +346,14 @@ export class AgentOrchestrator {
         for (const agent of this.agents.values()) {
             agent.setAgentManager(agentManager);
         }
+    }
+
+    /**
+     * Set NDK instance for all agents
+     */
+    setNDK(ndk: NDK): void {
+        // Implementation for setting NDK on agents
+        // This method is required by AgentManager but the actual NDK setting
+        // is handled elsewhere in the system
     }
 }

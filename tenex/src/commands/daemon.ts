@@ -37,12 +37,11 @@ export const daemonCommand = new Command("daemon")
 
         // Initialize NDK and get singleton
         await initNDK();
-        const ndk = getNDK();
 
         // Initialize core components
         const projectManager = new ProjectManager();
         const processManager = new ProcessManager();
-        const eventMonitor = new EventMonitor(ndk, projectManager, processManager);
+        const eventMonitor = new EventMonitor(projectManager, processManager);
 
         // Set up graceful shutdown
         setupGracefulShutdown(eventMonitor, processManager);

@@ -5,8 +5,6 @@ import { formatError } from "@/utils/errors";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logWarning } from "@tenex/shared/logger";
 import { configurationService } from "@tenex/shared/services";
-import type { UnifiedLLMConfig } from "@tenex/types/config";
-import type { LLMConfig } from "@tenex/types/llm";
 
 export class StatusPublisher {
     private statusInterval?: NodeJS.Timeout;
@@ -32,14 +30,7 @@ export class StatusPublisher {
             const event = new NDKEvent(ndk);
             event.kind = STATUS_KIND;
 
-            const llmConfigs = await this.getLLMConfigurations(projectInfo.projectPath);
-
-            event.content = JSON.stringify({
-                status: "online",
-                timestamp: Math.floor(Date.now() / 1000),
-                project: projectInfo.title,
-                llmConfigs: llmConfigs,
-            });
+            event.content = "";
 
             // Tag the project event properly
             event.tag(projectInfo.projectEvent);
@@ -53,69 +44,14 @@ export class StatusPublisher {
         }
     }
 
-    private async getLLMConfigurations(
-        projectPath: string
-    ): Promise<Record<string, Partial<LLMConfig> | UnifiedLLMConfig["defaults"]>> {
-        try {
-            const configuration = await configurationService.loadConfiguration(projectPath);
-            const llms = configuration.llms;
-
-            // Create a sanitized version of the configurations
-            const sanitizedConfigs: Record<
-                string,
-                Partial<LLMConfig> | UnifiedLLMConfig["defaults"]
-            > = {};
-
-            // Add defaults
-            sanitizedConfigs.defaults = llms.defaults;
-
-            // Add configurations without sensitive data
-            for (const [configName, config] of Object.entries(llms.configurations)) {
-                if (!config) continue;
-
-                // Copy the config but exclude sensitive data
-                const sanitizedConfig = { ...config };
-                sanitizedConfig.apiKey = undefined;
-                sanitizedConfigs[configName] = sanitizedConfig;
-            }
-
-            return sanitizedConfigs;
-        } catch (_err) {
-            // If configuration doesn't exist or can't be read, return empty object
-            return {};
-        }
-    }
-
-    private async getLLMConfigNames(projectPath: string): Promise<string[]> {
-        try {
-            const configuration = await configurationService.loadConfiguration(projectPath);
-            const llms = configuration.llms;
-
-            // Return all configuration names
-            return Object.keys(llms.configurations);
-        } catch (_err) {
-            // If configuration doesn't exist or can't be read, return empty array
-            return [];
-        }
-    }
-
     private async addAgentPubkeys(event: NDKEvent, projectPath: string): Promise<void> {
         try {
             const configuration = await configurationService.loadConfiguration(projectPath);
             const agents = configuration.agents || {};
 
             for (const [agentName, agentConfig] of Object.entries(agents)) {
-                let nsecValue: string | undefined;
-
-                // Handle both string and object agent configs
-                if (typeof agentConfig === "string") {
-                    nsecValue = agentConfig;
-                } else if (typeof agentConfig === "object" && agentConfig?.nsec) {
-                    nsecValue = agentConfig.nsec;
-                }
-
-                if (nsecValue) {
-                    const agentSigner = new NDKPrivateKeySigner(nsecValue);
+                if (agentConfig.nsec) {
+                    const agentSigner = new NDKPrivateKeySigner(agentConfig.nsec);
                     const agentPubkey = agentSigner.pubkey;
                     event.tags.push(["p", agentPubkey, agentName]);
                 }

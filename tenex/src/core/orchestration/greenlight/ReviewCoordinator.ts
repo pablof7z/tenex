@@ -139,7 +139,7 @@ export class ReviewCoordinatorImpl implements ReviewCoordinator {
             };
 
             return {
-                reviewerName: reviewer.getName(),
+                reviewerName: reviewer.name,
                 decision: reviewData.decision,
                 feedback: reviewData.feedback,
                 confidence: reviewData.confidence,
@@ -147,7 +147,7 @@ export class ReviewCoordinatorImpl implements ReviewCoordinator {
                 timestamp: Date.now(),
             };
         } catch (error) {
-            this.logger.error(`Failed to parse review from ${reviewer.getName()}: ${error}`);
+            this.logger.error(`Failed to parse review from ${reviewer.name}: ${error}`);
             throw error;
         }
     }
@@ -156,7 +156,7 @@ export class ReviewCoordinatorImpl implements ReviewCoordinator {
         const agentDescriptions = availableReviewers
             .map((name) => {
                 const agent = this.agents.get(name);
-                return `- ${name}: ${agent?.getConfig()?.role || "No role specified"}`;
+                return `- ${name}: ${agent?.config?.role || "No role specified"}`;
             })
             .join("\n");
 
@@ -187,7 +187,7 @@ Respond with a JSON array of reviewer names: ["reviewer1", "reviewer2", ...]`;
         // Get recent conversation messages for context
         const recentMessages = this.getRecentConversationContext(conversation);
 
-        return `You are ${reviewer.getName()}, acting as a code reviewer for completed work.
+        return `You are ${reviewer.name}, acting as a code reviewer for completed work.
 
 Task Description: ${reviewRequest.taskDescription}
 

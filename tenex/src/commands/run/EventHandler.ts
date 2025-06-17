@@ -1,26 +1,23 @@
 import path from "node:path";
-import { AgentEventHandler } from "@/commands/run/AgentEventHandler";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 // toKebabCase utility function
 import type { Agent } from "@/utils/agents/Agent";
 import { AgentManager } from "@/utils/agents/AgentManager";
+import { createAgent } from "@/utils/agents/createAgent";
 import { formatError } from "@/utils/errors";
-import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { ensureDirectory, fileExists, writeJsonFile } from "@tenex/shared/fs";
 import { logInfo } from "@tenex/shared/logger";
-import type { AgentsJson } from "@tenex/types/agents";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
 
 export class EventHandler {
     private agentManager: AgentManager;
-    private agentEventHandler: AgentEventHandler;
 
     constructor(private projectInfo: ProjectRuntimeInfo) {
         this.agentManager = new AgentManager(projectInfo.projectPath, projectInfo);
-        this.agentEventHandler = new AgentEventHandler();
     }
 
     async initialize(): Promise<void> {
@@ -76,10 +73,6 @@ export class EventHandler {
 
             case EVENT_KINDS.PROJECT_STATUS:
                 this.handleProjectStatus(event);
-                break;
-
-            case EVENT_KINDS.AGENT_CONFIG:
-                await this.agentEventHandler.handleAgentEvent(event, this.projectInfo);
                 break;
 
             case EVENT_KINDS.PROJECT:
@@ -174,10 +167,6 @@ export class EventHandler {
     }
 
     private async handleProjectEvent(event: NDKEvent): Promise<void> {
-        if (!this.isOurProjectEvent(event)) {
-            return;
-        }
-
         this.logProjectUpdate(event);
         const agentEventIds = this.extractAgentEventIds(event);
 
@@ -187,14 +176,6 @@ export class EventHandler {
         }
 
         // TODO: Update title, description, etc. in config.json if changed
-    }
-
-    private isOurProjectEvent(event: NDKEvent): boolean {
-        const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
-        return (
-            dTag === this.projectInfo.projectId &&
-            event.author.pubkey === this.projectInfo.projectPubkey
-        );
     }
 
     private logProjectUpdate(event: NDKEvent): void {
@@ -259,12 +240,6 @@ export class EventHandler {
     }
 
     private async handleLLMConfigChange(event: NDKEvent): Promise<void> {
-        // Only accept from project owner
-        if (event.author.pubkey !== this.projectInfo.projectPubkey) {
-            logInfo(chalk.yellow("⚠️  Ignoring LLM config change from non-project owner"));
-            return;
-        }
-
         const timestamp = new Date().toLocaleTimeString();
         logInfo(chalk.gray(`\n[${timestamp}] `) + chalk.magenta("LLM Config Change requested"));
 
@@ -298,15 +273,13 @@ export class EventHandler {
             return;
         }
 
-        logInfo(chalk.gray("Agent:   ") + chalk.white(agent.getName()));
+        logInfo(chalk.gray("Agent:   ") + chalk.white(agent.name));
         logInfo(chalk.gray("Model:   ") + chalk.white(newModelConfig));
 
         // Update the agent's LLM configuration
         try {
-            await this.agentManager.updateAgentLLMConfig(agent.getName(), newModelConfig);
-            logInfo(
-                chalk.green(`✅ Updated LLM config for ${agent.getName()} to ${newModelConfig}`)
-            );
+            await this.agentManager.updateAgentLLMConfig(agent.name, newModelConfig);
+            logInfo(chalk.green(`✅ Updated LLM config for ${agent.name} to ${newModelConfig}`));
 
             // Notify the agent about the change
             agent.notifyLLMConfigChange(newModelConfig);
@@ -316,123 +289,18 @@ export class EventHandler {
         }
     }
 
-    private toKebabCase(str: string): string {
-        return str
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "");
-    }
-
     private async ensureAgentNsec(agentName: string, agentEventId: string): Promise<void> {
-        const agentsJsonPath = path.join(this.projectInfo.projectPath, ".tenex", "agents.json");
-        const agentKey = this.toKebabCase(agentName);
-
         try {
-            const agents: AgentsJson = (await readJsonFile(agentsJsonPath)) || {};
-
-            // Check if agent already has an nsec
-            const agentEntry = agents[agentKey];
-
-            if (!agentEntry) {
-                // Generate new nsec for this agent
-                const signer = NDKPrivateKeySigner.generate();
-                if (!signer.privateKey) {
-                    throw new Error("Failed to generate private key for agent");
-                }
-                agents[agentKey] = {
-                    nsec: signer.privateKey,
-                    file: `${agentEventId}.json`,
-                };
-
-                await writeJsonFile(agentsJsonPath, agents);
-                logInfo(
-                    chalk.green(`✅ Generated nsec for agent: ${agentName} (as '${agentKey}')`)
-                );
-
-                // Publish kind:0 profile for the new agent
-                try {
-                    const projectTitle = this.projectInfo.title;
-                    const fullAgentName = `${agentKey} @ ${projectTitle}`;
-                    const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fullAgentName)}`;
-
-                    const ndk = getNDK();
-                    const profileEvent = new NDKEvent(ndk, {
-                        kind: 0,
-                        pubkey: signer.pubkey,
-                        content: JSON.stringify({
-                            name: fullAgentName,
-                            display_name: fullAgentName,
-                            about: `${agentKey} AI agent for ${projectTitle} project`,
-                            bot: true,
-                            picture: avatarUrl,
-                            created_at: Math.floor(Date.now() / 1000),
-                        }),
-                        tags: [],
-                    });
-
-                    await profileEvent.sign(signer);
-                    await profileEvent.publish();
-
-                    logInfo(chalk.green(`✅ Published kind:0 profile for ${agentName} agent`));
-
-                    // Publish kind 3199 agent request to the project owner
-                    try {
-                        const agentRequestEvent = new NDKEvent(ndk, {
-                            kind: EVENT_KINDS.AGENT_REQUEST,
-                            tags: [
-                                ["agent-name", agentKey],
-                                ["e", agentEventId], // Reference to the NDKAgent event
-                            ],
-                        });
-
-                        // Tag the project properly
-                        agentRequestEvent.tag(this.projectInfo.projectEvent);
-
-                        // Tag the author of the project (the owner)
-                        agentRequestEvent.tag(this.projectInfo.projectEvent.author);
-
-                        await agentRequestEvent.sign(signer);
-                        await agentRequestEvent.publish();
-
-                        logInfo(
-                            chalk.green(`✅ Published kind:3199 agent request for ${agentName}`)
-                        );
-                    } catch (err) {
-                        const errorMessage = formatError(err);
-                        logInfo(
-                            chalk.yellow(
-                                `⚠️  Failed to publish agent request for ${agentName}: ${errorMessage}`
-                            )
-                        );
-                    }
-                } catch (err) {
-                    const errorMessage = formatError(err);
-                    logInfo(
-                        chalk.yellow(
-                            `⚠️  Failed to publish profile for ${agentName}: ${errorMessage}`
-                        )
-                    );
-                }
-            } else {
-                // Check if we need to update the file reference
-                if (typeof agentEntry === "string") {
-                    // Old format - convert to new format
-                    agents[agentKey] = {
-                        nsec: agentEntry,
-                        file: `${agentEventId}.json`,
-                    };
-                    await writeJsonFile(agentsJsonPath, agents);
-                    logInfo(chalk.green(`✅ Updated agent ${agentName} to new format`));
-                } else if (!agentEntry.file) {
-                    // New format but missing file reference
-                    agentEntry.file = `${agentEventId}.json`;
-                    await writeJsonFile(agentsJsonPath, agents);
-                    logInfo(chalk.green(`✅ Added file reference for agent ${agentName}`));
-                }
-            }
+            await createAgent({
+                projectPath: this.projectInfo.projectPath,
+                projectTitle: this.projectInfo.title,
+                agentName,
+                agentEventId,
+                projectEvent: this.projectInfo.projectEvent,
+            });
         } catch (err) {
             const errorMessage = formatError(err);
-            logInfo(chalk.red(`Failed to update agents.json: ${errorMessage}`));
+            logInfo(chalk.red(`Failed to create agent ${agentName}: ${errorMessage}`));
         }
     }
 

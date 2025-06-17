@@ -1,4 +1,4 @@
-import type { AgentConfig, LegacyAgentsJson } from "@tenex/types/agents";
+import type { AgentConfig, AgentsJson } from "@tenex/types/agents";
 import type { LLMConfiguration } from "@tenex/types/llm";
 import { vi } from "vitest";
 
@@ -22,18 +22,18 @@ export function createMockAgent(overrides: Partial<AgentConfig> = {}): AgentConf
 }
 
 /**
- * Creates a mock legacy agents.json structure
+ * Creates a mock agents.json structure
  */
 export function createMockAgentsJson(
-    agents: Record<string, string | { nsec: string; file?: string }> = {}
-): LegacyAgentsJson {
+    agents: Record<string, { nsec: string; file?: string }> = {}
+): AgentsJson {
     return {
-        default: "nsec1default...",
+        default: { nsec: "nsec1default..." },
         code: {
             nsec: "nsec1code...",
             file: "code-agent.json",
         },
-        planner: "nsec1planner...",
+        planner: { nsec: "nsec1planner..." },
         ...agents,
     };
 }

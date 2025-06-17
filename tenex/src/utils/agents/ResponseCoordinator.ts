@@ -1,7 +1,8 @@
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { StrategyExecutionResult } from "@/core/orchestration/strategies/OrchestrationStrategy";
+import { publishResponse, publishTypingIndicator } from "@/utils/agents";
 import type { Agent } from "@/utils/agents/Agent";
 import type { AgentConfigurationManager } from "@/utils/agents/AgentConfigurationManager";
-import type { EnhancedResponsePublisher } from "@/utils/agents/EnhancedResponsePublisher";
 import type { OrchestrationExecutionService } from "@/utils/agents/OrchestrationExecutionService";
 import type { SystemPromptContextFactory } from "@/utils/agents/prompts/SystemPromptContextFactory";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -21,7 +22,7 @@ export class ResponseCoordinator {
     constructor(
         private configManager: AgentConfigurationManager,
         private contextFactory: SystemPromptContextFactory,
-        private responsePublisher: EnhancedResponsePublisher,
+        private projectInfo?: ProjectRuntimeInfo,
         private orchestrationExecutionService?: OrchestrationExecutionService,
         private isEventFromAnyAgentFn?: (eventPubkey: string) => Promise<boolean>
     ) {}
@@ -63,7 +64,7 @@ export class ResponseCoordinator {
             // Fallback to legacy logic when no orchestration service available
             logger.info("🎯 Agent determination result:");
             logger.info(`   Agents to respond: ${result.agents.length}`);
-            logger.info(`   Agent names: ${result.agents.map((a) => a.getName()).join(", ")}`);
+            logger.info(`   Agent names: ${result.agents.map((a) => a.name).join(", ")}`);
 
             if (result.agents.length === 0) {
                 logger.warn("❌ No agents will respond to this event - stopping processing");
@@ -101,7 +102,7 @@ export class ResponseCoordinator {
             try {
                 // Get agent-specific LLM config if available
                 const agentLLMConfig =
-                    this.configManager.getLLMConfigForAgent(agent.getName()) || llmConfig;
+                    this.configManager.getLLMConfigForAgent(agent.name) || llmConfig;
 
                 // Extract system prompt and last message from conversation
                 // Use getOrCreateConversationWithContext to ensure p-tagged agents can load conversations from storage
@@ -113,24 +114,24 @@ export class ResponseCoordinator {
 
                 // Check if we need to add the user message to this agent's conversation
                 // This handles cases where the agent wasn't in the agents Map when addEventToAllAgentConversations was called
-                if (conversation && !isTaskEvent && agent.getPubkey() !== event.author.pubkey) {
+                if (conversation && !isTaskEvent && agent.pubkey !== event.author.pubkey) {
                     const messages = conversation.getMessages();
                     const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
                     // Only add the message if it's not already the last message in the conversation
                     if (!lastMessage || lastMessage.event?.id !== event.id) {
                         logger.debug(
-                            ` Adding user message to ${agent.getName()}'s conversation: "${event.content}"`
+                            ` Adding user message to ${agent.name}'s conversation: "${event.content}"`
                         );
                         conversation.addUserMessage(event.content, event);
                         // Save the updated conversation using agent's conversation manager
                         await agent.saveConversationToStorage(conversation);
                         logger.debug(
-                            ` Updated conversation for ${agent.getName()}, now has ${conversation.getMessageCount()} messages`
+                            ` Updated conversation for ${agent.name}, now has ${conversation.getMessageCount()} messages`
                         );
                     } else {
                         logger.debug(
-                            ` User message already exists in ${agent.getName()}'s conversation, skipping duplicate`
+                            ` User message already exists in ${agent.name}'s conversation, skipping duplicate`
                         );
                     }
                 }
@@ -146,7 +147,7 @@ export class ResponseCoordinator {
                         systemPrompt = systemMessage.content;
 
                         // Add tool information to system prompt if tools are available
-                        const toolRegistry = agent.getToolRegistry();
+                        const toolRegistry = agent.core.toolRegistry;
                         if (toolRegistry) {
                             const availableTools = toolRegistry.getAllTools();
                             if (availableTools.length > 0) {
@@ -163,25 +164,33 @@ export class ResponseCoordinator {
                 }
 
                 // Publish typing indicator with system prompt and user prompt
-                await this.responsePublisher.publishTypingIndicator(
-                    event,
-                    agent,
-                    true,
-                    undefined,
-                    systemPrompt,
-                    lastUserMessage
-                );
-
-                // Create typing indicator callback
-                const typingIndicatorCallback = async (message: string) => {
-                    await this.responsePublisher.publishTypingIndicator(
+                if (this.projectInfo?.projectEvent) {
+                    await publishTypingIndicator(
                         event,
-                        agent,
+                        agent.name,
+                        agent.signer,
                         true,
-                        message,
+                        this.projectInfo.projectEvent,
+                        undefined,
                         systemPrompt,
                         lastUserMessage
                     );
+                }
+
+                // Create typing indicator callback
+                const typingIndicatorCallback = async (message: string) => {
+                    if (this.projectInfo?.projectEvent) {
+                        await publishTypingIndicator(
+                            event,
+                            agent.name,
+                            agent.signer,
+                            true,
+                            this.projectInfo.projectEvent,
+                            message,
+                            systemPrompt,
+                            lastUserMessage
+                        );
+                    }
                 };
 
                 // Check if the event is from another agent
@@ -208,40 +217,64 @@ export class ResponseCoordinator {
                     // Add agent as participant in conversation
                     const conversation = agent.getConversation(conversationId);
                     if (conversation) {
-                        conversation.addParticipant(agent.getPubkey());
+                        conversation.addParticipant(agent.pubkey);
                         await agent.saveConversationToStorage(conversation);
                     }
 
                     // Publish response to Nostr
-                    await this.responsePublisher.publishResponse(
-                        event,
-                        response,
-                        agent,
-                        isTaskEvent
-                    );
+                    if (this.projectInfo?.projectEvent) {
+                        await publishResponse(
+                            event,
+                            response,
+                            agent,
+                            this.projectInfo.projectEvent
+                        );
+                    }
                     const eventType = isTaskEvent ? "Task" : "Chat";
                     logger.info(
-                        `${eventType} response generated and published by agent '${agent.getName()}'`
+                        `${eventType} response generated and published by agent '${agent.name}'`
                     );
 
                     // Stop typing indicator after publishing response
-                    await this.responsePublisher.publishTypingIndicator(event, agent, false);
+                    if (this.projectInfo?.projectEvent) {
+                        await publishTypingIndicator(
+                            event,
+                            agent.name,
+                            agent.signer,
+                            false,
+                            this.projectInfo.projectEvent
+                        );
+                    }
                 } else {
                     logger.info(
-                        `Agent '${agent.getName()}' had nothing to add to the ${isTaskEvent ? "task" : "conversation"}`
+                        `Agent '${agent.name}' had nothing to add to the ${isTaskEvent ? "task" : "conversation"}`
                     );
 
                     // Stop typing indicator since agent decided not to respond
-                    await this.responsePublisher.publishTypingIndicator(event, agent, false);
+                    if (this.projectInfo?.projectEvent) {
+                        await publishTypingIndicator(
+                            event,
+                            agent.name,
+                            agent.signer,
+                            false,
+                            this.projectInfo.projectEvent
+                        );
+                    }
                 }
             } catch (error) {
-                logger.error(
-                    `Failed to generate response for agent '${agent.getName()}': ${error}`
-                );
+                logger.error(`Failed to generate response for agent '${agent.name}': ${error}`);
 
                 // Stop typing indicator on error
                 try {
-                    await this.responsePublisher.publishTypingIndicator(event, agent, false);
+                    if (this.projectInfo?.projectEvent) {
+                        await publishTypingIndicator(
+                            event,
+                            agent.name,
+                            agent.signer,
+                            false,
+                            this.projectInfo.projectEvent
+                        );
+                    }
                 } catch (indicatorError) {
                     logger.error(`Failed to stop typing indicator: ${indicatorError}`);
                 }

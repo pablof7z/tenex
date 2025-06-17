@@ -20,7 +20,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         logInfo(chalk.cyan("\n📡 Connecting and loading project...\n"));
 
         // Load project using real code path
-        const projectLoader = new ProjectLoader(ndk);
+        const projectLoader = new ProjectLoader();
         const projectInfo = await projectLoader.loadProject(projectPath);
 
         logInfo(`📦 Loaded project: ${projectInfo.title}`);
@@ -31,9 +31,9 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
 
         // Get all agent pubkeys for specs loading
         const allAgents = agentManager.getAllAgents();
-        const allAuthorPubkeys = [projectInfo.projectPubkey];
+        const allAuthorPubkeys = [(await projectInfo.projectSigner.user()).pubkey];
         for (const agent of allAgents.values()) {
-            allAuthorPubkeys.push(agent.getPubkey());
+            allAuthorPubkeys.push(agent.pubkey.toString());
         }
 
         // Load specs from all possible authors (same as real subscription)
@@ -57,8 +57,8 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
                 .filter(([name]) => name !== options.agent)
                 .map(([name, agent]) => ({
                     name,
-                    description: agent.getConfig().description || "",
-                    role: agent.getConfig().role || "",
+                    description: agent.config.description || "",
+                    role: agent.config.role || "",
                 })),
             isAgentToAgent: false,
         };
@@ -78,13 +78,13 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
         logInfo(chalk.cyan(`🤖 System Prompt for Agent: ${options.agent}`));
         logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.gray("Agent Pubkey: ") + chalk.white(agent.getPubkey()));
+        logInfo(chalk.gray("Agent Pubkey: ") + chalk.white(agent.pubkey));
         logInfo(chalk.gray("Project: ") + chalk.white(projectInfo.title));
         logInfo(
             chalk.gray("Specs Loaded: ") +
                 chalk.white(projectInfo.specCache.getAllSpecMetadata().length)
         );
-        const toolRegistry = agent.getToolRegistry();
+        const toolRegistry = agent.core.toolRegistry;
         const toolCount = toolRegistry ? toolRegistry.getAllTools().length : 0;
         logInfo(chalk.gray("Tools Available: ") + chalk.white(toolCount));
         logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
@@ -108,17 +108,14 @@ async function loadSpecsForDebug(
     ndk: NDK
 ): Promise<void> {
     try {
-        const projectRef = `31933:${projectInfo.projectPubkey}:${projectInfo.projectId}`;
-
         const filter = {
             kinds: [30023], // NDKArticle
             authors: allAuthorPubkeys, // Project author + all agent pubkeys
-            "#a": [projectRef],
+            ...projectInfo.projectEvent.filter(),
             limit: 50,
         };
 
         logInfo(`📋 Loading specs from ${allAuthorPubkeys.length} possible authors`);
-        logInfo(`Project ref: ${projectRef}`);
         logInfo(`Authors: ${allAuthorPubkeys.join(", ")}`);
 
         const specEvents = await ndk.fetchEvents(filter);

@@ -3,12 +3,11 @@ import type { TeamFormationAnalyzer } from "@/core/orchestration/TeamFormationAn
 import { TeamFormationError } from "@/core/orchestration/errors";
 import type {
     AgentDefinition,
-    LLMProvider,
-    Logger,
     OrchestrationConfig,
     ProjectContext,
     Team,
 } from "@/core/orchestration/types";
+import { logger } from "@tenex/shared/logger";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { traceFunction } from "@tenex/shared/services";
 
@@ -23,14 +22,10 @@ export interface TeamOrchestrator {
 export class TeamOrchestratorImpl implements TeamOrchestrator {
     constructor(
         private readonly analyzer: TeamFormationAnalyzer,
-        private readonly llmProvider: LLMProvider,
-        private readonly logger: Logger,
         private readonly config: OrchestrationConfig,
         private readonly typingIndicatorPublisher?: TypingIndicatorPublisher
     ) {
         if (!analyzer) throw new Error("TeamFormationAnalyzer is required");
-        if (!llmProvider) throw new Error("LLMProvider is required");
-        if (!logger) throw new Error("Logger is required");
         if (!config) throw new Error("OrchestrationConfig is required");
     }
 
@@ -48,7 +43,6 @@ export class TeamOrchestratorImpl implements TeamOrchestrator {
                         "orchestration.event_content_length": event.content?.length || 0,
                         "orchestration.available_agents_count": availableAgents.size,
                         "orchestration.project_title": projectContext?.title || "unknown",
-                        "orchestration.llm_provider_available": Boolean(this.llmProvider),
                     });
 
                     this.logger.info("🎯 TEAM ORCHESTRATOR - Starting team formation");
@@ -142,6 +136,13 @@ export class TeamOrchestratorImpl implements TeamOrchestrator {
                             `   Raw team response: ${JSON.stringify(combinedResponse.team, null, 2)}`
                         );
                         throw new TeamFormationError("No team members selected for request");
+                    }
+
+                    // Ensure event has an ID (should be signed)
+                    if (!event.id) {
+                        throw new Error(
+                            "Cannot form team for unsigned event - event must be signed first"
+                        );
                     }
 
                     // Create team object

@@ -1,6 +1,6 @@
 import { loadAgentConfiguration } from "./agent-loader.js";
 import { startMcpServer } from "./commands/mcp.js";
-import { initConfig } from "./config.js";
+import { initConfig, setConfigInstance } from "./config.js";
 import { initNDK } from "./ndk.js";
 
 // Load config and start server
@@ -12,7 +12,6 @@ import { initNDK } from "./ndk.js";
         config = await loadAgentConfiguration(config);
 
         // Set the config instance for use throughout the application
-        const { setConfigInstance } = await import("./config.js");
         setConfigInstance(config);
 
         // Initialize NDK with the loaded configuration

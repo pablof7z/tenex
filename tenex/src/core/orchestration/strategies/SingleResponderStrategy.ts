@@ -36,12 +36,12 @@ export class SingleResponderStrategy implements OrchestrationStrategy {
             }
 
             // Create conversation through the agent system
-            const conversationId = team.taskDefinition.id;
+            const conversationId = team.conversationId;
             const conversation = await leadAgent.getOrCreateConversationWithContext(
                 conversationId,
                 {
-                    agentRole: leadAgent.getConfig().role || "Assistant",
-                    projectName: leadAgent.getConfig().name,
+                    agentRole: leadAgent.config.role || "Assistant",
+                    projectName: leadAgent.config.name,
                     orchestrationMetadata: {
                         team,
                         strategy: "SINGLE_RESPONDER",

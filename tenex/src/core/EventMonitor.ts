@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { IProcessManager } from "@/core/ProcessManager";
 import type { IProjectManager } from "@/core/ProjectManager";
+import { getNDK } from "@/nostr/ndkClient";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
-import type NDK from "@nostr-dev-kit/ndk";
 import { getRelayUrls, logger } from "@tenex/shared";
 import type { LLMConfig, LLMConfigs } from "@tenex/types";
 import { nip19 } from "nostr-tools";
@@ -19,7 +19,6 @@ export class EventMonitor implements IEventMonitor {
     private llmConfigs: LLMConfig[] = [];
 
     constructor(
-        private ndk: NDK,
         private projectManager: IProjectManager,
         private processManager: IProcessManager
     ) {}
@@ -34,7 +33,7 @@ export class EventMonitor implements IEventMonitor {
             limit: 0,
         };
 
-        this.subscription = this.ndk.subscribe(filter, {
+        this.subscription = getNDK().subscribe(filter, {
             closeOnEose: false,
             groupable: false,
         });
@@ -84,7 +83,7 @@ export class EventMonitor implements IEventMonitor {
             const projectPath = await this.projectManager.ensureProjectExists(
                 projectIdentifier,
                 naddr,
-                this.ndk,
+                getNDK(),
                 this.llmConfigs
             );
 

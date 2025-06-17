@@ -2,14 +2,13 @@ import {
     type NDKArticle,
     type NDKEvent,
     NDKProject,
-    NDKTask,
     useNDKCurrentUser,
-    useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom, useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../contexts/NavigationContext";
 import type { ProjectAgent } from "../hooks/useProjectAgents";
+import { useUserProjects } from "../hooks/useUserProjects";
 import {
     onlineProjectsAtom,
     selectedProjectAtom,
@@ -40,67 +39,13 @@ export function DesktopLayout() {
     const onlineProjects = useAtomValue(onlineProjectsAtom);
     const [theme, setTheme] = useAtom(themeAtom);
 
-    const { events: projects } = useSubscribe<NDKProject>(
-        currentUser
-            ? [
-                  {
-                      kinds: [NDKProject.kind],
-                      authors: [currentUser.pubkey],
-                      limit: 50,
-                  },
-              ]
-            : false,
-        { wrap: true },
-        [currentUser?.pubkey]
-    );
+    // Only fetch projects at this level
+    const projects = useUserProjects();
 
-    const { events: tasks } = useSubscribe<NDKTask>(
-        projects.length > 0
-            ? [
-                  {
-                      kinds: [NDKTask.kind],
-                      "#a": projects.map(
-                          (p) => `${NDKProject.kind}:${p.pubkey}:${p.tagValue("d")}`
-                      ),
-                  },
-              ]
-            : false,
-        { wrap: true },
-        [projects.length]
-    );
-
-    const { events: statusUpdates } = useSubscribe(
-        tasks.length > 0
-            ? [
-                  {
-                      kinds: [1111],
-                      "#e": tasks.map((t) => t.id),
-                  },
-              ]
-            : false,
-        {},
-        [tasks.length]
-    );
-
-    const { events: threads } = useSubscribe(
-        projects.length > 0
-            ? [
-                  {
-                      kinds: [11], // Kind 11 for threads
-                      "#a": projects.map(
-                          (p) => `${NDKProject.kind}:${p.pubkey}:${p.tagValue("d")}`
-                      ),
-                  },
-              ]
-            : false,
-        {},
-        [projects.length]
-    );
-
-    // Filter projects with activity in last 72 hours OR created in last 24 hours OR manually activated
+    // Filter projects based on creation time and manual toggles
+    // Activity-based filtering will happen at the component level
     const filteredProjects = useMemo(() => {
         const now = Date.now() / 1000;
-        const seventyTwoHoursAgo = now - 72 * 60 * 60;
         const twentyFourHoursAgo = now - 24 * 60 * 60;
 
         return projects.filter((project) => {
@@ -114,33 +59,9 @@ export function DesktopLayout() {
 
             // Default behavior: show if created in last 24 hours
             const projectCreatedAt = project.created_at || 0;
-            if (projectCreatedAt > twentyFourHoursAgo) {
-                return true;
-            }
-
-            // Default behavior: show if has activity in last 72 hours
-            const projectTasks = tasks.filter((task) => {
-                const projectReference = task.tags?.find((tag) => tag[0] === "a")?.[1];
-                if (projectReference) {
-                    const parts = projectReference.split(":");
-                    if (parts.length >= 3) {
-                        const projectTagId = parts[2];
-                        return project.tagValue("d") === projectTagId;
-                    }
-                }
-                return false;
-            });
-
-            // Check for recent status updates
-            const hasRecentActivity = statusUpdates.some((update) => {
-                const taskId = update.tags?.find((tag) => tag[0] === "e" && tag[3] === "task")?.[1];
-                const isRecentUpdate = (update.created_at || 0) > seventyTwoHoursAgo;
-                return isRecentUpdate && projectTasks.some((task) => task.id === taskId);
-            });
-
-            return hasRecentActivity;
+            return projectCreatedAt > twentyFourHoursAgo;
         });
-    }, [projects, tasks, statusUpdates, manuallyToggled]);
+    }, [projects, manuallyToggled]);
 
     const toggleProjectActivation = (projectId: string) => {
         setManuallyToggled((prev) => {
@@ -208,9 +129,6 @@ export function DesktopLayout() {
             <ProjectDashboard
                 projects={projects}
                 filteredProjects={filteredProjects}
-                tasks={tasks}
-                statusUpdates={statusUpdates}
-                threads={threads}
                 onProjectClick={setSelectedProject}
                 onTaskCreate={handleTaskCreate}
                 onThreadClick={handleThreadClick}
@@ -265,17 +183,13 @@ export function DesktopLayout() {
                 selectedThread={selectedThread}
                 selectedProject={selectedProject}
                 selectedArticle={selectedArticle}
-                projects={projects}
                 onTaskClose={() => setSelectedTask(null)}
                 onThreadClose={() => setSelectedThread(null)}
                 onProjectClose={() => setSelectedProject(null)}
                 onArticleClose={() => setSelectedArticle(null)}
                 onTaskSelect={(_, taskId) => {
-                    // Find the task by its ID
-                    const task = tasks.find((t) => t.encode() === taskId);
-                    if (task) {
-                        setSelectedTask(task);
-                    }
+                    // Task will be fetched by the drawer component itself
+                    setSelectedTask({ id: taskId } as any);
                 }}
                 onEditProject={goToProjectSettings}
                 onThreadStart={(project, threadTitle, selectedAgents) => {
@@ -295,11 +209,8 @@ export function DesktopLayout() {
                     setSelectedThread(tempThread);
                 }}
                 onThreadSelect={(_, threadId) => {
-                    // Find the thread by its ID
-                    const thread = threads.find((t) => t.encode() === threadId);
-                    if (thread) {
-                        setSelectedThread(thread);
-                    }
+                    // Thread will be fetched by the drawer component itself
+                    setSelectedThread({ id: threadId } as any);
                 }}
                 onArticleSelect={(_, article) => {
                     setSelectedArticle(article);

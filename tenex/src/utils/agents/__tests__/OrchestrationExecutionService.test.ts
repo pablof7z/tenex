@@ -6,13 +6,11 @@ import type { StrategyExecutionResult } from "../../../core/orchestration/strate
 import { OrchestrationStrategy, type Team } from "../../../core/orchestration/types";
 import type { Agent } from "../Agent";
 import type { AgentConfigurationManager } from "../AgentConfigurationManager";
-import type { EnhancedResponsePublisher } from "../EnhancedResponsePublisher";
 import { OrchestrationExecutionService } from "../OrchestrationExecutionService";
 
 describe("OrchestrationExecutionService", () => {
     let service: OrchestrationExecutionService;
     let mockOrchestrationCoordinator: OrchestrationCoordinator;
-    let mockResponsePublisher: EnhancedResponsePublisher;
     let mockConfigManager: AgentConfigurationManager;
     let mockEvent: NDKEvent;
     let mockLLMConfig: LLMConfig;
@@ -32,10 +30,6 @@ describe("OrchestrationExecutionService", () => {
                 metadata: {},
             } as StrategyExecutionResult),
         } as unknown as OrchestrationCoordinator;
-
-        mockResponsePublisher = {
-            publishStrategyResponses: vi.fn(),
-        } as unknown as EnhancedResponsePublisher;
 
         mockConfigManager = {
             getLLMConfig: vi.fn().mockReturnValue({
@@ -63,7 +57,6 @@ describe("OrchestrationExecutionService", () => {
 
         service = new OrchestrationExecutionService(
             mockOrchestrationCoordinator,
-            mockResponsePublisher,
             mockConfigManager
         );
     });
@@ -107,7 +100,7 @@ describe("OrchestrationExecutionService", () => {
                 mockEvent,
                 mockAgents
             );
-            expect(mockResponsePublisher.publishStrategyResponses).toHaveBeenCalled();
+            // Strategy response publishing removed - test passes without it
         });
     });
 

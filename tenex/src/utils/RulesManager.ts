@@ -1,6 +1,6 @@
 import path from "node:path";
+import { getNDK } from "@/nostr/ndkClient";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type NDK from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/node";
 
@@ -22,10 +22,7 @@ export class RulesManager {
     private rulesCache: Map<string, CachedRule> = new Map();
     private rulesDir: string;
 
-    constructor(
-        private ndk: NDK,
-        private projectPath: string
-    ) {
+    constructor(private projectPath: string) {
         this.rulesDir = path.join(projectPath, ".tenex", "rules");
     }
 
@@ -81,7 +78,7 @@ export class RulesManager {
         // Fetch uncached rules from Nostr
         const filter = { ids: uncachedIds };
 
-        const events = await this.ndk.fetchEvents(filter);
+        const events = await getNDK().fetchEvents(filter);
 
         for (const event of events) {
             await this.cacheRule(event);

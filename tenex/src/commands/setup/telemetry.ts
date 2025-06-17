@@ -3,14 +3,14 @@ import path from "node:path";
 import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
 import type { GlobalConfig } from "@tenex/types/config";
-import type {
-    LogsConfig,
-    MetricsConfig,
+import {
     TELEMETRY_PROVIDERS,
-    TelemetryConfig,
-    TelemetryConfigs,
-    TelemetryProvider,
-    TracingConfig,
+    type LogsConfig,
+    type MetricsConfig,
+    type TelemetryConfig,
+    type TelemetryConfigs,
+    type TelemetryProvider,
+    type TracingConfig,
 } from "@tenex/types/telemetry";
 import chalk from "chalk";
 import { Command } from "commander";
@@ -204,9 +204,6 @@ export class TelemetryConfigEditor {
 
     private async addConfiguration(telemetryConfig: TelemetryConfigs): Promise<void> {
         logger.info(chalk.cyan("\n➕ Add New Telemetry Configuration\n"));
-
-        // Import the providers here to avoid circular dependency
-        const { TELEMETRY_PROVIDERS } = await import("@tenex/types/telemetry");
 
         const { provider } = await inquirer.prompt([
             {

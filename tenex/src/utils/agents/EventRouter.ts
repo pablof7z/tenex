@@ -3,7 +3,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 
 /**
- * Handles common event routing and validation logic
+ * Handles common event routing.
  * Extracted from AgentCommunicationHandler to reduce complexity
  */
 export class EventRouter {

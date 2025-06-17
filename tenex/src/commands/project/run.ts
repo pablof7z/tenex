@@ -6,7 +6,6 @@ import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getNDK, initNDK, shutdownNDK } from "@/nostr/ndkClient";
-import { getAgentSigner } from "@/utils/agentManager";
 import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
@@ -25,11 +24,11 @@ export const projectRunCommand = new Command("run")
             const ndk = getNDK();
 
             // Load project using ProjectLoader (which includes fetching the project event)
-            const projectLoader = new ProjectLoader(ndk);
+            const projectLoader = new ProjectLoader();
             const projectInfo = await projectLoader.loadProject(projectPath);
 
             // Display project information
-            const projectDisplay = new ProjectDisplay(ndk);
+            const projectDisplay = new ProjectDisplay();
             await projectDisplay.displayProjectInfo(projectInfo);
 
             // Start the project listener
@@ -46,10 +45,6 @@ async function runProjectListener(projectInfo: ProjectRuntimeInfo, ndk: NDK) {
         logger.info(
             `Starting listener for project: ${projectInfo.title} (${projectInfo.projectId})`
         );
-
-        // Set up agent signer - use primary agent
-        const { signer } = await getAgentSigner(projectInfo.projectPath);
-        ndk.signer = signer;
 
         // Initialize event handler
         const eventHandler = new EventHandler(projectInfo);

@@ -2,10 +2,6 @@
  * Project metadata types
  */
 
-import type { AgentsJson } from "../agents/config";
-import type { LLMConfigs } from "../llm/config";
-import type { TelemetryConfigs } from "../telemetry/config";
-
 /**
  * Project metadata stored in .tenex/metadata.json
  */
@@ -44,17 +40,6 @@ export interface ProjectInitOptions {
     skipAgents?: boolean;
 }
 
-/**
- * Legacy project configuration
- * @deprecated Use ProjectConfig from @tenex/types/config instead
- */
-export interface LegacyProjectConfig {
-    agents: AgentsJson;
-    llms: LLMConfigs;
-    telemetry?: TelemetryConfigs;
-    metadata: ProjectMetadata;
-    rules?: ProjectRules;
-}
 
 /**
  * Project rules structure

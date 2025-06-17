@@ -280,7 +280,7 @@ describe("HierarchicalStrategy", () => {
 
     describe("getName", () => {
         it("should return correct strategy name", () => {
-            expect(strategy.getName()).toBe("HierarchicalStrategy");
+            expect(strategy.name).toBe("HierarchicalStrategy");
         });
     });
 

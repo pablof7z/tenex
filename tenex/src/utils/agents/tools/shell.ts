@@ -51,7 +51,7 @@ export const shellTool: ToolDefinition = {
 
             // Add project reference if available
             if (projectEvent) {
-                startEvent.tags.push(["a", projectEvent.tagId()]);
+                startEvent.tag(projectEvent);
             }
 
             // Add conversation/thread reference
@@ -88,7 +88,7 @@ export const shellTool: ToolDefinition = {
                     });
 
                     if (projectEvent) {
-                        stdoutEvent.tags.push(["a", projectEvent.tagId()]);
+                        stdoutEvent.tag(projectEvent);
                     }
                     if (conversationId) {
                         stdoutEvent.tags.push(["e", conversationId]);
@@ -113,7 +113,7 @@ export const shellTool: ToolDefinition = {
                     });
 
                     if (projectEvent) {
-                        stderrEvent.tags.push(["a", projectEvent.tagId()]);
+                        stderrEvent.tag(projectEvent);
                     }
                     if (conversationId) {
                         stderrEvent.tags.push(["e", conversationId]);
@@ -137,7 +137,7 @@ export const shellTool: ToolDefinition = {
                     });
 
                     if (projectEvent) {
-                        completeEvent.tags.push(["a", projectEvent.tagId()]);
+                        completeEvent.tag(projectEvent);
                     }
                     if (conversationId) {
                         completeEvent.tags.push(["e", conversationId]);
@@ -176,7 +176,7 @@ export const shellTool: ToolDefinition = {
                     });
 
                     if (projectEvent) {
-                        errorEvent.tags.push(["a", projectEvent.tagId()]);
+                        errorEvent.tag(projectEvent);
                     }
                     if (conversationId) {
                         errorEvent.tags.push(["e", conversationId]);

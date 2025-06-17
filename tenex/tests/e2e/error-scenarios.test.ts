@@ -216,10 +216,11 @@ describe("TENEX Error Scenario Tests", () => {
             taskEvent.kind = 1934;
             const decoded = nip19.decode(projectNaddr);
             if (decoded.type === "naddr") {
-                taskEvent.tags = [
-                    ["a", `31933:${decoded.data.pubkey}:${decoded.data.identifier}`],
-                    ["title", "Concurrent Task"],
-                ];
+                const mockProjectEvent = {
+                    tagId: () => `31933:${decoded.data.pubkey}:${decoded.data.identifier}`,
+                } as any;
+                taskEvent.tags = [["title", "Concurrent Task"]];
+                taskEvent.tag(mockProjectEvent);
             }
             taskEvent.content = "Task for race condition test";
             await taskEvent.publish();

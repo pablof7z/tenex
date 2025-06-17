@@ -18,7 +18,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
     const [isCreatingNew, setIsCreatingNew] = useState(false);
 
     // Custom hooks
-    const { formData, reset, loadAgent, saveAgent, updateField, addTag, removeTag } =
+    const { data: formData, reset, loadAgent, saveAgent, updateField, addTag, removeTag } =
         useAgentForm();
 
     const { copiedId, copyAgentId, deleteAgent } = useAgentActions();
@@ -112,7 +112,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
                 onSave={handleSave}
                 onCopyAgentId={handleCopyAgentId}
                 onDeleteAgent={handleDeleteAgent}
-                onFormChange={(field, value) => updateField(field as keyof typeof formData, value)}
+                onFormChange={(field, value) => updateField(field, value)}
                 onAddTag={addTag}
                 onRemoveTag={removeTag}
             />

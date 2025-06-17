@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import * as child_process from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { default as NDK, NDKProject } from "@nostr-dev-kit/ndk";
-import { ProjectService } from "@tenex/shared/projects";
+import type NDK from "@nostr-dev-kit/ndk";
+import type { NDKProject } from "@nostr-dev-kit/ndk";
 import { nip19 } from "nostr-tools";
 import { ProjectManager } from "../../../src/core/ProjectManager";
 

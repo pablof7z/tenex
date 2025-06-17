@@ -35,9 +35,7 @@ export class LessonGeneratorImpl implements LessonGenerator {
                     return lesson;
                 }
             } catch (error) {
-                this.logger.error(
-                    `Failed to generate lesson for agent ${agent.getName()}: ${error}`
-                );
+                this.logger.error(`Failed to generate lesson for agent ${agent.name}: ${error}`);
             }
             return null;
         });
@@ -110,7 +108,7 @@ export class LessonGeneratorImpl implements LessonGenerator {
             return {
                 id: `lesson_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 agentId: ndkAgentEventId,
-                agentName: agent.getName(),
+                agentName: agent.name,
                 taskId: trigger.taskId,
                 type: "mistake" as const,
                 title: lessonData.lesson,
@@ -126,9 +124,7 @@ export class LessonGeneratorImpl implements LessonGenerator {
                 timestamp: Date.now(),
             };
         } catch (error) {
-            this.logger.error(
-                `Failed to parse lesson response for agent ${agent.getName()}: ${error}`
-            );
+            this.logger.error(`Failed to parse lesson response for agent ${agent.name}: ${error}`);
             return null;
         }
     }
@@ -136,7 +132,7 @@ export class LessonGeneratorImpl implements LessonGenerator {
     private buildLessonPrompt(trigger: ReflectionTrigger, agent: Agent): string {
         const triggerAny = trigger as any;
         const agentAny = agent as any;
-        return `You are helping agent "${agent.getName()}" learn from a correction or mistake.
+        return `You are helping agent "${agent.name}" learn from a correction or mistake.
 
 Context:
 - Trigger Event: ${triggerAny.triggerEvent?.content || trigger.reason}
@@ -185,6 +181,6 @@ Return a JSON array of indices for the lessons to keep. For example: [0, 2, 3]`;
     private async getAgentNDKEventId(agent: Agent): Promise<string> {
         // This would need to be implemented based on how agent metadata is stored
         // For now, returning a placeholder
-        return `placeholder-ndk-event-${agent.getName()}`;
+        return `placeholder-ndk-event-${agent.name}`;
     }
 }

@@ -8,13 +8,14 @@ import { AgentResponseGenerator } from "@/utils/agents/core/AgentResponseGenerat
 import type { SystemPromptContext } from "@/utils/agents/prompts/types";
 import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import type { AgentConfig, AgentResponse, LLMConfig } from "@/utils/agents/types";
-import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 
 export class Agent {
-    private core: AgentCore;
-    private conversationManager: AgentConversationManager;
-    private responseGenerator: AgentResponseGenerator;
+    readonly core: AgentCore;
+    readonly conversationManager: AgentConversationManager;
+    readonly responseGenerator: AgentResponseGenerator;
 
     constructor(
         name: string,
@@ -30,73 +31,34 @@ export class Agent {
         this.responseGenerator = new AgentResponseGenerator(this.core, this.conversationManager);
     }
 
-    // Delegation methods to core
-    getName(): string {
-        return this.core.getName();
+    get name(): string {
+        return this.core.name;
     }
 
-    getNsec(): string {
-        return this.core.getNsec();
+    get nsec(): string {
+        return this.core.nsec;
     }
 
-    getSigner() {
-        return this.core.getSigner();
+    get signer() {
+        return this.core.signer;
     }
 
-    getPubkey(): string {
-        return this.core.getPubkey();
+    get pubkey(): string {
+        return this.core.pubkey;
     }
 
-    getConfig(): AgentConfig {
-        return this.core.getConfig();
+    get config(): AgentConfig {
+        return this.core.config;
     }
 
-    setDefaultLLMConfig(config: LLMConfig): void {
-        this.core.setDefaultLLMConfig(config);
+    get availableTools(): any[] {
+        return this.core.toolRegistry ? this.core.toolRegistry.getAllTools() : [];
     }
-
-    getDefaultLLMConfig(): LLMConfig | undefined {
-        return this.core.getDefaultLLMConfig();
-    }
-
-    setToolRegistry(toolRegistry: ToolRegistry): void {
-        this.core.setToolRegistry(toolRegistry);
-    }
-
-    getToolRegistry(): ToolRegistry | undefined {
-        return this.core.getToolRegistry();
-    }
-
-    getAvailableTools(): any[] {
-        const toolRegistry = this.core.getToolRegistry();
-        return toolRegistry ? toolRegistry.getAllTools() : [];
-    }
-
-    getAgentEventId(): string | undefined {
-        return this.core.getAgentEventId();
-    }
-
-    setNDK(ndk: NDK): void {
-        this.core.setNDK(ndk);
-    }
-
-    setAgentManager(agentManager: AgentManager): void {
-        this.core.setAgentManager(agentManager);
-    }
-
-    getAgentManager(): AgentManager | undefined {
-        return this.core.getAgentManager();
-    }
-
-    // Delegation methods to conversation manager
 
     getConversation(conversationId: string): Conversation | undefined {
         return this.conversationManager.getConversation(conversationId);
     }
 
-    /**
-     * Create conversation with full system prompt context
-     */
     async getOrCreateConversationWithContext(
         conversationId: string,
         context: Partial<SystemPromptContext>
@@ -104,7 +66,7 @@ export class Agent {
         return this.conversationManager.getOrCreateConversationWithContext(conversationId, context);
     }
 
-    getAllConversations(): Map<string, Conversation> {
+    get allConversations(): Map<string, Conversation> {
         return this.conversationManager.getAllConversations();
     }
 
@@ -120,32 +82,11 @@ export class Agent {
         return this.conversationManager.saveConversationToStorage(conversation);
     }
 
-    static async loadFromConfig(
-        name: string,
-        nsec: string,
-        projectPath: string,
-        storage?: ConversationStorage,
-        configFile?: string,
-        projectName?: string,
-        toolRegistry?: ToolRegistry
-    ): Promise<Agent> {
-        const { config, agentEventId } = await loadAgentConfig(
-            name,
-            nsec,
-            projectPath,
-            storage,
-            configFile,
-            projectName,
-            toolRegistry
-        );
-        return new Agent(name, nsec, config, storage, projectName, toolRegistry, agentEventId);
-    }
 
     async saveConfig(projectPath: string): Promise<void> {
-        await saveAgentConfig(this.getName(), this.getConfig(), projectPath);
+        await saveAgentConfig(this.name, this.config, projectPath);
     }
 
-    // Delegation methods to response generator
     async generateResponse(
         conversationId: string,
         llmConfig?: LLMConfig,
@@ -163,11 +104,32 @@ export class Agent {
     }
 
     /**
+     * Set the LLM configuration for this agent
+     */
+    setLLMConfig(llmConfig: LLMConfig): void {
+        this.core.defaultLLMConfig = llmConfig;
+    }
+
+    /**
+     * Get the agent event ID if available
+     */
+    getAgentEventId(): string | undefined {
+        return this.core.agentEventId;
+    }
+
+    /**
+     * Set the agent manager reference
+     */
+    setAgentManager(agentManager: AgentManager): void {
+        this.core.agentManager = agentManager;
+    }
+
+    /**
      * Notify the agent that its LLM configuration has changed
      * This allows the agent to update any cached configuration
      */
     notifyLLMConfigChange(newConfigName: string): void {
-        logger.info(`Agent ${this.getName()} notified of LLM config change to: ${newConfigName}`);
+        logger.info(`Agent ${this.name} notified of LLM config change to: ${newConfigName}`);
         // The actual config will be loaded from AgentConfigurationManager
         // when the agent generates its next response
     }

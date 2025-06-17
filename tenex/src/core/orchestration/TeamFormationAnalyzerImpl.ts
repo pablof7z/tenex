@@ -4,10 +4,10 @@ import type { TeamFormationAnalyzer } from "@/core/orchestration/TeamFormationAn
 import type {
     AgentDefinition,
     CombinedAnalysisResponse,
-    LLMProvider,
     ProjectContext,
     RequestAnalysis,
 } from "@/core/orchestration/types";
+import type { ToolEnabledProvider } from "@/utils/agents/llm/ToolEnabledProvider";
 import { OrchestrationStrategy } from "@/core/orchestration/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
@@ -23,7 +23,7 @@ interface RawAnalysisResponse {
 
 export class TeamFormationAnalyzerImpl implements TeamFormationAnalyzer {
     constructor(
-        private readonly llmProvider: LLMProvider,
+        private readonly llmProvider: ToolEnabledProvider,
         private readonly promptBuilder: PromptBuilder,
         private readonly maxTeamSize: number = 5,
         private readonly typingIndicatorPublisher?: TypingIndicatorPublisher
@@ -106,7 +106,10 @@ export class TeamFormationAnalyzerImpl implements TeamFormationAnalyzer {
 
                     // Call LLM with telemetry
                     logger.info("🚀 Calling LLM for request analysis...");
-                    const response = await this.llmProvider.complete(prompt);
+                    const response = await this.llmProvider.generateResponse(
+                        [{ role: "user", content: prompt }],
+                        {} // Empty config - will use provider's default
+                    );
 
                     logger.info("📨 LLM ANALYSIS RESPONSE:");
                     logger.info("=".repeat(80));
@@ -289,7 +292,7 @@ export class TeamFormationAnalyzerImpl implements TeamFormationAnalyzer {
                 "getConfig" in this.llmProvider &&
                 typeof this.llmProvider.getConfig === "function"
             ) {
-                const config = this.llmProvider.getConfig();
+                const config = this.llmProvider.config;
                 if (config) {
                     return {
                         model: config.model,
@@ -448,7 +451,10 @@ export class TeamFormationAnalyzerImpl implements TeamFormationAnalyzer {
 
                     // Call LLM with telemetry
                     logger.info("🚀 Calling LLM for combined analysis and team formation...");
-                    const response = await this.llmProvider.complete(prompt);
+                    const response = await this.llmProvider.generateResponse(
+                        [{ role: "user", content: prompt }],
+                        {} // Empty config - will use provider's default
+                    );
 
                     logger.info("📨 LLM COMBINED RESPONSE:");
                     logger.info("=".repeat(80));

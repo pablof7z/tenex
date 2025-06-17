@@ -29,10 +29,10 @@ export class ConversationManager {
         logger.debug(`number of agents: ${this.agents.size}`);
 
         for (const [name, agent] of this.agents) {
-            logger.debug(` Processing agent: ${name}, agent pubkey: ${agent.getPubkey()}`);
+            logger.debug(` Processing agent: ${name}, agent pubkey: ${agent.pubkey}`);
 
             // Skip if this is the agent's own message
-            if (agent.getPubkey() === event.author.pubkey) {
+            if (agent.pubkey === event.author.pubkey) {
                 if (!isTaskEvent) {
                     logger.debug(`Skipping adding event to ${name}'s own conversation`);
                 }
@@ -74,7 +74,7 @@ export class ConversationManager {
     ): Promise<void> {
         for (const [name, agent] of this.agents) {
             // Skip if this is the agent's own message
-            if (agent.getPubkey() === event.author.pubkey) {
+            if (agent.pubkey === event.author.pubkey) {
                 continue;
             }
 

@@ -7,7 +7,6 @@ import { AgentSelectionService } from "@/utils/agents/AgentSelectionService";
 import { ChatEventProcessor } from "@/utils/agents/ChatEventProcessor";
 import { ConversationManager } from "@/utils/agents/ConversationManager";
 import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
-import { EnhancedResponsePublisher } from "@/utils/agents/EnhancedResponsePublisher";
 import { EventRouter } from "@/utils/agents/EventRouter";
 import { OrchestrationExecutionService } from "@/utils/agents/OrchestrationExecutionService";
 import { ResponseCoordinator } from "@/utils/agents/ResponseCoordinator";
@@ -35,7 +34,6 @@ export class AgentCommunicationHandler {
     private agents: Map<string, Agent>;
     private orchestrationCoordinator?: OrchestrationCoordinator;
     private contextFactory: SystemPromptContextFactory;
-    private responsePublisher: EnhancedResponsePublisher;
     private agentSelectionService: AgentSelectionService;
     private orchestrationExecutionService?: OrchestrationExecutionService;
 
@@ -54,8 +52,7 @@ export class AgentCommunicationHandler {
         conversationStorage: ConversationStorage,
         agents: Map<string, Agent>,
         projectInfo?: ProjectRuntimeInfo,
-        orchestrationCoordinator?: OrchestrationCoordinator,
-        ndk?: any // NDK instance for testing
+        orchestrationCoordinator?: OrchestrationCoordinator
     ) {
         this.configManager = configManager;
         this.conversationStorage = conversationStorage;
@@ -65,7 +62,6 @@ export class AgentCommunicationHandler {
 
         // Initialize supporting services
         this.contextFactory = new SystemPromptContextFactory(projectInfo);
-        this.responsePublisher = new EnhancedResponsePublisher(ndk || getNDK(), projectInfo);
         this.agentSelectionService = new AgentSelectionService(
             agents,
             projectInfo,
@@ -78,7 +74,7 @@ export class AgentCommunicationHandler {
         if (orchestrationCoordinator) {
             this.orchestrationExecutionService = new OrchestrationExecutionService(
                 orchestrationCoordinator,
-                this.responsePublisher,
+                undefined, // responsePublisher - not available in this context
                 configManager
             );
         }
@@ -89,7 +85,7 @@ export class AgentCommunicationHandler {
         this.responseCoordinator = new ResponseCoordinator(
             configManager,
             this.contextFactory,
-            this.responsePublisher,
+            projectInfo,
             this.orchestrationExecutionService
         );
 
@@ -184,11 +180,12 @@ export class AgentCommunicationHandler {
     }
 
     /**
-     * Update project info and propagate to response publisher
+     * Update project info and propagate to components
      */
     updateProjectInfo(projectInfo: ProjectRuntimeInfo): void {
         this.projectInfo = projectInfo;
-        this.responsePublisher.updateProjectInfo(projectInfo);
+        // Update components that depend on project info
+        // Note: ResponseCoordinator gets project info in constructor, could add update method if needed
     }
 
     /**

@@ -27,11 +27,8 @@ export class AgentConversationManager {
 
         if (!conversation && this.storage) {
             // Try to load from storage
-            const stored = await this.storage.loadConversation(
-                conversationId,
-                this.agentCore.getName()
-            );
-            if (stored && stored.agentName === this.agentCore.getName()) {
+            const stored = await this.storage.loadConversation(conversationId, this.agentCore.name);
+            if (stored && stored.agentName === this.agentCore.name) {
                 conversation = Conversation.fromJSON(stored);
                 this.conversations.set(conversationId, conversation);
             }
@@ -40,7 +37,7 @@ export class AgentConversationManager {
         if (!conversation) {
             // Create new conversation with full context
             const systemPrompt = this.agentCore.buildSystemPromptWithContext(context);
-            conversation = new Conversation(conversationId, this.agentCore.getName(), systemPrompt);
+            conversation = new Conversation(conversationId, this.agentCore.name, systemPrompt);
             this.conversations.set(conversationId, conversation);
 
             // Save to storage if available

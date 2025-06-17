@@ -43,12 +43,12 @@ export class PhasedDeliveryStrategy implements OrchestrationStrategy {
             }
 
             // Create conversation through the lead agent
-            const conversationId = team.taskDefinition.id;
+            const conversationId = team.conversationId;
             const conversation = await leadAgent.getOrCreateConversationWithContext(
                 conversationId,
                 {
-                    agentRole: leadAgent.getConfig().role || "Phase Coordinator",
-                    projectName: leadAgent.getConfig().name,
+                    agentRole: leadAgent.config.role || "Phase Coordinator",
+                    projectName: leadAgent.config.name,
                     orchestrationMetadata: {
                         team,
                         strategy: "PHASED_DELIVERY",
@@ -143,8 +143,8 @@ Please complete your part of this phase.`;
                             await phaseAgent.getOrCreateConversationWithContext(
                                 `${conversation.getId()}-phase${phaseIndex + 1}-${agentName}`,
                                 {
-                                    agentRole: phaseAgent.getConfig().role || "Phase Contributor",
-                                    projectName: phaseAgent.getConfig().name,
+                                    agentRole: phaseAgent.config.role || "Phase Contributor",
+                                    projectName: phaseAgent.config.name,
                                     orchestrationMetadata: {
                                         team,
                                         strategy: "PHASED_DELIVERY",

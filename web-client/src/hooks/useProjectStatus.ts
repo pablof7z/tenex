@@ -90,14 +90,18 @@ export function useProjectStatus() {
                     if (parts.length >= 3) {
                         const projectDir = parts[2];
 
-                        // Parse content to get LLM configurations
+                        // Extract LLM configurations from model tags
                         if (projectDir) {
-                            try {
-                                const content = JSON.parse(event.content);
-                                if (content.llmConfigs && typeof content.llmConfigs === "object") {
-                                    newConfigs.set(projectDir, content.llmConfigs);
+                            const modelTags = event.tags?.filter((tag) => tag[0] === "model") || [];
+                            if (modelTags.length > 0) {
+                                const llmConfigs: Record<string, string> = {};
+                                for (const [, model, configName] of modelTags) {
+                                    if (model && configName) {
+                                        llmConfigs[configName] = model;
+                                    }
                                 }
-                            } catch (_e) {}
+                                newConfigs.set(projectDir, llmConfigs);
+                            }
                         }
                     }
                 }

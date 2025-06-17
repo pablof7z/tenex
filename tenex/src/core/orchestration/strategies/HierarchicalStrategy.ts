@@ -45,8 +45,8 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
             const conversation = await leadAgent.getOrCreateConversationWithContext(
                 conversationId,
                 {
-                    agentName: leadAgent.getName(),
-                    agentConfig: leadAgent.getConfig(),
+                    agentName: leadAgent.name,
+                    agentConfig: leadAgent.config,
                 }
             );
 
@@ -106,8 +106,8 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
                     const memberConversation = await memberAgent.getOrCreateConversationWithContext(
                         `${conversation.getId()}-${delegation.agent}`,
                         {
-                            agentName: memberAgent.getName(),
-                            agentConfig: memberAgent.getConfig(),
+                            agentName: memberAgent.name,
+                            agentConfig: memberAgent.config,
                         }
                     );
 
@@ -194,7 +194,7 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
         }
     }
 
-    private extractDelegations(analysisResult: AgentResponse, members: string[]): Delegation[] {
+    private extractDelegations(_analysisResult: AgentResponse, members: string[]): Delegation[] {
         // Try to extract delegations from content if structured
         // For now, we'll create simple delegations for each member
         // TODO: Parse structured delegation info from the lead agent's response

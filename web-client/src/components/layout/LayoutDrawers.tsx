@@ -1,5 +1,6 @@
 import type { NDKArticle, NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
+import { useUserProjects } from "../../hooks/useUserProjects";
 import { ChatInterface } from "../ChatInterface";
 import { DocumentationView } from "../documentation/DocumentationView";
 import { ProjectDetail } from "../projects/ProjectDetail";
@@ -12,9 +13,6 @@ interface LayoutDrawersProps {
     selectedThread: NDKEvent | null;
     selectedProject: NDKProject | null;
     selectedArticle: NDKArticle | null;
-
-    // Data arrays
-    projects: NDKProject[];
 
     // Setters
     onTaskClose: () => void;
@@ -39,7 +37,6 @@ export function LayoutDrawers({
     selectedThread,
     selectedProject,
     selectedArticle,
-    projects,
     onTaskClose,
     onThreadClose,
     onProjectClose,
@@ -50,6 +47,8 @@ export function LayoutDrawers({
     onThreadSelect,
     onArticleSelect,
 }: LayoutDrawersProps) {
+    // Fetch projects only when needed to find the project for a task/thread
+    const projects = useUserProjects();
     return (
         <>
             {/* Task Detail Drawer */}
@@ -57,8 +56,8 @@ export function LayoutDrawers({
                 <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
                     {selectedTask &&
                         (() => {
-                            // Find the project for this task
-                            const project = projects.find((p) => {
+                            // Find the project for this task if it's a real task with tags
+                            const project = selectedTask.tags ? projects.find((p) => {
                                 const projectReference = selectedTask.tags?.find(
                                     (tag) => tag[0] === "a"
                                 )?.[1];
@@ -70,7 +69,7 @@ export function LayoutDrawers({
                                     }
                                 }
                                 return false;
-                            });
+                            }) : null;
 
                             if (!project) return null;
 
@@ -94,8 +93,8 @@ export function LayoutDrawers({
                 >
                     {selectedThread &&
                         (() => {
-                            // Find the project for this thread
-                            const project = projects.find((p) => {
+                            // Find the project for this thread if it's a real thread with tags
+                            const project = selectedThread.tags ? projects.find((p) => {
                                 const projectRef = selectedThread.tags?.find(
                                     (tag) => tag[0] === "a"
                                 )?.[1];
@@ -107,7 +106,7 @@ export function LayoutDrawers({
                                     }
                                 }
                                 return false;
-                            });
+                            }) : null;
 
                             if (!project) return null;
 

@@ -1,31 +1,54 @@
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { OrchestrationCoordinator } from "@/core/orchestration/integration/OrchestrationCoordinator";
-import type { AgentDefinition, EventContext, Team } from "@/core/orchestration/types";
+import type { Team } from "@/core/orchestration/types";
 import type { Agent } from "@/utils/agents/Agent";
 import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
 import type { SystemPromptContextFactory } from "@/utils/agents/prompts/SystemPromptContextFactory";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 
+export interface AgentSelectionResult {
+    agents: Agent[];
+    team?: Team;
+    reasoning?: string;
+}
+
+export interface AgentSelectionDependencies {
+    isEventFromAnyAgent: (eventPubkey: string) => Promise<boolean>;
+    getAgentByPubkey: (pubkey: string) => Promise<Agent | undefined>;
+    getAllAvailableAgents?: () => Promise<
+        Map<string, { description: string; role: string; capabilities: string }>
+    >;
+}
+
 /**
- * Service for determining which agents should respond to events
- * Extracted from AgentCommunicationHandler to reduce complexity
+ * Service responsible for determining which agents should respond to events
+ * Handles p-tag prioritization, orchestration integration, and anti-chatter logic
  */
 export class AgentSelectionService {
+    private dependencies?: AgentSelectionDependencies;
+
     constructor(
         private agents: Map<string, Agent>,
         private projectInfo?: ProjectRuntimeInfo,
         private orchestrationCoordinator?: OrchestrationCoordinator,
         private contextFactory?: SystemPromptContextFactory,
-        private conversationStorage?: ConversationStorage,
-        private dependencies?: {
-            isEventFromAnyAgent: (eventPubkey: string) => Promise<boolean>;
-            getAgentByPubkey: (pubkey: string) => Promise<Agent | undefined>;
-            getAllAvailableAgents?: () => Promise<
-                Map<string, { description: string; role: string; capabilities: string }>
-            >;
-        }
+        private conversationStorage?: ConversationStorage
     ) {}
+
+    /**
+     * Update the agents map
+     */
+    updateAgents(agents: Map<string, Agent>): void {
+        this.agents = agents;
+    }
+
+    /**
+     * Update dependencies for external function calls
+     */
+    updateDependencies(dependencies: AgentSelectionDependencies): void {
+        this.dependencies = dependencies;
+    }
 
     /**
      * Determine which agents should respond to an event
@@ -33,356 +56,140 @@ export class AgentSelectionService {
     async determineRespondingAgents(
         event: NDKEvent,
         conversationId: string,
-        mentionedPubkeys: string[],
-        isTaskEvent: boolean
-    ): Promise<{ agents: Agent[]; team?: Team }> {
-        this.logAnalysisStart(event, conversationId, mentionedPubkeys, isTaskEvent);
-
-        // Check if the event is from another agent
-        const isFromAgent = await this.checkIfEventFromAgent(event);
-
-        // Apply anti-chatter logic
-        if (await this.shouldApplyAntiChatter(isFromAgent, mentionedPubkeys, isTaskEvent)) {
-            return { agents: [] };
-        }
-
-        // Get existing team and participating agents
-        const { existingTeam } = await this.getExistingTeamInfo(conversationId);
-
-        // Priority 1: P-tagged agents
-        const pTaggedAgents = await this.getPTaggedAgents(mentionedPubkeys, event);
-        if (pTaggedAgents.length > 0) {
-            return { agents: pTaggedAgents };
-        }
-
-        // Priority 2: Use existing team if available
-        if (existingTeam && !isFromAgent) {
-            const teamAgents = await this.getTeamAgents(existingTeam, event);
-            return { agents: teamAgents, team: existingTeam };
-        }
-
-        // Priority 3: Use orchestration for new conversations
-        logger.info("🔄 Checking orchestration path:");
-        logger.info(`   Is from agent: ${isFromAgent}`);
-        logger.info(`   Has orchestration coordinator: ${!!this.orchestrationCoordinator}`);
-
-        if (!isFromAgent && this.orchestrationCoordinator) {
-            return await this.useOrchestrationForTeamFormation(event, conversationId);
-        }
-
-        this.logOrchestrationSkipped(isFromAgent);
-        return this.logFinalResult([]);
-    }
-
-    /**
-     * Log the start of agent analysis
-     */
-    private logAnalysisStart(
-        event: NDKEvent,
-        conversationId: string,
-        mentionedPubkeys: string[],
-        isTaskEvent: boolean
-    ): void {
-        logger.info("🔍 DETERMINE RESPONDING AGENTS - Starting analysis");
-        logger.info(`   Event ID: ${event.id}`);
-        logger.info(`   Conversation ID: ${conversationId}`);
-        logger.info(`   Mentioned pubkeys: ${JSON.stringify(mentionedPubkeys)}`);
-        logger.info(`   Event author: ${event.pubkey}`);
-        logger.info(`   Is task event: ${isTaskEvent}`);
-    }
-
-    /**
-     * Check if the event is from an agent
-     */
-    private async checkIfEventFromAgent(event: NDKEvent): Promise<boolean> {
-        const isFromAgent = await this.dependencies?.isEventFromAnyAgent(event.author.pubkey);
-
-        return isFromAgent ?? false;
-    }
-
-    /**
-     * Apply anti-chatter logic
-     */
-    private async shouldApplyAntiChatter(
-        isFromAgent: boolean,
-        mentionedPubkeys: string[],
-        isTaskEvent: boolean
-    ): Promise<boolean> {
-        if (isFromAgent && mentionedPubkeys.length === 0) {
-            const eventType = isTaskEvent ? "Task" : "Event";
-            logger.warn(
-                `🚫 ANTI-CHATTER TRIGGERED: ${eventType} event is from an agent with no agents selected. No agents will respond to avoid unnecessary chatter.`
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Get existing team information from conversations
-     */
-    private async getExistingTeamInfo(conversationId: string): Promise<{
-        participatingAgents: Agent[];
-        existingTeam?: Team;
-    }> {
-        const participatingAgents: Agent[] = [];
-        let existingTeam: Team | undefined;
-
-        for (const [_name, agent] of this.agents) {
-            const conversation = agent.getConversation(conversationId);
-            if (conversation) {
-                // Check for existing team in metadata
-                const teamMetadata = conversation.getMetadata("team") as Team | undefined;
-                if (teamMetadata && !existingTeam) {
-                    existingTeam = teamMetadata;
-                    logger.debug(` Found existing team: ${JSON.stringify(existingTeam)}`);
-                }
-
-                if (conversation.isParticipant(agent.getPubkey())) {
-                    participatingAgents.push(agent);
-                }
-            }
-        }
-
-        logger.debug(` participatingAgents count: ${participatingAgents.length}`);
-        return { participatingAgents, existingTeam };
-    }
-
-    /**
-     * Get agents that are p-tagged (mentioned)
-     */
-    private async getPTaggedAgents(mentionedPubkeys: string[], event: NDKEvent): Promise<Agent[]> {
-        const agentsToRespond: Agent[] = [];
-
-        if (mentionedPubkeys.length > 0) {
-            logger.debug(` Processing ${mentionedPubkeys.length} mentioned pubkeys`);
-            for (const pubkey of mentionedPubkeys) {
-                logger.debug(` Looking up agent for pubkey: ${pubkey}`);
-                const mentionedAgent = await this.dependencies?.getAgentByPubkey(pubkey);
-                logger.debug(` Found agent: ${mentionedAgent ? mentionedAgent.getName() : "null"}`);
-                if (mentionedAgent && mentionedAgent.getPubkey() !== event.author.pubkey) {
-                    agentsToRespond.push(mentionedAgent);
-                    logger.info(
-                        `Agent '${mentionedAgent.getName()}' was p-tagged and will join the conversation`
-                    );
-                } else if (mentionedAgent && mentionedAgent.getPubkey() === event.author.pubkey) {
-                    logger.debug(` Skipping self-mention for agent: ${mentionedAgent.getName()}`);
-                }
-            }
-        }
-
-        return agentsToRespond;
-    }
-
-    /**
-     * Get agents from an existing team
-     */
-    private async getTeamAgents(existingTeam: Team, event: NDKEvent): Promise<Agent[]> {
-        const agentsToRespond: Agent[] = [];
-        logger.info(`Using existing team for conversation: ${existingTeam.id}`);
-
-        for (const memberName of existingTeam.members) {
-            const agent = this.agents.get(memberName);
-            if (agent && agent.getPubkey() !== event.author.pubkey) {
-                agentsToRespond.push(agent);
-                logger.debug(` Added team member: ${memberName}`);
-            }
-        }
-
-        return agentsToRespond;
-    }
-
-    /**
-     * Use orchestration to form a new team
-     */
-    private async useOrchestrationForTeamFormation(
-        event: NDKEvent,
-        conversationId: string
-    ): Promise<{ agents: Agent[]; team?: Team }> {
+        mentionedPubkeys: string[] = [],
+        isTaskEvent = false
+    ): Promise<AgentSelectionResult> {
         try {
-            logger.info("🎭 ORCHESTRATION PATH - Starting team formation");
-            logger.info(
-                `   Orchestration coordinator available: ${!!this.orchestrationCoordinator}`
-            );
+            // 1. Check for p-tagged agents (highest priority)
+            const pTaggedAgents = await this.findPTaggedAgents(mentionedPubkeys);
+            if (pTaggedAgents.length > 0) {
+                logger.info(`🎯 Found ${pTaggedAgents.length} p-tagged agents`);
+                return {
+                    agents: pTaggedAgents,
+                    reasoning: "P-tagged agents selected",
+                };
+            }
 
-            // Build agent definitions for orchestration
-            const availableAgentDefs = await this.buildAgentDefinitions();
+            // 2. Check if event is from an agent (anti-chatter logic)
+            if (this.dependencies?.isEventFromAnyAgent) {
+                const isFromAgent = await this.dependencies.isEventFromAnyAgent(event.pubkey);
+                if (isFromAgent && mentionedPubkeys.length === 0) {
+                    logger.info(
+                        "🚫 Applying anti-chatter logic: no response to agent message without p-tags"
+                    );
+                    return {
+                        agents: [],
+                        reasoning: "Anti-chatter: agent message without p-tags",
+                    };
+                }
+            }
 
-            const eventContext: EventContext = {
-                conversationId,
-                hasPTags: false,
-                availableAgents: availableAgentDefs,
-                projectContext: {
-                    projectInfo: this.projectInfo,
-                    repository: this.projectInfo?.repository,
-                    title: this.projectInfo?.title,
-                },
-                originalEvent: event,
+            // 3. Check for existing team in conversation
+            const existingTeam = await this.findExistingTeam(conversationId);
+            if (existingTeam) {
+                logger.info(`🔄 Found existing team: ${existingTeam.id}`);
+                const teamAgents = await this.getTeamAgents(existingTeam);
+                return {
+                    agents: teamAgents,
+                    team: existingTeam,
+                    reasoning: "Existing team continuation",
+                };
+            }
+
+            // 4. Use orchestration to form new team
+            if (this.orchestrationCoordinator) {
+                logger.info("🤝 Using orchestration to determine responding agents");
+                const orchestrationResult = await this.orchestrationCoordinator.handleUserEvent(
+                    event,
+                    conversationId,
+                    this.projectInfo
+                );
+
+                if (orchestrationResult.success && orchestrationResult.team) {
+                    const teamAgents = await this.getTeamAgents(orchestrationResult.team);
+                    return {
+                        agents: teamAgents,
+                        team: orchestrationResult.team,
+                        reasoning: "New team formed via orchestration",
+                    };
+                }
+            }
+
+            // 5. Fallback to default agent
+            logger.info("🔧 Falling back to default agent");
+            const defaultAgent = this.agents.get("code");
+            if (defaultAgent) {
+                return {
+                    agents: [defaultAgent],
+                    reasoning: "Fallback to default agent",
+                };
+            }
+
+            // 6. No agents available
+            logger.warn("⚠️ No agents available to respond");
+            return {
+                agents: [],
+                reasoning: "No agents available",
             };
-
-            logger.info("🎯 Calling orchestration coordinator...");
-            logger.info(`   Available agents: ${Array.from(availableAgentDefs.keys()).join(", ")}`);
-            logger.info(`   Project title: ${this.projectInfo?.title || "unknown"}`);
-
-            const orchestrationResult = await this.orchestrationCoordinator!.handleUserEvent(
-                event,
-                eventContext
-            );
-
-            logger.info("🎭 Orchestration result received:");
-            logger.info(`   Team formed: ${orchestrationResult.teamFormed}`);
-            logger.info(`   Team object exists: ${!!orchestrationResult.team}`);
-
-            if (orchestrationResult.team) {
-                return await this.handleOrchestrationSuccess(
-                    orchestrationResult.team,
-                    conversationId
-                );
-            }
-            logger.warn("⚠️  Orchestration completed but no team was formed");
-            logger.warn(`   Team formed flag: ${orchestrationResult.teamFormed}`);
-            logger.warn(`   Team object: ${JSON.stringify(orchestrationResult.team)}`);
-            logger.warn("   This means no agents were selected by orchestration");
-            return { agents: [] };
         } catch (error) {
-            logger.error(`💥 ORCHESTRATION FAILED: ${error}`);
-            logger.error(
-                `   Error type: ${error instanceof Error ? error.constructor.name : typeof error}`
-            );
-            if (error instanceof Error) {
-                logger.error(`   Error stack: ${error.stack}`);
-            }
-            // Handle orchestration failures gracefully by returning empty agent list
-            // This prevents the entire event processing from failing
-            return { agents: [] };
+            logger.error(`Failed to determine responding agents: ${error}`);
+            return {
+                agents: [],
+                reasoning: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            };
         }
     }
 
     /**
-     * Build agent definitions for orchestration
+     * Find agents that are mentioned via p-tags
      */
-    private async buildAgentDefinitions(): Promise<Map<string, AgentDefinition>> {
-        const availableAgentDefs = new Map<string, AgentDefinition>();
+    private async findPTaggedAgents(mentionedPubkeys: string[]): Promise<Agent[]> {
+        const pTaggedAgents: Agent[] = [];
 
-        if (this.dependencies?.getAllAvailableAgents) {
-            logger.info("📋 Getting agent info from getAllAvailableAgentsFn...");
-            const allAgentInfo = await this.dependencies.getAllAvailableAgents();
-            logger.info(`   Found ${allAgentInfo.size} agents from function`);
-            for (const [name, info] of allAgentInfo) {
-                availableAgentDefs.set(name, {
-                    name,
-                    description: info.description || "",
-                    role: info.role || "",
-                    instructions: "",
-                });
-                logger.info(
-                    `   Agent ${name}: ${info.description || "no description"} (${info.role || "no role"})`
-                );
-            }
-        } else {
-            // Fallback: use basic info from agents map
-            logger.info("📋 Using fallback agent info from agents map...");
-            for (const [name, _agent] of this.agents) {
-                availableAgentDefs.set(name, {
-                    name,
-                    description: `Agent ${name}`,
-                    role: "AI Assistant",
-                    instructions: "",
-                });
-                logger.info(`   Agent ${name}: fallback description`);
+        for (const pubkey of mentionedPubkeys) {
+            if (this.dependencies?.getAgentByPubkey) {
+                const agent = await this.dependencies.getAgentByPubkey(pubkey);
+                if (agent) {
+                    pTaggedAgents.push(agent);
+                }
             }
         }
 
-        return availableAgentDefs;
+        return pTaggedAgents;
     }
 
     /**
-     * Handle successful orchestration result
+     * Find existing team in conversation
      */
-    private async handleOrchestrationSuccess(
-        team: Team,
-        conversationId: string
-    ): Promise<{ agents: Agent[]; team: Team }> {
-        const agentsToRespond: Agent[] = [];
-        logger.info(
-            `✅ Orchestration formed team '${team.id}' with members: ${team.members.join(", ")}`
-        );
+    private async findExistingTeam(conversationId: string): Promise<Team | undefined> {
+        // Check if any agent has an existing conversation with team metadata
+        for (const [_name, agent] of this.agents) {
+            const conversation = agent.getConversation?.(conversationId);
+            if (conversation && conversation.isParticipant?.(conversationId)) {
+                const team = conversation.getMetadata?.("team") as Team | undefined;
+                if (team) {
+                    return team;
+                }
+            }
+        }
+        return undefined;
+    }
 
-        // Get agents for the team members and save team metadata
+    /**
+     * Get agents from team members
+     */
+    private async getTeamAgents(team: Team): Promise<Agent[]> {
+        const teamAgents: Agent[] = [];
+
         for (const memberName of team.members) {
             const agent = this.agents.get(memberName);
             if (agent) {
-                agentsToRespond.push(agent);
-
-                // Save team metadata to agent's conversation
-                if (this.contextFactory && this.conversationStorage) {
-                    const context = await this.contextFactory.createContext(agent, false);
-                    const conversation = await agent.getOrCreateConversationWithContext(
-                        conversationId,
-                        context
-                    );
-
-                    if (conversation) {
-                        conversation.setMetadata("team", team);
-                        await agent.saveConversationToStorage(conversation);
-                        logger.debug(` Saved team metadata to ${memberName}'s conversation`);
-                    }
-                }
+                teamAgents.push(agent);
+            } else {
+                logger.warn(`Team member ${memberName} not found in available agents`);
             }
         }
 
-        return { agents: agentsToRespond, team };
-    }
-
-    /**
-     * Log when orchestration is skipped
-     */
-    private logOrchestrationSkipped(isFromAgent: boolean): void {
-        logger.info("🚫 ORCHESTRATION SKIPPED:");
-        logger.info(`   Is from agent: ${isFromAgent}`);
-        logger.info(`   Has orchestration coordinator: ${!!this.orchestrationCoordinator}`);
-        logger.info(
-            `   Reason: ${isFromAgent ? "Event from agent" : "No orchestration coordinator"}`
-        );
-    }
-
-    /**
-     * Log final result
-     */
-    private logFinalResult(agentsToRespond: Agent[]): { agents: Agent[] } {
-        logger.info("📊 FINAL RESULT - Agent determination complete:");
-        logger.info(`   Final agentsToRespond count: ${agentsToRespond.length}`);
-        logger.info(
-            `   Final agentsToRespond names: ${agentsToRespond.map((a) => a.getName()).join(", ")}`
-        );
-
-        if (agentsToRespond.length === 0) {
-            logger.warn("⚠️  NO AGENTS SELECTED TO RESPOND");
-            logger.warn(
-                "   This means the event will be processed but no responses will be generated"
-            );
-        }
-
-        return { agents: agentsToRespond };
-    }
-
-    /**
-     * Update agents map
-     */
-    updateAgents(agents: Map<string, Agent>): void {
-        this.agents = agents;
-    }
-
-    /**
-     * Update dependencies
-     */
-    updateDependencies(dependencies: {
-        isEventFromAnyAgent: (eventPubkey: string) => Promise<boolean>;
-        getAgentByPubkey: (pubkey: string) => Promise<Agent | undefined>;
-        getAllAvailableAgents?: () => Promise<
-            Map<string, { description: string; role: string; capabilities: string }>
-        >;
-    }): void {
-        this.dependencies = dependencies;
+        return teamAgents;
     }
 }

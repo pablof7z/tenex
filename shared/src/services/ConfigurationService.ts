@@ -123,13 +123,10 @@ const UnifiedLLMConfigSchema = z.object({
 });
 
 // Agent config schema
-const AgentConfigEntrySchema = z.union([
-    z.string(), // Legacy format
-    z.object({
-        nsec: z.string(),
-        file: z.string().optional(),
-    }),
-]);
+const AgentConfigEntrySchema = z.object({
+    nsec: z.string(),
+    file: z.string().optional(),
+});
 
 const AgentsJsonSchema = z.record(AgentConfigEntrySchema);
 
@@ -293,17 +290,6 @@ export class ConfigurationService {
      */
     async loadProjectConfig(basePath: string): Promise<ProjectConfig> {
         const filePath = path.join(basePath, "config.json");
-
-        // Check for legacy metadata.json first
-        const legacyPath = path.join(basePath, "metadata.json");
-        if ((await fileExists(legacyPath)) && !(await fileExists(filePath))) {
-            logger.info("Migrating metadata.json to config.json");
-            const legacyData = await readJsonFile(legacyPath);
-            const config = ProjectConfigSchema.parse(legacyData);
-            await this.saveProjectConfig(basePath, config);
-            return config;
-        }
-
         return this.loadConfig(filePath, ProjectConfigSchema);
     }
 
@@ -339,20 +325,7 @@ export class ConfigurationService {
      */
     async loadAgentsConfig(basePath: string): Promise<AgentsJson> {
         const filePath = path.join(basePath, "agents.json");
-        const rawData = await this.loadConfig(filePath, AgentsJsonSchema, {});
-
-        // Convert legacy format to new format
-        const converted: AgentsJson = {};
-        for (const [key, value] of Object.entries(rawData)) {
-            if (typeof value === "string") {
-                // Legacy format - convert to new format
-                converted[key] = { nsec: value };
-            } else {
-                converted[key] = value;
-            }
-        }
-
-        return converted;
+        return this.loadConfig(filePath, AgentsJsonSchema, {});
     }
 
     /**

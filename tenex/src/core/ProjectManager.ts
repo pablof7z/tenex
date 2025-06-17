@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { toKebabCase } from "@/utils/agents";
+import { createAgent } from "@/utils/agents/createAgent";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
@@ -20,7 +21,6 @@ import type {
 import type { LLMConfig } from "@tenex/types/llm";
 import type { Agent, ProjectData } from "@tenex/types/projects";
 import type { TelemetryConfig } from "@tenex/types/telemetry";
-import { nip19 } from "nostr-tools";
 
 const execAsync = promisify(exec);
 
@@ -53,7 +53,7 @@ export class ProjectManager implements IProjectManager {
         try {
             // Fetch project from Nostr
             const project = await this.fetchProject(naddr, ndk);
-            const projectData = this.projectToProjectData(project, naddr);
+            const projectData = this.projectToProjectData(project);
 
             // Clone repository if provided
             if (projectData.repoUrl) {
@@ -95,18 +95,11 @@ export class ProjectManager implements IProjectManager {
                 throw new Error("Project configuration missing projectNaddr");
             }
 
-            // Decode naddr to get project details
-            const decoded = nip19.decode(config.projectNaddr);
-            if (decoded.type !== "naddr") {
-                throw new Error("Invalid naddr in configuration");
-            }
-
-            const addressPointer = decoded.data as nip19.AddressPointer;
-            const { identifier, pubkey } = addressPointer;
-
+            // For now, return a simplified version without decoding naddr
+            // The identifier and pubkey will be filled when the project is fetched from Nostr
             return {
-                identifier,
-                pubkey,
+                identifier: config.projectNaddr, // Use naddr as identifier temporarily
+                pubkey: "", // Will be filled when fetched from Nostr
                 naddr: config.projectNaddr,
                 title: config.title || "Untitled Project",
                 description: config.description,
@@ -143,23 +136,8 @@ export class ProjectManager implements IProjectManager {
     }
 
     private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
-        // Decode naddr to get project details
-        const decoded = nip19.decode(naddr);
-        if (decoded.type !== "naddr") {
-            throw new Error("Invalid naddr provided");
-        }
-
-        const addressPointer = decoded.data as nip19.AddressPointer;
-        const filter = {
-            kinds: [addressPointer.kind],
-            authors: [addressPointer.pubkey],
-            "#d": [addressPointer.identifier],
-        };
-
-        const event = await ndk.fetchEvent(filter, {
-            closeOnEose: true,
-            groupable: false,
-        });
+        // Fetch the project event directly using NDK
+        const event = await ndk.fetchEvent(naddr);
 
         if (!event) {
             throw new Error("Project not found on Nostr");
@@ -168,7 +146,7 @@ export class ProjectManager implements IProjectManager {
         return event as NDKProject;
     }
 
-    private projectToProjectData(project: NDKProject, naddr: string): ProjectData {
+    private projectToProjectData(project: NDKProject): ProjectData {
         const repoTag = project.tagValue("repo");
         const hashtagTags = project.tags
             .filter((t) => t[0] === "t")
@@ -183,9 +161,9 @@ export class ProjectManager implements IProjectManager {
         return {
             identifier: project.dTag || "",
             pubkey: project.pubkey,
-            naddr,
+            naddr: project.encode(),
             title: project.title || "Untitled Project",
-            description: project.summary || project.content,
+            description: project.description,
             repoUrl: repoTag,
             hashtags: hashtagTags,
             agentEventIds: agentTags,
@@ -283,26 +261,32 @@ export class ProjectManager implements IProjectManager {
             const agentFile = path.join(projectPath, ".tenex", "agents", `${eventId}.json`);
             try {
                 const agentData = JSON.parse(await fs.readFile(agentFile, "utf-8"));
-                const agentName = this.toKebabCase(agentData.name || "agent");
-                agents[agentName] = {
-                    nsec: await this.generateNsec(),
-                    file: eventId,
-                };
+                const agentName = agentData.name || "agent";
+
+                await createAgent({
+                    projectPath,
+                    projectTitle: project.title || "Project",
+                    agentName,
+                    agentEventId: eventId,
+                });
             } catch (error) {
-                logger.warn("Failed to load agent file", { error, eventId });
+                logger.warn("Failed to create agent from event", { error, eventId });
             }
         }
 
+        // Reload configuration to get updated agents
+        const updatedConfiguration = await configurationService.loadConfiguration(projectPath);
+        const updatedAgents = updatedConfiguration.agents || {};
+
         // If no agents were created from events, create a default agent
-        if (Object.keys(agents).length === 0) {
+        if (Object.keys(updatedAgents).length === 0) {
             logger.info("No agents found in project, creating default agent");
-            agents.default = {
+            updatedAgents.default = {
                 nsec: await this.generateNsec(),
             };
+            updatedConfiguration.agents = updatedAgents;
+            await configurationService.saveConfiguration(projectPath, updatedConfiguration);
         }
-
-        configuration.agents = agents;
-        await configurationService.saveConfiguration(projectPath, configuration);
     }
 
     private async initializeLLMConfig(
@@ -428,11 +412,9 @@ export class ProjectManager implements IProjectManager {
     private async generateNsec(): Promise<string> {
         const { stdout } = await execAsync("openssl rand -hex 32");
         const privateKeyHex = stdout.trim();
-        // Convert hex string to Uint8Array
-        const privateKeyBytes = new Uint8Array(
-            privateKeyHex.match(/.{1,2}/g)!.map((byte) => Number.parseInt(byte, 16))
-        );
-        return nip19.nsecEncode(privateKeyBytes);
+        // NDKPrivateKeySigner can accept hex private key directly
+        const signer = new NDKPrivateKeySigner(privateKeyHex);
+        return signer.nsec;
     }
 
     private buildProjectProfile(projectName: string, description?: string): AgentProfile {

@@ -32,8 +32,8 @@ export class SystemPromptContextFactory {
      * Create a complete SystemPromptContext for an agent
      */
     async createContext(agent: Agent, isAgentToAgent = false): Promise<SystemPromptContext> {
-        const agentName = agent.getName();
-        const agentConfig = agent.getConfig();
+        const agentName = agent.name;
+        const agentConfig = agent.config;
 
         // Get project rules for this agent
         const projectRules = this.getProjectRulesForAgent(agentName);
@@ -45,7 +45,7 @@ export class SystemPromptContextFactory {
         const additionalRules = await this.buildAdditionalRules(agentName);
 
         // Get available tools for this agent
-        const availableTools = agent.getAvailableTools();
+        const availableTools = agent.availableTools;
 
         return {
             agentName,

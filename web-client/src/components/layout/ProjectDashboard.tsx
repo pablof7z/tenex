@@ -1,4 +1,4 @@
-import type { NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { Plus } from "lucide-react";
 import { ProjectColumn } from "../projects/ProjectColumn";
 import { Button } from "../ui/button";
@@ -6,9 +6,6 @@ import { Button } from "../ui/button";
 interface ProjectDashboardProps {
     projects: NDKProject[];
     filteredProjects: NDKProject[];
-    tasks: NDKTask[];
-    statusUpdates: NDKEvent[];
-    threads: NDKEvent[];
     onProjectClick: (project: NDKProject) => void;
     onTaskCreate: (project: NDKProject) => void;
     onThreadClick: (thread: NDKEvent) => void;
@@ -18,9 +15,6 @@ interface ProjectDashboardProps {
 export function ProjectDashboard({
     projects,
     filteredProjects,
-    tasks,
-    statusUpdates,
-    threads,
     onProjectClick,
     onTaskCreate,
     onThreadClick,
@@ -87,9 +81,6 @@ export function ProjectDashboard({
                                 <ProjectColumn
                                     key={project.tagId()}
                                     project={project}
-                                    tasks={tasks}
-                                    statusUpdates={statusUpdates}
-                                    threads={threads}
                                     onProjectClick={onProjectClick}
                                     onTaskCreate={onTaskCreate}
                                     onThreadClick={onThreadClick}

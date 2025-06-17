@@ -169,7 +169,7 @@ describe("SingleResponderStrategy", () => {
 
     describe("getName", () => {
         it("should return correct strategy name", () => {
-            expect(strategy.getName()).toBe("SingleResponderStrategy");
+            expect(strategy.name).toBe("SingleResponderStrategy");
         });
     });
 

@@ -299,9 +299,9 @@ describe("ReflectionSystem", () => {
             // Verify only participants were selected
             const selectedAgents = mockLessonGenerator.generateLessons.mock.calls[0][1];
             expect(selectedAgents).toHaveLength(2);
-            expect(selectedAgents.map((a) => a.getName())).toContain("agent1");
-            expect(selectedAgents.map((a) => a.getName())).toContain("agent3");
-            expect(selectedAgents.map((a) => a.getName())).not.toContain("agent2");
+            expect(selectedAgents.map((a) => a.name)).toContain("agent1");
+            expect(selectedAgents.map((a) => a.name)).toContain("agent3");
+            expect(selectedAgents.map((a) => a.name)).not.toContain("agent2");
         });
 
         it("should handle case with no agents to reflect", async () => {

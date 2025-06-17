@@ -134,10 +134,10 @@ describe("AgentCommunicationHandler with Orchestration", () => {
                 Promise.resolve(agents.get(name) || agents.values().next().value)
             ),
             getAgentByPubkey: vi.fn((pubkey) =>
-                Promise.resolve(Array.from(agents.values()).find((a) => a.getPubkey() === pubkey))
+                Promise.resolve(Array.from(agents.values()).find((a) => a.pubkey === pubkey))
             ),
             isEventFromAnyAgent: vi.fn((pubkey) =>
-                Promise.resolve(Array.from(agents.values()).some((a) => a.getPubkey() === pubkey))
+                Promise.resolve(Array.from(agents.values()).some((a) => a.pubkey === pubkey))
             ),
             formatAvailableAgentsForPrompt: vi.fn(() =>
                 Promise.resolve("Available agents: code, planner, debugger")
@@ -239,7 +239,7 @@ describe("AgentCommunicationHandler with Orchestration", () => {
                     mockConversation
                 );
                 (agent.generateResponse as ReturnType<typeof vi.fn>).mockResolvedValue({
-                    content: `Response from ${agent.getName()}`,
+                    content: `Response from ${agent.name}`,
                     metadata: { model: "test-model" },
                 });
             }
@@ -301,7 +301,7 @@ describe("AgentCommunicationHandler with Orchestration", () => {
                     mockConversation
                 );
                 (agent.generateResponse as ReturnType<typeof vi.fn>).mockResolvedValue({
-                    content: `Response from ${agent.getName()}`,
+                    content: `Response from ${agent.name}`,
                     metadata: { model: "test-model" },
                 });
             }
@@ -399,7 +399,7 @@ describe("AgentCommunicationHandler with Orchestration", () => {
                     mockConversation
                 );
                 (agent.generateResponse as ReturnType<typeof vi.fn>).mockResolvedValue({
-                    content: `Response from ${agent.getName()}`,
+                    content: `Response from ${agent.name}`,
                     metadata: { model: "test-model" },
                 });
             }
@@ -528,7 +528,7 @@ describe("AgentCommunicationHandler with Orchestration", () => {
                     mockConversation
                 );
                 (agent.generateResponse as ReturnType<typeof vi.fn>).mockResolvedValue({
-                    content: `Task response from ${agent.getName()}`,
+                    content: `Task response from ${agent.name}`,
                     metadata: { model: "test-model" },
                 });
             }

@@ -2,15 +2,17 @@ import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { createOrchestrationCoordinator } from "@/core/orchestration/OrchestrationFactory";
 import type { OrchestrationCoordinator } from "@/core/orchestration/integration/OrchestrationCoordinator";
 import { getNDK } from "@/nostr/ndkClient";
-import type { Agent } from "@/utils/agents/Agent";
+import { publishTypingIndicator } from "@/utils/agents";
+import { Agent } from "@/utils/agents/Agent";
+import { loadAgentConfig } from "@/utils/agents/core/AgentConfigManager";
 import { AgentCommunicationHandler } from "@/utils/agents/AgentCommunicationHandler";
 import { AgentConfigurationManager } from "@/utils/agents/AgentConfigurationManager";
 import { AgentOrchestrator } from "@/utils/agents/AgentOrchestrator";
 import { ConversationStorage } from "@/utils/agents/ConversationStorage";
+import { createLLMProvider } from "@/utils/agents/llm/LLMFactory";
 import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import type { ToolDefinition } from "@/utils/agents/tools/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 import type { LLMConfig } from "@tenex/types/llm";
 
@@ -28,8 +30,6 @@ export class AgentManager {
     private eventHandler: AgentCommunicationHandler;
     private orchestrator: AgentOrchestrator;
     private orchestrationCoordinator?: OrchestrationCoordinator;
-
-    private ndk = getNDK();
 
     constructor(projectPath: string, projectInfo?: ProjectRuntimeInfo) {
         this.projectPath = projectPath;
@@ -51,13 +51,15 @@ export class AgentManager {
             this.conversationStorage,
             new Map(), // Empty map for now
             this._projectInfo,
-            undefined, // No orchestration coordinator yet
-            this.ndk // Pass NDK instance if available
+            undefined // No orchestration coordinator yet
         );
 
         // Set dependencies for event handler
         this.eventHandler.setDependencies({
-            getAgent: (name) => this.orchestrator.getAgent(name),
+            getAgent: (name) =>
+                name
+                    ? this.orchestrator.getAgent(name)
+                    : Promise.reject(new Error("Agent name is required")),
             getAgentByPubkey: (pubkey) => this.orchestrator.getAgentByPubkey(pubkey),
             isEventFromAnyAgent: (pubkey) => this.orchestrator.isEventFromAnyAgent(pubkey),
             formatAvailableAgentsForPrompt: (excludeAgent) =>
@@ -69,6 +71,62 @@ export class AgentManager {
 
         // Set agent manager reference for all agents
         this.orchestrator.setAgentManagerForAll(this);
+    }
+
+    /**
+     * Load agents from configuration files
+     */
+    private async loadAgents(): Promise<Map<string, Agent>> {
+        const agents = new Map<string, Agent>();
+        const agentsConfig = await this.configManager.loadAgentsConfig();
+
+        for (const [name, config] of Object.entries(agentsConfig)) {
+            const agent = await this.loadAgent(name, config.nsec, config.file);
+            agents.set(name, agent);
+        }
+
+        return agents;
+    }
+
+    /**
+     * Load an Agent instance from existing configuration (moved from AgentOrchestrator)
+     */
+    private async loadAgent(name: string, nsec: string, configFile?: string): Promise<Agent> {
+        // Create agent-specific tool registry
+        const agentToolRegistry = this.orchestrator.getToolManager().createAgentRegistry(name);
+
+        const { config, agentEventId } = await loadAgentConfig(
+            name,
+            nsec,
+            this.configManager.getProjectPath(),
+            this.conversationStorage,
+            configFile,
+            this._projectInfo?.title || "unknown",
+            agentToolRegistry
+        );
+        const agent = new Agent(name, nsec, config, this.conversationStorage, this._projectInfo?.title || "unknown", agentToolRegistry, agentEventId);
+
+        // Set agent-specific LLM config or fall back to default
+        const llmConfig = this.configManager.getLLMConfigForAgent(name);
+        if (llmConfig) {
+            agent.setLLMConfig(llmConfig);
+        }
+
+        // Enable remember_lesson tool if agent has an event ID
+        const agentEventId = agent.getAgentEventId();
+        if (agentEventId) {
+            this.orchestrator
+                .getToolManager()
+                .enableRememberLessonTool(name, agentEventId, getNDK());
+        }
+
+        // Enable find_agent tool for agents with orchestration capability
+        const agentConfig = agent.config;
+        const hasOrchestrationCapability =
+            agentConfig.role?.toLowerCase().includes("orchestrator") || name === "default"; // Default agent has orchestration capability
+        this.orchestrator.getToolManager().enableFindAgentTool(name, hasOrchestrationCapability);
+
+        return agent;
     }
 
     async initialize(): Promise<void> {
@@ -87,8 +145,11 @@ export class AgentManager {
                 `After initialization - Default LLM: ${this.configManager.getDefaultLLMName()}`
             );
 
-            // Initialize orchestrator (loads agents)
-            await this.orchestrator.initialize();
+            // Load agents before passing to orchestrator
+            const loadedAgents = await this.loadAgents();
+
+            // Initialize orchestrator with created agents
+            await this.orchestrator.initialize(loadedAgents);
 
             // Create orchestration coordinator after everything is initialized
             if (this._projectInfo) {
@@ -120,8 +181,7 @@ export class AgentManager {
                 );
 
                 // Create a tool-enabled provider for orchestration
-                const { createLLMProvider } = await import("./llm/LLMFactory");
-                const llmProvider = createLLMProvider(defaultLLMConfig);
+                const llmProvider = createLLMProvider(defaultLLMConfig, this.getToolRegistry());
 
                 // Load orchestration configuration if available
                 const orchestrationConfig = await this.configManager.getOrchestrationConfig();
@@ -137,38 +197,21 @@ export class AgentManager {
                         userPrompt?: string
                     ) => {
                         try {
-                            const { EnhancedResponsePublisher } = await import(
-                                "./EnhancedResponsePublisher"
-                            );
-                            const publisher = new EnhancedResponsePublisher(
-                                this.ndk || getNDK(),
-                                this._projectInfo
-                            );
-                            // Create a mock agent for the orchestrator
-                            const mockAgent = {
-                                getName: () => agentName,
-                                getSigner: () => {
-                                    // Use project signer or a default one
-                                    if (this._projectInfo?.projectNsec) {
-                                        const { nip19 } = require("nostr-tools");
-                                        // TODO: Implement proper signing with the decoded data
-                                        // const { data } = nip19.decode(
-                                        //     this._projectInfo.projectNsec
-                                        // );
-                                        return {
-                                            sign: async (event: any) => {
-                                                // Simple signing implementation
-                                                return event;
-                                            },
-                                        };
-                                    }
-                                    throw new Error("No signer available for orchestrator");
-                                },
-                            };
-                            await publisher.publishTypingIndicator(
+                            // Use project signer
+                            if (
+                                !this._projectInfo?.projectSigner ||
+                                !this._projectInfo?.projectEvent
+                            ) {
+                                throw new Error(
+                                    "No signer or project event available for orchestrator"
+                                );
+                            }
+                            await publishTypingIndicator(
                                 originalEvent,
-                                mockAgent as any,
+                                agentName,
+                                this._projectInfo.projectSigner,
                                 isTyping,
+                                this._projectInfo.projectEvent,
                                 message,
                                 systemPrompt,
                                 userPrompt
@@ -187,6 +230,7 @@ export class AgentManager {
                     config: orchestrationConfig || {
                         orchestrator: {
                             llmConfig: "default",
+                            maxTeamSize: 5,
                             strategies: {},
                         },
                     },
@@ -199,13 +243,15 @@ export class AgentManager {
                     this.conversationStorage,
                     this.orchestrator.getAllAgents(),
                     this._projectInfo,
-                    this.orchestrationCoordinator,
-                    this.ndk
+                    this.orchestrationCoordinator
                 );
 
                 // Set dependencies again
                 this.eventHandler.setDependencies({
-                    getAgent: (name) => this.orchestrator.getAgent(name),
+                    getAgent: (name) =>
+                        name
+                            ? this.orchestrator.getAgent(name)
+                            : Promise.reject(new Error("Agent name is required")),
                     getAgentByPubkey: (pubkey) => this.orchestrator.getAgentByPubkey(pubkey),
                     isEventFromAnyAgent: (pubkey) => this.orchestrator.isEventFromAnyAgent(pubkey),
                     formatAvailableAgentsForPrompt: (excludeAgent) =>
@@ -256,7 +302,24 @@ export class AgentManager {
         if (!name) {
             throw new Error("Agent name is required");
         }
-        return this.orchestrator.getAgent(name);
+
+        try {
+            return await this.orchestrator.getAgent(name);
+        } catch (error) {
+            // If agent doesn't exist, try to load it from configuration
+            const agentsConfig = await this.configManager.loadAgentsConfig();
+            const agentConfig = agentsConfig[name];
+
+            if (!agentConfig) {
+                throw new Error(`Agent '${name}' not found in configuration`);
+            }
+
+            // Load the agent and add it to orchestrator
+            const agent = await this.loadAgent(name, agentConfig.nsec, agentConfig.file);
+            this.orchestrator.addAgent(name, agent);
+
+            return agent;
+        }
     }
 
     async getAgentByPubkey(pubkey: string): Promise<Agent | undefined> {

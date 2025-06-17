@@ -124,10 +124,8 @@ describe("TENEX End-to-End Tests", () => {
                 const taskEvent = new NDKEvent(ndk);
                 taskEvent.kind = EVENT_KINDS.TASK;
                 taskEvent.content = "Please create a hello world function";
-                taskEvent.tags.push(
-                    ["title", "Test Task"],
-                    ["a", `31933:${ownerPubkey}:${projectIdentifier}`]
-                );
+                taskEvent.tags.push(["title", "Test Task"]);
+                taskEvent.tag(projectEvent);
 
                 await taskEvent.sign();
                 await taskEvent.publish();
@@ -147,7 +145,7 @@ describe("TENEX End-to-End Tests", () => {
                 const chatEvent = new NDKEvent(ndk);
                 chatEvent.kind = EVENT_KINDS.CHAT;
                 chatEvent.content = "Hello, agent! How are you?";
-                chatEvent.tags.push(["a", `31933:${ownerPubkey}:${projectIdentifier}`]);
+                chatEvent.tag(projectEvent);
 
                 await chatEvent.sign();
                 await chatEvent.publish();
@@ -205,10 +203,8 @@ describe("TENEX End-to-End Tests", () => {
                 const taskEvent = new NDKEvent(ndk);
                 taskEvent.kind = EVENT_KINDS.TASK;
                 taskEvent.content = "Create a user authentication system with tests";
-                taskEvent.tags.push(
-                    ["title", "Build Feature"],
-                    ["a", `31933:${ownerPubkey}:${projectIdentifier}`]
-                );
+                taskEvent.tags.push(["title", "Build Feature"]);
+                taskEvent.tag(multiAgentProject);
 
                 await taskEvent.sign();
                 await taskEvent.publish();

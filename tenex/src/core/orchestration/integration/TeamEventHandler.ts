@@ -9,7 +9,7 @@ export interface TeamEventHandler {
         team: Team,
         originalEvent: NDKEvent,
         ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void>;
 
     publishTeamUpdateEvent(
@@ -17,14 +17,14 @@ export interface TeamEventHandler {
         updateType: "member_added" | "member_removed" | "strategy_changed" | "task_updated",
         details: string,
         ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void>;
 
     publishTeamDisbandedEvent(
         team: Team,
         reason: string,
         ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void>;
 }
 
@@ -41,7 +41,7 @@ export class TeamEventHandlerImpl implements TeamEventHandler {
         team: Team,
         originalEvent: NDKEvent,
         ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void> {
         try {
             const event = new NDKEvent(ndk);
@@ -72,8 +72,8 @@ export class TeamEventHandlerImpl implements TeamEventHandler {
             ];
 
             // Add project reference if available
-            if (projectNaddr) {
-                event.tags.push(["a", projectNaddr]);
+            if (projectEvent) {
+                event.tag(projectEvent);
             }
 
             await event.publish();
@@ -92,7 +92,7 @@ export class TeamEventHandlerImpl implements TeamEventHandler {
         updateType: "member_added" | "member_removed" | "strategy_changed" | "task_updated",
         details: string,
         ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void> {
         try {
             const event = new NDKEvent(ndk);
@@ -118,8 +118,8 @@ export class TeamEventHandlerImpl implements TeamEventHandler {
             ];
 
             // Add project reference if available
-            if (projectNaddr) {
-                event.tags.push(["a", projectNaddr]);
+            if (projectEvent) {
+                event.tag(projectEvent);
             }
 
             await event.publish();
@@ -135,7 +135,7 @@ export class TeamEventHandlerImpl implements TeamEventHandler {
         team: Team,
         reason: string,
         ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void> {
         try {
             const event = new NDKEvent(ndk);
@@ -162,8 +162,8 @@ export class TeamEventHandlerImpl implements TeamEventHandler {
             ];
 
             // Add project reference if available
-            if (projectNaddr) {
-                event.tags.push(["a", projectNaddr]);
+            if (projectEvent) {
+                event.tag(projectEvent);
             }
 
             await event.publish();

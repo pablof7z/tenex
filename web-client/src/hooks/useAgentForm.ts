@@ -113,7 +113,6 @@ export function useAgentForm() {
     return {
         // Expose form state
         ...formState,
-        formData: formState.data, // Keep legacy formData property for compatibility
 
         // Custom agent methods
         loadAgent,

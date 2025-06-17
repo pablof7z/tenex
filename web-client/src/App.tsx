@@ -3,7 +3,6 @@ import { NDKHeadless, NDKSessionLocalStorage } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-// import { DEFAULT_RELAYS } from "@tenex/shared";
 const DEFAULT_RELAYS = [
     "wss://relay.damus.io",
     "wss://relay.primal.net",

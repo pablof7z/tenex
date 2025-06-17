@@ -1,21 +1,18 @@
-import path from "node:path";
-import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
+import type { Agent, ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type NDK from "@nostr-dev-kit/ndk";
-import * as fileSystem from "@tenex/shared/fs";
-import { logError, logInfo, logWarning } from "@tenex/shared/logger";
+import { logInfo } from "@tenex/shared/logger";
 import type { UnifiedLLMConfig } from "@tenex/types/config";
-import { EVENT_KINDS } from "@tenex/types/events";
-import type { LLMConfigs } from "@tenex/types/llm";
 import chalk from "chalk";
 
 export class ProjectDisplay {
-    constructor(private ndk: NDK) {}
-
     async displayProjectInfo(projectInfo: ProjectRuntimeInfo): Promise<void> {
         this.displayBasicInfo(projectInfo);
-        await this.displayAgentConfigurations(projectInfo.projectEvent, projectInfo.projectPath);
-        await this.displayLLMSettings(projectInfo.projectPath);
+        await this.displayAgentConfigurations(
+            projectInfo.projectEvent,
+            projectInfo.projectPath,
+            projectInfo.agents
+        );
+        this.displayLLMSettings(projectInfo.llmConfig);
         // Note: Documentation display moved to after subscription EOSE
         logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
     }
@@ -37,7 +34,8 @@ export class ProjectDisplay {
 
     private async displayAgentConfigurations(
         projectEvent: NDKEvent,
-        projectPath: string
+        _projectPath: string,
+        agents: Map<string, Agent>
     ): Promise<void> {
         const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
         if (agentTags.length === 0) return;
@@ -46,93 +44,68 @@ export class ProjectDisplay {
         logInfo(chalk.cyan("🤖 Agent Configurations"));
         logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-        const agentsDir = path.join(projectPath, ".tenex", "agents");
-        await fileSystem.ensureDirectory(agentsDir);
-
         for (const tag of agentTags) {
-            if (tag[1]) {
-                await this.displayAndCacheAgent(tag[1], agentsDir);
+            const eventId = tag[1];
+            if (eventId) {
+                this.displayAgent(eventId, agents);
             }
         }
     }
 
-    private async displayAndCacheAgent(eventId: string, agentsDir: string): Promise<void> {
-        try {
-            const agentEvent = await this.ndk.fetchEvent(eventId);
+    private displayAgent(eventId: string, agents: Map<string, Agent>): void {
+        // Find agent by eventId
+        const agentEntry = Array.from(agents.entries()).find(
+            ([, agent]) => agent.eventId === eventId
+        );
 
-            if (!agentEvent || agentEvent.kind !== EVENT_KINDS.AGENT_CONFIG) {
-                logInfo(chalk.red(`Failed to fetch agent event: ${eventId}`));
-                return;
-            }
-
-            const agentName = agentEvent.tags.find((t) => t[0] === "title")?.[1] || "unnamed";
-            const description = agentEvent.tags.find((t) => t[0] === "description")?.[1] || "";
-            const role = agentEvent.tags.find((t) => t[0] === "role")?.[1] || "";
-
-            logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agentName));
-            logInfo(chalk.gray("Description: ") + chalk.white(description));
-            if (role) {
-                logInfo(chalk.gray("Role:        ") + chalk.white(role));
-            }
-
-            const agentDefinition = {
-                eventId: eventId,
-                name: agentName,
-                description: description,
-                role: role,
-                instructions: agentEvent.content || "",
-                version: agentEvent.tags.find((t) => t[0] === "ver")?.[1] || "1",
-                systemPrompt: agentEvent.content || "",
-            };
-
-            const agentFile = path.join(agentsDir, `${eventId}.json`);
-            await fileSystem.writeJsonFile(agentFile, agentDefinition);
-            logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
-        } catch (_err) {
-            logInfo(chalk.red(`Failed to fetch agent configuration: ${eventId}`));
+        if (!agentEntry) {
+            logInfo(chalk.red(`No agent instance found for event: ${eventId}`));
+            return;
         }
+
+        const [_agentKey, agent] = agentEntry;
+
+        // Display agent information with instance pubkey
+        logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
+        logInfo(chalk.gray("Description: ") + chalk.white(agent.description));
+        if (agent.role) {
+            logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
+        }
+        logInfo(chalk.gray("Pubkey:      ") + chalk.white(agent.pubkey));
+        logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
     }
 
-    private async displayLLMSettings(projectPath: string): Promise<void> {
-        const llmsPath = path.join(projectPath, ".tenex", "llms.json");
+    private displayLLMSettings(llmConfig: UnifiedLLMConfig): void {
+        const configurations = llmConfig?.configurations || {};
+        const defaults = llmConfig?.defaults || {};
+        const defaultConfig = defaults.default;
 
-        try {
-            const llmsFile = await fileSystem.readJsonFile<UnifiedLLMConfig>(llmsPath);
+        const configNames = Object.keys(configurations);
 
-            // Handle the new structured format with configurations, defaults, and credentials
-            const configurations = llmsFile?.configurations || {};
-            const defaults = llmsFile?.defaults || {};
-            const defaultConfig = defaults.default;
+        if (configNames.length === 0) {
+            // Don't show the header if there are no configs
+            return;
+        }
 
-            const configNames = Object.keys(configurations);
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan("🤖 Available LLM Configurations"));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-            if (configNames.length === 0) {
-                // Don't show the header if there are no configs
-                return;
+        for (const name of configNames) {
+            const config = configurations[name];
+            if (typeof config !== "object" || !config) continue;
+
+            const isDefault = name === defaultConfig;
+            logInfo(
+                chalk.gray("\nName:       ") +
+                    chalk.yellow(name) +
+                    (isDefault ? chalk.green(" (default)") : "")
+            );
+            logInfo(chalk.gray("Provider:   ") + chalk.white(config.provider));
+            logInfo(chalk.gray("Model:      ") + chalk.white(config.model));
+            if (config.baseURL) {
+                logInfo(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
             }
-
-            logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-            logInfo(chalk.cyan("🤖 Available LLM Configurations"));
-            logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-
-            for (const name of configNames) {
-                const config = configurations[name];
-                if (typeof config !== "object" || !config) continue;
-
-                const isDefault = name === defaultConfig;
-                logInfo(
-                    chalk.gray("\nName:       ") +
-                        chalk.yellow(name) +
-                        (isDefault ? chalk.green(" (default)") : "")
-                );
-                logInfo(chalk.gray("Provider:   ") + chalk.white(config.provider));
-                logInfo(chalk.gray("Model:      ") + chalk.white(config.model));
-                if (config.baseURL) {
-                    logInfo(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
-                }
-            }
-        } catch (_err) {
-            // Silent failure - just don't display anything if llms.json doesn't exist
         }
     }
 

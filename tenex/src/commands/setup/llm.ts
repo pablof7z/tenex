@@ -987,7 +987,7 @@ export class LLMConfigEditor {
                 return false;
             }
 
-            const provider = createLLMProvider(config, undefined);
+            const provider = createLLMProvider(config);
 
             const messages: LLMMessage[] = [
                 {

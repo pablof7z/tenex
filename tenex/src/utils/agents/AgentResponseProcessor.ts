@@ -1,14 +1,12 @@
 import type { Agent } from "@/utils/agents/Agent";
 import type { SystemPromptContext } from "@/utils/agents/prompts/types";
 import { formatError } from "@/utils/errors";
-import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 import chalk from "chalk";
 
 export class AgentResponseProcessor {
     constructor(
-        private ndk: NDK,
         private publishTypingIndicatorFn: (
             agent: Agent,
             conversationId: string,

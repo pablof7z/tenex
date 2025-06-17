@@ -60,7 +60,6 @@ export interface UnifiedLLMConfig {
 
 /**
  * Project-specific configuration stored in .tenex/config.json
- * (formerly metadata.json)
  */
 export interface ProjectConfig {
     /**

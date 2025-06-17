@@ -44,12 +44,12 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
             }
 
             // Create conversation through the lead agent
-            const conversationId = team.taskDefinition.id;
+            const conversationId = team.conversationId;
             const conversation = await leadAgent.getOrCreateConversationWithContext(
                 conversationId,
                 {
-                    agentRole: leadAgent.getConfig().role || "Coordinator",
-                    projectName: leadAgent.getConfig().name,
+                    agentRole: leadAgent.config.role || "Coordinator",
+                    projectName: leadAgent.config.name,
                     orchestrationMetadata: {
                         team,
                         strategy: "PARALLEL_EXECUTION",
@@ -171,7 +171,7 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
         conversation: any
     ): Promise<void> {
         try {
-            this.logger.debug(`Agent ${agent.getName()} starting parallel execution`);
+            this.logger.debug(`Agent ${agent.name} starting parallel execution`);
 
             const result = await agent.generateResponse(
                 conversationId,
@@ -183,7 +183,7 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
 
             execution.endTime = Date.now();
             execution.result = {
-                agentName: agent.getName(),
+                agentName: agent.name,
                 response: result.content,
                 timestamp: Date.now(),
                 metadata: result.metadata,
@@ -193,12 +193,12 @@ export class ParallelExecutionStrategy implements OrchestrationStrategy {
             conversation.addAssistantMessage(result.content);
 
             this.logger.debug(
-                `Agent ${agent.getName()} completed in ${execution.endTime - execution.startTime}ms`
+                `Agent ${agent.name} completed in ${execution.endTime - execution.startTime}ms`
             );
         } catch (error) {
             execution.endTime = Date.now();
             execution.error = error instanceof Error ? error : new Error(String(error));
-            this.logger.error(`Agent ${agent.getName()} failed: ${error}`);
+            this.logger.error(`Agent ${agent.name} failed: ${error}`);
         }
     }
 

@@ -70,13 +70,14 @@ export const addTaskTool: ToolDefinition = {
             // Add project reference
             taskEvent.tag(projectEvent);
 
-            // Add thread reference if we're in a conversation
-            if (context.conversationId) {
+            // Add thread reference if we're in a conversation with a valid event ID
+            // Only add "e" tag if conversationId is a valid Nostr event ID (64-char hex)
+            if (context.conversationId && /^[a-fA-F0-9]{64}$/.test(context.conversationId)) {
                 taskEvent.tags.push(["e", context.conversationId, "", "root"]);
             }
 
             // Sign and publish
-            await taskEvent.sign(agent.getSigner());
+            await taskEvent.sign(agent.signer);
             await taskEvent.publish();
 
             logger.info(

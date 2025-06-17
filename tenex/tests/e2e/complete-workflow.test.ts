@@ -155,9 +155,9 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 threadEvent.content = "Hello agents! Let's build a calculator app.";
                 threadEvent.tags.push(
                     ["title", "Build Calculator App"],
-                    ["a", `31933:${ownerPubkey}:${projectIdentifier}`],
                     ["p", ownerPubkey] // Mention ourselves to create a thread
                 );
+                threadEvent.tag(projectEvent);
 
                 await threadEvent.sign();
                 await publishWithRetry(threadEvent);
@@ -178,10 +178,8 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 taskEvent.kind = EVENT_KINDS.TASK;
                 taskEvent.content =
                     "Implement a basic calculator with add, subtract, multiply, and divide functions";
-                taskEvent.tags.push(
-                    ["title", "Implement Calculator"],
-                    ["a", `31933:${ownerPubkey}:${projectIdentifier}`]
-                );
+                taskEvent.tags.push(["title", "Implement Calculator"]);
+                taskEvent.tag(projectEvent);
 
                 await taskEvent.sign();
                 await publishWithRetry(taskEvent);
@@ -207,10 +205,8 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 const followUpEvent = new NDKEvent(ndk);
                 followUpEvent.kind = EVENT_KINDS.CHAT_REPLY;
                 followUpEvent.content = "Great work! Can you also add a square root function?";
-                followUpEvent.tags.push(
-                    ["e", threadEvent.id, "", "root"],
-                    ["a", `31933:${ownerPubkey}:${projectIdentifier}`]
-                );
+                followUpEvent.tags.push(["e", threadEvent.id, "", "root"]);
+                followUpEvent.tag(projectEvent);
 
                 await followUpEvent.sign();
                 await publishWithRetry(followUpEvent);
@@ -265,10 +261,8 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                     3. Database schema
                     4. Frontend UI components
                     5. Comprehensive test suite`;
-                complexTaskEvent.tags.push(
-                    ["title", "Build Complete Web App"],
-                    ["a", `31933:${ownerPubkey}:${projectIdentifier}`]
-                );
+                complexTaskEvent.tags.push(["title", "Build Complete Web App"]);
+                complexTaskEvent.tag(projectEvent);
 
                 await complexTaskEvent.sign();
                 await publishWithRetry(complexTaskEvent);
@@ -307,10 +301,13 @@ describe("TENEX Complete Workflow E2E Tests", () => {
 
                 // Create an event for a non-existent project
                 const fakeProjectIdentifier = `fake-project-${Date.now()}`;
+                const fakeProjectEvent = {
+                    tagId: () => `31933:${ownerPubkey}:${fakeProjectIdentifier}`,
+                } as any;
                 const chatEvent = new NDKEvent(ndk);
                 chatEvent.kind = EVENT_KINDS.CHAT;
                 chatEvent.content = "Hello to a non-existent project";
-                chatEvent.tags.push(["a", `31933:${ownerPubkey}:${fakeProjectIdentifier}`]);
+                chatEvent.tag(fakeProjectEvent);
 
                 await chatEvent.sign();
                 await publishWithRetry(chatEvent);

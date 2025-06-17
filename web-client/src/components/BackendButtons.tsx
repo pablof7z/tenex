@@ -2,6 +2,7 @@ import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom } from "jotai";
 import { Check, Play } from "lucide-react";
 import { useState } from "react";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { onlineBackendsAtom } from "../lib/store";
 import { Button } from "./ui/button";
 
@@ -20,7 +21,7 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
 
         try {
             const event = new NDKEvent(ndk);
-            event.kind = 24010;
+            event.kind = EVENT_KINDS.TASK;
             event.content = "Start task";
             event.tags = [
                 ["p", backendPubkey],

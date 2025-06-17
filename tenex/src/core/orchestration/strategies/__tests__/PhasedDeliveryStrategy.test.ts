@@ -25,7 +25,7 @@ describe("PhasedDeliveryStrategy", () => {
     });
 
     it("should have correct name and description", () => {
-        expect(strategy.getName()).toBe("PhasedDeliveryStrategy");
+        expect(strategy.name).toBe("PhasedDeliveryStrategy");
         expect(strategy.getDescription()).toBe(
             "Complex tasks are broken into sequential phases with deliverables, each phase building on the previous"
         );

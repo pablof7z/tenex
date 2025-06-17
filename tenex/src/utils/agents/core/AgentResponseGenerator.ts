@@ -8,6 +8,7 @@ import type { AgentCore } from "@/utils/agents/core/AgentCore";
 import { LLMConfigManager } from "@/utils/agents/llm/LLMConfigManager";
 import { createLLMProvider } from "@/utils/agents/llm/LLMFactory";
 import type { LLMMessage, LLMResponse as LLMProviderResponse } from "@/utils/agents/llm/types";
+import { ToolEnabledProvider } from "@/utils/agents/llm/ToolEnabledProvider";
 import type { AgentResponse, LLMConfig } from "@/utils/agents/types";
 import type { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
 import { EVENT_KINDS } from "@tenex/types/events";
@@ -60,7 +61,7 @@ export class AgentResponseGenerator {
         this.agentCore
             .getLogger()
             .info(
-                `🤖 Agent '${this.agentCore.getName()}' using LLM: ${config.provider}/${config.model}`
+                `🤖 Agent '${this.agentCore.name}' using LLM: ${config.provider}/${config.model}`
             );
 
         try {
@@ -93,7 +94,7 @@ export class AgentResponseGenerator {
             }
 
             const context = {
-                agentName: this.agentCore.getName(),
+                agentName: this.agentCore.name,
                 projectName: this.agentCore.getProjectName(),
                 conversationId,
                 typingIndicator: typingIndicatorCallback,
@@ -114,9 +115,7 @@ export class AgentResponseGenerator {
             const agentResponse = this.createAgentResponse(response, config, messages);
 
             // Check if provider has renderInChat data (from tool execution)
-            if (
-                provider instanceof (await import("../llm/ToolEnabledProvider")).ToolEnabledProvider
-            ) {
+            if (provider instanceof ToolEnabledProvider) {
                 const renderInChat = provider.getLastRenderInChat();
                 if (renderInChat) {
                     agentResponse.renderInChat = renderInChat;

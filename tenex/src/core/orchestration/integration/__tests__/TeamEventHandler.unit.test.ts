@@ -13,7 +13,7 @@ class MockTeamEventHandler extends TeamEventHandlerImpl {
         team: Team,
         originalEvent: NDKEvent,
         _ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void> {
         const event = {
             kind: 30040,
@@ -37,8 +37,8 @@ class MockTeamEventHandler extends TeamEventHandlerImpl {
             ],
         };
 
-        if (projectNaddr) {
-            event.tags.push(["a", projectNaddr]);
+        if (projectEvent) {
+            event.tags.push(["a", projectEvent.tagId()]);
         }
 
         this.publishedEvents.push(event);
@@ -53,7 +53,7 @@ class MockTeamEventHandler extends TeamEventHandlerImpl {
         updateType: "member_added" | "member_removed" | "strategy_changed" | "task_updated",
         details: string,
         _ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void> {
         const event = {
             kind: 30041,
@@ -73,8 +73,8 @@ class MockTeamEventHandler extends TeamEventHandlerImpl {
             ],
         };
 
-        if (projectNaddr) {
-            event.tags.push(["a", projectNaddr]);
+        if (projectEvent) {
+            event.tags.push(["a", projectEvent.tagId()]);
         }
 
         this.publishedEvents.push(event);
@@ -86,7 +86,7 @@ class MockTeamEventHandler extends TeamEventHandlerImpl {
         team: Team,
         reason: string,
         _ndk: NDK,
-        projectNaddr?: string
+        projectEvent?: NDKEvent
     ): Promise<void> {
         const event = {
             kind: 30042,
@@ -107,8 +107,8 @@ class MockTeamEventHandler extends TeamEventHandlerImpl {
             ],
         };
 
-        if (projectNaddr) {
-            event.tags.push(["a", projectNaddr]);
+        if (projectEvent) {
+            event.tags.push(["a", projectEvent.tagId()]);
         }
 
         this.publishedEvents.push(event);
@@ -171,12 +171,13 @@ describe("TeamEventHandler", () => {
             };
 
             const originalEvent = { id: "original-event-123" } as NDKEvent;
+            const mockProjectEvent = { tagId: () => "project-naddr" } as NDKEvent;
 
             await teamEventHandler.publishTeamFormationEvent(
                 team,
                 originalEvent,
                 mockNDK,
-                "project-naddr"
+                mockProjectEvent
             );
 
             expect(teamEventHandler.publishedEvents).toHaveLength(1);
@@ -232,12 +233,14 @@ describe("TeamEventHandler", () => {
                 },
             };
 
+            const mockProjectEvent = { tagId: () => "project-naddr" } as NDKEvent;
+
             await teamEventHandler.publishTeamUpdateEvent(
                 team,
                 "member_added",
                 "Added new-agent to handle additional requirements",
                 mockNDK,
-                "project-naddr"
+                mockProjectEvent
             );
 
             expect(teamEventHandler.publishedEvents).toHaveLength(1);
@@ -326,11 +329,13 @@ describe("TeamEventHandler", () => {
                 },
             };
 
+            const mockProjectEvent = { tagId: () => "project-naddr" } as NDKEvent;
+
             await teamEventHandler.publishTeamDisbandedEvent(
                 team,
                 "Task completed successfully",
                 mockNDK,
-                "project-naddr"
+                mockProjectEvent
             );
 
             expect(teamEventHandler.publishedEvents).toHaveLength(1);

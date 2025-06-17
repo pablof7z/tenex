@@ -2,7 +2,7 @@ import { promises as fsPromises } from "node:fs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { LegacyAgentsJson } from "@tenex/types/agents";
+import type { AgentsJson } from "@tenex/types/agents";
 import type { LLMConfig } from "@tenex/types/llm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentConfigurationManager } from "../AgentConfigurationManager";
@@ -17,10 +17,10 @@ describe("AgentConfigurationManager", () => {
         const tenexDir = path.join(tempDir, ".tenex");
         await fsPromises.mkdir(tenexDir, { recursive: true });
 
-        // Create a minimal metadata.json to prevent config loading errors
-        const metadataPath = path.join(tenexDir, "metadata.json");
+        // Create a minimal config.json to prevent config loading errors
+        const configPath = path.join(tenexDir, "config.json");
         await fsPromises.writeFile(
-            metadataPath,
+            configPath,
             JSON.stringify(
                 {
                     title: "Test Project",
@@ -262,8 +262,8 @@ describe("AgentConfigurationManager", () => {
 
     describe("agents.json operations", () => {
         it("should load agents configuration", async () => {
-            const mockAgentsConfig: LegacyAgentsJson = {
-                default: "nsec1default",
+            const mockAgentsConfig: AgentsJson = {
+                default: { nsec: "nsec1default" },
                 code: {
                     nsec: "nsec1code",
                     file: "code-agent.json",
@@ -287,8 +287,8 @@ describe("AgentConfigurationManager", () => {
         });
 
         it("should get specific agent config entry", async () => {
-            const mockAgentsConfig: LegacyAgentsJson = {
-                default: "nsec1default",
+            const mockAgentsConfig: AgentsJson = {
+                default: { nsec: "nsec1default" },
                 code: {
                     nsec: "nsec1code",
                     file: "code-agent.json",
@@ -303,19 +303,6 @@ describe("AgentConfigurationManager", () => {
                 nsec: "nsec1code",
                 file: "code-agent.json",
             });
-        });
-
-        it("should handle legacy string format", async () => {
-            const mockAgentsConfig: LegacyAgentsJson = {
-                default: "nsec1default",
-                code: "nsec1code",
-            };
-
-            const agentsPath = path.join(tempDir, ".tenex", "agents.json");
-            await fsPromises.writeFile(agentsPath, JSON.stringify(mockAgentsConfig, null, 2));
-
-            const entry = await manager.getAgentConfigEntry("code");
-            expect(entry).toBe("nsec1code");
         });
     });
 
@@ -505,7 +492,7 @@ describe("AgentConfigurationManager", () => {
                 },
             };
 
-            const mockAgentsConfig: LegacyAgentsJson = {
+            const mockAgentsConfig: AgentsJson = {
                 default: {
                     nsec: "nsec1default",
                     file: "default-agent.json",

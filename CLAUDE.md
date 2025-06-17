@@ -162,7 +162,10 @@ Projects maintain agents in `.tenex/agents.json` with enhanced format:
     "nsec": "nsec1...",
     "file": "abc123.json"  // Reference to NDKAgent event file
   },
-  "code": "nsec1...",  // Legacy format still supported
+  "code": {
+    "nsec": "nsec1...",
+    "file": "xyz789.json"
+  },
   "planner": {
     "nsec": "nsec1...",
     "file": "def456.json"
@@ -186,7 +189,7 @@ Agent definitions from NDKAgent events (kind 4199) are automatically fetched and
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
 - **UI Components**: shadcn/ui
-- **State**: Jotai (web), Zustand (legacy)
+- **State**: Jotai
 - **Protocol**: Nostr via NDK with class-based wrappers (NDKAgent, etc.)
 - **Formatter/Linter**: Biome
 - **Voice**: OpenAI Whisper API

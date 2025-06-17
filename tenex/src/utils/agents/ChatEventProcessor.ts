@@ -115,8 +115,6 @@ export class ChatEventProcessor {
         logger.error(`Failed to handle chat event: ${error}`);
         logger.error(`Error details: ${error instanceof Error ? error.stack : String(error)}`);
         logger.error("Event details:");
-        if (typeof event.inspect === "function") {
-            logger.error(event.inspect());
-        }
+        logger.error(event.inspect);
     }
 }
