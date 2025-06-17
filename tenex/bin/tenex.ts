@@ -25,6 +25,14 @@ debug
     .description("Show the system prompt for an agent")
     .option("--agent <name>", "Agent name", "default")
     .action((options) => runDebugSystemPrompt(options));
+debug
+    .command("agent")
+    .description("Start an interactive debug agent for the current project")
+    .option("-n, --name <name>", "Agent name", "debug")
+    .option("-m, --message <message>", "Initial message to send")
+    .action((options) => {
+        import("../src/commands/debug/agent").then(({ runDebugAgent }) => runDebugAgent(options));
+    });
 
 // Initialize NDK before parsing commands
 async function main() {
