@@ -43,7 +43,7 @@ export class CorrectionDetector implements ICorrectionDetector {
     ];
 
     constructor(
-        private readonly logger: Logger,
+        private readonly logger: AgentLogger,
         private readonly llmProvider: LLMProvider
     ) {
         if (!logger) throw new Error("Logger is required");
@@ -56,30 +56,22 @@ export class CorrectionDetector implements ICorrectionDetector {
     ): Promise<CorrectionAnalysis | null> {
         this.logger.debug(`Analyzing event ${event.id} for corrections`);
 
-        if (conversation.messages.length === 0) {
+        if (conversation.getMessages().length === 0) {
             return null;
         }
 
         const prompt = this.buildCorrectionDetectionPrompt(event, conversation);
 
         try {
-            const response = await this.llmProvider.processRequest({
-                model: "default",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are analyzing a conversation to detect if a correction is being made.
+            const systemPrompt = `You are analyzing a conversation to detect if a correction is being made.
                         Respond with a JSON object containing:
                         - isCorrection: boolean
                         - confidence: number (0-1)
                         - issues: array of strings describing what was wrong
-                        - affectedAgents: array of agent names affected by the correction`,
-                    },
-                    {
-                        role: "user",
-                        content: prompt,
-                    },
-                ],
+                        - affectedAgents: array of agent names affected by the correction`;
+
+            const response = await this.llmProvider.complete(`${systemPrompt}\n\n${prompt}`, {
+                temperature: 0.3,
             });
 
             const analysis = this.parseCorrectionAnalysis(response.content);
@@ -128,7 +120,7 @@ export class CorrectionDetector implements ICorrectionDetector {
     }
 
     private buildCorrectionDetectionPrompt(event: NDKEvent, conversation: Conversation): string {
-        const recentMessages = conversation.messages.slice(-5);
+        const recentMessages = conversation.getMessages().slice(-5);
         const messageHistory = recentMessages.map((m) => `${m.role}: ${m.content}`).join("\n\n");
 
         return `Analyze if the following message is correcting a previous error or mistake:
@@ -167,7 +159,12 @@ Consider:
             const currentMsg = messages[i];
             const previousMsg = messages[i - 1];
 
-            if (currentMsg.role === "user" && previousMsg.role === "assistant") {
+            if (
+                currentMsg &&
+                previousMsg &&
+                currentMsg.role === "user" &&
+                previousMsg.role === "assistant"
+            ) {
                 const indicators = this.findKeywords(
                     currentMsg.content,
                     CorrectionDetector.CORRECTION_KEYWORDS
@@ -192,7 +189,12 @@ Consider:
             const currentMsg = messages[i];
             const previousMsg = messages[i - 1];
 
-            if (currentMsg.role === "assistant" && previousMsg.role === "assistant") {
+            if (
+                currentMsg &&
+                previousMsg &&
+                currentMsg.role === "assistant" &&
+                previousMsg.role === "assistant"
+            ) {
                 const indicators = this.findKeywords(
                     currentMsg.content,
                     CorrectionDetector.CORRECTION_KEYWORDS
@@ -215,7 +217,7 @@ Consider:
     ): CorrectionPattern | null {
         const lastMessage = messages[messages.length - 1];
 
-        if (lastMessage.role === "user") {
+        if (lastMessage && lastMessage.role === "user") {
             const indicators = this.findKeywords(
                 lastMessage.content,
                 CorrectionDetector.REVISION_KEYWORDS

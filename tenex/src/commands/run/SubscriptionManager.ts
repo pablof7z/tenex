@@ -1,5 +1,5 @@
 import type { EventHandler } from "@/commands/run/EventHandler";
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
@@ -12,9 +12,9 @@ export class SubscriptionManager {
     private subscriptions: NDKSubscription[] = [];
     private processedEventIds = new Set<string>();
     private eventHandler: EventHandler;
-    private projectInfo: ProjectInfo;
+    private projectInfo: ProjectRuntimeInfo;
 
-    constructor(eventHandler: EventHandler, projectInfo: ProjectInfo) {
+    constructor(eventHandler: EventHandler, projectInfo: ProjectRuntimeInfo) {
         this.eventHandler = eventHandler;
         this.projectInfo = projectInfo;
     }
@@ -68,7 +68,7 @@ export class SubscriptionManager {
     private async subscribeToSpecDocuments(since: number): Promise<void> {
         // Filter for spec documents (kind 30023) that tag this project
         const specFilter: NDKFilter = {
-            kinds: [EVENT_KINDS.ARTICLE as NDKKind], // 30023
+            kinds: [EVENT_KINDS.ARTICLE], // 30023
             authors: [this.projectInfo.projectPubkey],
             "#a": [
                 `${this.projectInfo.projectEvent.kind}:${this.projectInfo.projectPubkey}:${this.projectInfo.projectId}`,

@@ -2,7 +2,7 @@ import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectInfo } from "../../../commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "../../../commands/run/ProjectLoader";
 import { TeamFormationError } from "../../../core/orchestration/errors";
 import type { OrchestrationCoordinator } from "../../../core/orchestration/integration/OrchestrationCoordinator";
 import type { StrategyExecutionResult } from "../../../core/orchestration/strategies/OrchestrationStrategy";
@@ -72,7 +72,7 @@ const mockConversationStorage: ConversationStorage = {
     }),
 } as unknown as ConversationStorage;
 
-const mockProjectInfo: ProjectInfo = {
+const mockProjectInfo: ProjectRuntimeInfo = {
     projectEvent: {
         id: "project123",
         kind: 31933,

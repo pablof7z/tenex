@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { OrchestrationCoordinator } from "@/core/orchestration/integration/OrchestrationCoordinator";
 import type { AgentDefinition, EventContext, Team } from "@/core/orchestration/types";
 import type { Agent } from "@/utils/agents/Agent";
@@ -14,7 +14,7 @@ import { logger } from "@tenex/shared/logger";
 export class AgentSelectionService {
     constructor(
         private agents: Map<string, Agent>,
-        private projectInfo?: ProjectInfo,
+        private projectInfo?: ProjectRuntimeInfo,
         private orchestrationCoordinator?: OrchestrationCoordinator,
         private contextFactory?: SystemPromptContextFactory,
         private conversationStorage?: ConversationStorage,
@@ -252,7 +252,9 @@ export class AgentSelectionService {
             if (error instanceof Error) {
                 logger.error(`   Error stack: ${error.stack}`);
             }
-            throw error;
+            // Handle orchestration failures gracefully by returning empty agent list
+            // This prevents the entire event processing from failing
+            return { agents: [] };
         }
     }
 

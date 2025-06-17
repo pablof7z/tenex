@@ -3,7 +3,7 @@ import type { OrchestrationConfig } from "@/core/orchestration/types";
 import { readJsonFile } from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
 import { configurationService } from "@tenex/shared/services";
-import type { AgentConfigEntry, LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
+import type { AgentConfigEntry, LegacyAgentsJson } from "@tenex/types/agents";
 import type { UnifiedLLMConfig } from "@tenex/types/config";
 import type { LLMConfig } from "@tenex/types/llm";
 
@@ -159,7 +159,7 @@ export class AgentConfigurationManager {
     /**
      * Load agents configuration from agents.json
      */
-    async loadAgentsConfig(): Promise<AgentsConfig> {
+    async loadAgentsConfig(): Promise<LegacyAgentsJson> {
         try {
             const configuration = await configurationService.loadConfiguration(this.projectPath);
             return configuration.agents || {};

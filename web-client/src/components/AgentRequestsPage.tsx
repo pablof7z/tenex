@@ -5,6 +5,7 @@ import {
     useNDKSessionSigners,
     useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { ArrowLeft, Bot, CheckCircle2, Copy, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "./common/EmptyState";
@@ -44,7 +45,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
         user
             ? [
                   {
-                      kinds: [13199 as NDKKind],
+                      kinds: [EVENT_KINDS.AGENT_REQUEST_LIST as NDKKind],
                       authors: [user.pubkey],
                       limit: 1,
                   },
@@ -61,7 +62,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
         user
             ? [
                   {
-                      kinds: [3199 as NDKKind],
+                      kinds: [EVENT_KINDS.AGENT_REQUEST as NDKKind],
                       "#p": [user.pubkey],
                   },
               ]

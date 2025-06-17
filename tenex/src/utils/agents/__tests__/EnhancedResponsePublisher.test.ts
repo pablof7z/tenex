@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectInfo } from "../../../commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "../../../commands/run/ProjectLoader";
 import type { StrategyExecutionResult } from "../../../core/orchestration/strategies/OrchestrationStrategy";
 import type { Agent } from "../Agent";
 import { EnhancedResponsePublisher } from "../EnhancedResponsePublisher";
@@ -9,7 +9,7 @@ import type { AgentResponse } from "../types";
 describe("EnhancedResponsePublisher", () => {
     let publisher: EnhancedResponsePublisher;
     let mockNDK: any;
-    let mockProjectInfo: ProjectInfo;
+    let mockProjectInfo: ProjectRuntimeInfo;
     let mockAgent: Agent;
     let mockEvent: NDKEvent;
 

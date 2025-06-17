@@ -1,7 +1,8 @@
 import type { Agent } from "@/utils/agents/Agent";
 import type { ToolCall } from "@/utils/agents/tools/types";
 import type { LLMConfig } from "@/utils/agents/types";
-import type { NDK, NDKProject } from "@nostr-dev-kit/ndk";
+import type { NDKProject } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 
 export interface LLMMessage {
     role: "system" | "user" | "assistant" | "tool";

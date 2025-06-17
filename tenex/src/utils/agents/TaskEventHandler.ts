@@ -42,14 +42,19 @@ export class TaskEventHandler {
                 );
 
                 conversation.addMessage({
+                    id: event.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     role: "user",
                     content: `New task: ${event.content}`,
                     timestamp: (event.created_at || Math.floor(Date.now() / 1000)) * 1000,
-                    eventId: event.id,
-                    pubkey: event.pubkey,
+                    metadata: {
+                        eventId: event.id,
+                    },
+                    author: {
+                        pubkey: event.pubkey,
+                    },
                 });
 
-                await conversation.save();
+                // Note: save() method doesn't exist on Conversation class
                 logger.info(`Added task to ${name} agent's conversation history for context`);
             } catch (err) {
                 const errorMessage = formatError(err);

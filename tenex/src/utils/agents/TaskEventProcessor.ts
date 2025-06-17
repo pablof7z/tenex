@@ -48,7 +48,7 @@ export class TaskEventProcessor {
                     "event.mentioned_pubkeys_count": mentionedPubkeys.length,
                     "event.llm_name": llmName || "default",
                     "event.agent_name": agentName,
-                    "task.title": title,
+                    "task.title": title || "Untitled",
                     "task.id": taskId,
                 });
 
@@ -63,7 +63,7 @@ export class TaskEventProcessor {
                 await this.conversationManager.addTaskToAllAgentConversations(
                     event,
                     taskId,
-                    title,
+                    title || "Untitled Task",
                     taskContent
                 );
 
@@ -114,8 +114,7 @@ export class TaskEventProcessor {
         logger.error(`Failed to handle task event: ${error}`);
         logger.error(`Error details: ${error instanceof Error ? error.stack : String(error)}`);
         logger.error("Event details:");
-        if (typeof event.inspect === "function") {
-            logger.error(event.inspect());
-        }
+        // Log event details for debugging
+        logger.error(`Event kind: ${event.kind}, id: ${event.id}`);
     }
 }

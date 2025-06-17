@@ -1,13 +1,13 @@
 /**
  * Unified configuration types for TENEX
- * 
+ *
  * These types define the structure for both global and project configurations,
  * ensuring consistency across the entire system.
  */
 
+import type { AgentsJson } from "../agents/config";
 import type { LLMConfig } from "../llm/config";
 import type { TelemetryConfig } from "../telemetry/config";
-import type { AgentsJson } from "../agents/config";
 
 /**
  * LLM provider credentials for authentication
@@ -29,7 +29,7 @@ export interface UnifiedLLMConfig {
     configurations: {
         [name: string]: LLMConfig;
     };
-    
+
     /**
      * Default configurations for different contexts
      */
@@ -38,18 +38,18 @@ export interface UnifiedLLMConfig {
          * Default configuration for general use
          */
         default?: string;
-        
+
         /**
          * Configuration for orchestrator LLM
          */
         orchestrator?: string;
-        
+
         /**
          * Agent-specific default configurations
          */
         [agentName: string]: string | undefined;
     };
-    
+
     /**
      * Provider credentials (only stored in global config)
      */
@@ -67,47 +67,47 @@ export interface ProjectConfig {
      * Project title
      */
     title: string;
-    
+
     /**
      * Project description
      */
     description?: string;
-    
+
     /**
      * Repository URL
      */
     repoUrl?: string;
-    
+
     /**
      * Project Nostr address
      */
     projectNaddr: string;
-    
+
     /**
      * Project nsec (private key)
      */
     nsec?: string;
-    
+
     /**
      * Project hashtags/topics
      */
     hashtags?: string[];
-    
+
     /**
      * Creation timestamp
      */
     createdAt?: number;
-    
+
     /**
      * Last update timestamp
      */
     updatedAt?: number;
-    
+
     /**
      * Whitelisted pubkeys for this project
      */
     whitelistedPubkeys?: string[];
-    
+
     /**
      * Telemetry configuration
      */
@@ -122,7 +122,7 @@ export interface GlobalConfig {
      * Whitelisted pubkeys for daemon monitoring
      */
     whitelistedPubkeys?: string[];
-    
+
     /**
      * Global telemetry configuration
      */
@@ -137,12 +137,12 @@ export interface TenexConfiguration {
      * Core configuration (project or global)
      */
     config: ProjectConfig | GlobalConfig;
-    
+
     /**
      * LLM configurations
      */
     llms: UnifiedLLMConfig;
-    
+
     /**
      * Agent configurations (project-only)
      */
@@ -157,17 +157,17 @@ export const CONFIG_PATHS = {
      * Configuration file (config.json)
      */
     CONFIG: "config.json",
-    
+
     /**
      * LLM configuration file (llms.json)
      */
     LLMS: "llms.json",
-    
+
     /**
      * Agents configuration file (agents.json)
      */
     AGENTS: "agents.json",
-    
+
     /**
      * TENEX directory name
      */

@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { StrategyExecutionResult } from "@/core/orchestration/strategies/OrchestrationStrategy";
 import type { Agent } from "@/utils/agents/Agent";
 import type { AgentResponse } from "@/utils/agents/types";
@@ -14,7 +14,7 @@ import { EVENT_KINDS } from "@tenex/types/events";
 export class EnhancedResponsePublisher {
     constructor(
         private ndk: NDK,
-        private projectInfo?: ProjectInfo
+        private projectInfo?: ProjectRuntimeInfo
     ) {}
 
     /**
@@ -290,7 +290,7 @@ export class EnhancedResponsePublisher {
     /**
      * Update project info (useful for dependency injection)
      */
-    updateProjectInfo(projectInfo: ProjectInfo): void {
+    updateProjectInfo(projectInfo: ProjectRuntimeInfo): void {
         this.projectInfo = projectInfo;
     }
 }

@@ -6,10 +6,7 @@ import {
     useNDK,
     useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-// Event kind numbers from SPEC.md
-const TYPING_INDICATOR_START = 24111;
-const TYPING_INDICATOR_END = 24112;
-const TASK = 1934; // NDKTask.kind
+import { EVENT_KINDS } from "@tenex/types/events";
 import { useAtom } from "jotai";
 import { ArrowDown, Send } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
@@ -59,7 +56,7 @@ const MessageList = memo(
             <div className="space-y-1">
                 {messages.map((event) => {
                     // Check if this is a task event
-                    if (event.kind === TASK) {
+                    if (event.kind === EVENT_KINDS.TASK) {
                         // For tasks, we'll render them as a special message with the task card
                         const task = event as NDKTask;
                         const taskComplexity = task.tags?.find(
@@ -147,13 +144,6 @@ export function ChatInterface({
     const projectDir = projectTagId ? projectTagId.split(":")[2] : undefined;
     const availableLLMConfigs = useProjectLLMConfigs(projectDir);
 
-    // // console.log("[ChatInterface] Project debug:", {
-    //     project,
-    //     projectTagId,
-    //     projectDir,
-    //     availableLLMConfigs,
-    // });
-
     // Use mention autocomplete hook
     const {
         textareaRef,
@@ -190,7 +180,12 @@ export function ChatInterface({
     // Subscribe to thread messages when currentThreadEvent is available
     const { events: threadReplies } = useSubscribe(
         currentThreadEvent && typeof currentThreadEvent.nip22Filter === "function"
-            ? [{ kinds: [1111], ...currentThreadEvent.nip22Filter() }]
+            ? [
+                  {
+                      kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind],
+                      ...currentThreadEvent.nip22Filter(),
+                  },
+              ]
             : false,
         {},
         [currentThreadEvent?.id]
@@ -211,7 +206,10 @@ export function ChatInterface({
         currentThreadEvent || taskId
             ? [
                   {
-                      kinds: [TYPING_INDICATOR_START as NDKKind, TYPING_INDICATOR_END as NDKKind],
+                      kinds: [
+                          EVENT_KINDS.TYPING_INDICATOR as NDKKind,
+                          EVENT_KINDS.TYPING_INDICATOR_STOP as NDKKind,
+                      ],
                       "#e": currentThreadEvent ? [currentThreadEvent.id] : taskId ? [taskId] : [],
                       since: Math.floor(Date.now() / 1000) - 60, // Only show indicators from last minute
                   },
@@ -234,10 +232,10 @@ export function ChatInterface({
         );
 
         for (const event of sortedEvents) {
-            if (event.kind === TYPING_INDICATOR_END) {
+            if (event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP) {
                 // Stop typing event - remove the indicator
                 indicatorsByPubkey.delete(event.pubkey);
-            } else if (event.kind === TYPING_INDICATOR_START) {
+            } else if (event.kind === EVENT_KINDS.TYPING_INDICATOR) {
                 // Start typing event - add/update the indicator
                 indicatorsByPubkey.set(event.pubkey, event);
             }
@@ -247,7 +245,8 @@ export function ChatInterface({
         const thirtySecondsAgo = Math.floor(Date.now() / 1000) - 30;
         const active = Array.from(indicatorsByPubkey.values()).filter(
             (event) =>
-                (event.created_at ?? 0) > thirtySecondsAgo && event.kind === TYPING_INDICATOR_START
+                (event.created_at ?? 0) > thirtySecondsAgo &&
+                event.kind === EVENT_KINDS.TYPING_INDICATOR
         );
 
         return active;
@@ -349,7 +348,7 @@ export function ChatInterface({
                 } else if (!kind11Event) {
                     // This is the first message, create a new thread (kind 11)
                     event = new NDKEvent(ndk);
-                    event.kind = 11;
+                    event.kind = EVENT_KINDS.CHAT;
                     event.content = cleanContent;
                     event.tags = [
                         ["title", threadTitle!],
@@ -393,9 +392,6 @@ export function ChatInterface({
                 } else {
                     // We have a kind11Event but it might not have reply() yet
                     // This shouldn't happen in normal flow, but let's handle it
-                    // // console.warn(
-                    //     "Thread event exists but doesn't support reply(). Waiting for thread to be properly loaded."
-                    // );
                     return;
                 }
             } else {
@@ -411,7 +407,6 @@ export function ChatInterface({
                 scrollToBottom(true); // Force scroll after sending
             }, 100);
         } catch (_error) {
-            // // console.error("Failed to send message:", error);
         } finally {
             setIsSending(false);
         }

@@ -1,54 +1,88 @@
-# React + TypeScript + Vite
+# TENEX Web Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The main user interface for TENEX - a context-first development environment that orchestrates multiple AI agents.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Project Management**: Create and manage AI-powered software projects
+- **Living Documentation**: Browse and update project specifications as Nostr events
+- **Multi-Agent Orchestration**: Configure and monitor multiple AI agents
+- **Voice-to-Task**: Convert spoken ideas into structured development tasks
+- **Real-time Collaboration**: Live updates with typing indicators and rich text
+- **Task Management**: Create, assign, and track development progress
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Framework**: Vite + React + TypeScript
+- **Styling**: Tailwind CSS v4 + shadcn/ui
+- **State Management**: Jotai
+- **Protocol**: Nostr via @nostr-dev-kit/ndk-hooks
+- **Voice**: OpenAI Whisper API
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Development
+
+### Prerequisites
+
+- [Bun](https://bun.sh) runtime (not Node.js)
+- A running TENEX backend (optional for full functionality)
+
+### Getting Started
+
+```bash
+# Install dependencies
+bun install
+
+# Start development server
+bun run dev
+
+# The app will be available at http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Available Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+bun run dev        # Start Vite dev server
+bun run build      # Build for production
+bun run preview    # Preview production build
+bun run lint       # Run ESLint
+bun run test       # Run tests with Vitest
 ```
+
+## Project Structure
+
+```
+src/
+├── components/      # React components
+│   ├── ui/         # shadcn/ui components
+│   ├── agents/     # Agent management
+│   ├── projects/   # Project views
+│   ├── tasks/      # Task management
+│   └── common/     # Shared components
+├── hooks/          # Custom React hooks
+├── lib/            # Utilities and setup
+└── utils/          # Helper functions
+```
+
+## Configuration
+
+The app uses environment variables for configuration. Create a `.env` file:
+
+```env
+# Optional: Backend URL (defaults to http://localhost:3456)
+VITE_BACKEND_URL=http://localhost:3456
+
+# Optional: Custom Nostr relays
+VITE_RELAY_URL=wss://relay.example.com
+```
+
+## Key Components
+
+- **AgentsPage**: Manage AI agents and their configurations
+- **ProjectDashboard**: Main project view with tasks and documentation
+- **ChatInterface**: Real-time communication with agents
+- **DocsPage**: Living documentation viewer
+- **VoiceTaskDialog**: Voice-to-task conversion
+
+## Contributing
+
+See the main [TENEX README](../README.md) for contribution guidelines.

@@ -202,7 +202,9 @@ export class GreenLightSystem {
         }
 
         if (filter?.operation) {
-            history = history.filter((r) => r.operation.includes(filter.operation));
+            history = history.filter(
+                (r) => filter.operation && r.operation.includes(filter.operation)
+            );
         }
 
         if (filter?.status) {
@@ -293,13 +295,12 @@ Consider: data loss potential, security impact, system stability, reversibility
 
 Respond with just the risk level.`;
 
-        const response = await this.llmProvider.generateResponse([
-            {
-                role: "system",
-                content: "You are a risk assessment system. Evaluate operations conservatively.",
-            },
-            { role: "user", content: prompt },
-        ]);
+        const systemPrompt =
+            "You are a risk assessment system. Evaluate operations conservatively.";
+        const fullPrompt = `${systemPrompt}\n\n${prompt}`;
+        const response = await this.llmProvider.complete(fullPrompt, {
+            temperature: 0.3,
+        });
 
         const level = response.content.trim().toLowerCase();
         if (["low", "medium", "high", "critical"].includes(level)) {

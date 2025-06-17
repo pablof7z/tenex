@@ -1,8 +1,0 @@
-{
-    "eventId": "f937387e62e63c247b14b6004a799d7e277d565ccbce073dbe8b9180fa01e5a0",
-    "title": "Inventory",
-    "description": "Instruct LLMs to preserve a map/inventory of all the parts of the codebase",
-    "content": "Maintain an accurate inventory of all code files within the `src/` directory, providing a concise one-line summary clearly stating each file's responsibility and scope. Immediately update this inventory whenever you create, significantly modify, or delete files.\n\n**Inventory Guidelines for LLMs:**\n\n- **Clearly state the file's purpose:** Each entry should explicitly describe what the file does, its main responsibility, and scope.\n- **Avoid vagueness:** Entries must precisely communicate responsibilities and usage context to enable quick understanding by other LLMs without additional context.\n\n### Inventory Format:\n\n```\nsrc/\n├── path/to/file.ext  # concise, explicit one-liner summarizing file responsibility and scope\n```\n\n### Current Inventory (Update Immediately):\n\n(empty, replace this placeholder with the current inventory)\n",
-    "version": "4",
-    "fetchedAt": 1750108480710
-}

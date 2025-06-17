@@ -131,9 +131,9 @@ export class EventMonitor implements IEventMonitor {
 
         // Encode as naddr
         return nip19.naddrEncode({
-            identifier,
+            identifier: identifier || "",
             pubkey: projectPubkey,
-            kind: Number.parseInt(kind, 10),
+            kind: Number.parseInt(kind!, 10),
         });
     }
 }

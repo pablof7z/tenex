@@ -1,4 +1,5 @@
 import { type NDKArticle, type NDKProject, NDKTask, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { useMemo } from "react";
 
 export function useProjectData(project: NDKProject | null) {
@@ -22,7 +23,7 @@ export function useProjectData(project: NDKProject | null) {
         project
             ? [
                   {
-                      kinds: [11],
+                      kinds: [EVENT_KINDS.CHAT],
                       ...project.filter(),
                       limit: 50,
                   },
@@ -37,7 +38,7 @@ export function useProjectData(project: NDKProject | null) {
         project
             ? [
                   {
-                      kinds: [30023],
+                      kinds: [EVENT_KINDS.ARTICLE],
                       ...project.filter(),
                       limit: 50,
                   },
@@ -52,7 +53,7 @@ export function useProjectData(project: NDKProject | null) {
         threads.length > 0
             ? [
                   {
-                      kinds: [1111],
+                      kinds: [EVENT_KINDS.THREAD_REPLY],
                       "#e": threads.map((t) => t.id),
                   },
               ]
@@ -66,7 +67,7 @@ export function useProjectData(project: NDKProject | null) {
         allTasks.length > 0
             ? [
                   {
-                      kinds: [1111],
+                      kinds: [EVENT_KINDS.THREAD_REPLY],
                       "#e": allTasks.map((t) => t.id),
                   },
               ]

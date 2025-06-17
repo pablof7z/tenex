@@ -1,6 +1,6 @@
 import path from "node:path";
 import { AgentEventHandler } from "@/commands/run/AgentEventHandler";
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 // toKebabCase utility function
@@ -10,6 +10,7 @@ import { formatError } from "@/utils/errors";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
 import { logInfo } from "@tenex/shared/logger";
+import type { AgentsJson } from "@tenex/types/agents";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
 
@@ -17,7 +18,7 @@ export class EventHandler {
     private agentManager: AgentManager;
     private agentEventHandler: AgentEventHandler;
 
-    constructor(private projectInfo: ProjectInfo) {
+    constructor(private projectInfo: ProjectRuntimeInfo) {
         this.agentManager = new AgentManager(projectInfo.projectPath, projectInfo);
         this.agentEventHandler = new AgentEventHandler();
     }
@@ -327,7 +328,7 @@ export class EventHandler {
         const agentKey = this.toKebabCase(agentName);
 
         try {
-            const agents = (await readJsonFile(agentsJsonPath)) || {};
+            const agents: AgentsJson = (await readJsonFile(agentsJsonPath)) || {};
 
             // Check if agent already has an nsec
             const agentEntry = agents[agentKey];

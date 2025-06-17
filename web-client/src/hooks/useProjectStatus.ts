@@ -1,5 +1,6 @@
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { onlineProjectStatusAtom, projectLLMConfigsAtom } from "../lib/store";
@@ -34,7 +35,7 @@ export function useProjectStatus() {
     const { events: statusEvents } = useSubscribe(
         [
             {
-                kinds: [24010 as NDKKind],
+                kinds: [EVENT_KINDS.PROJECT_STATUS],
                 since: Math.floor(Date.now() / 1000) - 300, // Last 5 minutes
             },
         ],

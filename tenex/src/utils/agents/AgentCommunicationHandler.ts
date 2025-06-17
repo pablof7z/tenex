@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { OrchestrationCoordinator } from "@/core/orchestration/integration/OrchestrationCoordinator";
 import { getNDK } from "@/nostr/ndkClient";
 import type { Agent } from "@/utils/agents/Agent";
@@ -31,7 +31,7 @@ export class AgentCommunicationHandler {
     // Supporting services
     private configManager: AgentConfigurationManager;
     private conversationStorage: ConversationStorage;
-    private projectInfo?: ProjectInfo;
+    private projectInfo?: ProjectRuntimeInfo;
     private agents: Map<string, Agent>;
     private orchestrationCoordinator?: OrchestrationCoordinator;
     private contextFactory: SystemPromptContextFactory;
@@ -53,7 +53,7 @@ export class AgentCommunicationHandler {
         configManager: AgentConfigurationManager,
         conversationStorage: ConversationStorage,
         agents: Map<string, Agent>,
-        projectInfo?: ProjectInfo,
+        projectInfo?: ProjectRuntimeInfo,
         orchestrationCoordinator?: OrchestrationCoordinator,
         ndk?: any // NDK instance for testing
     ) {
@@ -186,7 +186,7 @@ export class AgentCommunicationHandler {
     /**
      * Update project info and propagate to response publisher
      */
-    updateProjectInfo(projectInfo: ProjectInfo): void {
+    updateProjectInfo(projectInfo: ProjectRuntimeInfo): void {
         this.projectInfo = projectInfo;
         this.responsePublisher.updateProjectInfo(projectInfo);
     }

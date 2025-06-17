@@ -33,3 +33,19 @@ export interface ReflectionTrigger {
     reason: string;
     metadata?: Record<string, unknown>;
 }
+
+export interface LessonContext {
+    triggerEventId: string;
+    conversationId: string;
+    teamId?: string;
+    errorType?: string;
+    preventionStrategy?: string;
+    relatedCapabilities?: string[];
+    timestamp: number;
+}
+
+export interface ReflectionResult {
+    lessonsGenerated: AgentLesson[];
+    lessonsPublished: AgentLesson[];
+    reflectionDuration: number;
+}

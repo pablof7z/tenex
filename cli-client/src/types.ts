@@ -1,3 +1,7 @@
+import { EVENT_KINDS } from "@tenex/types/events";
+
+export { EVENT_KINDS };
+
 export interface ProjectAgent {
     pubkey: string;
     name: string;
@@ -31,14 +35,6 @@ export interface TypingIndicator {
     systemPrompt?: string;
     userPrompt?: string;
 }
-
-export const EVENT_KINDS = {
-    CHAT: 11,
-    THREAD_REPLY: 1111,
-    PROJECT_STATUS: 24010,
-    TYPING_INDICATOR: 24111,
-    TYPING_INDICATOR_STOP: 24112,
-} as const;
 
 export interface ChatSession {
     project: TenexProject;

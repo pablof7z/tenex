@@ -51,12 +51,13 @@ export class ResponseCoordinator {
             }
 
             await this.orchestrationExecutionService.executeResponseStrategy(
-                result as StrategyExecutionResult,
+                { agents: result.agents, team: result.team },
                 event,
                 conversationId,
                 llmConfig,
                 isTaskEvent,
-                this.processAgentResponses.bind(this)
+                this.processAgentResponses.bind(this),
+                null // ndk parameter - not needed for our callback
             );
         } else {
             // Fallback to legacy logic when no orchestration service available

@@ -88,7 +88,7 @@ export class OrchestrationCoordinator {
             this.logger.info(`   Team ID: ${team.id}`);
             this.logger.info(`   Strategy: ${team.strategy}`);
             this.logger.info(`   Members: ${team.members.join(", ")}`);
-            this.logger.info(`   Reasoning: ${team.reasoning || "none provided"}`);
+            this.logger.info(`   Reasoning: ${team.formation?.reasoning || "none provided"}`);
 
             // Save team to conversation metadata
             this.logger.info("💾 Saving team to conversation metadata...");
@@ -127,7 +127,7 @@ export class OrchestrationCoordinator {
 
     private async saveTeamToConversation(conversationId: string, team: Team): Promise<void> {
         // Load or create conversation
-        let conversationData = await this.conversationStorage.loadConversation(
+        const conversationData = await this.conversationStorage.loadConversation(
             conversationId,
             OrchestrationCoordinator.ORCHESTRATOR_AGENT_NAME
         );
@@ -139,15 +139,20 @@ export class OrchestrationCoordinator {
                 OrchestrationCoordinator.ORCHESTRATOR_AGENT_NAME
             );
             conversation.setMetadata("team", team);
-            conversationData = conversation.toJSON();
-        } else {
-            // Update existing conversation
-            if (!conversationData.metadata) {
-                conversationData.metadata = {};
-            }
-            conversationData.metadata.team = team;
+            // Pass the conversation instance directly, ConversationStorage will handle it
+            await this.conversationStorage.saveConversation(conversation);
+            return;
         }
-
+        // Update existing conversation
+        if (!conversationData.metadata) {
+            conversationData.metadata = {
+                totalMessages: 0,
+                totalTokens: 0,
+                totalCost: 0,
+                lastActivity: Date.now(),
+            };
+        }
+        conversationData.metadata.team = team;
         await this.conversationStorage.saveConversation(conversationData);
     }
 

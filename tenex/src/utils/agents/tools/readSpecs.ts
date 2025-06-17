@@ -28,6 +28,13 @@ export const readSpecsTool: ToolDefinition = {
             const { ndk } = context;
 
             // Get the agent manager and project path
+            if (!context.agent) {
+                return {
+                    success: false,
+                    output: "",
+                    error: "Agent context not available",
+                };
+            }
             const agentManager = context.agent.getAgentManager();
             if (!agentManager) {
                 return {
@@ -48,8 +55,9 @@ export const readSpecsTool: ToolDefinition = {
             };
 
             // If specific spec requested, add d tag filter
-            if (params.spec_name) {
-                filter["#d"] = [params.spec_name.toUpperCase()];
+            const specName = params.spec_name as string | undefined;
+            if (specName) {
+                filter["#d"] = [specName.toUpperCase()];
             }
 
             // Fetch events
@@ -58,8 +66,8 @@ export const readSpecsTool: ToolDefinition = {
             if (!events || events.size === 0) {
                 return {
                     success: true,
-                    output: params.spec_name
-                        ? `No ${params.spec_name.toUpperCase()} specification found.`
+                    output: specName
+                        ? `No ${specName.toUpperCase()} specification found.`
                         : "No specifications found for this project.",
                 };
             }
@@ -101,9 +109,16 @@ export const readSpecsTool: ToolDefinition = {
             }
 
             // Format output for LLM consumption
-            if (params.spec_name && latestSpecs.size === 1) {
+            if (specName && latestSpecs.size === 1) {
                 // Single spec requested
                 const spec = Array.from(latestSpecs.values())[0];
+                if (!spec) {
+                    return {
+                        success: false,
+                        output: "",
+                        error: "No specification found",
+                    };
+                }
                 const output = formatSingleSpec(spec);
 
                 return {

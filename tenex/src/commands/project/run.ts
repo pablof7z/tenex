@@ -1,7 +1,7 @@
 import path from "node:path";
 import { EventHandler } from "@/commands/run/EventHandler";
 import { ProjectDisplay } from "@/commands/run/ProjectDisplay";
-import { type ProjectInfo, ProjectLoader } from "@/commands/run/ProjectLoader";
+import { ProjectLoader, type ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
@@ -41,7 +41,7 @@ export const projectRunCommand = new Command("run")
         }
     });
 
-async function runProjectListener(projectInfo: ProjectInfo, ndk: NDK) {
+async function runProjectListener(projectInfo: ProjectRuntimeInfo, ndk: NDK) {
     try {
         logger.info(
             `Starting listener for project: ${projectInfo.title} (${projectInfo.projectId})`

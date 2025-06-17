@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectInfo } from "../../../../commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "../../../../commands/run/ProjectLoader";
 import type { CachedRule } from "../../../RulesManager";
 import type { Agent } from "../../Agent";
 import type { AgentConfig } from "../../types";
@@ -16,7 +16,7 @@ describe("SystemPromptContextFactory", () => {
         getAvailableTools: vi.fn().mockReturnValue(["tool1", "tool2"]),
     } as any;
 
-    const mockProjectInfo: ProjectInfo = {
+    const mockProjectInfo: ProjectRuntimeInfo = {
         rulesManager: {
             getRulesForAgent: vi.fn().mockReturnValue([
                 { id: "rule1", content: "Test rule 1" },

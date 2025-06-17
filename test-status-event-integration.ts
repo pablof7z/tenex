@@ -9,8 +9,8 @@
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 
 const E2E_CREATE_PROJECT_PATH = path.join(__dirname, "e2e", "create-project.ts");

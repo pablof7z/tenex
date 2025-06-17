@@ -42,8 +42,6 @@ export interface IProjectManager {
 }
 
 export class ProjectManager implements IProjectManager {
-    constructor() {}
-
     async initializeProject(
         projectPath: string,
         naddr: string,

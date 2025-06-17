@@ -50,6 +50,7 @@ export class ToolEnabledProvider implements LLMProvider {
             if (systemMessageIndex >= 0) {
                 enhancedMessages[systemMessageIndex] = {
                     ...enhancedMessages[systemMessageIndex],
+                    role: enhancedMessages[systemMessageIndex].role!,
                     content: `${enhancedMessages[systemMessageIndex].content}\n\n${toolPrompt}`,
                 };
             } else {
@@ -216,6 +217,7 @@ export class ToolEnabledProvider implements LLMProvider {
         if (systemIndex >= 0) {
             finalMessages[systemIndex] = {
                 ...finalMessages[systemIndex],
+                role: finalMessages[systemIndex].role!,
                 content: `${finalMessages[systemIndex].content}\n\nIMPORTANT: The tools have been executed and their results are provided above. Respond naturally to the user based on the tool results. Do not call tools again.`,
             };
         }

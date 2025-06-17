@@ -15,7 +15,7 @@ export class ReviewCoordinatorImpl implements ReviewCoordinator {
     constructor(
         private readonly llmProvider: LLMProvider,
         private readonly agents: Map<string, Agent>,
-        private readonly logger: Logger
+        private readonly logger: AgentLogger
     ) {
         if (!llmProvider) throw new Error("LLMProvider is required");
         if (!agents) throw new Error("Agents map is required");
@@ -34,7 +34,7 @@ export class ReviewCoordinatorImpl implements ReviewCoordinator {
         }
 
         if (availableReviewers.length === 0) {
-            this.logger.warn("No available reviewers found outside the team");
+            this.logger.warning("No available reviewers found outside the team");
             return [];
         }
 
@@ -156,7 +156,7 @@ export class ReviewCoordinatorImpl implements ReviewCoordinator {
         const agentDescriptions = availableReviewers
             .map((name) => {
                 const agent = this.agents.get(name);
-                return `- ${name}: ${agent?.getRole ? agent.getRole() : "No role specified"}`;
+                return `- ${name}: ${agent?.getConfig()?.role || "No role specified"}`;
             })
             .join("\n");
 

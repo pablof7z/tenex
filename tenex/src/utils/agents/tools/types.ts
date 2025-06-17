@@ -1,5 +1,6 @@
 import type { Agent } from "@/utils/agents/Agent";
-import type { NDK, NDKProject } from "@nostr-dev-kit/ndk";
+import type { NDKProject } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 
 export interface ToolParameter {
     name: string;

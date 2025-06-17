@@ -40,7 +40,7 @@ TENEX is a context-first development environment that orchestrates multiple AI a
 - **CLI Tool** (`tenex/`): Unified CLI with daemon mode and agent orchestration
 - **MCP Server** (`mcp/`): Model Context Protocol server with git integration
 - **Shared Libraries** (`shared/`): Common types and utilities
-- **iOS Client** (`ios-client/`): Native mobile application
+- **CLI Client** (`cli-client/`): Interactive command-line interface
 
 The system features living documentation, agent learning, rich communication, and sophisticated multi-agent orchestration through the Nostr protocol.
 

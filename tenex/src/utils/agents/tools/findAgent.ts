@@ -1,4 +1,9 @@
-import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
+import type {
+    ToolContext,
+    ToolDefinition,
+    ToolParameters,
+    ToolResult,
+} from "@/utils/agents/tools/types";
 import type { NDKEvent, NDKFilter, NDKKind } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 
@@ -149,49 +154,33 @@ export const findAgentTool: ToolDefinition = {
             required: false,
         },
     ],
-    execute: async (params: FindAgentParams, context?: ToolContext): Promise<FindAgentResult> => {
+    execute: async (params: ToolParameters, context?: ToolContext): Promise<ToolResult> => {
+        // Cast params to expected type
+        const findParams = params as FindAgentParams;
+
         // Check if agent has orchestration capability
         const agentConfig = context?.agent?.getConfig();
         const hasOrchestrationCapability =
-            agentConfig?.capabilities?.includes("orchestration") ||
-            agentConfig?.role?.toLowerCase().includes("orchestrator") ||
-            agentConfig?.isPrimary;
+            agentConfig?.role?.toLowerCase().includes("orchestrator") || false;
 
         if (!context?.agent || !hasOrchestrationCapability) {
             return {
                 success: false,
-                candidates: [],
+                output: "Only agents with orchestration capability can search for other agents",
                 error: "Only agents with orchestration capability can search for other agents",
-                renderInChat: {
-                    type: "agent_discovery",
-                    data: {
-                        query: params,
-                        agentEventIds: [],
-                        message:
-                            "Error: Only agents with orchestration capability can search for other agents",
-                    },
-                },
             };
         }
 
         if (!context.ndk) {
             return {
                 success: false,
-                candidates: [],
+                output: "NDK client not available",
                 error: "NDK client not available",
-                renderInChat: {
-                    type: "agent_discovery",
-                    data: {
-                        query: params,
-                        agentEventIds: [],
-                        message: "Error: NDK client not available",
-                    },
-                },
             };
         }
 
         try {
-            logger.info("Searching for agents with criteria:", params);
+            logger.info("Searching for agents with criteria:", findParams);
 
             // Build filter for NDKAgent events
             const filter: NDKFilter = {
@@ -210,12 +199,14 @@ export const findAgentTool: ToolDefinition = {
                 const agentInfo = extractAgentInfo(event);
                 if (agentInfo) {
                     // Calculate relevance score
-                    agentInfo.score = scoreAgent(agentInfo, params);
+                    agentInfo.score = scoreAgent(agentInfo, findParams);
 
                     // Only include agents with some relevance
                     if (
                         agentInfo.score > 0 ||
-                        (!params.capabilities && !params.specialization && !params.keywords)
+                        (!findParams.capabilities &&
+                            !findParams.specialization &&
+                            !findParams.keywords)
                     ) {
                         candidates.push(agentInfo);
                     }
@@ -231,7 +222,7 @@ export const findAgentTool: ToolDefinition = {
             });
 
             // Limit results
-            const limit = params.limit || 5;
+            const limit = findParams.limit || 5;
             const topCandidates = candidates.slice(0, limit);
 
             logger.info(`Returning ${topCandidates.length} agent candidates`);
@@ -247,34 +238,18 @@ export const findAgentTool: ToolDefinition = {
             }
 
             // Extract just the event IDs for the web client to fetch
-            const agentEventIds = topCandidates.map((candidate) => candidate.eventId);
+            const _agentEventIds = topCandidates.map((candidate) => candidate.eventId);
 
             return {
                 success: true,
-                candidates: topCandidates,
-                renderInChat: {
-                    type: "agent_discovery",
-                    data: {
-                        query: params,
-                        agentEventIds,
-                        message,
-                    },
-                },
+                output: `${message}\n\nFound agents:\n${topCandidates.map((a) => `- ${a.name}: ${a.description}`).join("\n")}`,
             };
         } catch (error) {
             logger.error("Error searching for agents:", error);
             return {
                 success: false,
-                candidates: [],
+                output: `Error searching for agents: ${error instanceof Error ? error.message : "Unknown error"}`,
                 error: error instanceof Error ? error.message : "Unknown error",
-                renderInChat: {
-                    type: "agent_discovery",
-                    data: {
-                        query: params,
-                        agentEventIds: [],
-                        message: `Error searching for agents: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    },
-                },
             };
         }
     },

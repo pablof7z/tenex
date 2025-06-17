@@ -42,7 +42,7 @@ export class ToolExecutor {
 
             // Pass through renderInChat if present
             if (result.success && "renderInChat" in result && result.renderInChat) {
-                response.renderInChat = result.renderInChat;
+                response.renderInChat = result.renderInChat as { type: string; data: unknown };
             }
 
             return response;

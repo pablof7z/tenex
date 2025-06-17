@@ -1,5 +1,5 @@
 // Re-export common types used throughout the CLI
-export type { ProjectInfo, ProjectMetadata } from "@/commands/run/ProjectLoader";
+export type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 export type { CachedRule, RuleMapping } from "@/utils/RulesManager";
 export type { Agent } from "@/utils/agents/Agent";
 export type { AgentConfig } from "@/utils/agents/types";

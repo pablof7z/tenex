@@ -152,6 +152,12 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`HierarchicalStrategy`** - Leader-follower agent relationships
 - **`ParallelExecutionStrategy`** - Concurrent agent task execution
 - **`SingleResponderStrategy`** - Single agent response coordination
+- **`PhasedDeliveryStrategy`** - Sequential phase-based execution for complex tasks with:
+  - Lead agent creates phase plan breaking down complex requests
+  - Each phase has specific agents, deliverables, and dependencies
+  - Phase results feed into subsequent phases for building solutions
+  - Lead agent reviews phase completion before proceeding
+  - Final integration phase combines all deliverables into cohesive response
 
 ### Quality Systems
 - **`GreenLightSystem`** - Task approval and validation workflows
@@ -308,6 +314,13 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 ---
 
 ## 🆕 Recent Updates
+
+### Phased Delivery Strategy Addition (January 2025)
+- **Added PhasedDeliveryStrategy** - New orchestration strategy for complex multi-phase tasks
+- **Sequential phase execution** - Tasks broken down into phases with specific deliverables
+- **Phase dependencies** - Later phases build upon results from earlier phases
+- **Lead agent coordination** - Lead agent plans phases, reviews progress, and integrates results
+- **Comprehensive testing** - Full test coverage including partial failure handling
 
 ### Project Identity System Enhancement (January 2025)
 - **Added project nsec generation** - Each project now has its own cryptographic identity

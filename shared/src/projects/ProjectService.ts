@@ -17,7 +17,6 @@ export interface IProjectService {
 }
 
 export class ProjectService implements IProjectService {
-
     async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
         try {
             const decoded = nip19.decode(naddr);
@@ -32,7 +31,7 @@ export class ProjectService implements IProjectService {
             }
 
             const filter = {
-                kinds: [kind as any],
+                kinds: [kind],
                 authors: [pubkey],
                 "#d": [identifier],
             };
@@ -100,8 +99,8 @@ export class ProjectService implements IProjectService {
             }
 
             logger.info("Repository cloned successfully");
-        } catch (error: any) {
-            if (error.message?.includes("already exists and is not an empty directory")) {
+        } catch (error) {
+            if (error instanceof Error && error.message?.includes("already exists and is not an empty directory")) {
                 logger.info("Repository already exists", { targetPath });
             } else {
                 logger.error("Failed to clone repository", { error, repoUrl });

@@ -3,8 +3,8 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { setTimeout } from "node:timers/promises";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 const TENEX_PATH = path.join(__dirname, "..", "tenex", "bin", "tenex.ts");
 const CLI_CLIENT_PATH = path.join(__dirname, "..", "cli-client", "dist", "index.js");

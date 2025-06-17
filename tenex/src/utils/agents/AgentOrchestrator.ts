@@ -1,15 +1,16 @@
 import path from "node:path";
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getAgentSigner } from "@/utils/agentManager";
 import { Agent } from "@/utils/agents/Agent";
 import type { AgentConfigurationManager } from "@/utils/agents/AgentConfigurationManager";
 import type { AgentManager } from "@/utils/agents/AgentManager";
 import type { ConversationStorage } from "@/utils/agents/ConversationStorage";
 import { ToolManager } from "@/utils/agents/tools/ToolManager";
-import { type NDK, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
-import type { LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
+import type { LegacyAgentsJson } from "@tenex/types/agents";
 
 /**
  * Orchestrates agent lifecycle and agent discovery
@@ -18,7 +19,7 @@ import type { LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
 export class AgentOrchestrator {
     private configManager: AgentConfigurationManager;
     private conversationStorage: ConversationStorage;
-    private projectInfo?: ProjectInfo;
+    private projectInfo?: ProjectRuntimeInfo;
     private agents: Map<string, Agent>;
     private toolManager: ToolManager;
     private ndk?: NDK;
@@ -27,7 +28,7 @@ export class AgentOrchestrator {
     constructor(
         configManager: AgentConfigurationManager,
         conversationStorage: ConversationStorage,
-        projectInfo?: ProjectInfo
+        projectInfo?: ProjectRuntimeInfo
     ) {
         this.configManager = configManager;
         this.conversationStorage = conversationStorage;
@@ -62,8 +63,9 @@ export class AgentOrchestrator {
         const agentsConfig = await this.configManager.loadAgentsConfig();
 
         for (const [name, config] of Object.entries(agentsConfig)) {
-            const nsec = config.nsec;
-            const configFile = config.file;
+            // Handle legacy string format and new object format
+            const nsec = typeof config === "string" ? config : config.nsec;
+            const configFile = typeof config === "object" ? config.file : undefined;
 
             const agent = await this.createAgent(name, nsec, configFile);
 
@@ -113,9 +115,7 @@ export class AgentOrchestrator {
         // Enable find_agent tool for agents with orchestration capability
         const agentConfig = agent.getConfig();
         const hasOrchestrationCapability =
-            agentConfig?.capabilities?.includes("orchestration") ||
-            agentConfig?.role?.toLowerCase().includes("orchestrator") ||
-            agentConfig?.isPrimary;
+            agentConfig?.role?.toLowerCase().includes("orchestrator") || name === "default"; // Default agent has orchestration capability
         this.toolManager.enableFindAgentTool(name, hasOrchestrationCapability);
 
         return agent;
@@ -183,7 +183,7 @@ export class AgentOrchestrator {
      */
     async isEventFromAnyAgent(eventPubkey: string): Promise<boolean> {
         // Check if the event is from any of the loaded agents
-        for (const [name, agent] of this.agents.entries()) {
+        for (const [_name, agent] of this.agents.entries()) {
             const agentPubkey = agent.getPubkey();
             if (agentPubkey === eventPubkey) {
                 return true;
@@ -215,7 +215,7 @@ export class AgentOrchestrator {
         const agentsConfig = await this.configManager.loadAgentsConfig();
 
         for (const [agentName, config] of Object.entries(agentsConfig)) {
-            const configFile = config.file;
+            const configFile = typeof config === "object" ? config.file : undefined;
 
             // Try to load agent configuration
             let description = "";
@@ -314,9 +314,6 @@ export class AgentOrchestrator {
         // Add project information if available
         if (this.projectInfo) {
             parts.push(`\nYou are working on the project: "${this.projectInfo.title}"`);
-            if (this.projectInfo.metadata.title) {
-                parts.push(`Project Name: ${this.projectInfo.metadata.title}`);
-            }
             if (this.projectInfo.repository) {
                 parts.push(`Repository: ${this.projectInfo.repository}`);
             }

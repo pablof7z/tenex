@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { CachedRule } from "@/utils/RulesManager";
 import type { SpecCache } from "@/utils/agents/prompts/SpecCache";
 import type { AgentConfig } from "@/utils/agents/types";
@@ -28,7 +28,7 @@ export interface SystemPromptContext {
     /** Agent configuration */
     agentConfig: AgentConfig;
     /** Project information */
-    projectInfo?: ProjectInfo;
+    projectInfo?: ProjectRuntimeInfo;
     /** Available tools for this agent */
     availableTools?: string[];
     /** Other agents in the system */

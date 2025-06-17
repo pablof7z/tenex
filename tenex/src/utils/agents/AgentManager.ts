@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { createOrchestrationCoordinator } from "@/core/orchestration/OrchestrationFactory";
 import type { OrchestrationCoordinator } from "@/core/orchestration/integration/OrchestrationCoordinator";
 import { getNDK } from "@/nostr/ndkClient";
@@ -21,7 +21,7 @@ import type { LLMConfig } from "@tenex/types/llm";
 export class AgentManager {
     private projectPath: string;
     private conversationStorage: ConversationStorage;
-    private _projectInfo?: ProjectInfo;
+    private _projectInfo?: ProjectRuntimeInfo;
 
     // Modular components
     private configManager: AgentConfigurationManager;
@@ -31,7 +31,7 @@ export class AgentManager {
 
     private ndk = getNDK();
 
-    constructor(projectPath: string, projectInfo?: ProjectInfo) {
+    constructor(projectPath: string, projectInfo?: ProjectRuntimeInfo) {
         this.projectPath = projectPath;
         this._projectInfo = projectInfo;
         this.conversationStorage = new ConversationStorage(projectPath);
@@ -106,115 +106,113 @@ export class AgentManager {
                     throw new Error(
                         "No LLM configuration available. Please ensure llms.json exists and contains a valid default configuration."
                     );
-                } else {
-                    // Log LLM configuration being used for orchestration
-                    logger.info(
-                        "✅ [Orchestration] Creating orchestration coordinator with LLM config:"
-                    );
-                    logger.info(`   LLM Name: ${this.configManager.getDefaultLLMName()}`);
-                    logger.info(`   Provider: ${defaultLLMConfig.provider}`);
-                    logger.info(`   Model: ${defaultLLMConfig.model}`);
-                    logger.info(`   Base URL: ${defaultLLMConfig.baseURL || "default"}`);
-                    logger.info(
-                        `   API Key: ${defaultLLMConfig.apiKey ? `***${defaultLLMConfig.apiKey.slice(-4)}` : "NOT SET"}`
-                    );
-
-                    // Create a tool-enabled provider for orchestration
-                    const { createLLMProvider } = await import("./llm/LLMFactory");
-                    const llmProvider = createLLMProvider(defaultLLMConfig);
-
-                    // Load orchestration configuration if available
-                    const orchestrationConfig = await this.configManager.getOrchestrationConfig();
-
-                    // Create typing indicator publisher adapter
-                    const typingIndicatorPublisher = {
-                        publishTypingIndicator: async (
-                            originalEvent: NDKEvent,
-                            agentName: string,
-                            isTyping: boolean,
-                            message?: string,
-                            systemPrompt?: string,
-                            userPrompt?: string
-                        ) => {
-                            try {
-                                const { EnhancedResponsePublisher } = await import(
-                                    "./EnhancedResponsePublisher"
-                                );
-                                const publisher = new EnhancedResponsePublisher(
-                                    this.ndk || getNDK(),
-                                    this._projectInfo
-                                );
-                                // Create a mock agent for the orchestrator
-                                const mockAgent = {
-                                    getName: () => agentName,
-                                    getSigner: () => {
-                                        // Use project signer or a default one
-                                        if (this._projectInfo?.projectNsec) {
-                                            const { nip19 } = require("nostr-tools");
-                                            const { data } = nip19.decode(
-                                                this._projectInfo.projectNsec
-                                            );
-                                            return {
-                                                sign: async (event: any) => {
-                                                    // Simple signing implementation
-                                                    return event;
-                                                },
-                                            };
-                                        }
-                                        throw new Error("No signer available for orchestrator");
-                                    },
-                                };
-                                await publisher.publishTypingIndicator(
-                                    originalEvent,
-                                    mockAgent as any,
-                                    isTyping,
-                                    message,
-                                    systemPrompt,
-                                    userPrompt
-                                );
-                            } catch (error) {
-                                logger.warn(`Failed to publish typing indicator: ${error}`);
-                            }
-                        },
-                    };
-
-                    this.orchestrationCoordinator = createOrchestrationCoordinator({
-                        llmProvider,
-                        llmConfig: defaultLLMConfig, // Pass the full config
-                        allLLMConfigs: this.configManager.getAllLLMConfigs(), // Pass all available LLM configs
-                        conversationStorage: this.conversationStorage,
-                        config: orchestrationConfig || {
-                            orchestrator: {
-                                llmConfig: "default",
-                                strategies: {},
-                            },
-                        },
-                        typingIndicatorPublisher,
-                    });
-
-                    // Re-create event handler with orchestration support
-                    this.eventHandler = new AgentCommunicationHandler(
-                        this.configManager,
-                        this.conversationStorage,
-                        this.orchestrator.getAllAgents(),
-                        this._projectInfo,
-                        this.orchestrationCoordinator,
-                        this.ndk
-                    );
-
-                    // Set dependencies again
-                    this.eventHandler.setDependencies({
-                        getAgent: (name) => this.orchestrator.getAgent(name),
-                        getAgentByPubkey: (pubkey) => this.orchestrator.getAgentByPubkey(pubkey),
-                        isEventFromAnyAgent: (pubkey) =>
-                            this.orchestrator.isEventFromAnyAgent(pubkey),
-                        formatAvailableAgentsForPrompt: (excludeAgent) =>
-                            this.orchestrator.formatAvailableAgentsForPrompt(excludeAgent),
-                        generateEnvironmentContext: (agentName) =>
-                            this.orchestrator.generateEnvironmentContext(agentName),
-                        getAllAvailableAgents: () => this.orchestrator.getAllAvailableAgents(),
-                    });
                 }
+                // Log LLM configuration being used for orchestration
+                logger.info(
+                    "✅ [Orchestration] Creating orchestration coordinator with LLM config:"
+                );
+                logger.info(`   LLM Name: ${this.configManager.getDefaultLLMName()}`);
+                logger.info(`   Provider: ${defaultLLMConfig.provider}`);
+                logger.info(`   Model: ${defaultLLMConfig.model}`);
+                logger.info(`   Base URL: ${defaultLLMConfig.baseURL || "default"}`);
+                logger.info(
+                    `   API Key: ${defaultLLMConfig.apiKey ? `***${defaultLLMConfig.apiKey.slice(-4)}` : "NOT SET"}`
+                );
+
+                // Create a tool-enabled provider for orchestration
+                const { createLLMProvider } = await import("./llm/LLMFactory");
+                const llmProvider = createLLMProvider(defaultLLMConfig);
+
+                // Load orchestration configuration if available
+                const orchestrationConfig = await this.configManager.getOrchestrationConfig();
+
+                // Create typing indicator publisher adapter
+                const typingIndicatorPublisher = {
+                    publishTypingIndicator: async (
+                        originalEvent: NDKEvent,
+                        agentName: string,
+                        isTyping: boolean,
+                        message?: string,
+                        systemPrompt?: string,
+                        userPrompt?: string
+                    ) => {
+                        try {
+                            const { EnhancedResponsePublisher } = await import(
+                                "./EnhancedResponsePublisher"
+                            );
+                            const publisher = new EnhancedResponsePublisher(
+                                this.ndk || getNDK(),
+                                this._projectInfo
+                            );
+                            // Create a mock agent for the orchestrator
+                            const mockAgent = {
+                                getName: () => agentName,
+                                getSigner: () => {
+                                    // Use project signer or a default one
+                                    if (this._projectInfo?.projectNsec) {
+                                        const { nip19 } = require("nostr-tools");
+                                        const { data } = nip19.decode(
+                                            this._projectInfo.projectNsec
+                                        );
+                                        return {
+                                            sign: async (event: any) => {
+                                                // Simple signing implementation
+                                                return event;
+                                            },
+                                        };
+                                    }
+                                    throw new Error("No signer available for orchestrator");
+                                },
+                            };
+                            await publisher.publishTypingIndicator(
+                                originalEvent,
+                                mockAgent as any,
+                                isTyping,
+                                message,
+                                systemPrompt,
+                                userPrompt
+                            );
+                        } catch (error) {
+                            logger.warn(`Failed to publish typing indicator: ${error}`);
+                        }
+                    },
+                };
+
+                this.orchestrationCoordinator = createOrchestrationCoordinator({
+                    llmProvider,
+                    llmConfig: defaultLLMConfig, // Pass the full config
+                    allLLMConfigs: this.configManager.getAllLLMConfigs(), // Pass all available LLM configs
+                    conversationStorage: this.conversationStorage,
+                    config: orchestrationConfig || {
+                        orchestrator: {
+                            llmConfig: "default",
+                            strategies: {},
+                        },
+                    },
+                    typingIndicatorPublisher,
+                });
+
+                // Re-create event handler with orchestration support
+                this.eventHandler = new AgentCommunicationHandler(
+                    this.configManager,
+                    this.conversationStorage,
+                    this.orchestrator.getAllAgents(),
+                    this._projectInfo,
+                    this.orchestrationCoordinator,
+                    this.ndk
+                );
+
+                // Set dependencies again
+                this.eventHandler.setDependencies({
+                    getAgent: (name) => this.orchestrator.getAgent(name),
+                    getAgentByPubkey: (pubkey) => this.orchestrator.getAgentByPubkey(pubkey),
+                    isEventFromAnyAgent: (pubkey) => this.orchestrator.isEventFromAnyAgent(pubkey),
+                    formatAvailableAgentsForPrompt: (excludeAgent) =>
+                        this.orchestrator.formatAvailableAgentsForPrompt(excludeAgent),
+                    generateEnvironmentContext: (agentName) =>
+                        this.orchestrator.generateEnvironmentContext(agentName),
+                    getAllAvailableAgents: () => this.orchestrator.getAllAvailableAgents(),
+                });
             }
         } catch (error) {
             logger.error("Failed to initialize AgentManager:", error);
@@ -339,7 +337,7 @@ export class AgentManager {
     }
 
     // Getter for project info - used by agents to access project information
-    get projectInfo(): ProjectInfo | undefined {
+    get projectInfo(): ProjectRuntimeInfo | undefined {
         return this._projectInfo;
     }
 }

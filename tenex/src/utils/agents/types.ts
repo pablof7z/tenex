@@ -6,16 +6,7 @@ import type { SerializedNDKEvent } from "@tenex/types/events";
 export type { LLMConfig } from "@tenex/types/llm";
 export type { ConversationContext } from "@tenex/types/conversations";
 export type { SerializedNDKEvent } from "@tenex/types/events";
-
-// CLI-specific agent config (extends base definition)
-export interface AgentConfig {
-    name: string;
-    description?: string;
-    role?: string;
-    instructions?: string;
-    systemPrompt?: string;
-    version?: string;
-}
+export type { AgentConfig } from "@tenex/types/agents";
 
 // Extend base conversation message for CLI needs
 export interface ConversationMessage extends BaseConversationMessage {

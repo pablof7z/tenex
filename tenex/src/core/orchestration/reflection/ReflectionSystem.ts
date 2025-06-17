@@ -28,7 +28,7 @@ export class ReflectionSystemImpl implements ReflectionSystem {
         private readonly lessonGenerator: LessonGenerator,
         private readonly lessonPublisher: LessonPublisher,
         private readonly conversationStorage: ConversationStorage,
-        private readonly logger: Logger
+        private readonly logger: AgentLogger
     ) {
         if (!detector) throw new Error("CorrectionDetector is required");
         if (!lessonGenerator) throw new Error("LessonGenerator is required");

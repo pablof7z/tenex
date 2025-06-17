@@ -52,9 +52,9 @@ export class ConversationStorage {
     }
 
     async saveConversation(
-        conversation: ConversationContext | { toJSON(): ConversationContext }
+        conversation: any // TODO: Fix type - should be InternalConversationState | Conversation
     ): Promise<void> {
-        // Handle both raw ConversationContext and Conversation instances
+        // Handle both raw conversation data and Conversation instances
         const data = "toJSON" in conversation ? conversation.toJSON() : conversation;
         // Use agent-specific file names to avoid conflicts
         const fileName = `${data.agentName}-${data.id}.json`;
@@ -64,10 +64,8 @@ export class ConversationStorage {
         logger.info(`Saved conversation ${data.id} for agent ${data.agentName} to ${filePath}`);
     }
 
-    async loadConversation(
-        conversationId: string,
-        agentName: string
-    ): Promise<ConversationContext | null> {
+    async loadConversation(conversationId: string, agentName: string): Promise<any | null> {
+        // TODO: Fix type - should be InternalConversationState
         const fileName = `${agentName}-${conversationId}.json`;
         const filePath = path.join(this.storageDir, fileName);
 

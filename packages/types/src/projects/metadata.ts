@@ -45,9 +45,10 @@ export interface ProjectInitOptions {
 }
 
 /**
- * Project configuration
+ * Legacy project configuration
+ * @deprecated Use ProjectConfig from @tenex/types/config instead
  */
-export interface ProjectConfig {
+export interface LegacyProjectConfig {
     agents: AgentsJson;
     llms: LLMConfigs;
     telemetry?: TelemetryConfigs;

@@ -87,7 +87,7 @@ export class ClaudeOutputParser extends EventEmitter {
                 if (connectedServers.length > 0) {
                     logger.info(
                         chalk.green(
-                            `✓ MCP Servers: ${connectedServers.map((s) => s.name).join(", ")}`
+                            `✓ MCP Servers: ${connectedServers.map((s: any) => s.name).join(", ")}`
                         )
                     );
                 }

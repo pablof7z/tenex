@@ -2,8 +2,8 @@ import { promises as fsPromises } from "node:fs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { LegacyAgentsJson as AgentsConfig } from "@tenex/types/agents";
-import type { LLMConfig, LLMConfigs } from "@tenex/types/llm";
+import type { LegacyAgentsJson } from "@tenex/types/agents";
+import type { LLMConfig } from "@tenex/types/llm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentConfigurationManager } from "../AgentConfigurationManager";
 
@@ -16,6 +16,22 @@ describe("AgentConfigurationManager", () => {
         tempDir = mkdtempSync(path.join(tmpdir(), "agent-config-test-"));
         const tenexDir = path.join(tempDir, ".tenex");
         await fsPromises.mkdir(tenexDir, { recursive: true });
+
+        // Create a minimal metadata.json to prevent config loading errors
+        const metadataPath = path.join(tenexDir, "metadata.json");
+        await fsPromises.writeFile(
+            metadataPath,
+            JSON.stringify(
+                {
+                    title: "Test Project",
+                    projectNaddr: "test-naddr",
+                    projectPubkey: "test-npub",
+                    projectNsec: "test-nsec",
+                },
+                null,
+                2
+            )
+        );
 
         manager = new AgentConfigurationManager(tempDir);
     });
@@ -36,17 +52,21 @@ describe("AgentConfigurationManager", () => {
         });
 
         it("should load LLM configurations from llms.json", async () => {
-            const mockLLMConfigs: LLMConfigs = {
-                default: "claude",
-                claude: {
-                    provider: "anthropic",
-                    model: "claude-3-opus-20240229",
-                    apiKey: "test-key",
+            const mockLLMConfigs = {
+                configurations: {
+                    claude: {
+                        provider: "anthropic",
+                        model: "claude-3-opus-20240229",
+                        apiKey: "test-key",
+                    },
+                    gpt4: {
+                        provider: "openai",
+                        model: "gpt-4",
+                        apiKey: "test-key",
+                    },
                 },
-                gpt4: {
-                    provider: "openai",
-                    model: "gpt-4",
-                    apiKey: "test-key",
+                defaults: {
+                    default: "claude",
                 },
             };
 
@@ -68,10 +88,15 @@ describe("AgentConfigurationManager", () => {
 
         it("should handle default config as object", async () => {
             const mockLLMConfigs = {
-                default: {
-                    provider: "openai",
-                    model: "gpt-4",
-                    apiKey: "test-key",
+                configurations: {
+                    default: {
+                        provider: "openai",
+                        model: "gpt-4",
+                        apiKey: "test-key",
+                    },
+                },
+                defaults: {
+                    default: "default",
                 },
             };
 
@@ -91,17 +116,21 @@ describe("AgentConfigurationManager", () => {
 
     describe("getLLMConfig", () => {
         beforeEach(async () => {
-            const mockLLMConfigs: LLMConfigs = {
-                default: "claude",
-                claude: {
-                    provider: "anthropic",
-                    model: "claude-3-opus-20240229",
-                    apiKey: "test-key",
+            const mockLLMConfigs = {
+                configurations: {
+                    claude: {
+                        provider: "anthropic",
+                        model: "claude-3-opus-20240229",
+                        apiKey: "test-key",
+                    },
+                    gpt4: {
+                        provider: "openai",
+                        model: "gpt-4",
+                        apiKey: "test-key",
+                    },
                 },
-                gpt4: {
-                    provider: "openai",
-                    model: "gpt-4",
-                    apiKey: "test-key",
+                defaults: {
+                    default: "claude",
                 },
             };
 
@@ -145,17 +174,22 @@ describe("AgentConfigurationManager", () => {
 
     describe("getLLMConfigForAgent", () => {
         beforeEach(async () => {
-            const mockLLMConfigs: LLMConfigs = {
-                default: "claude",
-                claude: {
-                    provider: "anthropic",
-                    model: "claude-3-opus-20240229",
-                    apiKey: "test-key",
+            const mockLLMConfigs = {
+                configurations: {
+                    claude: {
+                        provider: "anthropic",
+                        model: "claude-3-opus-20240229",
+                        apiKey: "test-key",
+                    },
+                    planner: {
+                        provider: "openai",
+                        model: "gpt-4",
+                        apiKey: "test-key",
+                    },
                 },
-                planner: {
-                    provider: "openai",
-                    model: "gpt-4",
-                    apiKey: "test-key",
+                defaults: {
+                    default: "claude",
+                    planner: "planner",
                 },
             };
 
@@ -185,17 +219,21 @@ describe("AgentConfigurationManager", () => {
 
     describe("updateAgentLLMConfig", () => {
         beforeEach(async () => {
-            const mockLLMConfigs: LLMConfigs = {
-                default: "claude",
-                claude: {
-                    provider: "anthropic",
-                    model: "claude-3-opus-20240229",
-                    apiKey: "test-key",
+            const mockLLMConfigs = {
+                configurations: {
+                    claude: {
+                        provider: "anthropic",
+                        model: "claude-3-opus-20240229",
+                        apiKey: "test-key",
+                    },
+                    gpt4: {
+                        provider: "openai",
+                        model: "gpt-4",
+                        apiKey: "test-key",
+                    },
                 },
-                gpt4: {
-                    provider: "openai",
-                    model: "gpt-4",
-                    apiKey: "test-key",
+                defaults: {
+                    default: "claude",
                 },
             };
 
@@ -204,8 +242,8 @@ describe("AgentConfigurationManager", () => {
             await manager.initialize();
         });
 
-        it("should update agent LLM config at runtime", () => {
-            const result = manager.updateAgentLLMConfig("planner", "gpt4");
+        it("should update agent LLM config at runtime", async () => {
+            const result = await manager.updateAgentLLMConfig("planner", "gpt4");
             expect(result).toBe(true);
 
             const config = manager.getLLMConfigForAgent("planner");
@@ -216,15 +254,15 @@ describe("AgentConfigurationManager", () => {
             });
         });
 
-        it("should return false for non-existent config", () => {
-            const result = manager.updateAgentLLMConfig("planner", "nonexistent");
+        it("should return false for non-existent config", async () => {
+            const result = await manager.updateAgentLLMConfig("planner", "nonexistent");
             expect(result).toBe(false);
         });
     });
 
     describe("agents.json operations", () => {
         it("should load agents configuration", async () => {
-            const mockAgentsConfig: AgentsConfig = {
+            const mockAgentsConfig: LegacyAgentsJson = {
                 default: "nsec1default",
                 code: {
                     nsec: "nsec1code",
@@ -249,7 +287,7 @@ describe("AgentConfigurationManager", () => {
         });
 
         it("should get specific agent config entry", async () => {
-            const mockAgentsConfig: AgentsConfig = {
+            const mockAgentsConfig: LegacyAgentsJson = {
                 default: "nsec1default",
                 code: {
                     nsec: "nsec1code",
@@ -268,7 +306,7 @@ describe("AgentConfigurationManager", () => {
         });
 
         it("should handle legacy string format", async () => {
-            const mockAgentsConfig: AgentsConfig = {
+            const mockAgentsConfig: LegacyAgentsJson = {
                 default: "nsec1default",
                 code: "nsec1code",
             };
@@ -367,8 +405,23 @@ describe("AgentConfigurationManager", () => {
     describe("circular reference handling", () => {
         it("should handle circular references in LLM configs", async () => {
             const mockLLMConfigs = {
-                config1: "config2",
-                config2: "config1",
+                configurations: {
+                    config1: {
+                        provider: "openai",
+                        model: "gpt-4",
+                        apiKey: "test-key",
+                    },
+                    config2: {
+                        provider: "anthropic",
+                        model: "claude-3",
+                        apiKey: "test-key",
+                    },
+                },
+                defaults: {
+                    default: "config1",
+                    config1: "config2",
+                    config2: "config1",
+                },
             };
 
             const llmsPath = path.join(tempDir, ".tenex", "llms.json");
@@ -383,7 +436,10 @@ describe("AgentConfigurationManager", () => {
     describe("edge cases", () => {
         it("should handle empty llms.json", async () => {
             const llmsPath = path.join(tempDir, ".tenex", "llms.json");
-            await fsPromises.writeFile(llmsPath, JSON.stringify({}, null, 2));
+            await fsPromises.writeFile(
+                llmsPath,
+                JSON.stringify({ configurations: {}, defaults: {} }, null, 2)
+            );
             await manager.initialize();
 
             expect(manager.getLLMConfig()).toBeUndefined();
@@ -406,11 +462,15 @@ describe("AgentConfigurationManager", () => {
 
         it("should get default LLM name", async () => {
             const mockLLMConfigs = {
-                default: "claude",
-                claude: {
-                    provider: "anthropic",
-                    model: "claude-3-opus-20240229",
-                    apiKey: "test-key",
+                configurations: {
+                    claude: {
+                        provider: "anthropic",
+                        model: "claude-3-opus-20240229",
+                        apiKey: "test-key",
+                    },
+                },
+                defaults: {
+                    default: "claude",
                 },
             };
 
@@ -425,23 +485,27 @@ describe("AgentConfigurationManager", () => {
     describe("read/write integration", () => {
         it("should persist and reload configurations", async () => {
             // Write configuration
-            const mockLLMConfigs: LLMConfigs = {
-                default: "claude",
-                claude: {
-                    provider: "anthropic",
-                    model: "claude-3-opus-20240229",
-                    apiKey: "test-key",
-                    enableCaching: true,
-                    contextWindowSize: 200000,
+            const mockLLMConfigs = {
+                configurations: {
+                    claude: {
+                        provider: "anthropic",
+                        model: "claude-3-opus-20240229",
+                        apiKey: "test-key",
+                        enableCaching: true,
+                        contextWindowSize: 200000,
+                    },
+                    gpt4: {
+                        provider: "openai",
+                        model: "gpt-4-turbo",
+                        apiKey: "test-key-2",
+                    },
                 },
-                gpt4: {
-                    provider: "openai",
-                    model: "gpt-4-turbo",
-                    apiKey: "test-key-2",
+                defaults: {
+                    default: "claude",
                 },
             };
 
-            const mockAgentsConfig: AgentsConfig = {
+            const mockAgentsConfig: LegacyAgentsJson = {
                 default: {
                     nsec: "nsec1default",
                     file: "default-agent.json",

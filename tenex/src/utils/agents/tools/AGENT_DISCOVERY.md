@@ -147,7 +147,7 @@ Run tests with: `bun test src/utils/agents/tools/__tests__/findAgent.test.ts`
 
 Enable debug logs to trace the discovery process:
 ```bash
-DEBUG=tenex:* tenex run
+DEBUG=tenex:* tenex project run
 ```
 
 ## Related Documentation

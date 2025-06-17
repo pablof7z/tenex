@@ -123,15 +123,17 @@ export class LessonGeneratorImpl implements LessonGenerator {
     }
 
     private buildLessonPrompt(trigger: ReflectionTrigger, agent: Agent): string {
+        const triggerAny = trigger as any;
+        const agentAny = agent as any;
         return `You are helping agent "${agent.getName()}" learn from a correction or mistake.
 
 Context:
-- Trigger Event: ${trigger.triggerEvent.content}
-- Detected Issues: ${JSON.stringify(trigger.detectedIssues)}
-- Conversation History: ${this.summarizeConversation(trigger.conversation)}
+- Trigger Event: ${triggerAny.triggerEvent?.content || trigger.reason}
+- Detected Issues: ${JSON.stringify(triggerAny.detectedIssues || [])}
+- Conversation History: ${triggerAny.conversation ? this.summarizeConversation(triggerAny.conversation) : "Not available"}
 
-Agent Role: ${agent.getRole ? agent.getRole() : "Not specified"}
-Agent Capabilities: ${agent.getCapabilities ? agent.getCapabilities() : "Not specified"}
+Agent Role: ${agentAny.getRole ? agentAny.getRole() : "Not specified"}
+Agent Capabilities: ${agentAny.getCapabilities ? agentAny.getCapabilities() : "Not specified"}
 
 Analyze whether this correction is relevant to this specific agent and what lesson they should learn.
 

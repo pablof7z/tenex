@@ -103,7 +103,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
 }
 
 async function loadSpecsForDebug(
-    projectInfo: import("../run/ProjectLoader").ProjectInfo,
+    projectInfo: import("../run/ProjectLoader").ProjectRuntimeInfo,
     allAuthorPubkeys: string[],
     ndk: NDK
 ): Promise<void> {

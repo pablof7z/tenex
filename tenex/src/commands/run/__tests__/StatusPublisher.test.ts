@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import type { ProjectInfo } from "../ProjectLoader";
+import type { ProjectRuntimeInfo } from "../ProjectLoader";
 import { StatusPublisher } from "../StatusPublisher";
 
 // Mock the NDK client
@@ -126,7 +126,7 @@ describe("StatusPublisher", () => {
 
         try {
             // Call the method we're testing
-            await statusPublisher.startPublishing(projectInfo as ProjectInfo);
+            await statusPublisher.startPublishing(projectInfo as ProjectRuntimeInfo);
 
             // Parse the captured content
             const statusContent = JSON.parse(capturedContent);
@@ -209,7 +209,7 @@ describe("StatusPublisher", () => {
         globalThis.NDKEvent = mock(() => mockEvent) as unknown as typeof NDKEvent;
 
         try {
-            await statusPublisher.startPublishing(projectInfo as ProjectInfo);
+            await statusPublisher.startPublishing(projectInfo as ProjectRuntimeInfo);
 
             const statusContent = JSON.parse(capturedContent);
 
@@ -271,7 +271,7 @@ describe("StatusPublisher", () => {
         globalThis.NDKEvent = mock(() => mockEvent) as unknown as typeof NDKEvent;
 
         try {
-            await statusPublisher.startPublishing(projectInfo as ProjectInfo);
+            await statusPublisher.startPublishing(projectInfo as ProjectRuntimeInfo);
 
             // Should handle both string and object agent configs
             const agentTags = capturedTags.filter((tag) => tag[0] === "p");

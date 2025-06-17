@@ -19,7 +19,7 @@ export const claudeCodeTool: ToolDefinition = {
         },
     ],
     execute: async (params, toolContext?: ToolContext) => {
-        const { prompt } = params;
+        const prompt = params.prompt as string;
 
         logInfo(chalk.blue("\n🚀 Starting Claude Code..."));
         logDebug(chalk.gray(`Prompt: "${prompt.substring(0, 100)}..."`));
@@ -27,7 +27,7 @@ export const claudeCodeTool: ToolDefinition = {
         try {
             const result = await executeClaudeCode(
                 {
-                    prompt,
+                    prompt: prompt,
                     verbose: true,
                     outputFormat: "stream-json",
                     dangerouslySkipPermissions: true,

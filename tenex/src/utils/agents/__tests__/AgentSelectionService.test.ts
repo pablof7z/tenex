@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectInfo } from "../../../commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "../../../commands/run/ProjectLoader";
 import type { OrchestrationCoordinator } from "../../../core/orchestration/integration/OrchestrationCoordinator";
 import { OrchestrationStrategy, type Team } from "../../../core/orchestration/types";
 import type { Agent } from "../Agent";
@@ -11,7 +11,7 @@ import type { SystemPromptContextFactory } from "../prompts/SystemPromptContextF
 describe("AgentSelectionService", () => {
     let service: AgentSelectionService;
     let mockAgents: Map<string, Agent>;
-    let mockProjectInfo: ProjectInfo;
+    let mockProjectInfo: ProjectRuntimeInfo;
     let mockOrchestrationCoordinator: OrchestrationCoordinator;
     let mockContextFactory: SystemPromptContextFactory;
     let mockConversationStorage: ConversationStorage;

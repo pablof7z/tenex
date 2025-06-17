@@ -13,7 +13,6 @@ export type {
     ProjectContext,
     EventContext,
     LLMResponse,
-    LLMConfig,
     LLMProvider,
     LogContext,
     Logger,
@@ -49,10 +48,10 @@ export type {
 } from "@/core/orchestration/supervision/SupervisionSystem";
 
 // Reflection exports
-export { CorrectionDetector } from "@/core/orchestration/reflection/CorrectionDetector";
-export { LessonGenerator } from "@/core/orchestration/reflection/LessonGenerator";
-export { LessonPublisher } from "@/core/orchestration/reflection/LessonPublisher";
-export { ReflectionSystem } from "@/core/orchestration/reflection/ReflectionSystem";
+export type { CorrectionDetector } from "@/core/orchestration/reflection/CorrectionDetector";
+export type { LessonGenerator } from "@/core/orchestration/reflection/LessonGenerator";
+export type { LessonPublisher } from "@/core/orchestration/reflection/LessonPublisher";
+export type { ReflectionSystem } from "@/core/orchestration/reflection/ReflectionSystem";
 export type {
     CorrectionAnalysis,
     CorrectionPattern,
@@ -61,9 +60,9 @@ export type {
 } from "@/core/orchestration/reflection/types";
 
 // Green light exports
-export { ReviewCoordinatorImpl } from "@/core/orchestration/greenlight/ReviewCoordinator";
-export { ReviewAggregatorImpl } from "@/core/orchestration/greenlight/ReviewAggregator";
-export { ReviewSystem } from "@/core/orchestration/greenlight/ReviewSystem";
+export type { ReviewCoordinatorImpl } from "@/core/orchestration/greenlight/ReviewCoordinator";
+export type { ReviewAggregatorImpl } from "@/core/orchestration/greenlight/ReviewAggregator";
+export type { ReviewSystem } from "@/core/orchestration/greenlight/ReviewSystem";
 export { GreenLightSystem } from "@/core/orchestration/greenlight/GreenLightSystem";
 export type {
     ReviewRequest,
@@ -79,9 +78,9 @@ export type { TeamEventHandler } from "@/core/orchestration/integration/TeamEven
 export { TeamEventHandlerImpl } from "@/core/orchestration/integration/TeamEventHandler";
 
 // Analysis exports
-export { TeamFormationAnalyzer } from "@/core/orchestration/TeamFormationAnalyzer";
+export type { TeamFormationAnalyzer } from "@/core/orchestration/TeamFormationAnalyzer";
 export { TeamFormationAnalyzerImpl } from "@/core/orchestration/TeamFormationAnalyzerImpl";
-export { PromptBuilder } from "@/core/orchestration/PromptBuilder";
+export type { PromptBuilder } from "@/core/orchestration/PromptBuilder";
 export { PromptBuilderImpl } from "@/core/orchestration/PromptBuilderImpl";
 
 // Adapter exports

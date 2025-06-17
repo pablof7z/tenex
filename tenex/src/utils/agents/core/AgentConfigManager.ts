@@ -82,7 +82,7 @@ Remember: You cannot add agents yourself - you can only suggest them. The final 
     if (configFile) {
         const eventConfigPath = path.join(projectPath, ".tenex", "agents", configFile);
         try {
-            const eventConfig = await fileSystem.readJsonFile(eventConfigPath);
+            const eventConfig = (await fileSystem.readJsonFile(eventConfigPath)) as any;
 
             // Extract the event ID
             agentEventId = eventConfig.eventId;
@@ -111,7 +111,7 @@ Remember: You cannot add agents yourself - you can only suggest them. The final 
                 if (file.endsWith(".json") && file !== `${name}.json`) {
                     try {
                         const eventConfigPath = path.join(agentsDir, file);
-                        const eventConfig = await fileSystem.readJsonFile(eventConfigPath);
+                        const eventConfig = (await fileSystem.readJsonFile(eventConfigPath)) as any;
 
                         // Check if this event configuration matches the agent name
                         if (

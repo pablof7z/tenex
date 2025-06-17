@@ -43,14 +43,15 @@ export class AgentIdentityBuilder implements PromptSectionBuilder {
         }
 
         // Capabilities summary
-        if (agentConfig.model || agentConfig.provider) {
+        const configAny = agentConfig as any;
+        if (configAny.model || configAny.provider) {
             parts.push("");
             parts.push("### Technical Details");
-            if (agentConfig.provider) {
-                parts.push(`- Provider: ${agentConfig.provider}`);
+            if (configAny.provider) {
+                parts.push(`- Provider: ${configAny.provider}`);
             }
-            if (agentConfig.model) {
-                parts.push(`- Model: ${agentConfig.model}`);
+            if (configAny.model) {
+                parts.push(`- Model: ${configAny.model}`);
             }
         }
 

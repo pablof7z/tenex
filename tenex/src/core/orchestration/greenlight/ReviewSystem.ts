@@ -6,6 +6,7 @@ import type {
 import type { ReviewRequest, ReviewResult } from "@/core/orchestration/greenlight/types";
 import type { TaskDefinition, Team } from "@/core/orchestration/types";
 import type { Conversation } from "@/utils/agents/Conversation";
+import type { ConversationMessage } from "@/utils/agents/types";
 import type { AgentLogger } from "@tenex/shared/logger";
 
 export interface ReviewSystem {
@@ -28,7 +29,7 @@ export class ReviewSystemImpl implements ReviewSystem {
     constructor(
         private readonly coordinator: ReviewCoordinator,
         private readonly aggregator: ReviewAggregator,
-        private readonly logger: Logger
+        private readonly logger: AgentLogger
     ) {
         if (!coordinator) throw new Error("ReviewCoordinator is required");
         if (!aggregator) throw new Error("ReviewAggregator is required");
@@ -57,7 +58,7 @@ export class ReviewSystemImpl implements ReviewSystem {
 
     async initiateReview(team: Team, conversation: Conversation): Promise<ReviewResult> {
         if (!team.taskDefinition) {
-            this.logger.warn("No task definition found for team");
+            this.logger.warning("No task definition found for team");
             return { status: "not_required" };
         }
 
@@ -74,7 +75,7 @@ export class ReviewSystemImpl implements ReviewSystem {
         const reviewers = await this.coordinator.selectReviewers(team);
 
         if (reviewers.length === 0) {
-            this.logger.warn("No reviewers available, proceeding without review");
+            this.logger.warning("No reviewers available, proceeding without review");
             return { status: "not_required" };
         }
 
@@ -157,21 +158,21 @@ export class ReviewSystemImpl implements ReviewSystem {
         };
     }
 
-    private extractCodeBlocks(messages: Conversation["messages"]): string[] {
+    private extractCodeBlocks(messages: ConversationMessage[]): string[] {
         const codeBlocks: string[] = [];
 
         for (const msg of messages) {
             if (msg.role === "assistant" && msg.content) {
                 // Extract code blocks from markdown
                 const matches = msg.content.match(/```[\s\S]*?```/g) || [];
-                codeBlocks.push(...matches.map((m) => m.replace(/```\w*\n?/g, "")));
+                codeBlocks.push(...matches.map((m: string) => m.replace(/```\w*\n?/g, "")));
             }
         }
 
         return codeBlocks;
     }
 
-    private countTestMentions(messages: Conversation["messages"]): number {
+    private countTestMentions(messages: ConversationMessage[]): number {
         let count = 0;
 
         for (const msg of messages) {
@@ -184,7 +185,7 @@ export class ReviewSystemImpl implements ReviewSystem {
         return Math.min(count, 10); // Cap at reasonable number
     }
 
-    private extractFileNames(messages: Conversation["messages"]): string[] {
+    private extractFileNames(messages: ConversationMessage[]): string[] {
         const fileNames = new Set<string>();
 
         for (const msg of messages) {
@@ -200,7 +201,7 @@ export class ReviewSystemImpl implements ReviewSystem {
         return Array.from(fileNames).slice(0, 20); // Limit to 20 files
     }
 
-    private extractKeyChanges(messages: Conversation["messages"]): string[] {
+    private extractKeyChanges(messages: ConversationMessage[]): string[] {
         const changes: string[] = [];
 
         for (const msg of messages) {

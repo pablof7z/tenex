@@ -1,5 +1,6 @@
 import type { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { atom, useAtom } from "jotai";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -17,7 +18,7 @@ export function useAgentLessons() {
 
     // Subscribe to all agent lesson events
     const { events: lessons, eose } = useSubscribe(
-        [{ kinds: [4124 as NDKKind], limit: 50 }],
+        [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], limit: 50 }],
         {},
         []
     );
@@ -87,7 +88,9 @@ export function useAgentLessons() {
  */
 export function useAgentLessonsByEventId(agentEventId: string | undefined) {
     const { events: lessons } = useSubscribe(
-        agentEventId ? [{ kinds: [4124 as NDKKind], "#e": [agentEventId] }] : false,
+        agentEventId
+            ? [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], "#e": [agentEventId] }]
+            : false,
         {},
         [agentEventId]
     );

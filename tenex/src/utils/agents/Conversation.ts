@@ -1,9 +1,21 @@
-import type { ConversationContext, ConversationMessage } from "@/utils/agents/types";
+import type { ConversationMessage } from "@/utils/agents/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 
+import type { ConversationMetadata } from "@tenex/types/conversations";
+
+// Internal conversation state used by the Conversation class
+interface InternalConversationState {
+    id: string;
+    agentName: string;
+    messages: ConversationMessage[];
+    createdAt: number;
+    lastActivityAt: number;
+    metadata?: ConversationMetadata;
+}
+
 export class Conversation {
-    private context: ConversationContext;
+    private context: InternalConversationState;
     private participants: Set<string> = new Set(); // Track participant pubkeys
 
     constructor(id: string, agentName: string, systemPrompt?: string) {
@@ -17,6 +29,7 @@ export class Conversation {
 
         if (systemPrompt) {
             this.addMessage({
+                id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 role: "system",
                 content: systemPrompt,
                 timestamp: Date.now(),
@@ -42,6 +55,7 @@ export class Conversation {
             `[Conversation ${this.getId()}] Adding user message: "${content.substring(0, 100)}..."`
         );
         this.addMessage({
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             role: "user",
             content,
             event,
@@ -69,6 +83,7 @@ export class Conversation {
 
     addAssistantMessage(content: string): void {
         this.addMessage({
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             role: "assistant",
             content,
             timestamp: Date.now(),
@@ -129,9 +144,9 @@ export class Conversation {
         return this.participants.size;
     }
 
-    toJSON(): ConversationContext {
+    toJSON(): InternalConversationState {
         // Create a deep copy and convert NDKEvents to raw events
-        const serializable: ConversationContext = {
+        const serializable: InternalConversationState = {
             ...this.context,
             messages: this.context.messages.map((msg) => ({
                 ...msg,
@@ -158,7 +173,7 @@ export class Conversation {
         );
     }
 
-    static fromJSON(data: ConversationContext): Conversation {
+    static fromJSON(data: InternalConversationState): Conversation {
         const conversation = new Conversation(data.id, data.agentName);
         conversation.context = data;
 

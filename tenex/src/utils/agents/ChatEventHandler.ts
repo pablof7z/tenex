@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { Agent } from "@/utils/agents/Agent";
 import type { SystemPromptContext } from "@/utils/agents/prompts/types";
 import { formatError } from "@/utils/errors";
@@ -9,7 +9,7 @@ import chalk from "chalk";
 export class ChatEventHandler {
     constructor(
         private agents: Map<string, Agent>,
-        private projectInfo: ProjectInfo,
+        private projectInfo: ProjectRuntimeInfo,
         private getAgentFn: (name?: string) => Promise<Agent>,
         private isEventFromAnyAgentFn: (eventPubkey: string) => Promise<boolean>,
         private buildSystemPromptContextFn: (
@@ -77,14 +77,19 @@ export class ChatEventHandler {
                 );
 
                 conversation.addMessage({
+                    id: event.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     role: "user",
                     content: event.content || "",
                     timestamp: (event.created_at || Math.floor(Date.now() / 1000)) * 1000,
-                    eventId: event.id,
-                    pubkey: event.pubkey,
+                    metadata: {
+                        eventId: event.id,
+                    },
+                    author: {
+                        pubkey: event.pubkey,
+                    },
                 });
 
-                await conversation.save();
+                // Note: save() method doesn't exist on Conversation class
                 logger.info(`Added message to ${name} agent's conversation history`);
             } catch (err) {
                 const errorMessage = formatError(err);

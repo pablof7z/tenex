@@ -13,7 +13,7 @@ import type {
     TelemetryEventPublisher,
 } from "@tenex/types/telemetry";
 import { logger } from "../logger.js";
-import { getTelemetryService } from "./TelemetryService.js";
+import { type TelemetrySpan, getTelemetryService } from "./TelemetryService.js";
 
 export class TelemetryEventService implements TelemetryEventPublisher {
     private readonly serviceName = "tenex-orchestration";
@@ -126,7 +126,7 @@ export class TelemetryEventService implements TelemetryEventPublisher {
         await this.publishEvent(event);
     }
 
-    private addEventAttributes(span: any, event: TelemetryEvent): void {
+    private addEventAttributes(span: TelemetrySpan, event: TelemetryEvent): void {
         switch (event.type) {
             case "team_formation_analysis":
                 span.setAttributes({

@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { CachedRule } from "@/utils/RulesManager";
 import type { Agent } from "@/utils/agents/Agent";
 import type { SystemPromptContext } from "@/utils/agents/prompts/types";
@@ -8,14 +8,14 @@ import type { SystemPromptContext } from "@/utils/agents/prompts/types";
  * Replaces manual context building in AgentCommunicationHandler.
  */
 export class SystemPromptContextFactory {
-    private projectInfo?: ProjectInfo;
+    private projectInfo?: ProjectRuntimeInfo;
     private getAllAvailableAgentsFn?: () => Promise<
         Map<string, { description: string; role: string; capabilities: string }>
     >;
     private formatAvailableAgentsForPromptFn?: (excludeAgent?: string) => Promise<string>;
 
     constructor(
-        projectInfo?: ProjectInfo,
+        projectInfo?: ProjectRuntimeInfo,
         dependencies?: {
             getAllAvailableAgents?: () => Promise<
                 Map<string, { description: string; role: string; capabilities: string }>
@@ -142,7 +142,7 @@ export class SystemPromptContextFactory {
     /**
      * Update the project info (useful for dependency injection)
      */
-    updateProjectInfo(projectInfo: ProjectInfo): void {
+    updateProjectInfo(projectInfo: ProjectRuntimeInfo): void {
         this.projectInfo = projectInfo;
     }
 

@@ -66,14 +66,14 @@ export const shellTool: ToolDefinition = {
                 const errors: string[] = [];
 
                 // Spawn the process
-                const child = spawn(command, [], {
+                const child = spawn(command as string, [], {
                     shell: true,
-                    cwd,
+                    cwd: cwd as string | undefined,
                     env: process.env,
                 });
 
                 // Handle stdout
-                child.stdout.on("data", async (data) => {
+                child.stdout.on("data", async (data: Buffer) => {
                     const chunk = data.toString();
                     output.push(chunk);
 
@@ -98,7 +98,7 @@ export const shellTool: ToolDefinition = {
                 });
 
                 // Handle stderr
-                child.stderr.on("data", async (data) => {
+                child.stderr.on("data", async (data: Buffer) => {
                     const chunk = data.toString();
                     errors.push(chunk);
 
@@ -123,7 +123,7 @@ export const shellTool: ToolDefinition = {
                 });
 
                 // Handle process exit
-                child.on("close", async (code) => {
+                child.on("close", async (code: number | null) => {
                     // Publish completion event
                     const completeEvent = new NDKEvent(ndk);
                     completeEvent.kind = 24200;
@@ -162,7 +162,7 @@ export const shellTool: ToolDefinition = {
                 });
 
                 // Handle process errors
-                child.on("error", async (error) => {
+                child.on("error", async (error: Error) => {
                     // Publish error event
                     const errorEvent = new NDKEvent(ndk);
                     errorEvent.kind = 24200;

@@ -1,33 +1,36 @@
+import type { NDKKind } from "@nostr-dev-kit/ndk";
+
 /**
  * Nostr event kinds used in TENEX
  */
 
 export const EVENT_KINDS = {
     // Standard Nostr kinds
-    METADATA: 0,
-    TEXT_NOTE: 1,
-    CONTACT_LIST: 3,
+    METADATA: 0 as NDKKind,
+    TEXT_NOTE: 1 as NDKKind,
+    CONTACT_LIST: 3 as NDKKind,
 
     // Chat-related
-    CHAT: 11,
-    THREAD_REPLY: 1111,
+    CHAT: 11 as NDKKind,
+    THREAD_REPLY: 1111 as NDKKind,
 
     // TENEX-specific kinds
-    TASK: 1934,
-    AGENT_REQUEST: 3199,
-    AGENT_LESSON: 4124,
-    AGENT_CONFIG: 4199,
+    TASK: 1934 as NDKKind,
+    AGENT_REQUEST: 3199 as NDKKind,
+    AGENT_REQUEST_LIST: 13199 as NDKKind, // List of agent requests (10000 + 3199)
+    AGENT_LESSON: 4124 as NDKKind,
+    AGENT_CONFIG: 4199 as NDKKind,
 
     // Status and typing
-    PROJECT_STATUS: 24010,
-    LLM_CONFIG_CHANGE: 24101,
-    TYPING_INDICATOR: 24111,
-    TYPING_INDICATOR_STOP: 24112,
+    PROJECT_STATUS: 24010 as NDKKind,
+    LLM_CONFIG_CHANGE: 24101 as NDKKind,
+    TYPING_INDICATOR: 24111 as NDKKind,
+    TYPING_INDICATOR_STOP: 24112 as NDKKind,
 
     // Addressable events
-    ARTICLE: 30023,
-    TEMPLATE: 30717,
-    PROJECT: 31933,
+    ARTICLE: 30023 as NDKKind,
+    TEMPLATE: 30717 as NDKKind,
+    PROJECT: 31933 as NDKKind,
 } as const;
 
 export type EventKind = (typeof EVENT_KINDS)[keyof typeof EVENT_KINDS];

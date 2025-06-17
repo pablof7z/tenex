@@ -29,3 +29,13 @@ export interface SupervisionEvent {
     decision: SupervisionDecision;
     timestamp: number;
 }
+
+export type MilestoneStatus = "pending" | "in_progress" | "completed" | "failed";
+
+export interface SupervisionContext {
+    taskId: string;
+    conversationId: string;
+    milestones: Milestone[];
+    teamId?: string;
+    projectInfo?: unknown;
+}

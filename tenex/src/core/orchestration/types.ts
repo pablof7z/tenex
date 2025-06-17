@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 export enum OrchestrationStrategy {
@@ -61,7 +61,7 @@ export interface AgentDefinition {
 }
 
 export interface ProjectContext {
-    projectInfo?: ProjectInfo;
+    projectInfo?: ProjectRuntimeInfo;
     repository?: string;
     title?: string;
 }

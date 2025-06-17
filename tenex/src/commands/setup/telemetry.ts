@@ -105,7 +105,7 @@ export class TelemetryConfigEditor {
 
                 logger.info(`     ${features.join(", ") || "No features enabled"}`);
             });
-            logger.info();
+            logger.info("");
         }
 
         const { action } = await inquirer.prompt([
@@ -159,7 +159,7 @@ export class TelemetryConfigEditor {
                 // Load from config.json and extract telemetry section
                 const globalConfig =
                     (await fileSystem.readJsonFile<GlobalConfig>(this.telemetryPath)) || {};
-                return globalConfig.telemetry || {};
+                return (globalConfig.telemetry as TelemetryConfigs) || {};
             }
             // Load from project telemetry.json
             return (await fileSystem.readJsonFile<TelemetryConfigs>(this.telemetryPath)) || {};
@@ -179,7 +179,7 @@ export class TelemetryConfigEditor {
             } catch {
                 // File doesn't exist, create new one
             }
-            globalConfig.telemetry = config;
+            globalConfig.telemetry = config as TelemetryConfig;
             await fileSystem.writeJsonFile(this.telemetryPath, globalConfig, { spaces: 2 });
         } else {
             // Save directly to project telemetry.json
@@ -530,26 +530,30 @@ export class TelemetryConfigEditor {
     }
 
     private async editServiceInfo(config: TelemetryConfig): Promise<void> {
-        const currentService = config.tracing || config.metrics || config.logs || {};
+        const currentService =
+            config.tracing ||
+            config.metrics ||
+            config.logs ||
+            ({} as TracingConfig | MetricsConfig | LogsConfig);
 
         const serviceInfo = await inquirer.prompt([
             {
                 type: "input",
                 name: "serviceName",
                 message: "Service name:",
-                default: currentService.serviceName,
+                default: (currentService as any).serviceName || "",
             },
             {
                 type: "input",
                 name: "serviceVersion",
                 message: "Service version:",
-                default: currentService.serviceVersion,
+                default: (currentService as any).serviceVersion || "",
             },
             {
                 type: "input",
                 name: "environment",
                 message: "Environment:",
-                default: currentService.environment,
+                default: (currentService as any).environment || "",
             },
         ]);
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
 import { type ChildProcess, spawn } from "node:child_process";
-import path from "node:path";
-import { NDKEvent, NDKKind, NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { NDKEvent, NDKKind, NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
 import { NDKAgent } from "../cli-client/src/events/agent.js";
 import { getNDK } from "../cli-client/src/ndk-setup.js";
 

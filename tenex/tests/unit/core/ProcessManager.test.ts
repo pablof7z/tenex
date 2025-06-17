@@ -30,32 +30,49 @@ const mockLogger = {
     debug: mock(() => {}),
 };
 
-mock.module("node:child_process", () => ({
-    spawn: mock((_command: string, _args: string[], _options: unknown) => {
-        const child = new MockChildProcess(12345);
-        setTimeout(() => child.emit("spawn"), 0);
-        return child;
-    }),
-}));
+// Store reference to spawn mock
+let spawnMock: ReturnType<typeof mock>;
+let mockChildProcess: MockChildProcess;
+
+mock.module("node:child_process", () => {
+    spawnMock = mock((_command: string, _args: string[], _options: unknown) => {
+        mockChildProcess = new MockChildProcess(12345);
+        setTimeout(() => mockChildProcess.emit("spawn"), 0);
+        return mockChildProcess;
+    });
+    return {
+        spawn: spawnMock,
+    };
+});
 
 mock.module("@tenex/shared", () => ({
     logger: mockLogger,
 }));
 
+// Mock process.kill for isProjectRunning checks
+const originalProcessKill = process.kill;
+const mockProcessKill = mock((pid: number, signal?: string | number) => {
+    if (signal === 0 && pid === 12345) {
+        // Simulate process exists
+        return true;
+    }
+    return originalProcessKill(pid, signal as any);
+});
+
 describe("ProcessManager", () => {
     let processManager: ProcessManager;
-    let mockChildProcess: MockChildProcess;
 
     beforeEach(() => {
         processManager = new ProcessManager();
+        // Reset the spawn mock
+        spawnMock.mockClear();
+        // Mock process.kill
+        (global as any).process.kill = mockProcessKill;
+    });
 
-        // Setup spawn mock to return our mock child process
-        const spawnMock = spawn as ReturnType<typeof mock>;
-        spawnMock.mockImplementation(() => {
-            mockChildProcess = new MockChildProcess(12345);
-            setTimeout(() => mockChildProcess.emit("spawn"), 0);
-            return mockChildProcess;
-        });
+    afterEach(() => {
+        // Restore original process.kill
+        (global as any).process.kill = originalProcessKill;
     });
 
     describe("spawnProjectRun", () => {
@@ -70,7 +87,7 @@ describe("ProcessManager", () => {
                 ["run", expect.stringContaining("tenex.ts"), "project", "run"],
                 {
                     cwd: projectPath,
-                    stdio: ["ignore", "pipe", "pipe"],
+                    stdio: "inherit",
                     detached: false,
                 }
             );
@@ -98,35 +115,7 @@ describe("ProcessManager", () => {
             expect(spawnMock.mock.calls.length).toBe(spawnCallCount);
         });
 
-        test("should handle stdout data", async () => {
-            const projectPath = "/test/project";
-            const projectId = "test-project";
-
-            await processManager.spawnProjectRun(projectPath, projectId);
-
-            // Simulate stdout data
-            if (mockChildProcess.stdout) {
-                mockChildProcess.stdout.emit("data", Buffer.from("Test output\nAnother line"));
-            }
-
-            // Logger should be called for each line
-            expect(mockLogger.info).toHaveBeenCalledWith("[test-project] Test output");
-            expect(mockLogger.info).toHaveBeenCalledWith("[test-project] Another line");
-        });
-
-        test("should handle stderr data", async () => {
-            const projectPath = "/test/project";
-            const projectId = "test-project";
-
-            await processManager.spawnProjectRun(projectPath, projectId);
-
-            // Simulate stderr data
-            if (mockChildProcess.stderr) {
-                mockChildProcess.stderr.emit("data", Buffer.from("Error message"));
-            }
-
-            expect(mockLogger.error).toHaveBeenCalledWith("[test-project] Error message");
-        });
+        // Skip stdout/stderr tests since stdio is set to "inherit"
 
         test("should remove process on exit", async () => {
             const projectPath = "/test/project";

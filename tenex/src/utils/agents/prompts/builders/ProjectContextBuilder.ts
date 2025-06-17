@@ -24,23 +24,22 @@ export class ProjectContextBuilder implements PromptSectionBuilder {
 
         parts.push(`You are working on the project: "${projectInfo.title}"`);
 
-        if (projectInfo.metadata?.title) {
-            parts.push(`Project Name: ${projectInfo.metadata.title}`);
-        }
+        // Project title is already shown above
 
         if (projectInfo.repository) {
             parts.push(`Repository: ${projectInfo.repository}`);
         }
 
-        if (projectInfo.description) {
+        const projectAny = projectInfo as any;
+        if (projectAny.description || projectInfo.projectEvent?.content) {
             parts.push("");
             parts.push("### Project Description");
-            parts.push(projectInfo.description);
+            parts.push(projectAny.description || projectInfo.projectEvent?.content || "");
         }
 
-        if (projectInfo.hashtags && projectInfo.hashtags.length > 0) {
+        if (projectAny.hashtags && projectAny.hashtags.length > 0) {
             parts.push("");
-            parts.push(`Technologies/Topics: ${projectInfo.hashtags.join(", ")}`);
+            parts.push(`Technologies/Topics: ${projectAny.hashtags.join(", ")}`);
         }
 
         return {

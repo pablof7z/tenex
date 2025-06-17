@@ -44,21 +44,21 @@ export const rememberLessonTool: ToolDefinition = {
             // Create the lesson event
             const lessonEvent = new NDKEvent(ndk);
             lessonEvent.kind = 4124;
-            lessonEvent.content = params.lesson;
+            lessonEvent.content = params.lesson as string;
 
             // Add tags
             lessonEvent.tags.push(["e", agentEventId]); // e-tag the NDKAgent event
-            lessonEvent.tags.push(["title", params.title]);
+            lessonEvent.tags.push(["title", params.title as string]);
 
             // Sign and publish
             await lessonEvent.sign(agent.getSigner());
             await lessonEvent.publish();
 
-            logger.info(`Agent '${context.agentName}' recorded lesson: ${params.title}`);
+            logger.info(`Agent '${context.agentName}' recorded lesson: ${params.title as string}`);
 
             return {
                 success: true,
-                output: `Lesson recorded successfully: "${params.title}"`,
+                output: `Lesson recorded successfully: "${params.title as string}"`,
             };
         } catch (error) {
             logger.error(`Failed to record lesson: ${error}`);

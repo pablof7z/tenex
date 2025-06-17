@@ -1,5 +1,6 @@
 import path from "node:path";
-import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/node";
 
@@ -44,7 +45,7 @@ export class RulesManager {
         for (const ruleTag of ruleTags) {
             const [, ruleEventId, ...agentNames] = ruleTag;
             ruleMappings.push({
-                ruleEventId,
+                ruleEventId: ruleEventId || "",
                 agentNames: agentNames || [],
             });
         }

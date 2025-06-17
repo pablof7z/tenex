@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { toKebabCase } from "@/utils/agents";
 import { formatError } from "@/utils/errors";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -19,7 +19,7 @@ export interface AgentDefinition {
 }
 
 export class AgentEventHandler {
-    async handleAgentEvent(event: NDKEvent, projectInfo: ProjectInfo): Promise<void> {
+    async handleAgentEvent(event: NDKEvent, projectInfo: ProjectRuntimeInfo): Promise<void> {
         try {
             if (!this.validateAgentEvent(event, projectInfo)) {
                 return;
@@ -44,14 +44,14 @@ export class AgentEventHandler {
         }
     }
 
-    private validateAgentEvent(event: NDKEvent, projectInfo: ProjectInfo): boolean {
+    private validateAgentEvent(event: NDKEvent, projectInfo: ProjectRuntimeInfo): boolean {
         if (event.kind !== EVENT_KINDS.AGENT_CONFIG) {
             logError("Event is not an NDKAgent event");
             return false;
         }
 
         const aTag = event.tags.find((tag) => tag[0] === "a");
-        if (!aTag || !aTag[1].includes(`31933:${projectInfo.projectPubkey}:`)) {
+        if (!aTag || !aTag[1] || !aTag[1].includes(`31933:${projectInfo.projectPubkey}:`)) {
             logWarning("Agent event does not reference this project");
             return false;
         }

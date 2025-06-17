@@ -4,12 +4,10 @@ import { fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/logger";
 import type { AgentsJson } from "@tenex/types/agents";
 import type {
-    CONFIG_PATHS,
     GlobalConfig,
     ProjectConfig,
     TenexConfiguration,
     UnifiedLLMConfig,
-    isProjectConfig,
 } from "@tenex/types/config";
 import type { LLMConfig } from "@tenex/types/llm";
 import { z } from "zod";
@@ -295,11 +293,11 @@ export class ConfigurationService {
      */
     async loadProjectConfig(basePath: string): Promise<ProjectConfig> {
         const filePath = path.join(basePath, "config.json");
-        
+
         // Check for legacy metadata.json first
         const legacyPath = path.join(basePath, "metadata.json");
-        if (await fileExists(legacyPath) && !(await fileExists(filePath))) {
-            logger.info(`Migrating metadata.json to config.json`);
+        if ((await fileExists(legacyPath)) && !(await fileExists(filePath))) {
+            logger.info("Migrating metadata.json to config.json");
             const legacyData = await readJsonFile(legacyPath);
             const config = ProjectConfigSchema.parse(legacyData);
             await this.saveProjectConfig(basePath, config);
@@ -341,7 +339,20 @@ export class ConfigurationService {
      */
     async loadAgentsConfig(basePath: string): Promise<AgentsJson> {
         const filePath = path.join(basePath, "agents.json");
-        return this.loadConfig(filePath, AgentsJsonSchema, {});
+        const rawData = await this.loadConfig(filePath, AgentsJsonSchema, {});
+
+        // Convert legacy format to new format
+        const converted: AgentsJson = {};
+        for (const [key, value] of Object.entries(rawData)) {
+            if (typeof value === "string") {
+                // Legacy format - convert to new format
+                converted[key] = { nsec: value };
+            } else {
+                converted[key] = value;
+            }
+        }
+
+        return converted;
     }
 
     /**
@@ -387,8 +398,8 @@ export class ConfigurationService {
                 const creds = llmConfig.credentials[config.provider];
                 return {
                     ...config,
-                    apiKey: config.apiKey || creds.apiKey,
-                    baseURL: config.baseURL || creds.baseUrl,
+                    apiKey: config.apiKey || creds?.apiKey,
+                    baseURL: config.baseURL || creds?.baseUrl,
                 };
             }
             return config;
@@ -403,8 +414,8 @@ export class ConfigurationService {
                 const creds = llmConfig.credentials[config.provider];
                 return {
                     ...config,
-                    apiKey: config.apiKey || creds.apiKey,
-                    baseURL: config.baseURL || creds.baseUrl,
+                    apiKey: config.apiKey || creds?.apiKey,
+                    baseURL: config.baseURL || creds?.baseUrl,
                 };
             }
             return config;
@@ -545,7 +556,11 @@ export class ConfigurationService {
     /**
      * Check if a configuration file exists
      */
-    async configExists(contextPath: string, configType: "config" | "llms" | "agents", isGlobal = false): Promise<boolean> {
+    async configExists(
+        contextPath: string,
+        configType: "config" | "llms" | "agents",
+        isGlobal = false
+    ): Promise<boolean> {
         const basePath = isGlobal ? this.getGlobalPath() : this.getProjectPath(contextPath);
         const filePath = path.join(basePath, `${configType}.json`);
         return fileExists(filePath);

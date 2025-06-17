@@ -5,10 +5,10 @@
  * This test creates a real project structure and tests the actual StatusPublisher logic
  */
 
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import fs from "node:fs/promises";
 import { StatusPublisher } from "./tenex/src/commands/run/StatusPublisher";
 
 // Mock getNDK to avoid actual Nostr connections

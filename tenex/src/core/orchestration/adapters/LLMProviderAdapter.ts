@@ -58,13 +58,16 @@ export class LLMProviderAdapter implements LLMProvider {
         };
 
         logger.debug("[LLMProviderAdapter] Calling generateResponse with config:", {
-            provider: agentConfig.provider,
-            model: agentConfig.model,
-            hasApiKey: !!agentConfig.apiKey,
+            provider: "provider" in agentConfig ? agentConfig.provider : "unknown",
+            model: "model" in agentConfig ? agentConfig.model : "unknown",
+            hasApiKey: "apiKey" in agentConfig ? !!agentConfig.apiKey : false,
         });
 
         // Call the agent LLM provider using the correct method
-        const response = await this.agentLLMProvider.generateResponse(messages, agentConfig);
+        const response = await this.agentLLMProvider.generateResponse(
+            messages,
+            agentConfig as AgentLLMConfig
+        );
 
         // Convert response to orchestration format
         return this.convertResponse(response);

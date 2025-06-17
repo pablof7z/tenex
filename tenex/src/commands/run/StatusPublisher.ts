@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STATUS_INTERVAL_MS, STATUS_KIND } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 import { formatError } from "@/utils/errors";
@@ -7,12 +7,11 @@ import { logWarning } from "@tenex/shared/logger";
 import { configurationService } from "@tenex/shared/services";
 import type { UnifiedLLMConfig } from "@tenex/types/config";
 import type { LLMConfig } from "@tenex/types/llm";
-import chalk from "chalk";
 
 export class StatusPublisher {
     private statusInterval?: NodeJS.Timeout;
 
-    async startPublishing(projectInfo: ProjectInfo): Promise<void> {
+    async startPublishing(projectInfo: ProjectRuntimeInfo): Promise<void> {
         await this.publishStatusEvent(projectInfo);
 
         this.statusInterval = setInterval(async () => {
@@ -27,7 +26,7 @@ export class StatusPublisher {
         }
     }
 
-    private async publishStatusEvent(projectInfo: ProjectInfo): Promise<void> {
+    private async publishStatusEvent(projectInfo: ProjectRuntimeInfo): Promise<void> {
         try {
             const ndk = getNDK();
             const event = new NDKEvent(ndk);
@@ -50,7 +49,7 @@ export class StatusPublisher {
             event.publish();
         } catch (err) {
             const errorMessage = formatError(err);
-            logWarning(`Failed to publish status event2: ${errorMessage}`);
+            logWarning(`Failed to publish status event: ${errorMessage}`);
         }
     }
 
@@ -142,7 +141,7 @@ export class StatusPublisher {
             for (const [agentName, configRef] of Object.entries(llms.defaults)) {
                 if (agentName === "default" || agentName === "orchestrator") continue;
 
-                const config = llms.configurations[configRef];
+                const config = configRef ? llms.configurations[configRef] : undefined;
                 if (config?.model) {
                     event.tags.push(["model", config.model, `${agentName}-default`]);
                 }

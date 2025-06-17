@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import type { OrchestrationConfig } from "@/core/orchestration/types";
+import { type OrchestrationConfig, OrchestrationStrategy } from "@/core/orchestration/types";
 import { createLLMProvider } from "@/utils/agents/llm/LLMFactory";
 import type { LLMMessage } from "@/utils/agents/llm/types";
 import search from "@inquirer/search";
@@ -13,9 +13,9 @@ import chalk from "chalk";
 import { Command } from "commander";
 import inquirer from "inquirer";
 
-interface LLMConfigWithName extends LLMConfig {
+type LLMConfigWithName = LLMConfig & {
     name: string;
-}
+};
 
 interface ProviderModels {
     [key: string]: string[];
@@ -97,7 +97,7 @@ async function fetchOllamaModels(): Promise<string[]> {
             throw new Error(`Ollama API returned ${response.status}`);
         }
 
-        const data: OllamaModelsResponse = await response.json();
+        const data = (await response.json()) as OllamaModelsResponse;
         return data.models.map((model) => model.name);
     } catch (error) {
         logger.warn(`Could not fetch Ollama models: ${error}`);
@@ -126,7 +126,7 @@ async function fetchOpenRouterModelsWithMetadata(): Promise<OpenRouterModelWithM
             throw new Error(`OpenRouter API returned ${response.status}`);
         }
 
-        const data: OpenRouterModelsResponse = await response.json();
+        const data = (await response.json()) as OpenRouterModelsResponse;
         return data.data
             .filter((model) => {
                 // Check if model supports text input and output
@@ -307,9 +307,12 @@ export class LLMConfigEditor {
                 const isDefault = llmsConfig.defaults.default === config.name;
                 const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
                 logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
-                logger.info(`     ${config.provider} - ${config.model}`);
+                const llmConfig = llmsConfig.configurations[config.name];
+                if (llmConfig) {
+                    logger.info(`     ${llmConfig.provider} - ${llmConfig.model}`);
+                }
             });
-            logger.info();
+            logger.info("");
         }
 
         const { action } = await inquirer.prompt([
@@ -376,9 +379,12 @@ export class LLMConfigEditor {
                     const isDefault = llmsConfig.defaults.default === config.name;
                     const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
                     logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
-                    logger.info(`     ${config.provider} - ${config.model}`);
+                    const llmConfig = llmsConfig.configurations[config.name];
+                    if (llmConfig) {
+                        logger.info(`     ${llmConfig.provider} - ${llmConfig.model}`);
+                    }
                 });
-                logger.info();
+                logger.info("");
             }
 
             const currentDefault = llmsConfig.defaults.default || "none";
@@ -526,7 +532,7 @@ export class LLMConfigEditor {
             }
 
             logger.info(chalk.green(`✅ Found ${availableModels.length} Ollama models`));
-            model = await selectModelWithSearch(provider, availableModels);
+            model = await selectModelWithSearch(provider, availableModels || []);
         } else if (provider === "openrouter") {
             logger.info(chalk.cyan("🔍 Fetching available OpenRouter models..."));
             const modelsWithMetadata = await fetchOpenRouterModelsWithMetadata();
@@ -536,7 +542,7 @@ export class LLMConfigEditor {
             model = selection.model;
             supportsCaching = selection.supportsCaching;
         } else {
-            model = await selectModelWithSearch(provider, availableModels);
+            model = await selectModelWithSearch(provider, availableModels || []);
         }
 
         let apiKey = "";
@@ -602,7 +608,7 @@ export class LLMConfigEditor {
             });
         }
 
-        const responses = await inquirer.prompt([
+        const prompts: any[] = [
             {
                 type: "input",
                 name: "configName",
@@ -622,9 +628,16 @@ export class LLMConfigEditor {
                 message: "Set as default configuration?",
                 default: Object.keys(llmsConfig.configurations).length === 0,
             },
-        ]);
+        ];
 
-        const { configName, enableCaching = supportsCaching, setAsDefault } = responses;
+        const responses = await inquirer.prompt(prompts);
+
+        const configName = responses.configName as string;
+        const enableCaching =
+            (responses as any).enableCaching !== undefined
+                ? (responses as any).enableCaching
+                : supportsCaching;
+        const setAsDefault = (responses as any).setAsDefault as boolean;
 
         const newConfig: LLMConfig = {
             provider,
@@ -633,7 +646,7 @@ export class LLMConfigEditor {
         };
 
         // Only add apiKey if it's not empty
-        if (apiKey && apiKey.trim()) {
+        if (apiKey?.trim()) {
             newConfig.apiKey = apiKey;
         }
 
@@ -685,7 +698,7 @@ export class LLMConfigEditor {
             };
 
             // Remove API key from individual config in global mode
-            delete newConfig.apiKey;
+            newConfig.apiKey = undefined;
         }
 
         await this.saveConfig(llmsConfig);
@@ -707,6 +720,10 @@ export class LLMConfigEditor {
         ]);
 
         const config = llmsConfig.configurations[configName];
+        if (!config) {
+            logger.error(chalk.red(`Configuration ${configName} not found`));
+            return;
+        }
         logger.info(chalk.cyan(`\n✏️ Editing Configuration: ${configName}\n`));
 
         const { field } = await inquirer.prompt([
@@ -744,7 +761,7 @@ export class LLMConfigEditor {
                     }
 
                     logger.info(chalk.green(`✅ Found ${availableModels.length} Ollama models`));
-                    newModel = await selectModelWithSearch(config.provider, availableModels);
+                    newModel = await selectModelWithSearch(config.provider, availableModels || []);
                 } else if (config.provider === "openrouter") {
                     logger.info(chalk.cyan("🔍 Fetching available OpenRouter models..."));
                     const modelsWithMetadata = await fetchOpenRouterModelsWithMetadata();
@@ -756,7 +773,7 @@ export class LLMConfigEditor {
                     newModel = selection.model;
                     newSupportsCaching = selection.supportsCaching;
                 } else {
-                    newModel = await selectModelWithSearch(config.provider, availableModels);
+                    newModel = await selectModelWithSearch(config.provider, availableModels || []);
                 }
 
                 config.model = newModel;
@@ -823,7 +840,7 @@ export class LLMConfigEditor {
         }
 
         await this.saveConfig(llmsConfig);
-        logger.info(chalk.green(`\n✅ Configuration updated successfully!`));
+        logger.info(chalk.green("\n✅ Configuration updated successfully!"));
     }
 
     private async removeConfiguration(llmsConfig: UnifiedLLMConfig): Promise<void> {
@@ -866,7 +883,7 @@ export class LLMConfigEditor {
         const configs = this.getConfigList(llmsConfig);
         const currentDefault = llmsConfig.defaults.default || "none";
 
-        logger.info(chalk.cyan(`\n⚙️  Set Default Configuration`));
+        logger.info(chalk.cyan("\n⚙️  Set Default Configuration"));
         logger.info(chalk.gray(`Current default: ${currentDefault}\n`));
 
         const { configName } = await inquirer.prompt([
@@ -922,7 +939,7 @@ export class LLMConfigEditor {
         ]);
 
         if (configName === "default") {
-            delete llmsConfig.defaults.orchestrator;
+            llmsConfig.defaults.orchestrator = undefined;
             logger.info(chalk.green("\n✅ Orchestrator will use the default LLM configuration"));
         } else {
             llmsConfig.defaults.orchestrator = configName;
@@ -934,7 +951,27 @@ export class LLMConfigEditor {
         await this.saveConfig(llmsConfig);
     }
 
-    private async testConfiguration(config: LLMConfig, configName?: string): Promise<boolean> {
+    private async testExistingConfiguration(llmsConfig: UnifiedLLMConfig): Promise<void> {
+        const configs = this.getConfigList(llmsConfig);
+
+        const { configName } = await inquirer.prompt([
+            {
+                type: "list",
+                name: "configName",
+                message: "Select configuration to test:",
+                choices: configs.map((c) => c.name),
+            },
+        ]);
+
+        const config = llmsConfig.configurations[configName];
+        if (!config) {
+            logger.error(chalk.red(`Configuration ${configName} not found`));
+            return;
+        }
+        await this.testConfiguration(config, configName);
+    }
+
+    private async testConfiguration(config: LLMConfig, _configName?: string): Promise<boolean> {
         try {
             // Validate config before testing
             if (!config.provider) {
@@ -955,7 +992,7 @@ export class LLMConfigEditor {
                 return false;
             }
 
-            const provider = createLLMProvider(config, null);
+            const provider = createLLMProvider(config, undefined);
 
             const messages: LLMMessage[] = [
                 {
@@ -971,7 +1008,7 @@ export class LLMConfigEditor {
 
             const response = await provider.generateResponse(messages, config);
 
-            if (response && response.content) {
+            if (response?.content) {
                 logger.info(chalk.green(`\n✅ Test successful! Response: ${response.content}`));
                 return true;
             }
@@ -1018,18 +1055,58 @@ export class LLMConfigEditor {
 
             // Apply credentials if available (global config)
             if (llmsConfig.credentials?.[orchestratorConfig.provider]) {
-                const creds = llmsConfig.credentials[orchestratorConfig.provider];
+                const _creds = llmsConfig.credentials[orchestratorConfig.provider];
                 return {
-                    llmConfig: {
-                        ...orchestratorConfig,
-                        apiKey: orchestratorConfig.apiKey || creds.apiKey,
-                        baseURL: orchestratorConfig.baseURL || creds.baseUrl,
+                    orchestrator: {
+                        llmConfig: orchestratorConfigName,
+                        maxTeamSize: 5,
+                        strategies: {
+                            simple: OrchestrationStrategy.SINGLE_RESPONDER,
+                            moderate: OrchestrationStrategy.HIERARCHICAL,
+                            complex: OrchestrationStrategy.PHASED_DELIVERY,
+                        },
+                    },
+                    supervision: {
+                        complexTools: [],
+                        supervisionTimeout: 60000,
+                    },
+                    reflection: {
+                        enabled: true,
+                        detectionThreshold: 0.7,
+                        maxLessonsPerAgent: 100,
+                    },
+                    greenLight: {
+                        defaultRequiredFor: [],
+                        reviewTimeout: 300000,
+                        parallelReviews: true,
                     },
                 };
             }
 
             return {
-                llmConfig: orchestratorConfig,
+                orchestrator: {
+                    llmConfig: orchestratorConfigName,
+                    maxTeamSize: 5,
+                    strategies: {
+                        simple: OrchestrationStrategy.SINGLE_RESPONDER,
+                        moderate: OrchestrationStrategy.HIERARCHICAL,
+                        complex: OrchestrationStrategy.PHASED_DELIVERY,
+                    },
+                },
+                supervision: {
+                    complexTools: [],
+                    supervisionTimeout: 60000,
+                },
+                reflection: {
+                    enabled: true,
+                    detectionThreshold: 0.7,
+                    maxLessonsPerAgent: 100,
+                },
+                greenLight: {
+                    defaultRequiredFor: [],
+                    reviewTimeout: 300000,
+                    parallelReviews: true,
+                },
             };
         } catch (error) {
             logger.debug("Could not load orchestration config", { error });

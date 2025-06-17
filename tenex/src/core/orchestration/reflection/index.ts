@@ -1,7 +1,7 @@
-export { CorrectionDetector } from "@/core/orchestration/reflection/CorrectionDetector";
-export { LessonGenerator } from "@/core/orchestration/reflection/LessonGenerator";
-export { LessonPublisher } from "@/core/orchestration/reflection/LessonPublisher";
-export { ReflectionSystem } from "@/core/orchestration/reflection/ReflectionSystem";
+export type { CorrectionDetector } from "@/core/orchestration/reflection/CorrectionDetector";
+export type { LessonGenerator } from "@/core/orchestration/reflection/LessonGenerator";
+export type { LessonPublisher } from "@/core/orchestration/reflection/LessonPublisher";
+export type { ReflectionSystem } from "@/core/orchestration/reflection/ReflectionSystem";
 export type {
     CorrectionAnalysis,
     CorrectionPattern,

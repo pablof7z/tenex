@@ -57,33 +57,34 @@ export class LessonPublisherImpl implements LessonPublisher {
         try {
             const event = new NDKEvent(ndk);
             event.kind = LessonPublisherImpl.LESSON_KIND;
-            event.content = lesson.lesson;
+            event.content = lesson.content;
 
             // Add required tags
             event.tags = [
-                ["e", lesson.ndkAgentEventId], // Reference to the NDKAgent event
-                ["title", this.truncateLesson(lesson.lesson, 50)], // Short title
+                ["e", (lesson as any).ndkAgentEventId || lesson.agentId], // Reference to the NDKAgent event
+                ["title", this.truncateLesson(lesson.content, 50)], // Short title
             ];
 
             // Add optional context tags
-            if (lesson.context.errorType) {
-                event.tags.push(["error-type", lesson.context.errorType]);
+            const lessonAny = lesson as any;
+            if (lessonAny.context?.errorType) {
+                event.tags.push(["error-type", lessonAny.context.errorType]);
             }
 
-            if (lesson.context.preventionStrategy) {
-                event.tags.push(["prevention", lesson.context.preventionStrategy]);
+            if (lessonAny.context?.preventionStrategy) {
+                event.tags.push(["prevention", lessonAny.context.preventionStrategy]);
             }
 
-            if (lesson.context.relatedCapabilities.length > 0) {
-                event.tags.push(["capabilities", lesson.context.relatedCapabilities.join(",")]);
+            if (lessonAny.context?.relatedCapabilities?.length > 0) {
+                event.tags.push(["capabilities", lessonAny.context.relatedCapabilities.join(",")]);
             }
 
             // Add metadata tags
             event.tags.push(
-                ["confidence", lesson.confidence.toString()],
+                ["confidence", (lessonAny.confidence || 0.5).toString()],
                 ["agent-name", lesson.agentName],
-                ["conversation-id", lesson.context.conversationId],
-                ["trigger-event", lesson.context.triggerEventId]
+                ["conversation-id", lessonAny.context?.conversationId || ""],
+                ["trigger-event", lessonAny.context?.triggerEventId || ""]
             );
 
             if (lesson.context.teamId) {

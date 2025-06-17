@@ -1,4 +1,5 @@
 import { type NDKArticle, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { nip19 } from "nostr-tools";
 import { useMemo } from "react";
 
@@ -15,11 +16,11 @@ export function useArticle(articleIdOrNaddr?: string): NDKArticle | null {
                 const decoded = nip19.decode(articleIdOrNaddr);
                 if (decoded.type === "note") {
                     // It's an event ID
-                    return [{ ids: [decoded.data], kinds: [30023] }];
+                    return [{ ids: [decoded.data], kinds: [EVENT_KINDS.ARTICLE] }];
                 }
                 if (decoded.type === "nevent") {
                     // It's an nevent
-                    return [{ ids: [decoded.data.id], kinds: [30023] }];
+                    return [{ ids: [decoded.data.id], kinds: [EVENT_KINDS.ARTICLE] }];
                 }
             } catch (_e) {
                 // console.error("Failed to decode article ID:", e);
@@ -35,7 +36,7 @@ export function useArticle(articleIdOrNaddr?: string): NDKArticle | null {
                     // It's an naddr
                     return [
                         {
-                            kinds: [30023],
+                            kinds: [EVENT_KINDS.ARTICLE],
                             authors: [decoded.data.pubkey],
                             "#d": [decoded.data.identifier],
                         },
@@ -48,7 +49,7 @@ export function useArticle(articleIdOrNaddr?: string): NDKArticle | null {
         }
 
         // Assume it's a raw event ID
-        return [{ ids: [articleIdOrNaddr], kinds: [30023] }];
+        return [{ ids: [articleIdOrNaddr], kinds: [EVENT_KINDS.ARTICLE] }];
     }, [articleIdOrNaddr, ndk]);
 
     const { events } = useSubscribe<NDKArticle>(filter, { wrap: true }, [articleIdOrNaddr]);

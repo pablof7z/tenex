@@ -1,6 +1,7 @@
 import path from "node:path";
-import type { ProjectInfo } from "@/commands/run/ProjectLoader";
-import type { NDK, NDKEvent } from "@nostr-dev-kit/ndk";
+import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo, logWarning } from "@tenex/shared/logger";
 import type { UnifiedLLMConfig } from "@tenex/types/config";
@@ -11,7 +12,7 @@ import chalk from "chalk";
 export class ProjectDisplay {
     constructor(private ndk: NDK) {}
 
-    async displayProjectInfo(projectInfo: ProjectInfo): Promise<void> {
+    async displayProjectInfo(projectInfo: ProjectRuntimeInfo): Promise<void> {
         this.displayBasicInfo(projectInfo);
         await this.displayAgentConfigurations(projectInfo.projectEvent, projectInfo.projectPath);
         await this.displayLLMSettings(projectInfo.projectPath);
@@ -19,7 +20,7 @@ export class ProjectDisplay {
         logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
     }
 
-    private displayBasicInfo(projectInfo: ProjectInfo): void {
+    private displayBasicInfo(projectInfo: ProjectRuntimeInfo): void {
         logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
         logInfo(chalk.cyan("📦 Project Information"));
         logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
@@ -49,7 +50,9 @@ export class ProjectDisplay {
         await fileSystem.ensureDirectory(agentsDir);
 
         for (const tag of agentTags) {
-            await this.displayAndCacheAgent(tag[1], agentsDir);
+            if (tag[1]) {
+                await this.displayAndCacheAgent(tag[1], agentsDir);
+            }
         }
     }
 
@@ -97,8 +100,8 @@ export class ProjectDisplay {
             const llmsFile = await fileSystem.readJsonFile<UnifiedLLMConfig>(llmsPath);
 
             // Handle the new structured format with configurations, defaults, and credentials
-            const configurations = llmsFile.configurations || {};
-            const defaults = llmsFile.defaults || {};
+            const configurations = llmsFile?.configurations || {};
+            const defaults = llmsFile?.defaults || {};
             const defaultConfig = defaults.default;
 
             const configNames = Object.keys(configurations);
@@ -133,7 +136,7 @@ export class ProjectDisplay {
         }
     }
 
-    private async displaySpecificationDocuments(projectInfo: ProjectInfo): Promise<void> {
+    private async displaySpecificationDocuments(projectInfo: ProjectRuntimeInfo): Promise<void> {
         const specs = projectInfo.specCache.getAllSpecMetadata();
 
         if (specs.length === 0) {
@@ -158,7 +161,7 @@ export class ProjectDisplay {
         }
     }
 
-    async displayAllDocumentation(projectInfo: ProjectInfo): Promise<void> {
+    async displayAllDocumentation(projectInfo: ProjectRuntimeInfo): Promise<void> {
         await this.displaySpecificationDocuments(projectInfo);
     }
 }

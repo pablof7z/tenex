@@ -7,7 +7,7 @@ import { logError, logInfo } from "@tenex/shared/node";
 import { configurationService } from "@tenex/shared/services";
 import type { ProjectConfig, TenexConfiguration } from "@tenex/types/config";
 
-export interface ProjectInfo {
+export interface ProjectRuntimeInfo {
     config: ProjectConfig;
     projectEvent: NDKProject;
     projectPath: string;
@@ -15,6 +15,7 @@ export interface ProjectInfo {
     repository: string;
     projectId: string;
     projectPubkey: string;
+    projectNsec?: string;
     ruleMappings: RuleMapping[];
     rulesManager: RulesManager;
     specCache: SpecCache;
@@ -23,7 +24,7 @@ export interface ProjectInfo {
 export class ProjectLoader {
     constructor(private ndk: NDK) {}
 
-    async loadProject(projectPath: string): Promise<ProjectInfo> {
+    async loadProject(projectPath: string): Promise<ProjectRuntimeInfo> {
         const configuration = await this.loadConfiguration(projectPath);
         const config = configuration.config as ProjectConfig;
         const projectEvent = await this.fetchProjectEvent(config.projectNaddr);
@@ -87,7 +88,7 @@ export class ProjectLoader {
         ruleMappings: RuleMapping[],
         rulesManager: RulesManager,
         specCache: SpecCache
-    ): ProjectInfo {
+    ): ProjectRuntimeInfo {
         const titleTag = projectEvent.tags.find((tag) => tag[0] === "title");
         const repoTag = projectEvent.tags.find((tag) => tag[0] === "repo");
         const dTag = projectEvent.tags.find((tag) => tag[0] === "d");
@@ -100,6 +101,7 @@ export class ProjectLoader {
             repository: repoTag?.[1] || config.repoUrl || "No repository",
             projectId: dTag?.[1] || "",
             projectPubkey: projectEvent.author.pubkey,
+            projectNsec: config.nsec,
             ruleMappings,
             rulesManager,
             specCache,

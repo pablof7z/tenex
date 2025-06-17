@@ -609,7 +609,7 @@ var require_command = __commonJS((exports) => {
   var childProcess = __require("child_process");
   var path = __require("path");
   var fs = __require("fs");
-  var process2 = __require("process");
+  var process3 = __require("process");
   var { Argument, humanReadableArgName } = require_argument();
   var { CommanderError } = require_error();
   var { Help } = require_help();
@@ -651,10 +651,10 @@ var require_command = __commonJS((exports) => {
       this._showHelpAfterError = false;
       this._showSuggestionAfterError = true;
       this._outputConfiguration = {
-        writeOut: (str) => process2.stdout.write(str),
-        writeErr: (str) => process2.stderr.write(str),
-        getOutHelpWidth: () => process2.stdout.isTTY ? process2.stdout.columns : undefined,
-        getErrHelpWidth: () => process2.stderr.isTTY ? process2.stderr.columns : undefined,
+        writeOut: (str) => process3.stdout.write(str),
+        writeErr: (str) => process3.stderr.write(str),
+        getOutHelpWidth: () => process3.stdout.isTTY ? process3.stdout.columns : undefined,
+        getErrHelpWidth: () => process3.stderr.isTTY ? process3.stderr.columns : undefined,
         outputError: (str, write) => write(str)
       };
       this._hidden = false;
@@ -843,7 +843,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
       if (this._exitCallback) {
         this._exitCallback(new CommanderError(exitCode, code, message));
       }
-      process2.exit(exitCode);
+      process3.exit(exitCode);
     }
     action(fn) {
       const listener = (args) => {
@@ -919,12 +919,12 @@ Expecting one of '${allowedValues.join("', '")}'`);
       }
       return this;
     }
-    _optionEx(config, flags, description, fn, defaultValue) {
+    _optionEx(config5, flags, description, fn, defaultValue) {
       if (typeof flags === "object" && flags instanceof Option) {
         throw new Error("To add an Option object use addOption() instead of option() or requiredOption()");
       }
       const option = this.createOption(flags, description);
-      option.makeOptionMandatory(!!config.mandatory);
+      option.makeOptionMandatory(!!config5.mandatory);
       if (typeof fn === "function") {
         option.default(defaultValue).argParser(fn);
       } else if (fn instanceof RegExp) {
@@ -1011,8 +1011,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
       }
       parseOptions = parseOptions || {};
       if (argv === undefined) {
-        argv = process2.argv;
-        if (process2.versions && process2.versions.electron) {
+        argv = process3.argv;
+        if (process3.versions && process3.versions.electron) {
           parseOptions.from = "electron";
         }
       }
@@ -1025,7 +1025,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
           userArgs = argv.slice(2);
           break;
         case "electron":
-          if (process2.defaultApp) {
+          if (process3.defaultApp) {
             this._scriptPath = argv[1];
             userArgs = argv.slice(2);
           } else {
@@ -1093,23 +1093,23 @@ Expecting one of '${allowedValues.join("', '")}'`);
       }
       launchWithNode = sourceExt.includes(path.extname(executableFile));
       let proc;
-      if (process2.platform !== "win32") {
+      if (process3.platform !== "win32") {
         if (launchWithNode) {
           args.unshift(executableFile);
-          args = incrementNodeInspectorPort(process2.execArgv).concat(args);
-          proc = childProcess.spawn(process2.argv[0], args, { stdio: "inherit" });
+          args = incrementNodeInspectorPort(process3.execArgv).concat(args);
+          proc = childProcess.spawn(process3.argv[0], args, { stdio: "inherit" });
         } else {
           proc = childProcess.spawn(executableFile, args, { stdio: "inherit" });
         }
       } else {
         args.unshift(executableFile);
-        args = incrementNodeInspectorPort(process2.execArgv).concat(args);
-        proc = childProcess.spawn(process2.execPath, args, { stdio: "inherit" });
+        args = incrementNodeInspectorPort(process3.execArgv).concat(args);
+        proc = childProcess.spawn(process3.execPath, args, { stdio: "inherit" });
       }
       if (!proc.killed) {
         const signals = ["SIGUSR1", "SIGUSR2", "SIGTERM", "SIGINT", "SIGHUP"];
         signals.forEach((signal) => {
-          process2.on(signal, () => {
+          process3.on(signal, () => {
             if (proc.killed === false && proc.exitCode === null) {
               proc.kill(signal);
             }
@@ -1118,10 +1118,10 @@ Expecting one of '${allowedValues.join("', '")}'`);
       }
       const exitCallback = this._exitCallback;
       if (!exitCallback) {
-        proc.on("close", process2.exit.bind(process2));
+        proc.on("close", process3.exit.bind(process3));
       } else {
         proc.on("close", () => {
-          exitCallback(new CommanderError(process2.exitCode || 0, "commander.executeSubCommandAsync", "(close)"));
+          exitCallback(new CommanderError(process3.exitCode || 0, "commander.executeSubCommandAsync", "(close)"));
         });
       }
       proc.on("error", (err) => {
@@ -1136,7 +1136,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
           throw new Error(`'${executableFile}' not executable`);
         }
         if (!exitCallback) {
-          process2.exit(1);
+          process3.exit(1);
         } else {
           const wrappedError = new CommanderError(1, "commander.executeSubCommandAsync", "(error)");
           wrappedError.nestedError = err;
@@ -1479,18 +1479,18 @@ Expecting one of '${allowedValues.join("', '")}'`);
 `);
         this.outputHelp({ error: true });
       }
-      const config = errorOptions || {};
-      const exitCode = config.exitCode || 1;
-      const code = config.code || "commander.error";
+      const config5 = errorOptions || {};
+      const exitCode = config5.exitCode || 1;
+      const code = config5.code || "commander.error";
       this._exit(exitCode, code, message);
     }
     _parseOptionsEnv() {
       this.options.forEach((option) => {
-        if (option.envVar && option.envVar in process2.env) {
+        if (option.envVar && option.envVar in process3.env) {
           const optionKey = option.attributeName();
           if (this.getOptionValue(optionKey) === undefined || ["default", "config", "env"].includes(this.getOptionValueSource(optionKey))) {
             if (option.required || option.optional) {
-              this.emit(`optionEnv:${option.name()}`, process2.env[option.envVar]);
+              this.emit(`optionEnv:${option.name()}`, process3.env[option.envVar]);
             } else {
               this.emit(`optionEnv:${option.name()}`);
             }
@@ -1671,16 +1671,16 @@ Expecting one of '${allowedValues.join("', '")}'`);
     }
     _getHelpContext(contextOptions) {
       contextOptions = contextOptions || {};
-      const context = { error: !!contextOptions.error };
+      const context2 = { error: !!contextOptions.error };
       let write;
-      if (context.error) {
+      if (context2.error) {
         write = (arg) => this._outputConfiguration.writeErr(arg);
       } else {
         write = (arg) => this._outputConfiguration.writeOut(arg);
       }
-      context.write = contextOptions.write || write;
-      context.command = this;
-      return context;
+      context2.write = contextOptions.write || write;
+      context2.command = this;
+      return context2;
     }
     outputHelp(contextOptions) {
       let deprecatedCallback;
@@ -1688,22 +1688,22 @@ Expecting one of '${allowedValues.join("', '")}'`);
         deprecatedCallback = contextOptions;
         contextOptions = undefined;
       }
-      const context = this._getHelpContext(contextOptions);
-      this._getCommandAndAncestors().reverse().forEach((command) => command.emit("beforeAllHelp", context));
-      this.emit("beforeHelp", context);
-      let helpInformation = this.helpInformation(context);
+      const context2 = this._getHelpContext(contextOptions);
+      this._getCommandAndAncestors().reverse().forEach((command) => command.emit("beforeAllHelp", context2));
+      this.emit("beforeHelp", context2);
+      let helpInformation = this.helpInformation(context2);
       if (deprecatedCallback) {
         helpInformation = deprecatedCallback(helpInformation);
         if (typeof helpInformation !== "string" && !Buffer.isBuffer(helpInformation)) {
           throw new Error("outputHelp callback must return a string or a Buffer");
         }
       }
-      context.write(helpInformation);
+      context2.write(helpInformation);
       if (this._helpLongFlag) {
         this.emit(this._helpLongFlag);
       }
-      this.emit("afterHelp", context);
-      this._getCommandAndAncestors().forEach((command) => command.emit("afterAllHelp", context));
+      this.emit("afterHelp", context2);
+      this._getCommandAndAncestors().forEach((command) => command.emit("afterAllHelp", context2));
     }
     helpOption(flags, description) {
       if (typeof flags === "boolean") {
@@ -1719,7 +1719,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
     }
     help(contextOptions) {
       this.outputHelp(contextOptions);
-      let exitCode = process2.exitCode || 0;
+      let exitCode = process3.exitCode || 0;
       if (exitCode === 0 && contextOptions && typeof contextOptions !== "function" && contextOptions.error) {
         exitCode = 1;
       }
@@ -1732,15 +1732,15 @@ Expecting one of '${allowedValues.join("', '")}'`);
 Expecting one of '${allowedValues.join("', '")}'`);
       }
       const helpEvent = `${position}Help`;
-      this.on(helpEvent, (context) => {
+      this.on(helpEvent, (context2) => {
         let helpStr;
         if (typeof text === "function") {
-          helpStr = text({ error: context.error, command: context.command });
+          helpStr = text({ error: context2.error, command: context2.command });
         } else {
           helpStr = text;
         }
         if (helpStr) {
-          context.write(`${helpStr}
+          context2.write(`${helpStr}
 `);
         }
       });
@@ -5535,8 +5535,8 @@ var require_lastValueFrom = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.lastValueFrom = undefined;
   var EmptyError_1 = require_EmptyError();
-  function lastValueFrom(source, config4) {
-    var hasConfig = typeof config4 === "object";
+  function lastValueFrom(source, config5) {
+    var hasConfig = typeof config5 === "object";
     return new Promise(function(resolve, reject) {
       var _hasValue = false;
       var _value;
@@ -5550,7 +5550,7 @@ var require_lastValueFrom = __commonJS((exports) => {
           if (_hasValue) {
             resolve(_value);
           } else if (hasConfig) {
-            resolve(config4.defaultValue);
+            resolve(config5.defaultValue);
           } else {
             reject(new EmptyError_1.EmptyError);
           }
@@ -5567,8 +5567,8 @@ var require_firstValueFrom = __commonJS((exports) => {
   exports.firstValueFrom = undefined;
   var EmptyError_1 = require_EmptyError();
   var Subscriber_1 = require_Subscriber();
-  function firstValueFrom(source, config4) {
-    var hasConfig = typeof config4 === "object";
+  function firstValueFrom(source, config5) {
+    var hasConfig = typeof config5 === "object";
     return new Promise(function(resolve, reject) {
       var subscriber = new Subscriber_1.SafeSubscriber({
         next: function(value) {
@@ -5578,7 +5578,7 @@ var require_firstValueFrom = __commonJS((exports) => {
         error: reject,
         complete: function() {
           if (hasConfig) {
-            resolve(config4.defaultValue);
+            resolve(config5.defaultValue);
           } else {
             reject(new EmptyError_1.EmptyError);
           }
@@ -5664,8 +5664,8 @@ var require_timeout = __commonJS((exports) => {
       this.info = info;
     };
   });
-  function timeout(config4, schedulerArg) {
-    var _a2 = isDate_1.isValidDate(config4) ? { first: config4 } : typeof config4 === "number" ? { each: config4 } : config4, first = _a2.first, each = _a2.each, _b = _a2.with, _with = _b === undefined ? timeoutErrorFactory : _b, _c = _a2.scheduler, scheduler = _c === undefined ? schedulerArg !== null && schedulerArg !== undefined ? schedulerArg : async_1.asyncScheduler : _c, _d = _a2.meta, meta = _d === undefined ? null : _d;
+  function timeout(config5, schedulerArg) {
+    var _a2 = isDate_1.isValidDate(config5) ? { first: config5 } : typeof config5 === "number" ? { each: config5 } : config5, first = _a2.first, each = _a2.each, _b = _a2.with, _with = _b === undefined ? timeoutErrorFactory : _b, _c = _a2.scheduler, scheduler = _c === undefined ? schedulerArg !== null && schedulerArg !== undefined ? schedulerArg : async_1.asyncScheduler : _c, _d = _a2.meta, meta = _d === undefined ? null : _d;
     if (first == null && each == null) {
       throw new TypeError("No timeout provided.");
     }
@@ -6182,12 +6182,12 @@ var require_connectable = __commonJS((exports) => {
     },
     resetOnDisconnect: true
   };
-  function connectable(source, config4) {
-    if (config4 === undefined) {
-      config4 = DEFAULT_CONFIG;
+  function connectable(source, config5) {
+    if (config5 === undefined) {
+      config5 = DEFAULT_CONFIG;
     }
     var connection = null;
-    var { connector, resetOnDisconnect: _a2 } = config4, resetOnDisconnect = _a2 === undefined ? true : _a2;
+    var { connector, resetOnDisconnect: _a2 } = config5, resetOnDisconnect = _a2 === undefined ? true : _a2;
     var subject = connector();
     var result = new Observable_1.Observable(function(subscriber) {
       return subject.subscribe(subscriber);
@@ -7662,11 +7662,11 @@ var require_connect = __commonJS((exports) => {
       return new Subject_1.Subject;
     }
   };
-  function connect(selector, config4) {
-    if (config4 === undefined) {
-      config4 = DEFAULT_CONFIG;
+  function connect(selector, config5) {
+    if (config5 === undefined) {
+      config5 = DEFAULT_CONFIG;
     }
-    var connector = config4.connector;
+    var connector = config5.connector;
     return lift_1.operate(function(source, subscriber) {
       var subject = connector();
       innerFrom_1.innerFrom(selector(fromSubscribable_1.fromSubscribable(subject))).subscribe(subscriber);
@@ -9005,15 +9005,15 @@ var require_retry = __commonJS((exports) => {
     if (configOrCount === undefined) {
       configOrCount = Infinity;
     }
-    var config4;
+    var config5;
     if (configOrCount && typeof configOrCount === "object") {
-      config4 = configOrCount;
+      config5 = configOrCount;
     } else {
-      config4 = {
+      config5 = {
         count: configOrCount
       };
     }
-    var _a2 = config4.count, count = _a2 === undefined ? Infinity : _a2, delay = config4.delay, _b = config4.resetOnSuccess, resetOnSuccess = _b === undefined ? false : _b;
+    var _a2 = config5.count, count = _a2 === undefined ? Infinity : _a2, delay = config5.delay, _b = config5.resetOnSuccess, resetOnSuccess = _b === undefined ? false : _b;
     return count <= 0 ? identity_1.identity : lift_1.operate(function(source, subscriber) {
       var soFar = 0;
       var innerSub;
@@ -9667,9 +9667,9 @@ var require_throttle = __commonJS((exports) => {
   var lift_1 = require_lift();
   var OperatorSubscriber_1 = require_OperatorSubscriber();
   var innerFrom_1 = require_innerFrom();
-  function throttle(durationSelector, config4) {
+  function throttle(durationSelector, config5) {
     return lift_1.operate(function(source, subscriber) {
-      var _a2 = config4 !== null && config4 !== undefined ? config4 : {}, _b = _a2.leading, leading = _b === undefined ? true : _b, _c = _a2.trailing, trailing = _c === undefined ? false : _c;
+      var _a2 = config5 !== null && config5 !== undefined ? config5 : {}, _b = _a2.leading, leading = _b === undefined ? true : _b, _c = _a2.trailing, trailing = _c === undefined ? false : _c;
       var hasValue = false;
       var sendValue = null;
       var throttled = null;
@@ -9718,14 +9718,14 @@ var require_throttleTime = __commonJS((exports) => {
   var async_1 = require_async();
   var throttle_1 = require_throttle();
   var timer_1 = require_timer();
-  function throttleTime(duration, scheduler, config4) {
+  function throttleTime(duration, scheduler, config5) {
     if (scheduler === undefined) {
       scheduler = async_1.asyncScheduler;
     }
     var duration$ = timer_1.timer(duration, scheduler);
     return throttle_1.throttle(function() {
       return duration$;
-    }, config4);
+    }, config5);
   }
   exports.throttleTime = throttleTime;
 });
@@ -31055,33 +31055,6 @@ var require_bolt11 = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/commander/esm.mjs
-var import__ = __toESM(require_commander(), 1);
-var {
-  program,
-  createCommand,
-  createArgument,
-  createOption,
-  CommanderError,
-  InvalidArgumentError,
-  InvalidOptionArgumentError,
-  Command,
-  Argument,
-  Option,
-  Help
-} = import__.default;
-// ../packages/types/src/tools/definitions.js
-var ToolCategory;
-((ToolCategory2) => {
-  ToolCategory2["FileSystem"] = "filesystem";
-  ToolCategory2["Git"] = "git";
-  ToolCategory2["Nostr"] = "nostr";
-  ToolCategory2["Documentation"] = "documentation";
-  ToolCategory2["Agent"] = "agent";
-  ToolCategory2["System"] = "system";
-  ToolCategory2["Development"] = "development";
-  ToolCategory2["Testing"] = "testing";
-})(ToolCategory || (ToolCategory = {}));
 // ../shared/node_modules/chalk/source/vendor/ansi-styles/index.js
 var ANSI_BACKGROUND_OFFSET = 10;
 var wrapAnsi16 = (offset = 0) => (code) => `\x1B[${code + offset}m`;
@@ -31565,7 +31538,7 @@ var chalk = createChalk();
 var chalkStderr = createChalk({ level: stderrColor ? stderrColor.level : 0 });
 var source_default = chalk;
 
-// ../shared/dist/shared/src/logger.js
+// ../shared/src/logger.ts
 var globalConfig = {
   useEmoji: true,
   useLabels: false,
@@ -31588,38 +31561,73 @@ var agentColors = [
   source_default.cyanBright
 ];
 var agentColorMap = new Map;
+// ../packages/types/src/tools/definitions.js
+var ToolCategory;
+((ToolCategory2) => {
+  ToolCategory2.FileSystem = "filesystem";
+  ToolCategory2.Git = "git";
+  ToolCategory2.Nostr = "nostr";
+  ToolCategory2.Documentation = "documentation";
+  ToolCategory2.Agent = "agent";
+  ToolCategory2.System = "system";
+  ToolCategory2.Development = "development";
+  ToolCategory2.Testing = "testing";
+})(ToolCategory || (ToolCategory = {}));
+// ../shared/dist/shared/src/logger.js
+var globalConfig2 = {
+  useEmoji: true,
+  useLabels: false,
+  debugEnabled: typeof process !== "undefined" && process.env?.DEBUG === "true"
+};
+var agentColors2 = [
+  source_default.red,
+  source_default.green,
+  source_default.yellow,
+  source_default.blue,
+  source_default.magenta,
+  source_default.cyan,
+  source_default.white,
+  source_default.gray,
+  source_default.redBright,
+  source_default.greenBright,
+  source_default.yellowBright,
+  source_default.blueBright,
+  source_default.magentaBright,
+  source_default.cyanBright
+];
+var agentColorMap2 = new Map;
 function getAgentColor(agentName) {
-  if (!agentColorMap.has(agentName)) {
-    const index = agentColorMap.size % agentColors.length;
-    const color = agentColors[index] || source_default.white;
-    agentColorMap.set(agentName, color);
+  if (!agentColorMap2.has(agentName)) {
+    const index = agentColorMap2.size % agentColors2.length;
+    const color = agentColors2[index] || source_default.white;
+    agentColorMap2.set(agentName, color);
   }
-  return agentColorMap.get(agentName) || source_default.white;
+  return agentColorMap2.get(agentName) || source_default.white;
 }
 function logError(message, error) {
-  const prefix = globalConfig.useEmoji ? "\u274C" : globalConfig.useLabels ? "[ERROR]" : "";
+  const prefix = globalConfig2.useEmoji ? "\u274C" : globalConfig2.useLabels ? "[ERROR]" : "";
   const fullMessage = prefix ? `${prefix} ${message}` : message;
   console.error(source_default.redBright(fullMessage), error || "");
 }
 function logInfo(message, ...args) {
-  const prefix = globalConfig.useEmoji ? "\u2139\uFE0F" : globalConfig.useLabels ? "[INFO]" : "";
+  const prefix = globalConfig2.useEmoji ? "\u2139\uFE0F" : globalConfig2.useLabels ? "[INFO]" : "";
   const fullMessage = prefix ? `${prefix} ${message}` : message;
   console.log(source_default.blueBright(fullMessage), ...args);
 }
 function logSuccess(message) {
-  const prefix = globalConfig.useEmoji ? "\u2705" : globalConfig.useLabels ? "[SUCCESS]" : "";
+  const prefix = globalConfig2.useEmoji ? "\u2705" : globalConfig2.useLabels ? "[SUCCESS]" : "";
   const fullMessage = prefix ? `${prefix} ${message}` : message;
   console.log(source_default.greenBright(fullMessage));
 }
 function logWarning(message, ...args) {
-  const prefix = globalConfig.useEmoji ? "\u26A0\uFE0F" : globalConfig.useLabels ? "[WARNING]" : "";
+  const prefix = globalConfig2.useEmoji ? "\u26A0\uFE0F" : globalConfig2.useLabels ? "[WARNING]" : "";
   const fullMessage = prefix ? `${prefix} ${message}` : message;
   console.warn(source_default.yellowBright(fullMessage), ...args);
 }
 function logDebug(message, ...args) {
-  if (!globalConfig.debugEnabled)
+  if (!globalConfig2.debugEnabled)
     return;
-  const prefix = globalConfig.useEmoji ? "\uD83D\uDD0D" : globalConfig.useLabels ? "[DEBUG]" : "";
+  const prefix = globalConfig2.useEmoji ? "\uD83D\uDD0D" : globalConfig2.useLabels ? "[DEBUG]" : "";
   const fullMessage = prefix ? `${prefix} ${message}` : message;
   console.log(source_default.magentaBright(fullMessage), ...args);
 }
@@ -31636,7 +31644,7 @@ class AgentLogger {
   formatMessage(emoji, message, colorFn) {
     const projectPrefix = this.projectName ? `${source_default.gray(`[${this.projectName}]`)} ` : "";
     const agentPrefix = `${this.color(`[${this.agentName}]`)} `;
-    const emojiPrefix = globalConfig.useEmoji ? `${emoji} ` : "";
+    const emojiPrefix = globalConfig2.useEmoji ? `${emoji} ` : "";
     const coloredMessage = colorFn(message);
     return `${projectPrefix}${agentPrefix}${emojiPrefix}${coloredMessage}`;
   }
@@ -31653,7 +31661,7 @@ class AgentLogger {
     console.error(this.formatMessage("\u274C", message, source_default.redBright), error || "");
   }
   debug(message, ...args) {
-    if (globalConfig.debugEnabled) {
+    if (globalConfig2.debugEnabled) {
       console.log(this.formatMessage("\uD83D\uDD0D", message, source_default.magentaBright), ...args);
     }
   }
@@ -31661,7 +31669,7 @@ class AgentLogger {
 function createAgentLogger(agentName, projectName) {
   return new AgentLogger(agentName, projectName);
 }
-var logger = {
+var logger2 = {
   info: logInfo,
   error: logError,
   success: logSuccess,
@@ -31681,6 +31689,22 @@ var EXTENDED_RELAYS = [...DEFAULT_RELAYS, "wss://purplepag.es"];
 function getRelayUrls(extended = false) {
   return extended ? EXTENDED_RELAYS : DEFAULT_RELAYS;
 }
+// node_modules/commander/esm.mjs
+var import__ = __toESM(require_commander(), 1);
+var {
+  program,
+  createCommand,
+  createArgument,
+  createOption,
+  CommanderError,
+  InvalidArgumentError,
+  InvalidOptionArgumentError,
+  Command,
+  Argument,
+  Option,
+  Help
+} = import__.default;
+
 // node_modules/chalk/source/vendor/ansi-styles/index.js
 var ANSI_BACKGROUND_OFFSET2 = 10;
 var wrapAnsi162 = (offset = 0) => (code) => `\x1B[${code + offset}m`;
@@ -48313,17 +48337,17 @@ function relayListFromKind3(ndk, contactList) {
     const relayList = new NDKRelayList(ndk);
     const readRelays = /* @__PURE__ */ new Set;
     const writeRelays = /* @__PURE__ */ new Set;
-    for (let [key, config4] of Object.entries(content)) {
+    for (let [key, config5] of Object.entries(content)) {
       try {
         key = normalizeRelayUrl(key);
       } catch {
         continue;
       }
-      if (!config4) {
+      if (!config5) {
         readRelays.add(key);
         writeRelays.add(key);
       } else {
-        const relayConfig = config4;
+        const relayConfig = config5;
         if (relayConfig.write)
           writeRelays.add(key);
         if (relayConfig.read)
@@ -50136,23 +50160,34 @@ var NDK = class extends import_tseep7.EventEmitter {
 var d2 = import_debug12.default("ndk:zapper:ln");
 var d3 = import_debug11.default("ndk:zapper");
 
-// src/types.ts
+// ../packages/types/dist/events/kinds.js
 var EVENT_KINDS = {
+  METADATA: 0,
+  TEXT_NOTE: 1,
+  CONTACT_LIST: 3,
   CHAT: 11,
   THREAD_REPLY: 1111,
+  TASK: 1934,
+  AGENT_REQUEST: 3199,
+  AGENT_REQUEST_LIST: 13199,
+  AGENT_LESSON: 4124,
+  AGENT_CONFIG: 4199,
   PROJECT_STATUS: 24010,
+  LLM_CONFIG_CHANGE: 24101,
   TYPING_INDICATOR: 24111,
-  TYPING_INDICATOR_STOP: 24112
+  TYPING_INDICATOR_STOP: 24112,
+  ARTICLE: 30023,
+  TEMPLATE: 30717,
+  PROJECT: 31933
 };
-
 // src/chat.ts
 class TenexChat {
   ndk;
   session;
-  constructor(ndk, project3) {
+  constructor(ndk, project4) {
     this.ndk = ndk;
     this.session = {
-      project: project3,
+      project: project4,
       agents: [],
       typingIndicators: new Map
     };
@@ -50182,7 +50217,7 @@ class TenexChat {
           }
         }
         this.session.agents = agents2;
-        logger.info(`\uD83E\uDD16 Discovered ${agents2.length} agents: ${agents2.map((a) => a.name).join(", ")}`);
+        logger2.info(`\uD83E\uDD16 Discovered ${agents2.length} agents: ${agents2.map((a) => a.name).join(", ")}`);
         resolve(agents2);
       });
       setTimeout(() => {
@@ -50215,7 +50250,7 @@ class TenexChat {
       title
     };
     this.session.currentThread = threadEvent;
-    logger.info(`\uD83E\uDDF5 Created thread: "${title}"`);
+    logger2.info(`\uD83E\uDDF5 Created thread: "${title}"`);
     return threadEvent;
   }
   async replyToThread(content, mentionedAgents = []) {
@@ -50236,7 +50271,7 @@ class TenexChat {
     }
     await event.sign();
     await event.publish();
-    logger.info("\uD83D\uDCAC Replied to thread");
+    logger2.info("\uD83D\uDCAC Replied to thread");
   }
   resolveMentions(mentionedAgents) {
     const pubkeys = [];
@@ -50245,7 +50280,7 @@ class TenexChat {
       if (agent) {
         pubkeys.push(agent.pubkey);
       } else {
-        logger.warn(`\u26A0\uFE0F  Agent "${agentName}" not found`);
+        logger2.warn(`\u26A0\uFE0F  Agent "${agentName}" not found`);
       }
     }
     return pubkeys;
@@ -50271,7 +50306,7 @@ class TenexChat {
     ];
     const sub = this.ndk.subscribe(filters);
     sub.on("event", onMessage);
-    logger.info(`\uD83D\uDC42 Listening for replies to thread: ${threadId}`);
+    logger2.info(`\uD83D\uDC42 Listening for replies to thread: ${threadId}`);
   }
   async subscribeToTypingIndicators(threadId, onTyping) {
     const filters = [
@@ -50304,7 +50339,7 @@ class TenexChat {
       }
       onTyping(indicator);
     });
-    logger.info(`\u2328\uFE0F  Listening for typing indicators in thread: ${threadId}`);
+    logger2.info(`\u2328\uFE0F  Listening for typing indicators in thread: ${threadId}`);
   }
   getSession() {
     return this.session;
@@ -50429,9 +50464,9 @@ class ProjectCreator {
     this.ndk = ndk;
   }
   async create() {
-    logger.info(source_default2.blue.bold(`
+    logger2.info(source_default2.blue.bold(`
 \uD83D\uDE80 Create New TENEX Project`));
-    logger.info(source_default2.gray(`Follow the steps to create your project
+    logger2.info(source_default2.gray(`Follow the steps to create your project
 `));
     const formData = {
       name: "",
@@ -50447,7 +50482,7 @@ class ProjectCreator {
     await this.confirmAndCreate(formData);
   }
   async getProjectDetails(formData) {
-    logger.info(source_default2.yellow(`
+    logger2.info(source_default2.yellow(`
 \uD83D\uDCDD Step 1: Project Details`));
     const answers = await lib_default.prompt([
       {
@@ -50484,7 +50519,7 @@ class ProjectCreator {
     Object.assign(formData, answers);
   }
   async selectTemplate(formData) {
-    logger.info(source_default2.yellow(`
+    logger2.info(source_default2.yellow(`
 \uD83D\uDCCB Step 2: Choose Template (optional)`));
     const { useTemplate } = await lib_default.prompt([
       {
@@ -50502,7 +50537,7 @@ class ProjectCreator {
       const templateEvents = await this.ndk.fetchEvents(filters);
       spinner.stop();
       if (templateEvents.size === 0) {
-        logger.info(source_default2.yellow("No templates found. Continuing without template."));
+        logger2.info(source_default2.yellow("No templates found. Continuing without template."));
         return;
       }
       const templates2 = Array.from(templateEvents).map((event) => {
@@ -50525,11 +50560,11 @@ class ProjectCreator {
       formData.selectedTemplate = selectedTemplate;
     } catch (error) {
       spinner.fail(source_default2.red("Failed to fetch templates"));
-      logger.error(error);
+      logger2.error(error);
     }
   }
   async selectAgents(formData) {
-    logger.info(source_default2.yellow(`
+    logger2.info(source_default2.yellow(`
 \uD83E\uDD16 Step 3: Select Agents`));
     const spinner = ora2("Fetching available agents...").start();
     try {
@@ -50537,7 +50572,7 @@ class ProjectCreator {
       const agentEvents = await this.ndk.fetchEvents(filters);
       spinner.stop();
       if (agentEvents.size === 0) {
-        logger.info(source_default2.yellow("No agents found. You can add agents later."));
+        logger2.info(source_default2.yellow("No agents found. You can add agents later."));
         return;
       }
       const agents2 = Array.from(agentEvents).map((event) => {
@@ -50560,11 +50595,11 @@ class ProjectCreator {
       formData.selectedAgents = selectedAgents;
     } catch (error) {
       spinner.fail(source_default2.red("Failed to fetch agents"));
-      logger.error(error);
+      logger2.error(error);
     }
   }
   async selectInstructions(formData) {
-    logger.info(source_default2.yellow(`
+    logger2.info(source_default2.yellow(`
 \uD83D\uDCDA Step 4: Select Instructions`));
     const spinner = ora2("Fetching available instructions...").start();
     try {
@@ -50572,7 +50607,7 @@ class ProjectCreator {
       const instructionEvents = await this.ndk.fetchEvents(filters);
       spinner.stop();
       if (instructionEvents.size === 0) {
-        logger.info(source_default2.yellow("No instructions found. You can add instructions later."));
+        logger2.info(source_default2.yellow("No instructions found. You can add instructions later."));
         return;
       }
       const instructions = Array.from(instructionEvents).map((event) => {
@@ -50629,27 +50664,27 @@ class ProjectCreator {
       formData.selectedInstructions = instructionsWithAgents;
     } catch (error) {
       spinner.fail(source_default2.red("Failed to fetch instructions"));
-      logger.error(error);
+      logger2.error(error);
     }
   }
   async confirmAndCreate(formData) {
-    logger.info(source_default2.yellow(`
+    logger2.info(source_default2.yellow(`
 \u2705 Step 5: Confirm & Create`));
-    logger.info(source_default2.blue(`
+    logger2.info(source_default2.blue(`
 \uD83D\uDCCA Project Summary:`));
-    logger.info(`Name: ${source_default2.white(formData.name)}`);
-    logger.info(`Description: ${source_default2.white(formData.description || "None")}`);
-    logger.info(`Hashtags: ${source_default2.white(formData.hashtags || "None")}`);
-    logger.info(`Repository: ${source_default2.white(formData.repoUrl || "None")}`);
-    logger.info(`Image: ${source_default2.white(formData.imageUrl || "None")}`);
+    logger2.info(`Name: ${source_default2.white(formData.name)}`);
+    logger2.info(`Description: ${source_default2.white(formData.description || "None")}`);
+    logger2.info(`Hashtags: ${source_default2.white(formData.hashtags || "None")}`);
+    logger2.info(`Repository: ${source_default2.white(formData.repoUrl || "None")}`);
+    logger2.info(`Image: ${source_default2.white(formData.imageUrl || "None")}`);
     if (formData.selectedTemplate) {
-      logger.info(`Template: ${source_default2.white(formData.selectedTemplate.tagValue("title") || "Selected")}`);
+      logger2.info(`Template: ${source_default2.white(formData.selectedTemplate.tagValue("title") || "Selected")}`);
     }
     if (formData.selectedAgents && formData.selectedAgents.length > 0) {
-      logger.info(`Agents (${formData.selectedAgents.length}): ${source_default2.white(formData.selectedAgents.map((a) => a.name).join(", "))}`);
+      logger2.info(`Agents (${formData.selectedAgents.length}): ${source_default2.white(formData.selectedAgents.map((a) => a.name).join(", "))}`);
     }
     if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
-      logger.info(`Instructions (${formData.selectedInstructions.length}): ${source_default2.white(formData.selectedInstructions.map((i2) => i2.title || "Untitled").join(", "))}`);
+      logger2.info(`Instructions (${formData.selectedInstructions.length}): ${source_default2.white(formData.selectedInstructions.map((i2) => i2.title || "Untitled").join(", "))}`);
     }
     const { confirm } = await lib_default.prompt([
       {
@@ -50660,69 +50695,69 @@ class ProjectCreator {
       }
     ]);
     if (!confirm) {
-      logger.info(source_default2.gray("Project creation cancelled."));
+      logger2.info(source_default2.gray("Project creation cancelled."));
       return;
     }
     const spinner = ora2("Creating project...").start();
     try {
-      const project3 = new NDKProject(this.ndk);
-      project3.title = formData.name.trim();
-      project3.content = formData.description.trim() || `A new TENEX project: ${formData.name}`;
+      const project4 = new NDKProject(this.ndk);
+      project4.title = formData.name.trim();
+      project4.content = formData.description.trim() || `A new TENEX project: ${formData.name}`;
       if (formData.hashtags.trim()) {
         const hashtagArray = formData.hashtags.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
-        project3.hashtags = hashtagArray;
+        project4.hashtags = hashtagArray;
       }
       if (formData.repoUrl?.trim()) {
-        project3.repo = formData.repoUrl.trim();
+        project4.repo = formData.repoUrl.trim();
       }
       if (formData.imageUrl?.trim()) {
-        project3.picture = formData.imageUrl.trim();
+        project4.picture = formData.imageUrl.trim();
       }
       if (formData.selectedTemplate) {
-        project3.tags.push(["template", formData.selectedTemplate.tagId()]);
+        project4.tags.push(["template", formData.selectedTemplate.tagId()]);
       }
       if (formData.selectedAgents && formData.selectedAgents.length > 0) {
         for (const agent of formData.selectedAgents) {
-          project3.tags.push(["agent", agent.id]);
+          project4.tags.push(["agent", agent.id]);
         }
       }
       if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
         for (const instruction of formData.selectedInstructions) {
           if (instruction.assignedAgents && instruction.assignedAgents.length > 0) {
-            project3.tags.push(["rule", instruction.id, ...instruction.assignedAgents]);
+            project4.tags.push(["rule", instruction.id, ...instruction.assignedAgents]);
           } else {
-            project3.tags.push(["rule", instruction.id]);
+            project4.tags.push(["rule", instruction.id]);
           }
         }
       }
-      await project3.publish();
+      await project4.publish();
       spinner.succeed(source_default2.green("Project created successfully!"));
-      logger.info(source_default2.gray(`
-Project ID: ${project3.dTag}`));
-      logger.info(source_default2.gray(`NADDR: ${project3.encode()}`));
+      logger2.info(source_default2.gray(`
+Project ID: ${project4.dTag}`));
+      logger2.info(source_default2.gray(`NADDR: ${project4.encode()}`));
     } catch (error) {
       spinner.fail(source_default2.red("Failed to create project"));
-      logger.error(error);
+      logger2.error(error);
     }
   }
 }
 
 // src/ndk-setup.ts
 var ndkInstance = null;
-async function getNDK(config4 = {}) {
+async function getNDK(config5 = {}) {
   if (!ndkInstance) {
-    const relays2 = config4.relays || getRelayUrls();
+    const relays2 = config5.relays || getRelayUrls();
     ndkInstance = new NDK({
       explicitRelayUrls: [...relays2],
       outboxRelayUrls: [...relays2],
       enableOutboxModel: true
     });
-    if (config4.nsec) {
-      const signer = new NDKPrivateKeySigner(config4.nsec);
+    if (config5.nsec) {
+      const signer = new NDKPrivateKeySigner(config5.nsec);
       ndkInstance.signer = signer;
     }
     await ndkInstance.connect();
-    logger.info(`\u2705 Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
+    logger2.info(`\u2705 Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
   }
   return ndkInstance;
 }
@@ -50733,8 +50768,8 @@ class TenexCLI {
   chat;
   project;
   async start() {
-    logger.info(source_default2.blue.bold("\uD83D\uDE80 TENEX CLI Client"));
-    logger.info(source_default2.gray(`Connect to TENEX projects via CLI
+    logger2.info(source_default2.blue.bold("\uD83D\uDE80 TENEX CLI Client"));
+    logger2.info(source_default2.gray(`Connect to TENEX projects via CLI
 `));
     await this.authenticate();
     await this.selectMode();
@@ -50742,8 +50777,8 @@ class TenexCLI {
   async authenticate() {
     const nsec = process.env.NSEC;
     if (!nsec) {
-      logger.error("\u274C NSEC environment variable not found");
-      logger.info(source_default2.gray("Please set your NSEC: export NSEC=nsec1..."));
+      logger2.error("\u274C NSEC environment variable not found");
+      logger2.info(source_default2.gray("Please set your NSEC: export NSEC=nsec1..."));
       process.exit(1);
     }
     const spinner = ora2("Connecting to Nostr network...").start();
@@ -50752,11 +50787,11 @@ class TenexCLI {
       spinner.succeed(source_default2.green("Connected to Nostr network"));
       const user = this.ndk.activeUser;
       if (user) {
-        logger.info(source_default2.gray(`Authenticated as: ${user.npub}`));
+        logger2.info(source_default2.gray(`Authenticated as: ${user.npub}`));
       }
     } catch (error) {
       spinner.fail(source_default2.red("Failed to connect to Nostr"));
-      logger.error(error);
+      logger2.error(error);
       process.exit(1);
     }
   }
@@ -50785,7 +50820,7 @@ class TenexCLI {
         break;
       }
       case "exit":
-        logger.info(source_default2.gray("\uD83D\uDC4B Goodbye!"));
+        logger2.info(source_default2.gray("\uD83D\uDC4B Goodbye!"));
         await this.ndk?.disconnect();
         process.exit(0);
     }
@@ -50822,14 +50857,14 @@ class TenexCLI {
       await this.chat.discoverAgents();
     } catch (error) {
       spinner.fail(source_default2.red("Failed to connect to project"));
-      logger.error(error);
+      logger2.error(error);
       process.exit(1);
     }
   }
   async startChatSession() {
     const agents2 = this.chat.getSession().agents;
     if (agents2.length === 0) {
-      logger.info(source_default2.yellow("\u26A0\uFE0F  No agents discovered. Continuing anyway..."));
+      logger2.info(source_default2.yellow("\u26A0\uFE0F  No agents discovered. Continuing anyway..."));
     }
     while (true) {
       const { action } = await lib_default.prompt([
@@ -50860,7 +50895,7 @@ class TenexCLI {
           this.showSession();
           break;
         case "exit":
-          logger.info(source_default2.gray("\uD83D\uDC4B Goodbye!"));
+          logger2.info(source_default2.gray("\uD83D\uDC4B Goodbye!"));
           await this.ndk?.disconnect();
           process.exit(0);
       }
@@ -50888,12 +50923,12 @@ class TenexCLI {
       const threadEvent = await this.chat.createThread(title, cleanContent, mentionedAgents);
       spinner.succeed(source_default2.green(`Thread created: ${title}`));
       if (mentionedAgents.length > 0) {
-        logger.info(source_default2.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
+        logger2.info(source_default2.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
       }
       await this.startListening(threadEvent.id);
     } catch (error) {
       spinner.fail(source_default2.red("Failed to create thread"));
-      logger.error(error);
+      logger2.error(error);
     }
   }
   async replyToThread() {
@@ -50910,24 +50945,24 @@ class TenexCLI {
       await this.chat.replyToThread(cleanContent, mentionedAgents);
       spinner.succeed(source_default2.green("Reply sent"));
       if (mentionedAgents.length > 0) {
-        logger.info(source_default2.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
+        logger2.info(source_default2.gray(`Mentioned agents: ${mentionedAgents.join(", ")}`));
       }
     } catch (error) {
       spinner.fail(source_default2.red("Failed to send reply"));
-      logger.error(error);
+      logger2.error(error);
     }
   }
   async startListening(threadId) {
-    logger.info(source_default2.blue(`
+    logger2.info(source_default2.blue(`
 \uD83D\uDC42 Listening for responses...`));
-    logger.info(source_default2.gray(`Press Ctrl+C to stop listening
+    logger2.info(source_default2.gray(`Press Ctrl+C to stop listening
 `));
     await this.chat.subscribeToThread(threadId, (event) => {
       const timestamp = new Date(event.created_at * 1000).toLocaleTimeString();
       const agentName = this.chat.getSession().agents.find((a) => a.pubkey === event.pubkey)?.name || "Unknown";
-      logger.info(source_default2.green(`
+      logger2.info(source_default2.green(`
 [${timestamp}] ${agentName}:`));
-      logger.info(event.content);
+      logger2.info(event.content);
     });
     await this.chat.subscribeToTypingIndicators(threadId, (indicator) => {
       if (indicator.kind === 24111) {
@@ -50936,33 +50971,33 @@ class TenexCLI {
           typingMsg += source_default2.gray(`
    Processing: "${indicator.userPrompt.substring(0, 100)}${indicator.userPrompt.length > 100 ? "..." : ""}"`);
         }
-        logger.info(typingMsg);
+        logger2.info(typingMsg);
       } else {
-        logger.info(source_default2.gray(`\u270B ${indicator.agentName} stopped typing`));
+        logger2.info(source_default2.gray(`\u270B ${indicator.agentName} stopped typing`));
       }
     });
     process.on("SIGINT", () => {
-      logger.info(source_default2.gray(`
+      logger2.info(source_default2.gray(`
 \uD83D\uDC4B Stopped listening`));
       process.exit(0);
     });
   }
   showSession() {
     const session = this.chat.getSession();
-    logger.info(source_default2.blue(`
+    logger2.info(source_default2.blue(`
 \uD83D\uDCCB Current Session`));
-    logger.info(source_default2.gray("=".repeat(50)));
-    logger.info(`Project: ${session.project.title || session.project.identifier}`);
-    logger.info(`NADDR: ${session.project.naddr}`);
-    logger.info(`Agents: ${session.agents.map((a) => a.name).join(", ")}`);
+    logger2.info(source_default2.gray("=".repeat(50)));
+    logger2.info(`Project: ${session.project.title || session.project.identifier}`);
+    logger2.info(`NADDR: ${session.project.naddr}`);
+    logger2.info(`Agents: ${session.agents.map((a) => a.name).join(", ")}`);
     if (session.currentThread) {
-      logger.info(`Current Thread: ${session.currentThread.title}`);
+      logger2.info(`Current Thread: ${session.currentThread.title}`);
     }
     const typingCount = session.typingIndicators.size;
     if (typingCount > 0) {
-      logger.info(`Typing: ${Array.from(session.typingIndicators.values()).map((t) => t.agentName).join(", ")}`);
+      logger2.info(`Typing: ${Array.from(session.typingIndicators.values()).map((t) => t.agentName).join(", ")}`);
     }
-    logger.info(source_default2.gray(`${"=".repeat(50)}
+    logger2.info(source_default2.gray(`${"=".repeat(50)}
 `));
   }
 }
@@ -50970,34 +51005,34 @@ class TenexCLI {
 // src/commands/project-create.ts
 async function createProject(options) {
   try {
-    logger.info(source_default2.blue("\uD83D\uDE80 Creating TENEX project..."));
+    logger2.info(source_default2.blue("\uD83D\uDE80 Creating TENEX project..."));
     const ndk = await getNDK({ nsec: options.nsec });
     const user = ndk.activeUser;
     if (!user) {
       throw new Error("Failed to authenticate with provided nsec");
     }
-    const project3 = new NDKProject(ndk);
+    const project4 = new NDKProject(ndk);
     const projectId = `${options.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-    project3.title = options.name;
-    project3.content = options.description || `A TENEX project: ${options.name}`;
-    project3.tags.push(["d", projectId]);
+    project4.title = options.name;
+    project4.content = options.description || `A TENEX project: ${options.name}`;
+    project4.tags.push(["d", projectId]);
     if (options.repo) {
-      project3.repo = options.repo;
+      project4.repo = options.repo;
     }
     if (options.hashtags) {
       const hashtagArray = options.hashtags.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
-      project3.hashtags = hashtagArray;
+      project4.hashtags = hashtagArray;
     }
-    await project3.publish();
-    const naddr = project3.encode();
-    logger.info(source_default2.green("\u2705 Project created successfully!"));
-    logger.info(source_default2.gray(`Project ID: ${projectId}`));
-    logger.info(source_default2.gray(`NADDR: ${naddr}`));
-    logger.info(source_default2.gray(`Author: ${user.npub}`));
-    logger.info(naddr);
+    await project4.publish();
+    const naddr = project4.encode();
+    logger2.info(source_default2.green("\u2705 Project created successfully!"));
+    logger2.info(source_default2.gray(`Project ID: ${projectId}`));
+    logger2.info(source_default2.gray(`NADDR: ${naddr}`));
+    logger2.info(source_default2.gray(`Author: ${user.npub}`));
+    logger2.info(naddr);
     process.exit(0);
   } catch (error) {
-    logger.error(source_default2.red("\u274C Failed to create project:"), error);
+    logger2.error(source_default2.red("\u274C Failed to create project:"), error);
     process.exit(1);
   }
 }
@@ -51005,7 +51040,7 @@ async function createProject(options) {
 // src/commands/project-start.ts
 async function startProject(options) {
   try {
-    logger.info(source_default2.blue("\uD83D\uDE80 Sending project start event..."));
+    logger2.info(source_default2.blue("\uD83D\uDE80 Sending project start event..."));
     const ndk = await getNDK({ nsec: options.nsec });
     const user = ndk.activeUser;
     if (!user) {
@@ -51020,10 +51055,10 @@ async function startProject(options) {
     event.content = "Starting project...";
     event.tag(projectEvent);
     await event.publish();
-    logger.info(source_default2.green("\u2705 Project start event sent successfully!"));
+    logger2.info(source_default2.green("\u2705 Project start event sent successfully!"));
     process.exit(0);
   } catch (error) {
-    logger.error(source_default2.red("\u274C Failed to send project start event:"), error);
+    logger2.error(source_default2.red("\u274C Failed to send project start event:"), error);
     process.exit(1);
   }
 }
@@ -51039,7 +51074,7 @@ var projectCommand = program2.command("project").description("Project management
 projectCommand.command("create").description("Create a new TENEX project").requiredOption("--name <name>", "Project name").requiredOption("--nsec <nsec>", "Your Nostr private key").option("--description <description>", "Project description").option("--repo <url>", "Git repository URL").option("--hashtags <tags>", "Comma-separated hashtags").action(createProject);
 projectCommand.command("start").description("Send a project start event (triggers daemon to start project)").requiredOption("--nsec <nsec>", "Your Nostr private key").requiredOption("--project <naddr>", "Project NADDR or identifier").action(startProject);
 program2.command("help").description("Show usage information").action(() => {
-  logger.info(`
+  logger2.info(`
 \uD83D\uDE80 TENEX CLI Client
 
 Usage:

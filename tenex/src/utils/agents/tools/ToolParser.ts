@@ -12,7 +12,8 @@ export function parseToolCalls(content: string): ToolCall[] {
     while (match !== null) {
         try {
             // Clean up the JSON string - handle potential formatting issues
-            const jsonStr = match[1].trim();
+            const jsonStr = match[1]?.trim();
+            if (!jsonStr) continue;
 
             const toolData = JSON.parse(jsonStr);
             if (toolData.tool && typeof toolData.tool === "string") {
@@ -47,7 +48,9 @@ export function parseToolCalls(content: string): ToolCall[] {
     while (match !== null) {
         try {
             const toolName = match[1];
-            const toolArgs = JSON.parse(match[2]);
+            const toolArgsStr = match[2];
+            if (!toolName || !toolArgsStr) continue;
+            const toolArgs = JSON.parse(toolArgsStr);
             toolCalls.push({
                 id: `call_${Math.random().toString(36).substr(2, 9)}`,
                 name: toolName,
@@ -67,7 +70,9 @@ export function parseToolCalls(content: string): ToolCall[] {
     while (match !== null) {
         try {
             const toolName = match[1];
-            const toolArgs = JSON.parse(match[2]);
+            const toolArgsStr = match[2];
+            if (!toolName || !toolArgsStr) continue;
+            const toolArgs = JSON.parse(toolArgsStr);
             toolCalls.push({
                 id: `call_${Math.random().toString(36).substr(2, 9)}`,
                 name: toolName,

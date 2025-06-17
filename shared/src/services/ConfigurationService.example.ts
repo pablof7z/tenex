@@ -2,6 +2,7 @@ import { configurationService } from "./ConfigurationService";
 
 // Example usage of ConfigurationService
 
+// biome-ignore lint/correctness/noUnusedVariables: This is an example function
 async function example() {
     const projectPath = "/path/to/project";
 
@@ -22,14 +23,14 @@ async function example() {
         );
         console.log("Resolved LLM Config:", resolvedConfig);
 
-        // Load project metadata
-        const metadata = await configurationService.loadProjectMetadata(projectPath);
-        console.log("Project Metadata:", metadata);
+        // Load project config (includes metadata)
+        const projectConfig = await configurationService.loadProjectConfig(projectPath);
+        console.log("Project Config:", projectConfig);
 
         // Save updated agents configuration
         const updatedAgents = {
             default: { nsec: "nsec1...", file: "agent1.json" },
-            planner: "nsec1...", // Legacy format still supported
+            planner: { nsec: "nsec1..." }, // Both formats supported
         };
         await configurationService.saveAgentsConfig(projectPath, updatedAgents);
 
@@ -49,3 +50,8 @@ async function example() {
 // 4. Consistent error handling
 // 5. Support for backwards compatibility
 // 6. Centralized configuration logic
+
+// Run the example if this file is executed directly
+if (import.meta.main) {
+    example().catch(console.error);
+}

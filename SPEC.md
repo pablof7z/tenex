@@ -16,7 +16,7 @@ The system has evolved into a sophisticated multi-agent orchestration platform f
 
 ## System Architecture
 
-TENEX consists of four interconnected components that work together:
+TENEX consists of interconnected components that work together:
 
 ### 1. Web Client (`web-client/`)
 
@@ -48,7 +48,7 @@ A Vite-based React application (not Next.js) providing the user interface:
 A command-line interface for local development operations with sophisticated agent orchestration:
 
 - **Project Initialization**: Set up new TENEX projects locally (`tenex project init`)
-- **Agent Orchestration**: Run multi-agent system with `tenex run`
+- **Agent Orchestration**: Run multi-agent system with `tenex project run`
 - **Agent Management**: Configure multiple agents with individual identities
 - **Status Broadcasting**: Publishes project online status (kind 24010) every 60 seconds
 - **Conversation Management**: Persistent storage with token optimization
@@ -111,32 +111,31 @@ Common code and type definitions used across all components:
 - **LLM Types**: Configuration interfaces for AI models
 - **Utilities**: File system, logging, and Nostr helpers
 
-### 5. TENEX Daemon (`tenexd/`)
+### 5. TENEX Daemon
 
 A background service that monitors Nostr for events and manages project processes:
 
 - **Event Monitoring**: Listens for all events from whitelisted pubkeys
-- **Process Management**: Starts `tenex run` when ANY event with project "a" tag is received
+- **Process Management**: Starts `tenex project run` when ANY event with project "a" tag is received
 - **LLM Configuration**: Initializes project llms.json from daemon's AI settings if missing
 - **Project Discovery**: Automatically initializes projects from Nostr if not found locally
 - **Agent Configuration**: Creates agent configurations from NDKAgent events (kind 4199)
 
 **Key Features**:
 - Whitelist-based security for event processing
-- One `tenex run` process per project
+- One `tenex project run` process per project
 - Automatic llms.json initialization from daemon's AI configurations
 - Process deduplication (won't start if already running)
 - Real-time project process management
 
-### 6. iOS Client (`ios-client/`)
+### 6. CLI Client (`cli-client/`)
 
-Native iOS application for mobile access to TENEX:
+Interactive command-line interface for TENEX:
 
-- **SwiftUI Interface**: Modern, responsive design
+- **Interactive Chat Interface**: Chat with AI agents through terminal
+- **Project Creation Wizard**: Step-by-step project setup
+- **Event Processing**: Handle agent and instruction events
 - **NDK Integration**: Full Nostr protocol support
-- **Project Management**: Create and manage projects on mobile
-- **Task Tracking**: Monitor agent progress
-- **Real-time Updates**: Live status from agents
 
 ## Advanced Features
 
@@ -208,9 +207,9 @@ Any Event (from whitelisted pubkey) → tenexd receives
                                     Initialize project if needed
                                     Initialize llms.json if needed
                                             ↓
-                                      Start "tenex run"
+                                      Start "tenex project run"
                                             ↓
-                                    "tenex run" process:
+                                    "tenex project run" process:
                                     - Fetches project event
                                     - Shows agent configs & LLMs
                                     - Subscribes to all project events
@@ -356,6 +355,13 @@ Enhanced multi-agent system with sophisticated capabilities:
 - **Anti-Chatter Logic**: Prevents unnecessary agent-to-agent messages
 - **Learning System**: Agents share lessons across sessions
 - **Cost Optimization**: Token caching and context management
+- **Phased Delivery**: Complex tasks broken into sequential phases with deliverables
+
+**Orchestration Strategies**:
+- **Single Responder**: One agent handles the entire task independently
+- **Hierarchical**: Leader-follower relationships where a lead agent coordinates and delegates to team members
+- **Parallel Execution**: Multiple agents work concurrently on different aspects, then results are combined
+- **Phased Delivery**: Complex tasks broken into sequential phases with deliverables, each phase building on previous results
 
 ## Data Flow
 

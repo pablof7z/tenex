@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
 import { type ChildProcess, spawn } from "node:child_process";
-import path from "node:path";
-import NDK, { NDKPrivateKeySigner, type NDKSubscription } from "@nostr-dev-kit/ndk";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import NDK, { NDKPrivateKeySigner, type NDKSubscription } from "@nostr-dev-kit/ndk";
 
 const TENEX_PATH = path.join(__dirname, "..", "tenex", "bin", "tenex.ts");
 const CLI_CLIENT_PATH = path.join(__dirname, "..", "cli-client", "dist", "index.js");
