@@ -199,7 +199,7 @@ interface CacheEntry<T> {
  * for both global and project-specific configurations
  */
 export class ConfigurationService {
-    private cache = new Map<string, CacheEntry<any>>();
+    private cache = new Map<string, CacheEntry<unknown>>();
     private readonly cacheTTL = 5000; // 5 seconds cache TTL
 
     /**

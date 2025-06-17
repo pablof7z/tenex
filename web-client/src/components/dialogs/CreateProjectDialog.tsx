@@ -154,7 +154,6 @@ export function CreateProjectDialog({
             onOpenChange(false);
             onProjectCreated?.();
         } catch (_error) {
-            // console.error("Failed to create project:", error);
         } finally {
             setIsCreating(false);
         }

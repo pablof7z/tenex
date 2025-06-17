@@ -11,11 +11,39 @@ const _CLI_CLIENT_PATH = path.join(__dirname, "../../../cli-client/dist/index.js
 const TEST_DIR = path.join(process.cwd(), "test-e2e-temp");
 
 // Test configuration
-const TEST_RELAYS = ["wss://relay.damus.io", "wss://nos.lol"];
+// Use local/test relays instead of public ones to avoid rate limiting
+const TEST_RELAYS = process.env.TEST_RELAYS
+    ? process.env.TEST_RELAYS.split(",")
+    : ["wss://localhost:8080"];
 const TEST_TIMEOUT = 120000; // 120 seconds for comprehensive e2e tests
+const PUBLISH_RETRY_ATTEMPTS = 3;
+const PUBLISH_RETRY_DELAY = 2000; // 2 seconds between retries
 
 // Global for helper functions
 let globalNdk: NDK;
+
+// Helper function to publish events with retry logic
+async function publishWithRetry(
+    event: NDKEvent,
+    maxAttempts = PUBLISH_RETRY_ATTEMPTS
+): Promise<void> {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            await event.publish();
+            return; // Success
+        } catch (error: any) {
+            console.warn(`Publish attempt ${attempt} failed:`, error.message);
+            if (attempt < maxAttempts) {
+                console.log(`Retrying in ${PUBLISH_RETRY_DELAY}ms...`);
+                await new Promise((resolve) => setTimeout(resolve, PUBLISH_RETRY_DELAY));
+            } else {
+                throw new Error(
+                    `Failed to publish after ${maxAttempts} attempts: ${error.message}`
+                );
+            }
+        }
+    }
+}
 
 describe("TENEX Complete Workflow E2E Tests", () => {
     let daemonProcess: ChildProcess | null = null;
@@ -88,7 +116,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 );
 
                 await projectEvent.sign();
-                await projectEvent.publish();
+                await publishWithRetry(projectEvent);
 
                 const projectNaddr = projectEvent.encode();
                 console.log(`Project created with naddr: ${projectNaddr}`);
@@ -132,7 +160,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 );
 
                 await threadEvent.sign();
-                await threadEvent.publish();
+                await publishWithRetry(threadEvent);
                 console.log(`Thread created: ${threadEvent.id}`);
 
                 // Step 4: Wait for daemon to detect and process the event
@@ -156,7 +184,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 );
 
                 await taskEvent.sign();
-                await taskEvent.publish();
+                await publishWithRetry(taskEvent);
                 console.log(`Task created: ${taskEvent.id}`);
 
                 // Step 6: Monitor agent activity
@@ -185,7 +213,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 );
 
                 await followUpEvent.sign();
-                await followUpEvent.publish();
+                await publishWithRetry(followUpEvent);
 
                 // Wait for agent response
                 await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -221,7 +249,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 projectEvent.tags.push(["title", "Multi-Agent Test Project"]);
 
                 await projectEvent.sign();
-                await projectEvent.publish();
+                await publishWithRetry(projectEvent);
 
                 const projectNaddr = projectEvent.encode();
 
@@ -243,7 +271,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 );
 
                 await complexTaskEvent.sign();
-                await complexTaskEvent.publish();
+                await publishWithRetry(complexTaskEvent);
 
                 // Give agents time to process and collaborate
                 console.log("Waiting for agents to collaborate...");
@@ -285,7 +313,7 @@ describe("TENEX Complete Workflow E2E Tests", () => {
                 chatEvent.tags.push(["a", `31933:${ownerPubkey}:${fakeProjectIdentifier}`]);
 
                 await chatEvent.sign();
-                await chatEvent.publish();
+                await publishWithRetry(chatEvent);
 
                 // Wait to see if daemon handles it gracefully
                 await new Promise((resolve) => setTimeout(resolve, 5000));

@@ -303,7 +303,13 @@ export class TeamFormationAnalyzerImpl implements TeamFormationAnalyzer {
 
             // Try to access provider configuration if available (legacy support)
             if ("config" in this.llmProvider && this.llmProvider.config) {
-                const config = this.llmProvider.config as any;
+                const config = this.llmProvider.config as {
+                    model?: string;
+                    baseURL?: string;
+                    maxTokens?: number;
+                    temperature?: number;
+                    provider?: string;
+                };
                 return {
                     model: config.model,
                     baseURL: config.baseURL,
@@ -315,7 +321,13 @@ export class TeamFormationAnalyzerImpl implements TeamFormationAnalyzer {
 
             // Try alternative property names (legacy support)
             if ("_config" in this.llmProvider && this.llmProvider._config) {
-                const config = this.llmProvider._config as any;
+                const config = this.llmProvider._config as {
+                    model?: string;
+                    baseURL?: string;
+                    maxTokens?: number;
+                    temperature?: number;
+                    provider?: string;
+                };
                 return {
                     model: config.model,
                     baseURL: config.baseURL,

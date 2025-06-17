@@ -1,4 +1,3 @@
-import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { EVENT_KINDS } from "@tenex/types/events";
 import { useSetAtom } from "jotai";
@@ -98,9 +97,7 @@ export function useProjectStatus() {
                                 if (content.llmConfigs && typeof content.llmConfigs === "object") {
                                     newConfigs.set(projectDir, content.llmConfigs);
                                 }
-                            } catch (_e) {
-                                // console.error("[useProjectStatus] Failed to parse content:", e);
-                            }
+                            } catch (_e) {}
                         }
                     }
                 }

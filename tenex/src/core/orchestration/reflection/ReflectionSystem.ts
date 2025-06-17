@@ -103,16 +103,20 @@ export class ReflectionSystemImpl implements ReflectionSystem {
         const publishedEventIds = await this.lessonPublisher.publishLessons(uniqueLessons, ndk);
 
         // Store reflection metadata in conversation
-        await this.storeReflectionMetadata(trigger.conversation, {
-            reflectionTriggerId: trigger.triggerEvent.id,
-            lessonsGenerated: uniqueLessons.length,
-            lessonsPublished: publishedEventIds.length,
-            timestamp: Date.now(),
-        });
+        // Store reflection metadata in conversation
+        const conversation = await this.conversationStorage.getConversation(trigger.conversationId);
+        if (conversation) {
+            await this.storeReflectionMetadata(conversation, {
+                reflectionTriggerId: (trigger.metadata?.eventId as string) || "",
+                lessonsGenerated: uniqueLessons.length,
+                lessonsPublished: publishedEventIds.length,
+                timestamp: Date.now(),
+            });
+        }
 
         return {
             lessonsGenerated: uniqueLessons,
-            lessonsPublished: publishedEventIds,
+            lessonsPublished: uniqueLessons.filter((_, index) => index < publishedEventIds.length),
             reflectionDuration: Date.now() - startTime,
         };
     }
@@ -123,25 +127,22 @@ export class ReflectionSystemImpl implements ReflectionSystem {
     ): Promise<Agent[]> {
         const selectedAgents: Agent[] = [];
 
-        // If there's a team, reflect only team members
-        if (trigger.team) {
-            for (const memberName of trigger.team.members) {
-                const agent = agents.get(memberName);
-                if (agent) {
-                    selectedAgents.push(agent);
-                }
-            }
+        // Get conversation to check participants
+        const conversation = await this.conversationStorage.getConversation(trigger.conversationId);
+        if (!conversation) {
+            return selectedAgents;
+        }
 
-            // Also include the team lead if different from members
-            if (trigger.team.lead && !trigger.team.members.includes(trigger.team.lead)) {
-                const leadAgent = agents.get(trigger.team.lead);
-                if (leadAgent) {
-                    selectedAgents.push(leadAgent);
-                }
+        // Check metadata for team info
+        const teamId = trigger.metadata?.teamId as string;
+        if (teamId) {
+            // Add all agents that might be part of the team
+            for (const [_, agent] of agents) {
+                selectedAgents.push(agent);
             }
         } else {
             // No team - reflect based on conversation participants
-            const participants = trigger.conversation.getParticipants();
+            const participants = conversation.getParticipants();
 
             for (const [agentName, agent] of agents) {
                 if (participants.includes(agentName)) {
@@ -163,7 +164,7 @@ export class ReflectionSystemImpl implements ReflectionSystem {
         }
     ): Promise<void> {
         // Get existing reflections or initialize
-        const existingReflections = conversation.getMetadata("reflections") || [];
+        const existingReflections = (conversation.getMetadata("reflections") || []) as any[];
 
         // Add new reflection
         existingReflections.push(metadata);

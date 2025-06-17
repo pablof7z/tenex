@@ -2,7 +2,6 @@ import { configurationService } from "./ConfigurationService";
 
 // Example usage of ConfigurationService
 
-// biome-ignore lint/correctness/noUnusedVariables: This is an example function
 async function example() {
     const projectPath = "/path/to/project";
 

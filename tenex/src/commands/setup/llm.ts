@@ -608,7 +608,7 @@ export class LLMConfigEditor {
             });
         }
 
-        const prompts: any[] = [
+        const prompts: inquirer.QuestionCollection = [
             {
                 type: "input",
                 name: "configName",
@@ -634,10 +634,8 @@ export class LLMConfigEditor {
 
         const configName = responses.configName as string;
         const enableCaching =
-            (responses as any).enableCaching !== undefined
-                ? (responses as any).enableCaching
-                : supportsCaching;
-        const setAsDefault = (responses as any).setAsDefault as boolean;
+            "enableCaching" in responses ? (responses.enableCaching as boolean) : supportsCaching;
+        const setAsDefault = responses.setAsDefault as boolean;
 
         const newConfig: LLMConfig = {
             provider,

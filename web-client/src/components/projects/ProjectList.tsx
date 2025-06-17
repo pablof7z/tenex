@@ -159,10 +159,6 @@ export function ProjectList() {
         );
     }
 
-    const getInitials = (title: string) => {
-        return StringUtils.getInitials(title);
-    };
-
     const getAvatarColors = (title: string) => {
         const colors = [
             "bg-gradient-to-br from-blue-500 to-blue-600",
@@ -340,7 +336,9 @@ export function ProjectList() {
                                             <AvatarFallback
                                                 className={`text-white font-semibold text-base sm:text-lg ${getAvatarColors(project.title || "Project")}`}
                                             >
-                                                {getInitials(project.title || "Project")}
+                                                {StringUtils.getInitials(
+                                                    project.title || "Project"
+                                                )}
                                             </AvatarFallback>
                                         </Avatar>
                                     </div>

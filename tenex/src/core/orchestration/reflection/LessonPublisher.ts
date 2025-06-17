@@ -87,8 +87,9 @@ export class LessonPublisherImpl implements LessonPublisher {
                 ["trigger-event", lessonAny.context?.triggerEventId || ""]
             );
 
-            if (lesson.context.teamId) {
-                event.tags.push(["team-id", lesson.context.teamId]);
+            const contextObj = lesson.context ? JSON.parse(lesson.context) : {};
+            if (contextObj.teamId) {
+                event.tags.push(["team-id", contextObj.teamId]);
             }
 
             // Publish the event
@@ -96,7 +97,7 @@ export class LessonPublisherImpl implements LessonPublisher {
 
             this.logger.info(
                 `Published lesson for agent ${lesson.agentName}: "${this.truncateLesson(
-                    lesson.lesson,
+                    lesson.content,
                     30
                 )}..."`
             );

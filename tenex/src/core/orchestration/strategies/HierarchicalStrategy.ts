@@ -25,7 +25,7 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
         agents: Map<string, Agent>,
         _conversationStorage: ConversationStorage
     ): Promise<StrategyExecutionResult> {
-        this.logger.info(`Executing HierarchicalStrategy for task ${team.taskDefinition.id}`);
+        this.logger.info(`Executing HierarchicalStrategy for team ${team.id}`);
 
         try {
             // Get the lead agent
@@ -41,11 +41,10 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
             }
 
             // Create conversation through the lead agent
-            const conversationId = team.taskDefinition.id;
+            const conversationId = team.conversationId || team.id;
             const conversation = await leadAgent.getOrCreateConversationWithContext(
                 conversationId,
                 {
-                    agentRole: leadAgent.getConfig().role || "Team Lead",
                     projectName: leadAgent.getConfig().name,
                     orchestrationMetadata: {
                         team,

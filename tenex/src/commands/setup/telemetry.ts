@@ -340,7 +340,7 @@ export class TelemetryConfigEditor {
     }
 
     private async configureTracing(provider: TelemetryProvider): Promise<Partial<TracingConfig>> {
-        const config: any = {
+        const config: Partial<TracingConfig> = {
             protocol: provider.protocol,
         };
 
@@ -386,7 +386,7 @@ export class TelemetryConfigEditor {
     }
 
     private async configureMetrics(provider: TelemetryProvider): Promise<Partial<MetricsConfig>> {
-        const config: any = {
+        const config: Partial<MetricsConfig> = {
             protocol: provider.protocol,
         };
 
@@ -432,7 +432,7 @@ export class TelemetryConfigEditor {
     }
 
     private async configureLogs(provider: TelemetryProvider): Promise<Partial<LogsConfig>> {
-        const config: any = {
+        const config: Partial<LogsConfig> = {
             protocol: provider.protocol,
         };
 
@@ -541,19 +541,19 @@ export class TelemetryConfigEditor {
                 type: "input",
                 name: "serviceName",
                 message: "Service name:",
-                default: (currentService as any).serviceName || "",
+                default: currentService.serviceName || "",
             },
             {
                 type: "input",
                 name: "serviceVersion",
                 message: "Service version:",
-                default: (currentService as any).serviceVersion || "",
+                default: currentService.serviceVersion || "",
             },
             {
                 type: "input",
                 name: "environment",
                 message: "Environment:",
-                default: (currentService as any).environment || "",
+                default: currentService.environment || "",
             },
         ]);
 

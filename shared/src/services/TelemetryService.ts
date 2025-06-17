@@ -9,6 +9,12 @@
 import type { TelemetryConfig } from "@tenex/types/telemetry";
 import { logger } from "../logger.js";
 
+interface OtelApi {
+    trace: {
+        getTracer(name: string, version: string): TelemetryTracer;
+    };
+}
+
 export interface TelemetrySpan {
     setAttributes(attributes: Record<string, string | number | boolean>): void;
     setStatus(status: { code: number; message?: string }): void;
@@ -125,11 +131,11 @@ export class TelemetryService {
     /**
      * Dynamically load OpenTelemetry (optional dependency)
      */
-    private async loadOpenTelemetry(): Promise<any | null> {
+    private async loadOpenTelemetry(): Promise<OtelApi | null> {
         try {
             // Try to import OpenTelemetry packages
             const api = await import("@opentelemetry/api");
-            return api;
+            return api as OtelApi;
         } catch (_error) {
             // OpenTelemetry not installed - this is okay
             return null;
@@ -139,7 +145,10 @@ export class TelemetryService {
     /**
      * Initialize OpenTelemetry with the provided configuration
      */
-    private async initializeOpenTelemetry(otelApi: any, config: TelemetryConfig): Promise<void> {
+    private async initializeOpenTelemetry(
+        otelApi: OtelApi,
+        config: TelemetryConfig
+    ): Promise<void> {
         try {
             if (!config.tracing?.endpoint) {
                 throw new Error("Tracing endpoint not configured");

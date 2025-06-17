@@ -12,6 +12,7 @@ import { configurationService } from "@tenex/shared/services";
 import type { AgentProfile } from "@tenex/types/agents";
 import type {
     GlobalConfig,
+    LLMCredentials,
     ProjectConfig,
     TenexConfiguration,
     UnifiedLLMConfig,
@@ -321,7 +322,7 @@ export class ProjectManager implements IProjectManager {
 
         // Use provided configs or load from global
         let effectiveConfigs = llmConfigs;
-        let globalCredentials: Record<string, any> | undefined;
+        let globalCredentials: Record<string, LLMCredentials> | undefined;
 
         if (!effectiveConfigs || effectiveConfigs.length === 0) {
             const globalConfig = await this.loadGlobalConfiguration();
@@ -486,7 +487,19 @@ export class ProjectManager implements IProjectManager {
             .replace(/(^-|-$)/g, "");
     }
 
-    private async fetchAgentDefinition(eventId: string, ndk: NDK): Promise<any> {
+    private async fetchAgentDefinition(
+        eventId: string,
+        ndk: NDK
+    ): Promise<{
+        id: string;
+        title: string;
+        description: string;
+        role: string;
+        instructions: string;
+        version: string;
+        created_at: number | undefined;
+        pubkey: string;
+    } | null> {
         try {
             const filter = {
                 ids: [eventId],

@@ -73,7 +73,6 @@ export function VoiceTaskDialog({
             mediaRecorder.start();
             setIsRecording(true);
         } catch (error) {
-            // console.error("Error starting recording:", error);
             let errorMessage = "Failed to start recording.";
 
             if (error instanceof DOMException) {

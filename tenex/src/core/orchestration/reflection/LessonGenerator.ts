@@ -18,7 +18,7 @@ export interface LessonGenerator {
 export class LessonGeneratorImpl implements LessonGenerator {
     constructor(
         private readonly llmProvider: LLMProvider,
-        private readonly logger: Logger
+        private readonly logger: AgentLogger
     ) {
         if (!llmProvider) throw new Error("LLMProvider is required");
         if (!logger) throw new Error("Logger is required");
@@ -95,9 +95,9 @@ export class LessonGeneratorImpl implements LessonGenerator {
             }
 
             const context: LessonContext = {
-                triggerEventId: trigger.triggerEvent.id,
-                conversationId: trigger.conversation.id,
-                teamId: trigger.team?.id,
+                triggerEventId: (trigger.metadata?.eventId as string) || "",
+                conversationId: trigger.conversationId,
+                teamId: trigger.metadata?.teamId as string,
                 errorType: lessonData.context.errorType,
                 preventionStrategy: lessonData.context.preventionStrategy,
                 relatedCapabilities: lessonData.context.relatedCapabilities || [],
@@ -108,11 +108,22 @@ export class LessonGeneratorImpl implements LessonGenerator {
             const ndkAgentEventId = await this.getAgentNDKEventId(agent);
 
             return {
+                id: `lesson_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                agentId: ndkAgentEventId,
                 agentName: agent.getName(),
-                ndkAgentEventId,
-                lesson: lessonData.lesson,
-                confidence: lessonData.confidence,
-                context,
+                taskId: trigger.taskId,
+                type: "mistake" as const,
+                title: lessonData.lesson.title || lessonData.lesson,
+                content: lessonData.lesson.content || lessonData.lesson,
+                context: JSON.stringify(context),
+                impact:
+                    lessonData.confidence >= 0.8
+                        ? "high"
+                        : lessonData.confidence >= 0.5
+                          ? "medium"
+                          : "low",
+                tags: lessonData.context.relatedCapabilities || [],
+                timestamp: Date.now(),
             };
         } catch (error) {
             this.logger.error(
@@ -152,7 +163,7 @@ Respond with a JSON object:
 
     private buildDeduplicationPrompt(lessons: AgentLesson[]): string {
         const lessonDescriptions = lessons
-            .map((lesson, index) => `${index}: [${lesson.agentName}] ${lesson.lesson}`)
+            .map((lesson, index) => `${index}: [${lesson.agentName}] ${lesson.content}`)
             .join("\n");
 
         return `Review these lessons learned from a correction and identify which ones are unique and valuable.
@@ -174,7 +185,6 @@ Return a JSON array of indices for the lessons to keep. For example: [0, 2, 3]`;
     private async getAgentNDKEventId(agent: Agent): Promise<string> {
         // This would need to be implemented based on how agent metadata is stored
         // For now, returning a placeholder
-        const metadata = agent.getMetadata ? agent.getMetadata() : {};
-        return metadata.ndkEventId || `placeholder-ndk-event-${agent.getName()}`;
+        return `placeholder-ndk-event-${agent.getName()}`;
     }
 }

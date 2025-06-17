@@ -123,9 +123,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
             await navigator.clipboard.writeText(event.encode());
             setCopiedEvent(event.id);
             setTimeout(() => setCopiedEvent(null), 2000);
-        } catch (_err) {
-            // console.error("Failed to copy nevent:", err);
-        }
+        } catch (_err) {}
     };
 
     const handleSaveAgents = async () => {

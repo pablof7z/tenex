@@ -1,0 +1,23 @@
+{
+    "configurations": {
+        "openrouter-deepseek-deepseek-chat-v3-0324": {
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "enableCaching": false
+        },
+        "openrouter-anthropic-claude-sonnet-4": {
+            "provider": "openrouter",
+            "model": "anthropic/claude-sonnet-4",
+            "enableCaching": true
+        }
+    },
+    "defaults": {
+        "default": "openrouter-deepseek-deepseek-chat-v3-0324"
+    },
+    "credentials": {
+        "openrouter": {
+            "apiKey": "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",
+            "baseUrl": "https://openrouter.ai/api/v1"
+        }
+    }
+}

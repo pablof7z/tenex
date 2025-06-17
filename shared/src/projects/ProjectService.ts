@@ -100,7 +100,10 @@ export class ProjectService implements IProjectService {
 
             logger.info("Repository cloned successfully");
         } catch (error) {
-            if (error instanceof Error && error.message?.includes("already exists and is not an empty directory")) {
+            if (
+                error instanceof Error &&
+                error.message?.includes("already exists and is not an empty directory")
+            ) {
                 logger.info("Repository already exists", { targetPath });
             } else {
                 logger.error("Failed to clone repository", { error, repoUrl });
