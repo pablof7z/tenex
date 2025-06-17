@@ -108,10 +108,7 @@ async function fetchOllamaModels(): Promise<string[]> {
     }
 }
 
-async function fetchOpenRouterModels(): Promise<string[]> {
-    const models = await fetchOpenRouterModelsWithMetadata();
-    return models.map((model) => model.id);
-}
+// fetchOpenRouterModels is no longer needed - we use fetchOpenRouterModelsWithMetadata directly
 
 async function fetchOpenRouterModelsWithMetadata(): Promise<OpenRouterModelWithMetadata[]> {
     try {
@@ -608,7 +605,7 @@ export class LLMConfigEditor {
             });
         }
 
-        const prompts: inquirer.QuestionCollection = [
+        const prompts: any[] = [
             {
                 type: "input",
                 name: "configName",

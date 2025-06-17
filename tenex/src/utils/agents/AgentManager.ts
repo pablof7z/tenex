@@ -151,9 +151,10 @@ export class AgentManager {
                                     // Use project signer or a default one
                                     if (this._projectInfo?.projectNsec) {
                                         const { nip19 } = require("nostr-tools");
-                                        const { data } = nip19.decode(
-                                            this._projectInfo.projectNsec
-                                        );
+                                        // TODO: Implement proper signing with the decoded data
+                                        // const { data } = nip19.decode(
+                                        //     this._projectInfo.projectNsec
+                                        // );
                                         return {
                                             sign: async (event: any) => {
                                                 // Simple signing implementation
@@ -178,7 +179,7 @@ export class AgentManager {
                     },
                 };
 
-                this.orchestrationCoordinator = createOrchestrationCoordinator({
+                this.orchestrationCoordinator = await createOrchestrationCoordinator({
                     llmProvider,
                     llmConfig: defaultLLMConfig, // Pass the full config
                     allLLMConfigs: this.configManager.getAllLLMConfigs(), // Pass all available LLM configs

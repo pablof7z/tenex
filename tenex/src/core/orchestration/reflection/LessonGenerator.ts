@@ -113,8 +113,8 @@ export class LessonGeneratorImpl implements LessonGenerator {
                 agentName: agent.getName(),
                 taskId: trigger.taskId,
                 type: "mistake" as const,
-                title: lessonData.lesson.title || lessonData.lesson,
-                content: lessonData.lesson.content || lessonData.lesson,
+                title: lessonData.lesson,
+                content: lessonData.lesson,
                 context: JSON.stringify(context),
                 impact:
                     lessonData.confidence >= 0.8

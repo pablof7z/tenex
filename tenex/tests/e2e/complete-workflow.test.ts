@@ -14,7 +14,7 @@ const TEST_DIR = path.join(process.cwd(), "test-e2e-temp");
 // Use local/test relays instead of public ones to avoid rate limiting
 const TEST_RELAYS = process.env.TEST_RELAYS
     ? process.env.TEST_RELAYS.split(",")
-    : ["wss://localhost:8080"];
+    : ["wss://relay.damus.io", "wss://relay.nostr.band"];
 const TEST_TIMEOUT = 120000; // 120 seconds for comprehensive e2e tests
 const PUBLISH_RETRY_ATTEMPTS = 3;
 const PUBLISH_RETRY_DELAY = 2000; // 2 seconds between retries
@@ -328,31 +328,32 @@ describe("TENEX Complete Workflow E2E Tests", () => {
 });
 
 // Helper functions
-async function runCommand(
-    args: string[]
-): Promise<{ code: number | null; stdout: string; stderr: string }> {
-    return new Promise((resolve) => {
-        const proc = spawn("bun", ["run", CLI_PATH, ...args], {
-            cwd: process.cwd(),
-            stdio: "pipe",
-        });
-
-        let stdout = "";
-        let stderr = "";
-
-        proc.stdout?.on("data", (data) => {
-            stdout += data.toString();
-        });
-
-        proc.stderr?.on("data", (data) => {
-            stderr += data.toString();
-        });
-
-        proc.on("close", (code) => {
-            resolve({ code, stdout, stderr });
-        });
-    });
-}
+// runCommand is not currently used but kept for potential future use
+// async function runCommand(
+//     args: string[]
+// ): Promise<{ code: number | null; stdout: string; stderr: string }> {
+//     return new Promise((resolve) => {
+//         const proc = spawn("bun", ["run", CLI_PATH, ...args], {
+//             cwd: process.cwd(),
+//             stdio: "pipe",
+//         });
+//
+//         let stdout = "";
+//         let stderr = "";
+//
+//         proc.stdout?.on("data", (data) => {
+//             stdout += data.toString();
+//         });
+//
+//         proc.stderr?.on("data", (data) => {
+//             stderr += data.toString();
+//         });
+//
+//         proc.on("close", (code) => {
+//             resolve({ code, stdout, stderr });
+//         });
+//     });
+// }
 
 function spawnCommand(args: string[]) {
     return spawn("bun", ["run", CLI_PATH, ...args], {

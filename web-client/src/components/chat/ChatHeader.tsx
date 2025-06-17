@@ -28,13 +28,6 @@ export function ChatHeader({
 }: ChatHeaderProps) {
     if (!onBack) return null;
 
-    // // console.log("[ChatHeader] Props:", {
-    //     hasMessages: !!messages,
-    //     messagesLength: messages?.length,
-    //     projectPubkey,
-    //     availableModels,
-    // });
-
     return (
         <div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
             <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">

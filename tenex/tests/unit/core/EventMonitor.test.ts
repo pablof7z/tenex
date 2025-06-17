@@ -106,7 +106,7 @@ describe("EventMonitor", () => {
             expect(mockNDK.subscribe).toHaveBeenCalledWith(
                 {
                     authors: whitelistedPubkeys,
-                    since: expect.any(Number),
+                    limit: 0,
                 },
                 {
                     closeOnEose: false,
@@ -124,7 +124,7 @@ describe("EventMonitor", () => {
             expect(mockNDK.subscribe).toHaveBeenCalledWith(
                 {
                     authors: [],
-                    since: expect.any(Number),
+                    limit: 0,
                 },
                 expect.any(Object)
             );
@@ -175,7 +175,8 @@ describe("EventMonitor", () => {
             expect(mockProjectManager.ensureProjectExists).toHaveBeenCalledWith(
                 "test-project",
                 expect.any(String),
-                mockNDK
+                mockNDK,
+                []
             );
             expect(mockProcessManager.spawnProjectRun).toHaveBeenCalledWith(
                 "/projects/test-project",

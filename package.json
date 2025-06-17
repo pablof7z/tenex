@@ -11,7 +11,7 @@
         "dev": "bun workspaces foreach --parallel run dev",
         "lint": "biome check .",
         "format": "biome format . --write",
-        "test": "bun workspaces foreach run test",
+        "test": "cd tenex && bun test && cd ../shared && bun test && cd ../web-client && bun run test:unit",
         "clean": "bun workspaces foreach run clean",
         "typecheck": "bun workspaces foreach run typecheck"
     },

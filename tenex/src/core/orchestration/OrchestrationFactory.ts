@@ -35,9 +35,9 @@ export interface OrchestrationDependencies {
 /**
  * Factory function for creating orchestration components with proper dependency injection
  */
-export function createOrchestrationCoordinator(
+export async function createOrchestrationCoordinator(
     dependencies: OrchestrationDependencies
-): OrchestrationCoordinator {
+): Promise<OrchestrationCoordinator> {
     // Merge with default config
     const config: OrchestrationConfig = {
         ...defaultOrchestrationConfig,
@@ -89,6 +89,12 @@ export function createOrchestrationCoordinator(
         dependencies.typingIndicatorPublisher
     );
 
-    // Create coordinator
-    return new OrchestrationCoordinator(orchestrator, dependencies.conversationStorage, logger);
+    // Create coordinator with a proper AgentLogger
+    const { createAgentLogger } = await import("@tenex/shared/logger");
+    const agentLogger = createAgentLogger("Orchestration");
+    return new OrchestrationCoordinator(
+        orchestrator,
+        dependencies.conversationStorage,
+        agentLogger
+    );
 }

@@ -1,6 +1,6 @@
 import type { NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import { atom } from "jotai";
 import type { LLMConfig } from "@tenex/types/llm";
+import { atom } from "jotai";
 
 // Backend info structure
 export interface BackendInfo {

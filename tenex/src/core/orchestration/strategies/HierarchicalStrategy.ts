@@ -45,11 +45,8 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
             const conversation = await leadAgent.getOrCreateConversationWithContext(
                 conversationId,
                 {
-                    projectName: leadAgent.getConfig().name,
-                    orchestrationMetadata: {
-                        team,
-                        strategy: "HIERARCHICAL",
-                    },
+                    agentName: leadAgent.getName(),
+                    agentConfig: leadAgent.getConfig(),
                 }
             );
 
@@ -97,7 +94,7 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
             for (const delegation of delegations) {
                 const memberAgent = agents.get(delegation.agent);
                 if (!memberAgent) {
-                    this.logger.warn(`Member agent ${delegation.agent} not found, skipping`);
+                    this.logger.warning(`Member agent ${delegation.agent} not found, skipping`);
                     partialFailures.push(new Error(`Agent ${delegation.agent} not found`));
                     continue;
                 }
@@ -109,14 +106,8 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
                     const memberConversation = await memberAgent.getOrCreateConversationWithContext(
                         `${conversation.getId()}-${delegation.agent}`,
                         {
-                            agentRole: memberAgent.getConfig().role || "Team Member",
-                            projectName: memberAgent.getConfig().name,
-                            orchestrationMetadata: {
-                                team,
-                                strategy: "HIERARCHICAL",
-                                phase: "execution",
-                                leadAgent: team.lead,
-                            },
+                            agentName: memberAgent.getName(),
+                            agentConfig: memberAgent.getConfig(),
                         }
                     );
 
@@ -203,14 +194,10 @@ export class HierarchicalStrategy implements OrchestrationStrategy {
         }
     }
 
-    private extractDelegations(
-        analysisResult: { metadata?: { subtasks?: Delegation[] } },
-        members: string[]
-    ): Delegation[] {
-        // Try to extract delegations from metadata if available
-        if (analysisResult.metadata?.subtasks) {
-            return analysisResult.metadata.subtasks;
-        }
+    private extractDelegations(analysisResult: AgentResponse, members: string[]): Delegation[] {
+        // Try to extract delegations from content if structured
+        // For now, we'll create simple delegations for each member
+        // TODO: Parse structured delegation info from the lead agent's response
 
         // Otherwise create simple delegations for each member
         const delegations: Delegation[] = [];

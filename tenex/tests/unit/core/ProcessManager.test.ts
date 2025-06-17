@@ -197,17 +197,25 @@ describe("ProcessManager", () => {
             // Don't emit exit event to simulate timeout
             mockChildProcess.kill = mock(() => {});
 
+            // Start the stop process
             const stopPromise = processManager.stopProject("test-project");
 
-            // Wait for timeout
+            // Wait for SIGTERM to be sent
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            expect(killSpy).toHaveBeenCalledWith(mockChildProcess.pid, "SIGTERM");
+
+            // Wait for timeout (5 seconds + a bit extra)
             await new Promise((resolve) => setTimeout(resolve, 5100));
 
-            expect(killSpy).toHaveBeenCalledWith(mockChildProcess.pid, "SIGTERM");
+            // Should have sent SIGKILL after timeout
             expect(killSpy).toHaveBeenCalledWith(mockChildProcess.pid, "SIGKILL");
+
+            // Emit exit to complete the promise
+            mockChildProcess.emit("exit", 0, null);
 
             await stopPromise;
             process.kill = originalKill;
-        });
+        }, 10000); // Increase test timeout to 10 seconds
 
         test("should handle non-existent project", async () => {
             await processManager.stopProject("non-existent");
@@ -220,15 +228,48 @@ describe("ProcessManager", () => {
 
     describe("stopAll", () => {
         test("should stop all running projects", async () => {
+            // Create different child processes for each project
+            const processes: MockChildProcess[] = [];
+            let callCount = 0;
+
+            // Override spawn mock to return different processes
+            spawnMock.mockImplementation((_command: string, _args: string[], _options: unknown) => {
+                const proc = new MockChildProcess(12345 + callCount);
+                processes.push(proc);
+                callCount++;
+                setTimeout(() => proc.emit("spawn"), 0);
+                return proc;
+            });
+
             await processManager.spawnProjectRun("/test/project1", "project1");
             await processManager.spawnProjectRun("/test/project2", "project2");
             await processManager.spawnProjectRun("/test/project3", "project3");
 
-            await processManager.stopAll();
+            expect(processManager.getRunningProjects()).toHaveLength(3);
+
+            // Mock process.kill to prevent ESRCH errors
+            const killSpy = mock(() => {});
+            const originalKill = process.kill;
+            process.kill = killSpy;
+
+            // Start stopAll
+            const stopAllPromise = processManager.stopAll();
+
+            // Wait a bit for SIGTERM to be sent
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            // Emit exit events for all processes
+            processes.forEach((proc) => {
+                proc.emit("exit", 0, null);
+            });
+
+            await stopAllPromise;
 
             expect(await processManager.isProjectRunning("project1")).toBe(false);
             expect(await processManager.isProjectRunning("project2")).toBe(false);
             expect(await processManager.isProjectRunning("project3")).toBe(false);
+
+            process.kill = originalKill;
         });
 
         test("should handle empty process list", async () => {
