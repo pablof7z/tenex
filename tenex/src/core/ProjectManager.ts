@@ -20,7 +20,6 @@ import type {
 } from "@tenex/types/config";
 import type { LLMConfig } from "@tenex/types/llm";
 import type { Agent, ProjectData } from "@tenex/types/projects";
-import type { TelemetryConfig } from "@tenex/types/telemetry";
 
 const execAsync = promisify(exec);
 
@@ -29,16 +28,14 @@ export interface IProjectManager {
         projectPath: string,
         naddr: string,
         ndk: NDK,
-        llmConfigs?: LLMConfig[],
-        telemetryConfigs?: TelemetryConfig[]
+        llmConfigs?: LLMConfig[]
     ): Promise<ProjectData>;
     loadProject(projectPath: string): Promise<ProjectData>;
     ensureProjectExists(
         identifier: string,
         naddr: string,
         ndk: NDK,
-        llmConfigs?: LLMConfig[],
-        telemetryConfigs?: TelemetryConfig[]
+        llmConfigs?: LLMConfig[]
     ): Promise<string>;
 }
 
@@ -47,8 +44,7 @@ export class ProjectManager implements IProjectManager {
         projectPath: string,
         naddr: string,
         ndk: NDK,
-        llmConfigs?: LLMConfig[],
-        telemetryConfigs?: TelemetryConfig[]
+        llmConfigs?: LLMConfig[]
     ): Promise<ProjectData> {
         try {
             // Fetch project from Nostr
@@ -75,9 +71,6 @@ export class ProjectManager implements IProjectManager {
 
             // Initialize LLM configuration - use global config if no explicit configs provided
             await this.initializeLLMConfig(projectPath, llmConfigs);
-
-            // Initialize telemetry configuration - use global config if no explicit configs provided
-            await this.initializeTelemetryConfig(projectPath, telemetryConfigs);
 
             return projectData;
         } catch (error) {
@@ -119,8 +112,7 @@ export class ProjectManager implements IProjectManager {
         identifier: string,
         naddr: string,
         ndk: NDK,
-        llmConfigs?: LLMConfig[],
-        telemetryConfigs?: TelemetryConfig[]
+        llmConfigs?: LLMConfig[]
     ): Promise<string> {
         const projectPath = path.join(process.cwd(), "projects", identifier);
 
@@ -130,7 +122,7 @@ export class ProjectManager implements IProjectManager {
         }
 
         // Initialize the project
-        await this.initializeProject(projectPath, naddr, ndk, llmConfigs, telemetryConfigs);
+        await this.initializeProject(projectPath, naddr, ndk, llmConfigs);
 
         return projectPath;
     }
@@ -254,7 +246,7 @@ export class ProjectManager implements IProjectManager {
 
     private async initializeAgents(projectPath: string, project: ProjectData): Promise<void> {
         const configuration = await configurationService.loadConfiguration(projectPath);
-        const agents = configuration.agents || {};
+        const _agents = configuration.agents || {};
 
         // Create agents from agent event IDs
         for (const eventId of project.agentEventIds) {
@@ -336,7 +328,7 @@ export class ProjectManager implements IProjectManager {
         // Set default to first config
         const firstKey = Object.keys(unifiedConfig.configurations)[0];
         if (firstKey) {
-            unifiedConfig.defaults.default = firstKey;
+            unifiedConfig.defaults.agents = firstKey;
         }
 
         configuration.llms = unifiedConfig;
@@ -347,36 +339,6 @@ export class ProjectManager implements IProjectManager {
             configCount: effectiveConfigs.length,
             defaultKey: unifiedConfig.defaults.default,
         });
-    }
-
-    private async initializeTelemetryConfig(
-        projectPath: string,
-        telemetryConfigs?: TelemetryConfig[]
-    ): Promise<void> {
-        const configuration = await configurationService.loadConfiguration(projectPath);
-        const projectConfig = configuration.config as ProjectConfig;
-
-        // If telemetry already configured, don't override
-        if (projectConfig.telemetry) {
-            logger.debug("Telemetry configuration already exists", { projectPath });
-            return;
-        }
-
-        // Use provided configs or load from global
-        let effectiveTelemetry: TelemetryConfig | undefined;
-        if (telemetryConfigs && telemetryConfigs.length > 0) {
-            effectiveTelemetry = telemetryConfigs[0];
-        } else {
-            const globalConfig = await this.loadGlobalConfiguration();
-            effectiveTelemetry = (globalConfig.config as GlobalConfig).telemetry;
-        }
-
-        if (effectiveTelemetry) {
-            projectConfig.telemetry = effectiveTelemetry;
-            configuration.config = projectConfig;
-            await configurationService.saveConfiguration(projectPath, configuration);
-            logger.info("Initialized telemetry configuration", { projectPath });
-        }
     }
 
     private async loadGlobalConfiguration(): Promise<TenexConfiguration> {
@@ -424,6 +386,7 @@ export class ProjectManager implements IProjectManager {
             about: description || `TENEX project: ${projectName}`,
             picture: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}`,
             banner: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}-banner`,
+            created_at: Math.floor(Date.now() / 1000),
             nip05: `${toKebabCase(projectName)}@tenex.bot`,
             lud16: `${toKebabCase(projectName)}@tenex.bot`,
             website: "https://tenex.bot",
@@ -460,13 +423,6 @@ export class ProjectManager implements IProjectManager {
             });
             // Don't throw - profile creation is not critical for project initialization
         }
-    }
-
-    private toKebabCase(str: string): string {
-        return str
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)/g, "");
     }
 
     private async fetchAgentDefinition(

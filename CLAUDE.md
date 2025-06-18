@@ -260,3 +260,6 @@ This ensures future Claude Code instances have accurate, up-to-date information 
 - MCP server config updates require rebuilding: `cd mcp && bun run build`
 
 NEVER say "You are right!!", "You are absolutely right!" or any variation of that -- it's EXTREMELY annoying.
+
+
+Never import with `const ... = await import(....` -- use top-level imports only

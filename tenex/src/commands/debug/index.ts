@@ -1,9 +1,21 @@
+import { createAgentSystem } from "@/agents";
+import type {
+    AgentConfig,
+    ConversationStore,
+    LLMProvider,
+    NostrPublisher,
+} from "@/agents/core/types";
+import { Agent } from "@/agents/domain/Agent";
+import { TeamLead } from "@/agents/domain/TeamLead";
 import { ProjectLoader } from "@/commands/run/ProjectLoader";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
-import { AgentManager } from "@/utils/agents/AgentManager";
+import { readAgentsJson } from "@/utils/agents";
 import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { readFile } from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/logger";
+import { configurationService } from "@tenex/shared/services";
 import chalk from "chalk";
 
 interface DebugSystemPromptOptions {
@@ -25,73 +37,84 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
 
         logInfo(`📦 Loaded project: ${projectInfo.title}`);
 
-        // Initialize agent manager (same as real system)
-        const agentManager = new AgentManager(projectPath, projectInfo);
-        await agentManager.initialize();
+        // Load agent configurations
+        const agentsJson = await readAgentsJson(projectPath);
+        const _agentConfigs = new Map<string, AgentConfig>();
 
-        // Get all agent pubkeys for specs loading
-        const allAgents = agentManager.getAllAgents();
-        const allAuthorPubkeys = [(await projectInfo.projectSigner.user()).pubkey];
-        for (const agent of allAgents.values()) {
-            allAuthorPubkeys.push(agent.pubkey.toString());
+        // Load configuration for LLM
+        const configuration = await configurationService.loadConfiguration(projectPath);
+        const defaultLLMName = configuration.llms?.defaults?.agents || "default";
+        const llmConfig = configurationService.resolveConfigReference(
+            configuration.llms,
+            defaultLLMName
+        );
+
+        if (!llmConfig) {
+            throw new Error("No LLM configuration found");
         }
 
-        // Load specs from all possible authors (same as real subscription)
-        await loadSpecsForDebug(projectInfo, allAuthorPubkeys, ndk);
-
-        // Get the specific agent
-        const agent = allAgents.get(options.agent);
-        if (!agent) {
-            const availableAgents = Array.from(allAgents.keys());
-            logError(
-                `Agent '${options.agent}' not found. Available agents: ${availableAgents.join(", ")}`
-            );
+        // Find the requested agent
+        const agentEntry = Object.entries(agentsJson).find(([name]) => name === options.agent);
+        if (!agentEntry) {
+            logError(`Agent '${options.agent}' not found in agents.json`);
+            logInfo("\nAvailable agents:");
+            for (const name of Object.keys(agentsJson)) {
+                logInfo(`  - ${name}`);
+            }
             process.exit(1);
         }
 
-        // Use the REAL agent conversation creation with full context
-        const context = {
-            projectInfo,
-            specCache: projectInfo.specCache,
-            otherAgents: Array.from(allAgents.entries())
-                .filter(([name]) => name !== options.agent)
-                .map(([name, agent]) => ({
-                    name,
-                    description: agent.config.description || "",
-                    role: agent.config.role || "",
-                })),
-            isAgentToAgent: false,
+        const [agentName, agentData] = agentEntry;
+
+        // Load agent definition if available
+        let role = `${agentName} specialist`;
+        let instructions = `You are the ${agentName} agent for this project.`;
+
+        if (agentData.file) {
+            try {
+                const agentDefPath = `${projectPath}/.tenex/agents/${agentData.file}`;
+                const agentDefContent = await readFile(agentDefPath, "utf-8");
+                const agentDef = JSON.parse(agentDefContent);
+                role = agentDef.role || role;
+                instructions = agentDef.instructions || instructions;
+            } catch (_error) {
+                logInfo(chalk.yellow(`Could not load agent definition from ${agentData.file}`));
+            }
+        }
+
+        // Create agent config
+        const agentConfig: AgentConfig = {
+            name: agentName,
+            role,
+            instructions,
+            nsec: agentData.nsec,
+            tools: [], // Add tools if needed
         };
 
-        // Get system prompt using the REAL agent method that the system uses
-        const conversation = await agent.getOrCreateConversationWithContext(
-            "debug-prompt",
-            context
+        // Create a mock agent to show its system prompt
+        const mockAgent = new Agent(
+            agentConfig,
+            {} as LLMProvider, // LLM provider not needed for debug
+            {} as ConversationStore, // Store not needed
+            {} as NostrPublisher, // Publisher not needed
+            ndk,
+            undefined // Tool registry
         );
 
-        // Extract the system prompt from the messages
-        const messages = conversation.getFormattedMessages();
-        const systemMessage = messages.find((msg) => msg.role === "system");
-        const systemPrompt = systemMessage?.content || "No system prompt found";
+        // Get the system prompt
+        const systemPrompt = (
+            mockAgent as Agent & { buildSystemPrompt(): string }
+        ).buildSystemPrompt();
 
-        // Display the result
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.cyan(`🤖 System Prompt for Agent: ${options.agent}`));
-        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.gray("Agent Pubkey: ") + chalk.white(agent.pubkey));
-        logInfo(chalk.gray("Project: ") + chalk.white(projectInfo.title));
-        logInfo(
-            chalk.gray("Specs Loaded: ") +
-                chalk.white(projectInfo.specCache.getAllSpecMetadata().length)
-        );
-        const toolRegistry = agent.core.toolRegistry;
-        const toolCount = toolRegistry ? toolRegistry.getAllTools().length : 0;
-        logInfo(chalk.gray("Tools Available: ") + chalk.white(toolCount));
-        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(`\n${systemPrompt}`);
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        // Display the system prompt
+        logInfo(chalk.cyan("\n═══════════════════════════════════════════════════════════════"));
+        logInfo(chalk.cyan(`System Prompt for Agent: ${chalk.bold(agentName)}`));
+        logInfo(chalk.cyan("═══════════════════════════════════════════════════════════════\n"));
 
-        logInfo(`✅ System prompt generated successfully (${systemPrompt.length} characters)`);
+        logInfo(systemPrompt);
+
+        logInfo(chalk.cyan("\n═══════════════════════════════════════════════════════════════"));
+        logInfo(chalk.green("\n✅ Debug complete"));
 
         // Exit the process
         process.exit(0);
@@ -99,42 +122,5 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         const errorMessage = formatError(err);
         logError(`Failed to generate system prompt: ${errorMessage}`);
         process.exit(1);
-    }
-}
-
-async function loadSpecsForDebug(
-    projectInfo: import("../run/ProjectLoader").ProjectRuntimeInfo,
-    allAuthorPubkeys: string[],
-    ndk: NDK
-): Promise<void> {
-    try {
-        const filter = {
-            kinds: [30023], // NDKArticle
-            authors: allAuthorPubkeys, // Project author + all agent pubkeys
-            ...projectInfo.projectEvent.filter(),
-            limit: 50,
-        };
-
-        logInfo(`📋 Loading specs from ${allAuthorPubkeys.length} possible authors`);
-        logInfo(`Authors: ${allAuthorPubkeys.join(", ")}`);
-
-        const specEvents = await ndk.fetchEvents(filter);
-        const eventArray = Array.from(specEvents);
-
-        if (eventArray.length > 0) {
-            logInfo(`Found ${eventArray.length} specification document(s)`);
-            await projectInfo.specCache.updateSpecs(eventArray);
-
-            // Show loaded spec metadata
-            const metadata = projectInfo.specCache.getAllSpecMetadata();
-            for (const spec of metadata) {
-                logInfo(`  - ${spec.title} (${spec.id}): ${spec.summary || "No summary"}`);
-            }
-        } else {
-            logInfo("No specification documents found");
-            logInfo(`Filter used: ${JSON.stringify(filter)}`);
-        }
-    } catch (error) {
-        logError(`Failed to load specs: ${error}`);
     }
 }

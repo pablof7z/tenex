@@ -72,6 +72,13 @@ This document outlines best practices for using the core Nostr Development Kit (
     const user = await ndk.signer.user();
     ndk.activeUser = user;
     ```
+### Generating a new nsec
+    Do NOT use nostr-tools for this, use:
+    ```
+    const signer = NDKPrivateKeySigner.generate();
+    const { npub, nsec, privateKey, pubkey } = signer;
+    ```
+
 
 ## 3. Cache Adapters
 
@@ -201,63 +208,6 @@ This document outlines best practices for using the core Nostr Development Kit (
     }
     ```
 *   **Convenience Methods:** Utilize the getters and setters provided by the wrappers (e.g., `article.title`, `relayList.readRelayUrls`).
-
-## 8. Zapping
-
-*   **Instantiate `NDKZapper`:** Create an instance with the target (user or event), amount (in msat), and optional configuration.
-    ```typescript
-    import { NDKZapper, NDKUser } from "@nostr-dev-kit/ndk";
-
-    const targetUser = ndk.getUser({ pubkey: "target_pubkey..." });
-    const amountMsat = 21000;
-    const zapper = new NDKZapper(targetUser, amountMsat, "msat", { ndk, signer: ndk.signer, comment: "Great post!" });
-    ```
-*   **Provide Payment Callbacks:** You MUST provide `lnPay` and/or `cashuPay` callbacks in the `NDKZapper` options or globally in `ndk.walletConfig`. These functions handle the actual payment logic (fetching invoice, paying, providing proofs).
-    ```typescript
-
-    zapper.lnPay = async (paymentInfo) => {
-        console.log(`Need to pay LN invoice: ${paymentInfo.pr}`);
-
-
-
-        return undefined;
-    };
-    ```
-*   **Initiate Zap:** Call `zapper.zap()`. This handles fetching recipient zap info (LUD-06/16, NIP-61), generating zap requests (NIP-57), calling your payment callbacks, and publishing nutzaps (NIP-61).
-    ```typescript
-    try {
-        const results = await zapper.zap();
-        console.log("Zap results:", results);
-        results.forEach((result, split) => {
-            if (result instanceof Error) {
-                console.error(`Zap failed for ${split.pubkey}: ${result.message}`);
-            } else {
-                console.log(`Zap successful for ${split.pubkey}:`, result);
-            }
-        });
-    } catch (error) {
-        console.error("Zap process failed:", error);
-    }
-    ```
-*   **Event Handling:** Listen to events emitted by the `NDKZapper` instance (`ln_invoice`, `ln_payment`, `split:complete`, `complete`, `notice`) for detailed progress updates.
-*   **Splits:** Be aware that `NDKZapper` automatically handles zap splits defined in the target event's `zap` tags. Your payment callbacks will be called for each split recipient.
-
-## 9. Wallet Operations (`ndk-wallet`)
-
-*   **Core NDK doesn't include wallet UI/logic.** The `ndk-wallet` package provides implementations for common wallet interactions (NWC, WebLN, Cashu).
-*   **Integration:** In a core/terminal context, you would typically integrate `ndk-wallet` components to provide the necessary `lnPay` or `cashuPay` callbacks to `NDKZapper`.
-    *   **NWC:** Instantiate `NDKNwcWallet` with connection details, connect, and use its `payInvoice` method within your `lnPay` callback.
-    *   **Cashu:** Instantiate `NDKCashuWallet` (requires a mint interface), load state, and use its methods (`payLnInvoice`, `send`) within your `cashuPay` or `lnPay` callbacks.
-*   **Configuration:** Set up `ndk.walletConfig` globally or pass callbacks directly to `NDKZapper`.
-    ```typescript
-
-
-
-
-
-    ```
-
-Remember to handle errors gracefully throughout your application, especially during network operations like connecting, fetching, and publishing.
 
 # Bech32:
 If you want to load an event from a bech32 (nevent1..., naddr1..., etc) just use const event = await ndk.fetchEvent(<bech32>);

@@ -24,7 +24,7 @@ const mockNDK = {
     pool: {
         relays: new Map(),
     },
-    fetchEvent: mock((filter: any) => {
+    fetchEvent: mock((filter: { ids?: string[]; kinds?: number[]; "#d"?: string[] }) => {
         // Return a mock agent event
         if (filter.ids?.[0]?.startsWith("agent-event-")) {
             return Promise.resolve({
@@ -103,18 +103,20 @@ mock.module("@tenex/shared", () => ({
 
 // Mock child_process
 mock.module("node:child_process", () => ({
-    exec: mock((_cmd: string, callback: (err: any, stdout: string, stderr: string) => void) => {
-        // Simulate successful git clone
-        setTimeout(() => callback(null, "Cloned successfully", ""), 0);
-    }),
+    exec: mock(
+        (_cmd: string, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
+            // Simulate successful git clone
+            setTimeout(() => callback(null, "Cloned successfully", ""), 0);
+        }
+    ),
 }));
 
 // Mock node:util
 mock.module("node:util", () => ({
-    promisify: mock((fn: any) => {
-        return (...args: any[]) => {
+    promisify: mock((fn: (...args: unknown[]) => void) => {
+        return (...args: unknown[]) => {
             return new Promise((resolve, reject) => {
-                fn(...args, (err: any, stdout: string, stderr: string) => {
+                fn(...args, (err: Error | null, stdout: string, stderr: string) => {
                     if (err) reject(err);
                     else resolve({ stdout, stderr });
                 });
@@ -150,10 +152,15 @@ describe("ProjectManager", () => {
         await fs.mkdir(tempDir, { recursive: true });
 
         // Spy on child_process.exec to prevent actual git clone
-        spyOn(child_process, "exec").mockImplementation((_cmd: string, callback: any) => {
-            // Simulate successful git clone
-            setTimeout(() => callback(null, "Cloned successfully", ""), 0);
-        });
+        spyOn(child_process, "exec").mockImplementation(
+            (
+                _cmd: string,
+                callback: (err: Error | null, stdout: string, stderr: string) => void
+            ) => {
+                // Simulate successful git clone
+                setTimeout(() => callback(null, "Cloned successfully", ""), 0);
+            }
+        );
 
         // Reset mocks and set up return values
         mockProjectServiceInstance.fetchProject.mockReset();
@@ -303,7 +310,11 @@ describe("ProjectManager", () => {
             const naddr = createTestNaddr();
 
             await expect(
-                projectManager.initializeProject(projectPath, naddr, failingMockNDK as any)
+                projectManager.initializeProject(
+                    projectPath,
+                    naddr,
+                    failingMockNDK as unknown as NDK
+                )
             ).rejects.toThrow("Network error");
         });
     });

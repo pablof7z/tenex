@@ -46,3 +46,4 @@ mcp/tenex-mcp
 .roo/mcp.json
 tenexd/config.json
 cli-client/dist shared/dist tenex/dist web-client/dist
+**/projects/

@@ -1,8 +1,8 @@
 import os from "node:os";
 import path from "node:path";
-import { type OrchestrationConfig, OrchestrationStrategy } from "@/core/orchestration/types";
-import { createLLMProvider } from "@/utils/agents/llm/LLMFactory";
-import type { LLMMessage } from "@/utils/agents/llm/types";
+// Orchestration types are no longer used after refactor
+import { createLLMProvider } from "@/llm/LLMFactory";
+import type { LLMMessage } from "@/llm/types";
 import search from "@inquirer/search";
 import * as fileSystem from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/node";
@@ -301,7 +301,7 @@ export class LLMConfigEditor {
         if (configs.length > 0) {
             logger.info(chalk.green("Current configurations:"));
             configs.forEach((config, index) => {
-                const isDefault = llmsConfig.defaults.default === config.name;
+                const isDefault = llmsConfig.defaults.agents === config.name;
                 const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
                 logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
                 const llmConfig = llmsConfig.configurations[config.name];
@@ -311,6 +311,9 @@ export class LLMConfigEditor {
             });
             logger.info("");
         }
+
+        const currentDefault = llmsConfig.defaults.agents || "none";
+        const currentTeamBuilding = llmsConfig.defaults.teamBuilding || "none";
 
         const { action } = await inquirer.prompt([
             {
@@ -324,8 +327,11 @@ export class LLMConfigEditor {
                               { name: "Test existing configuration", value: "test" },
                               { name: "Edit existing configuration", value: "edit" },
                               { name: "Remove configuration", value: "remove" },
-                              { name: "Set default configuration", value: "default" },
-                              { name: "Configure orchestrator LLM", value: "teamformation" },
+                              { name: `Set agent's default [${currentDefault}]`, value: "default" },
+                              {
+                                  name: `Set team building model [${currentTeamBuilding}]`,
+                                  value: "teambuilding",
+                              },
                           ]
                         : []),
                     { name: "Exit", value: "exit" },
@@ -349,8 +355,8 @@ export class LLMConfigEditor {
             case "default":
                 await this.setDefaultConfiguration(llmsConfig);
                 break;
-            case "teamformation":
-                await this.configureTeamFormationLLM(llmsConfig);
+            case "teambuilding":
+                await this.setTeamBuildingConfiguration(llmsConfig);
                 break;
             case "exit":
                 logger.info(chalk.green("\n✅ Configuration saved!"));
@@ -373,7 +379,7 @@ export class LLMConfigEditor {
             if (configs.length > 0) {
                 logger.info(chalk.green("Current configurations:"));
                 configs.forEach((config, index) => {
-                    const isDefault = llmsConfig.defaults.default === config.name;
+                    const isDefault = llmsConfig.defaults.agents === config.name;
                     const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
                     logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
                     const llmConfig = llmsConfig.configurations[config.name];
@@ -384,9 +390,8 @@ export class LLMConfigEditor {
                 logger.info("");
             }
 
-            const currentDefault = llmsConfig.defaults.default || "none";
-            const currentOrchestrator =
-                llmsConfig.defaults.orchestrator || llmsConfig.defaults.default || "none";
+            const currentDefault = llmsConfig.defaults.agents || "none";
+            const currentTeamBuilding = llmsConfig.defaults.teamBuilding || "none";
 
             const choices = [
                 { name: "Add new LLM configuration", value: "add" },
@@ -394,10 +399,10 @@ export class LLMConfigEditor {
                     ? [
                           { name: "Edit existing configuration", value: "edit" },
                           { name: "Remove configuration", value: "remove" },
-                          { name: `Default: [${currentDefault}]`, value: "default" },
+                          { name: `Agent's default: [${currentDefault}]`, value: "default" },
                           {
-                              name: `Orchestrator LLM: [${currentOrchestrator}]`,
-                              value: "teamformation",
+                              name: `Team Building: [${currentTeamBuilding}]`,
+                              value: "teambuilding",
                           },
                       ]
                     : []),
@@ -430,8 +435,8 @@ export class LLMConfigEditor {
                 case "default":
                     await this.setDefaultConfiguration(llmsConfig);
                     break;
-                case "teamformation":
-                    await this.configureTeamFormationLLM(llmsConfig);
+                case "teambuilding":
+                    await this.setTeamBuildingConfiguration(llmsConfig);
                     break;
                 case "continue":
                     logger.info(chalk.green("\n✅ LLM configuration complete!"));
@@ -679,7 +684,7 @@ export class LLMConfigEditor {
         llmsConfig.configurations[configName] = newConfig;
 
         if (setAsDefault) {
-            llmsConfig.defaults.default = configName;
+            llmsConfig.defaults.agents = configName;
         }
 
         // If this is global config and a new API key was entered, save it to credentials
@@ -876,7 +881,7 @@ export class LLMConfigEditor {
 
     private async setDefaultConfiguration(llmsConfig: UnifiedLLMConfig): Promise<void> {
         const configs = this.getConfigList(llmsConfig);
-        const currentDefault = llmsConfig.defaults.default || "none";
+        const currentDefault = llmsConfig.defaults.agents || "none";
 
         logger.info(chalk.cyan("\n⚙️  Set Default Configuration"));
         logger.info(chalk.gray(`Current default: ${currentDefault}\n`));
@@ -893,57 +898,33 @@ export class LLMConfigEditor {
             },
         ]);
 
-        llmsConfig.defaults.default = configName;
+        llmsConfig.defaults.agents = configName;
         await this.saveConfig(llmsConfig);
         logger.info(chalk.green(`\n✅ Configuration "${configName}" set as default!`));
     }
 
-    private async configureTeamFormationLLM(llmsConfig: UnifiedLLMConfig): Promise<void> {
+    private async setTeamBuildingConfiguration(llmsConfig: UnifiedLLMConfig): Promise<void> {
         const configs = this.getConfigList(llmsConfig);
-        const currentOrchestrator =
-            llmsConfig.defaults.orchestrator || llmsConfig.defaults.default || "none";
+        const currentTeamBuilding = llmsConfig.defaults.teamBuilding || "none";
 
-        logger.info(chalk.cyan("\n🤝 Configure Orchestrator LLM"));
-        logger.info(chalk.gray(`Current orchestrator: ${currentOrchestrator}`));
-        logger.info(
-            chalk.gray(
-                "\nThe orchestrator LLM analyzes requirements and forms teams of agents for complex tasks.\n"
-            )
-        );
-
-        if (configs.length === 0) {
-            logger.error(chalk.red("No LLM configurations available. Please add one first."));
-            return;
-        }
-
-        const choices = [
-            ...configs.map((c) => ({
-                name: c.name === currentOrchestrator ? `${c.name} (current)` : c.name,
-                value: c.name,
-            })),
-            { name: "Use default configuration", value: "default" },
-        ];
+        logger.info(chalk.cyan("\n🤝 Set Team Building Configuration"));
+        logger.info(chalk.gray(`Current team building model: ${currentTeamBuilding}\n`));
 
         const { configName } = await inquirer.prompt([
             {
                 type: "list",
                 name: "configName",
-                message: "Select LLM configuration for orchestrator:",
-                choices,
+                message: "Select configuration for team building:",
+                choices: configs.map((c) => ({
+                    name: c.name === currentTeamBuilding ? `${c.name} (current)` : c.name,
+                    value: c.name,
+                })),
             },
         ]);
 
-        if (configName === "default") {
-            llmsConfig.defaults.orchestrator = undefined;
-            logger.info(chalk.green("\n✅ Orchestrator will use the default LLM configuration"));
-        } else {
-            llmsConfig.defaults.orchestrator = configName;
-            logger.info(
-                chalk.green(`\n✅ Orchestrator LLM set to use "${configName}" configuration`)
-            );
-        }
-
+        llmsConfig.defaults.teamBuilding = configName;
         await this.saveConfig(llmsConfig);
+        logger.info(chalk.green(`\n✅ Configuration "${configName}" set for team building!`));
     }
 
     private async testExistingConfiguration(llmsConfig: UnifiedLLMConfig): Promise<void> {
@@ -1024,88 +1005,6 @@ export class LLMConfigEditor {
             }
 
             return false;
-        }
-    }
-
-    public static async getOrchestrationConfig(
-        projectPath?: string
-    ): Promise<OrchestrationConfig | null> {
-        try {
-            const configuration = await configurationService.loadConfiguration(
-                projectPath || "",
-                !projectPath
-            );
-            const llmsConfig = configuration.llms;
-
-            const orchestratorConfigName =
-                llmsConfig.defaults.orchestrator || llmsConfig.defaults.default;
-            if (!orchestratorConfigName) {
-                return null;
-            }
-
-            const orchestratorConfig = llmsConfig.configurations[orchestratorConfigName];
-            if (!orchestratorConfig) {
-                return null;
-            }
-
-            // Apply credentials if available (global config)
-            if (llmsConfig.credentials?.[orchestratorConfig.provider]) {
-                const _creds = llmsConfig.credentials[orchestratorConfig.provider];
-                return {
-                    orchestrator: {
-                        llmConfig: orchestratorConfigName,
-                        maxTeamSize: 5,
-                        strategies: {
-                            simple: OrchestrationStrategy.SINGLE_RESPONDER,
-                            moderate: OrchestrationStrategy.HIERARCHICAL,
-                            complex: OrchestrationStrategy.PHASED_DELIVERY,
-                        },
-                    },
-                    supervision: {
-                        complexTools: [],
-                        supervisionTimeout: 60000,
-                    },
-                    reflection: {
-                        enabled: true,
-                        detectionThreshold: 0.7,
-                        maxLessonsPerAgent: 100,
-                    },
-                    greenLight: {
-                        defaultRequiredFor: [],
-                        reviewTimeout: 300000,
-                        parallelReviews: true,
-                    },
-                };
-            }
-
-            return {
-                orchestrator: {
-                    llmConfig: orchestratorConfigName,
-                    maxTeamSize: 5,
-                    strategies: {
-                        simple: OrchestrationStrategy.SINGLE_RESPONDER,
-                        moderate: OrchestrationStrategy.HIERARCHICAL,
-                        complex: OrchestrationStrategy.PHASED_DELIVERY,
-                    },
-                },
-                supervision: {
-                    complexTools: [],
-                    supervisionTimeout: 60000,
-                },
-                reflection: {
-                    enabled: true,
-                    detectionThreshold: 0.7,
-                    maxLessonsPerAgent: 100,
-                },
-                greenLight: {
-                    defaultRequiredFor: [],
-                    reviewTimeout: 300000,
-                    parallelReviews: true,
-                },
-            };
-        } catch (error) {
-            logger.debug("Could not load orchestration config", { error });
-            return null;
         }
     }
 }

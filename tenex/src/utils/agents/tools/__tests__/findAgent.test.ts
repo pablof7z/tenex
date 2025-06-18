@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import type { Agent } from "@/agents/domain/Agent";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, type NDKKind } from "@nostr-dev-kit/ndk";
-import type { Agent } from "../../Agent";
 import { findAgentTool } from "../findAgent";
 import type { ToolContext } from "../types";
 

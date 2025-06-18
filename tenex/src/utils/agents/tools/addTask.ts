@@ -77,7 +77,7 @@ export const addTaskTool: ToolDefinition = {
             }
 
             // Sign and publish
-            await taskEvent.sign(agent.signer);
+            await taskEvent.sign(agent.getSigner());
             await taskEvent.publish();
 
             logger.info(

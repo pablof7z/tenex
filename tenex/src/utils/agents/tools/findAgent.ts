@@ -159,7 +159,7 @@ export const findAgentTool: ToolDefinition = {
         const findParams = params as FindAgentParams;
 
         // Check if agent has orchestration capability
-        const agentConfig = context?.agent?.config;
+        const agentConfig = context?.agent?.getConfig();
         const hasOrchestrationCapability =
             agentConfig?.role?.toLowerCase().includes("orchestrator") || false;
 

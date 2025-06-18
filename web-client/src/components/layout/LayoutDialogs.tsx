@@ -1,52 +1,45 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
 import { CreateProjectDialog } from "../dialogs/CreateProjectDialog";
-import { CreateTaskDialog } from "../dialogs/CreateTaskDialog";
 import { GlobalSearchDialog } from "../dialogs/GlobalSearchDialog";
 import { TaskCreationOptionsDialog } from "../dialogs/TaskCreationOptionsDialog";
 import { ThreadDialog } from "../dialogs/ThreadDialog";
-import { VoiceTaskDialog } from "../dialogs/VoiceTaskDialog";
+import { VoiceMessageDialog } from "../dialogs/VoiceMessageDialog";
 
 interface LayoutDialogsProps {
     // Dialog states
     showCreateDialog: boolean;
     showSearchDialog: boolean;
-    showTaskOptionsDialog: boolean;
-    showCreateTaskDialog: boolean;
-    showVoiceTaskDialog: boolean;
+    showOptionsDialog: boolean;
+    showVoiceDialog: boolean;
     showThreadDialog: boolean;
     selectedProjectForTask: NDKProject | null;
 
     // Dialog handlers
     onCreateDialogChange: (open: boolean) => void;
     onSearchDialogChange: (open: boolean) => void;
-    onTaskOptionsDialogChange: (open: boolean) => void;
-    onCreateTaskDialogChange: (open: boolean) => void;
-    onVoiceTaskDialogChange: (open: boolean) => void;
+    onOptionsDialogChange: (open: boolean) => void;
+    onVoiceDialogChange: (open: boolean) => void;
     onThreadDialogChange: (open: boolean) => void;
 
     // Event handlers
-    onTaskOptionSelect: (option: "task" | "voice" | "thread") => void;
-    onTaskCreated: () => void;
+    onOptionSelect: (option: "voice" | "thread") => void;
     onThreadStart: (title: string, selectedAgents: ProjectAgent[]) => void;
 }
 
 export function LayoutDialogs({
     showCreateDialog,
     showSearchDialog,
-    showTaskOptionsDialog,
-    showCreateTaskDialog,
-    showVoiceTaskDialog,
+    showOptionsDialog,
+    showVoiceDialog,
     showThreadDialog,
     selectedProjectForTask,
     onCreateDialogChange,
     onSearchDialogChange,
-    onTaskOptionsDialogChange,
-    onCreateTaskDialogChange,
-    onVoiceTaskDialogChange,
+    onOptionsDialogChange,
+    onVoiceDialogChange,
     onThreadDialogChange,
-    onTaskOptionSelect,
-    onTaskCreated,
+    onOptionSelect,
     onThreadStart,
 }: LayoutDialogsProps) {
     return (
@@ -63,30 +56,19 @@ export function LayoutDialogs({
             {/* Global Search Dialog */}
             <GlobalSearchDialog open={showSearchDialog} onOpenChange={onSearchDialogChange} />
 
-            {/* Task Creation Options Dialog */}
+            {/* Creation Options Dialog */}
             <TaskCreationOptionsDialog
-                open={showTaskOptionsDialog}
-                onOpenChange={onTaskOptionsDialogChange}
-                onOptionSelect={onTaskOptionSelect}
+                open={showOptionsDialog}
+                onOpenChange={onOptionsDialogChange}
+                onOptionSelect={onOptionSelect}
             />
 
-            {/* Create Task Dialog */}
+            {/* Voice Message Dialog */}
             {selectedProjectForTask && (
-                <CreateTaskDialog
-                    open={showCreateTaskDialog}
-                    onOpenChange={onCreateTaskDialogChange}
+                <VoiceMessageDialog
+                    open={showVoiceDialog}
+                    onOpenChange={onVoiceDialogChange}
                     project={selectedProjectForTask}
-                    onTaskCreated={onTaskCreated}
-                />
-            )}
-
-            {/* Voice Task Dialog */}
-            {selectedProjectForTask && (
-                <VoiceTaskDialog
-                    open={showVoiceTaskDialog}
-                    onOpenChange={onVoiceTaskDialogChange}
-                    project={selectedProjectForTask}
-                    onTaskCreated={onTaskCreated}
                 />
             )}
 

@@ -1,11 +1,11 @@
-import { MessageSquare, Mic, Plus } from "lucide-react";
+import { MessageSquare, Mic } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent } from "../ui/dialog";
 
 interface TaskCreationOptionsDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onOptionSelect: (option: "task" | "voice" | "thread") => void;
+    onOptionSelect: (option: "voice" | "thread") => void;
 }
 
 export function TaskCreationOptionsDialog({
@@ -13,7 +13,7 @@ export function TaskCreationOptionsDialog({
     onOpenChange,
     onOptionSelect,
 }: TaskCreationOptionsDialogProps) {
-    const handleOptionClick = (option: "task" | "voice" | "thread") => {
+    const handleOptionClick = (option: "voice" | "thread") => {
         onOptionSelect(option);
         onOpenChange(false);
     };
@@ -27,25 +27,13 @@ export function TaskCreationOptionsDialog({
                     <Button
                         variant="outline"
                         className="w-full justify-start gap-3 py-3 h-auto"
-                        onClick={() => handleOptionClick("task")}
-                    >
-                        <Plus className="w-5 h-5 text-blue-600" />
-                        <div className="text-left">
-                            <div className="font-medium">New Task</div>
-                            <div className="text-xs text-slate-500">Create a regular task</div>
-                        </div>
-                    </Button>
-
-                    <Button
-                        variant="outline"
-                        className="w-full justify-start gap-3 py-3 h-auto"
                         onClick={() => handleOptionClick("voice")}
                     >
                         <Mic className="w-5 h-5 text-green-600" />
                         <div className="text-left">
                             <div className="font-medium">Voice</div>
                             <div className="text-xs text-slate-500">
-                                Record voice to create task
+                                Record voice message
                             </div>
                         </div>
                     </Button>

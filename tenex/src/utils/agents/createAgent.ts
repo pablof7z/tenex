@@ -12,15 +12,19 @@ export interface CreateAgentOptions {
     projectPath: string;
     projectTitle: string;
     agentName: string;
-    agentEventId: string;
+    agentEventId?: string;
     projectEvent?: NDKProject;
+    skipIfExists?: boolean;
 }
 
 /**
  * Single place to create an agent: generates nsec, publishes profile, updates agents.json
  */
-export async function createAgent(options: CreateAgentOptions): Promise<void> {
-    const { projectPath, projectTitle, agentName, agentEventId, projectEvent } = options;
+export async function createAgent(
+    options: CreateAgentOptions
+): Promise<NDKPrivateKeySigner | undefined> {
+    const { projectPath, projectTitle, agentName, agentEventId, projectEvent, skipIfExists } =
+        options;
     const agentKey = toKebabCase(agentName);
 
     // Load current agents configuration
@@ -36,6 +40,14 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
             await configurationService.saveConfiguration(projectPath, { ...configuration, agents });
             logInfo(chalk.green(`✅ Added file reference for agent ${agentName}`));
         }
+        if (skipIfExists) {
+            const existingSigner = new NDKPrivateKeySigner(existingAgent.nsec);
+            return existingSigner;
+        }
+        if (skipIfExists) {
+            const existingSigner = new NDKPrivateKeySigner(existingAgent.nsec);
+            return existingSigner;
+        }
         return;
     }
 
@@ -47,8 +59,8 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
 
     // Update agents.json
     agents[agentKey] = {
-        nsec: signer.privateKey,
-        file: `${agentEventId}.json`,
+        nsec: signer.nsec,
+        file: agentEventId ? `${agentEventId}.json` : undefined,
     };
 
     await configurationService.saveConfiguration(projectPath, { ...configuration, agents });
@@ -68,7 +80,6 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
                 about: `${agentKey} AI agent for ${projectTitle} project`,
                 bot: true,
                 picture: avatarUrl,
-                created_at: Math.floor(Date.now() / 1000),
             }),
         });
 
@@ -83,7 +94,7 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
                     kind: EVENT_KINDS.AGENT_REQUEST,
                     tags: [
                         ["agent-name", agentKey],
-                        ["e", agentEventId],
+                        ["e", agentEventId || ""],
                     ],
                 });
 
@@ -106,4 +117,6 @@ export async function createAgent(options: CreateAgentOptions): Promise<void> {
         const errorMessage = formatError(err);
         logInfo(chalk.yellow(`⚠️  Failed to publish profile for ${agentName}: ${errorMessage}`));
     }
+
+    return signer;
 }

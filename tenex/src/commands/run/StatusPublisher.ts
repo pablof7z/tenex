@@ -37,7 +37,10 @@ export class StatusPublisher {
 
             await this.addAgentPubkeys(event, projectInfo.projectPath);
             await this.addModelTags(event, projectInfo.projectPath);
-            event.publish();
+
+            // Sign the event with the project's signer
+            await event.sign(projectInfo.projectSigner);
+            await event.publish();
         } catch (err) {
             const errorMessage = formatError(err);
             logWarning(`Failed to publish status event: ${errorMessage}`);

@@ -7,7 +7,6 @@
 
 import type { AgentsJson } from "../agents/config";
 import type { LLMConfig } from "../llm/config";
-import type { TelemetryConfig } from "../telemetry/config";
 
 /**
  * LLM provider credentials for authentication
@@ -107,10 +106,6 @@ export interface ProjectConfig {
      */
     whitelistedPubkeys?: string[];
 
-    /**
-     * Telemetry configuration
-     */
-    telemetry?: TelemetryConfig;
 }
 
 /**
@@ -122,10 +117,6 @@ export interface GlobalConfig {
      */
     whitelistedPubkeys?: string[];
 
-    /**
-     * Global telemetry configuration
-     */
-    telemetry?: TelemetryConfig;
 }
 
 /**

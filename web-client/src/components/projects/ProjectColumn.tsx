@@ -176,7 +176,7 @@ export function ProjectColumn({
                                 e.stopPropagation();
                                 onTaskCreate?.(project);
                             }}
-                            title="Create new task"
+                            title="Create new content"
                         >
                             <Plus className="w-4 h-4" />
                         </Button>
@@ -218,7 +218,7 @@ export function ProjectColumn({
                             No tasks or threads yet
                         </p>
                         <Button variant="ghost" size="sm" onClick={() => onTaskCreate?.(project)}>
-                            Create first task
+                            Create content
                         </Button>
                     </div>
                 )}

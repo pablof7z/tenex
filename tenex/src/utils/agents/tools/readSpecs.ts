@@ -35,7 +35,8 @@ export const readSpecsTool: ToolDefinition = {
                     error: "Agent context not available",
                 };
             }
-            const agentManager = context.agent.core.agentManager;
+            // Agent manager is not available in new architecture
+            const agentManager = null;
             if (!agentManager) {
                 return {
                     success: false,
@@ -46,7 +47,7 @@ export const readSpecsTool: ToolDefinition = {
 
             // For now, use the current agent's pubkey to read specs
             // In the future, we might want to read specs from all agents
-            const currentPubkey = context.agent.pubkey;
+            const currentPubkey = context.agent.getPubkey();
 
             // Build filter for NDKArticle events from current agent
             const filter: NDKFilter = {

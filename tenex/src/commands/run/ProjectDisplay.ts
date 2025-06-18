@@ -1,3 +1,4 @@
+import { log } from "node:console";
 import type { Agent, ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logInfo } from "@tenex/shared/logger";
@@ -33,22 +34,21 @@ export class ProjectDisplay {
     }
 
     private async displayAgentConfigurations(
-        projectEvent: NDKEvent,
+        _projectEvent: NDKEvent,
         _projectPath: string,
         agents: Map<string, Agent>
     ): Promise<void> {
-        const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
-        if (agentTags.length === 0) return;
+        if (agents.size === 0) {
+            logInfo(chalk.yellow("No agent configurations found for this project."));
+            return;
+        }
 
         logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
         logInfo(chalk.cyan("🤖 Agent Configurations"));
         logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-        for (const tag of agentTags) {
-            const eventId = tag[1];
-            if (eventId) {
-                this.displayAgent(eventId, agents);
-            }
+        for (const [, agent] of agents) {
+            this.displayAgent(agent.eventId, agents);
         }
     }
 
@@ -121,15 +121,12 @@ export class ProjectDisplay {
         logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
         for (const spec of specs) {
-            const lastUpdated = new Date(spec.lastUpdated * 1000).toLocaleDateString();
+            const lastUpdated = new Date(spec.updatedAt * 1000).toLocaleDateString();
             logInfo(chalk.gray("\nDocument:    ") + chalk.yellow(spec.id));
             logInfo(chalk.gray("Title:       ") + chalk.white(spec.title));
             logInfo(chalk.gray("Last Updated:") + chalk.white(lastUpdated));
             if (spec.summary) {
                 logInfo(chalk.gray("Summary:     ") + chalk.white(spec.summary));
-            }
-            if (spec.contentSize) {
-                logInfo(chalk.gray("Size:        ") + chalk.gray(`${spec.contentSize} characters`));
             }
         }
     }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Mock } from "bun:test";
-import { ToolEnabledProvider } from "../../llm/ToolEnabledProvider";
+import { ToolEnabledProvider } from "@/llm/ToolEnabledProvider";
 import type {
     LLMConfig,
     LLMContext,
@@ -8,7 +8,7 @@ import type {
     LLMProvider,
     LLMResponse,
     ProviderTool,
-} from "../../llm/types";
+} from "@/llm/types";
 import { ToolRegistry } from "../ToolRegistry";
 import type { ToolDefinition, ToolResult } from "../types";
 

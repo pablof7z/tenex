@@ -22,15 +22,18 @@ export class EventRouter {
     private llmProvider!: LLMProvider;
     private orchestratorLLMProvider?: LLMProvider;
     private toolManager?: ToolManager;
+    private projectEvent?: NDKEvent;
 
     constructor(
         private orchestrator: TeamOrchestrator,
         private store: ConversationStore,
         private publisher: NostrPublisher,
         private ndk: NDK,
-        private projectContext: ProjectContext
+        private projectContext: ProjectContext,
+        projectEvent?: NDKEvent
     ) {
         this.agentConfigs = new Map();
+        this.projectEvent = projectEvent;
     }
 
     setAgentConfigs(configs: Map<string, AgentConfig>): void {
@@ -45,6 +48,10 @@ export class EventRouter {
         this.toolManager = manager;
     }
 
+    setPublisher(publisher: NostrPublisher): void {
+        this.publisher = publisher;
+    }
+
     getAgent(name: string): Agent | undefined {
         // For debug purposes, create a standalone agent
         const agentConfig = this.agentConfigs.get(name);
@@ -53,23 +60,20 @@ export class EventRouter {
         }
 
         const toolRegistry = this.toolManager?.createAgentRegistry(name);
-        
+
         // Enable agent-specific tools
         if (this.toolManager) {
-            // Enable update_spec for default agent only
-            this.toolManager.enableUpdateSpecTool(name);
-            
             // Enable remember_lesson if agent has event ID
             if (agentConfig.eventId && this.ndk) {
                 this.toolManager.enableRememberLessonTool(name, agentConfig.eventId, this.ndk);
             }
-            
+
             // Enable find_agent for orchestrators
             if (agentConfig.hasOrchestrationCapability) {
                 this.toolManager.enableFindAgentTool(name, true);
             }
         }
-        
+
         const agent = new Agent(
             agentConfig,
             this.llmProvider,
@@ -92,6 +96,7 @@ export class EventRouter {
             conversationId,
             projectId: this.projectContext.projectId,
             originalEvent: event,
+            projectEvent: this.projectEvent,
         };
 
         // Check if we have an existing team for this conversation
@@ -149,8 +154,7 @@ export class EventRouter {
     }
 
     private extractConversationId(event: NDKEvent): string {
-        // Check for 'e' tags (replies)
-        const eTags = event.tags.filter((tag) => tag[0] === "e");
+        const eTags = event.tags.filter((tag) => tag[0] === "E");
         if (eTags.length > 0) {
             // Use the root event as conversation ID
             const firstTag = eTags[0];
@@ -160,7 +164,7 @@ export class EventRouter {
         }
 
         // For new conversations, use the event ID itself
-        return event.id ?? `conv-${Date.now()}`;
+        return event.id;
     }
 
     private async createTeamLead(team: Team): Promise<TeamLead> {
@@ -175,14 +179,15 @@ export class EventRouter {
 
         // Enable agent-specific tools
         if (this.toolManager) {
-            // Enable update_spec for default agent only
-            this.toolManager.enableUpdateSpecTool(leadConfig.name);
-            
             // Enable remember_lesson if agent has event ID
             if (leadConfig.eventId && this.ndk) {
-                this.toolManager.enableRememberLessonTool(leadConfig.name, leadConfig.eventId, this.ndk);
+                this.toolManager.enableRememberLessonTool(
+                    leadConfig.name,
+                    leadConfig.eventId,
+                    this.ndk
+                );
             }
-            
+
             // Enable find_agent for orchestrators
             if (leadConfig.hasOrchestrationCapability) {
                 this.toolManager.enableFindAgentTool(leadConfig.name, true);
@@ -220,14 +225,15 @@ export class EventRouter {
 
             // Enable agent-specific tools
             if (this.toolManager) {
-                // Enable update_spec for default agent only
-                this.toolManager.enableUpdateSpecTool(memberConfig.name);
-                
                 // Enable remember_lesson if agent has event ID
                 if (memberConfig.eventId && this.ndk) {
-                    this.toolManager.enableRememberLessonTool(memberConfig.name, memberConfig.eventId, this.ndk);
+                    this.toolManager.enableRememberLessonTool(
+                        memberConfig.name,
+                        memberConfig.eventId,
+                        this.ndk
+                    );
                 }
-                
+
                 // Enable find_agent for orchestrators
                 if (memberConfig.hasOrchestrationCapability) {
                     this.toolManager.enableFindAgentTool(memberConfig.name, true);
@@ -266,6 +272,3 @@ export class EventRouter {
         return this.createTeamLead(teamDomain);
     }
 }
-
-// Import Team here to avoid circular dependency
-import { Team } from "../domain/Team";

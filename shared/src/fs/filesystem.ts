@@ -12,6 +12,13 @@ import { logError } from "../logger.js";
  */
 
 // Path utilities
+// File operations
+export async function readFile(filePath: string, encoding?: BufferEncoding): Promise<string>;
+export async function readFile(filePath: string, encoding: null): Promise<Buffer>;
+export async function readFile(filePath: string, encoding?: BufferEncoding | null): Promise<string | Buffer> {
+    return await fsPromises.readFile(filePath, encoding as any);
+}
+
 export function expandHome(filePath: string): string {
     if (filePath.startsWith("~")) {
         return path.join(os.homedir(), filePath.slice(1));

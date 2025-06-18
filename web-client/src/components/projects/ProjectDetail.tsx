@@ -4,10 +4,9 @@ import { useState } from "react";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
 import { useProjectData } from "../../hooks/useProjectData";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
-import { CreateTaskDialog } from "../dialogs/CreateTaskDialog";
 import { TaskCreationOptionsDialog } from "../dialogs/TaskCreationOptionsDialog";
 import { ThreadDialog } from "../dialogs/ThreadDialog";
-import { VoiceTaskDialog } from "../dialogs/VoiceTaskDialog";
+import { VoiceMessageDialog } from "../dialogs/VoiceMessageDialog";
 import { Button } from "../ui/button";
 import { DocsTabContent } from "./DocsTabContent";
 import { ProjectTabs } from "./ProjectTabs";
@@ -38,8 +37,7 @@ export function ProjectDetail({
     onArticleSelect,
 }: ProjectDetailProps) {
     const [showOptionsDialog, setShowOptionsDialog] = useState(false);
-    const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
-    const [showVoiceTaskDialog, setShowVoiceTaskDialog] = useState(false);
+    const [showVoiceDialog, setShowVoiceDialog] = useState(false);
     const [showThreadDialog, setShowThreadDialog] = useState(false);
     const [activeTab, setActiveTab] = useState<"tasks" | "threads" | "docs">("tasks");
 
@@ -95,22 +93,12 @@ export function ProjectDetail({
         localStorage.setItem("seenThreadReplies", JSON.stringify(seenThreadReplies));
     };
 
-    const handleOptionSelect = (option: "task" | "voice" | "thread") => {
+    const handleOptionSelect = (option: "voice" | "thread") => {
+        setShowOptionsDialog(false);
         switch (option) {
-            case "task":
-                setShowCreateTaskDialog(true);
+            case "voice":
+                setShowVoiceDialog(true);
                 break;
-            case "voice": {
-                const openaiApiKey = localStorage.getItem("openaiApiKey");
-                if (!openaiApiKey) {
-                    alert(
-                        "Please set your OpenAI API key in settings first before using voice recording."
-                    );
-                    return;
-                }
-                setShowVoiceTaskDialog(true);
-                break;
-            }
             case "thread":
                 setShowThreadDialog(true);
                 break;
@@ -138,7 +126,6 @@ export function ProjectDetail({
                         taskUnreadMap={taskUnreadMap}
                         project={project}
                         onTaskSelect={onTaskSelect}
-                        onCreateTask={() => setShowOptionsDialog(true)}
                         markTaskStatusUpdatesSeen={markTaskStatusUpdatesSeen}
                     />
                 ) : activeTab === "threads" ? (
@@ -171,6 +158,7 @@ export function ProjectDetail({
                     rounded="full"
                     className="shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95"
                     onClick={() => setShowOptionsDialog(true)}
+                    title="Create new content"
                 >
                     <Plus className="w-6 h-6" />
                 </Button>
@@ -183,22 +171,10 @@ export function ProjectDetail({
                 onOptionSelect={handleOptionSelect}
             />
 
-            <CreateTaskDialog
-                open={showCreateTaskDialog}
-                onOpenChange={setShowCreateTaskDialog}
+            <VoiceMessageDialog
+                open={showVoiceDialog}
+                onOpenChange={setShowVoiceDialog}
                 project={project}
-                onTaskCreated={() => {
-                    // Tasks will automatically refresh via useSubscribe
-                }}
-            />
-
-            <VoiceTaskDialog
-                open={showVoiceTaskDialog}
-                onOpenChange={setShowVoiceTaskDialog}
-                project={project}
-                onTaskCreated={() => {
-                    // Tasks will automatically refresh via useSubscribe
-                }}
             />
 
             <ThreadDialog

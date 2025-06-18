@@ -130,37 +130,6 @@ const AgentConfigEntrySchema = z.object({
 
 const AgentsJsonSchema = z.record(AgentConfigEntrySchema);
 
-// Telemetry schema
-const TelemetryConfigSchema = z.object({
-    tracing: z
-        .object({
-            enabled: z.boolean(),
-            endpoint: z.string().optional(),
-            protocol: z.enum(["grpc", "http/protobuf", "http/json"]).optional(),
-            headers: z.record(z.string()).optional(),
-            serviceName: z.string().optional(),
-        })
-        .optional(),
-    metrics: z
-        .object({
-            enabled: z.boolean(),
-            endpoint: z.string().optional(),
-            protocol: z.enum(["grpc", "http/protobuf", "http/json"]).optional(),
-            headers: z.record(z.string()).optional(),
-            serviceName: z.string().optional(),
-        })
-        .optional(),
-    logs: z
-        .object({
-            enabled: z.boolean(),
-            endpoint: z.string().optional(),
-            protocol: z.enum(["grpc", "http/protobuf", "http/json"]).optional(),
-            headers: z.record(z.string()).optional(),
-            serviceName: z.string().optional(),
-        })
-        .optional(),
-});
-
 // Project config schema
 const ProjectConfigSchema = z.object({
     title: z.string(),
@@ -172,13 +141,11 @@ const ProjectConfigSchema = z.object({
     createdAt: z.number().optional(),
     updatedAt: z.number().optional(),
     whitelistedPubkeys: z.array(z.string()).optional(),
-    telemetry: TelemetryConfigSchema.optional(),
 });
 
 // Global config schema
 const GlobalConfigSchema = z.object({
     whitelistedPubkeys: z.array(z.string()).optional(),
-    telemetry: TelemetryConfigSchema.optional(),
 });
 
 /**

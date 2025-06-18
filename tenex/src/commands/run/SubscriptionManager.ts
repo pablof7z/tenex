@@ -1,4 +1,5 @@
 import type { EventHandler } from "@/commands/run/EventHandler";
+import { ProcessedEventStore } from "@/commands/run/ProcessedEventStore";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
@@ -15,20 +16,24 @@ import chalk from "chalk";
 
 export class SubscriptionManager {
     private subscriptions: NDKSubscription[] = [];
-    private processedEventIds = new Set<string>();
+    private processedEventStore: ProcessedEventStore;
     private eventHandler: EventHandler;
     private projectInfo: ProjectRuntimeInfo;
 
     constructor(eventHandler: EventHandler, projectInfo: ProjectRuntimeInfo) {
         this.eventHandler = eventHandler;
         this.projectInfo = projectInfo;
+        this.processedEventStore = new ProcessedEventStore(projectInfo.projectPath);
     }
 
     async start(): Promise<void> {
         logger.info(chalk.cyan("📡 Setting up project subscriptions..."));
 
-        // Calculate the "since" timestamp for startup (5 minutes ago)
-        const startupSince = Math.floor(Date.now() / 1000) - STARTUP_FILTER_MINUTES * 60;
+        // Load previously processed event IDs from disk
+        await this.processedEventStore.load();
+
+        // Calculate the "since" timestamp for startup (5 seconds ago)
+        const startupSince = Math.floor(Date.now() / 1000) - 5;
 
         // 1. Subscribe to project updates (NDKProject events)
         await this.subscribeToProjectUpdates();
@@ -95,6 +100,7 @@ export class SubscriptionManager {
         const projectTagFilter: NDKFilter = {
             ...this.projectInfo.projectEvent.filter(),
             since,
+            limit: 5
         };
 
         logger.info(chalk.blue("  • Setting up project event subscription..."));
@@ -116,13 +122,13 @@ export class SubscriptionManager {
 
     private async handleIncomingEvent(event: NDKEvent, source: string): Promise<void> {
         // Check for duplicate events
-        if (this.processedEventIds.has(event.id)) {
+        if (this.processedEventStore.has(event.id)) {
             logger.debug(`Skipping duplicate event ${event.id} from ${source}`);
             return;
         }
 
         // Mark as processed
-        this.processedEventIds.add(event.id);
+        this.processedEventStore.add(event.id);
 
         // Log receipt
         if (event.kind !== EVENT_KINDS.PROJECT_STATUS) {
@@ -146,7 +152,10 @@ export class SubscriptionManager {
         }
 
         this.subscriptions = [];
-        this.processedEventIds.clear();
+
+        // Flush any pending saves to disk before stopping
+        await this.processedEventStore.flush();
+        this.processedEventStore.clear();
 
         logger.info("All subscriptions stopped");
     }

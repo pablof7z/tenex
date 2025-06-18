@@ -27,10 +27,12 @@ export function TaskOverview({ task, statusUpdates, onClick }: TaskOverviewProps
             .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
     }, [statusUpdates, task.id]);
 
+    // Get agent profile for latest update
+    const profile = useProfileValue(latestUpdate?.pubkey || "");
+    
     // Get agent info for latest update
     const AgentInfo = () => {
         if (!latestUpdate) return null;
-        const profile = useProfileValue(latestUpdate.pubkey);
         const agentTag = latestUpdate.tagValue("agent");
 
         const getAgentName = () => {

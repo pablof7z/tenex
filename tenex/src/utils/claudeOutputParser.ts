@@ -6,6 +6,12 @@ interface ClaudeMessage {
     type: string;
     subtype?: string;
     session_id?: string;
+    model?: string;
+    cwd?: string;
+    mcp_servers?: Array<{
+        name: string;
+        status: string;
+    }>;
     message?: {
         id: string;
         type: string;
@@ -87,7 +93,7 @@ export class ClaudeOutputParser extends EventEmitter {
                 if (connectedServers.length > 0) {
                     logger.info(
                         chalk.green(
-                            `✓ MCP Servers: ${connectedServers.map((s: any) => s.name).join(", ")}`
+                            `✓ MCP Servers: ${connectedServers.map((s) => s.name).join(", ")}`
                         )
                     );
                 }

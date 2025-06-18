@@ -1,4 +1,4 @@
-import type { Agent } from "@/utils/agents/Agent";
+import type { Agent } from "@/agents/domain/Agent";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 

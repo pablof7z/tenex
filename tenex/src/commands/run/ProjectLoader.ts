@@ -1,7 +1,7 @@
 import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
 import { type RuleMapping, RulesManager } from "@/utils/RulesManager";
-import { DefaultSpecCache, type SpecCache } from "@/utils/agents/prompts/SpecCache";
+import { SpecCache } from "@/utils/SpecCache";
 import { NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/node";
@@ -53,12 +53,12 @@ export class ProjectLoader {
         await rulesManager.fetchAndCacheRules(ruleMappings);
 
         // Initialize spec cache
-        const specCache = new DefaultSpecCache();
+        const specCache = new SpecCache();
 
         // Create project signer
         const projectSigner = config.nsec
             ? new NDKPrivateKeySigner(config.nsec)
-            : new NDKPrivateKeySigner(NDKPrivateKeySigner.generate().privateKey);
+            : NDKPrivateKeySigner.generate();
 
         return this.extractProjectInfo(
             projectEvent,
@@ -150,7 +150,8 @@ export class ProjectLoader {
                 // Find matching agent in agents.json by eventId
                 const agentKey = Object.keys(agentsConfig).find((key) => {
                     const config = agentsConfig[key];
-                    return config?.file === eventId;
+                    // Match either eventId directly or eventId.json
+                    return config?.file === eventId || config?.file === `${eventId}.json`;
                 });
 
                 if (agentKey && agentsConfig[agentKey]) {

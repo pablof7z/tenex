@@ -51,7 +51,7 @@ export const rememberLessonTool: ToolDefinition = {
             lessonEvent.tags.push(["title", params.title as string]);
 
             // Sign and publish
-            await lessonEvent.sign(agent.signer);
+            await lessonEvent.sign(agent.getSigner());
             await lessonEvent.publish();
 
             logger.info(`Agent '${context.agentName}' recorded lesson: ${params.title as string}`);

@@ -26,9 +26,8 @@ export function DesktopLayout() {
     const currentUser = useNDKCurrentUser();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
-    const [showTaskOptionsDialog, setShowTaskOptionsDialog] = useState(false);
-    const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
-    const [showVoiceTaskDialog, setShowVoiceTaskDialog] = useState(false);
+    const [showOptionsDialog, setShowOptionsDialog] = useState(false);
+    const [showVoiceDialog, setShowVoiceDialog] = useState(false);
     const [showThreadDialog, setShowThreadDialog] = useState(false);
     const [selectedProjectForTask, setSelectedProjectForTask] = useState<NDKProject | null>(null);
     const [manuallyToggled, setManuallyToggled] = useState<Map<string, boolean>>(new Map());
@@ -75,25 +74,21 @@ export function DesktopLayout() {
         });
     };
 
-    const handleTaskCreate = (project: NDKProject) => {
-        setSelectedProjectForTask(project);
-        setShowTaskOptionsDialog(true);
-    };
-
     const handleThreadClick = (thread: NDKEvent) => {
         // Set the selected thread to open in drawer
         setSelectedThread(thread);
     };
 
-    const handleTaskOptionSelect = (option: "task" | "voice" | "thread") => {
-        setShowTaskOptionsDialog(false);
+    const handleCreateAction = (project: NDKProject) => {
+        setSelectedProjectForTask(project);
+        setShowOptionsDialog(true);
+    };
 
+    const handleOptionSelect = (option: "voice" | "thread") => {
+        setShowOptionsDialog(false);
         switch (option) {
-            case "task":
-                setShowCreateTaskDialog(true);
-                break;
             case "voice":
-                setShowVoiceTaskDialog(true);
+                setShowVoiceDialog(true);
                 break;
             case "thread":
                 setShowThreadDialog(true);
@@ -130,7 +125,7 @@ export function DesktopLayout() {
                 projects={projects}
                 filteredProjects={filteredProjects}
                 onProjectClick={setSelectedProject}
-                onTaskCreate={handleTaskCreate}
+                onTaskCreate={handleCreateAction}
                 onThreadClick={handleThreadClick}
                 onCreateProject={() => setShowCreateDialog(true)}
             />
@@ -139,23 +134,16 @@ export function DesktopLayout() {
             <LayoutDialogs
                 showCreateDialog={showCreateDialog}
                 showSearchDialog={showSearchDialog}
-                showTaskOptionsDialog={showTaskOptionsDialog}
-                showCreateTaskDialog={showCreateTaskDialog}
-                showVoiceTaskDialog={showVoiceTaskDialog}
+                showOptionsDialog={showOptionsDialog}
+                showVoiceDialog={showVoiceDialog}
                 showThreadDialog={showThreadDialog}
                 selectedProjectForTask={selectedProjectForTask}
                 onCreateDialogChange={setShowCreateDialog}
                 onSearchDialogChange={setShowSearchDialog}
-                onTaskOptionsDialogChange={setShowTaskOptionsDialog}
-                onCreateTaskDialogChange={setShowCreateTaskDialog}
-                onVoiceTaskDialogChange={setShowVoiceTaskDialog}
+                onOptionsDialogChange={setShowOptionsDialog}
+                onVoiceDialogChange={setShowVoiceDialog}
                 onThreadDialogChange={setShowThreadDialog}
-                onTaskOptionSelect={handleTaskOptionSelect}
-                onTaskCreated={() => {
-                    setShowCreateTaskDialog(false);
-                    setShowVoiceTaskDialog(false);
-                    setSelectedProjectForTask(null);
-                }}
+                onOptionSelect={handleOptionSelect}
                 onThreadStart={(title, selectedAgents) => {
                     setShowThreadDialog(false);
 

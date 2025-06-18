@@ -1,35 +1,113 @@
 import path from "node:path";
+import { type EventRouter, createAgentSystem } from "@/agents";
+import type { AgentConfig } from "@/agents/core/types";
+import { createLLMProvider } from "@/agents/infrastructure/LLMProviderAdapter";
+import { NostrPublisher } from "@/agents/infrastructure/NostrPublisher";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
-// toKebabCase utility function
-import type { Agent } from "@/utils/agents/Agent";
-import { AgentManager } from "@/utils/agents/AgentManager";
 import { createAgent } from "@/utils/agents/createAgent";
 import { formatError } from "@/utils/errors";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { ensureDirectory, fileExists, writeJsonFile } from "@tenex/shared/fs";
+import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
 import { logInfo } from "@tenex/shared/logger";
+import { configurationService } from "@tenex/shared/services";
 import { EVENT_KINDS } from "@tenex/types/events";
+import type { LLMProvider } from "@tenex/types/llm";
 import chalk from "chalk";
 
 export class EventHandler {
-    private agentManager: AgentManager;
+    private eventRouter!: EventRouter;
+    private agentConfigs: Map<string, AgentConfig>;
 
     constructor(private projectInfo: ProjectRuntimeInfo) {
-        this.agentManager = new AgentManager(projectInfo.projectPath, projectInfo);
+        this.agentConfigs = new Map();
     }
 
     async initialize(): Promise<void> {
-        await this.agentManager.initialize();
+        // Load configuration
+        const configuration = await configurationService.loadConfiguration(
+            this.projectInfo.projectPath
+        );
 
-        // Set NDK instance on the agent manager so agents can access it
-        const ndk = getNDK();
-        this.agentManager.setNDK(ndk);
+        // Load agent configurations
+        await this.loadAgentConfigs();
+
+        // Get LLM configuration
+        const defaultLLMName = configuration.llms?.defaults?.agents || "default";
+        const llmConfig = configurationService.resolveConfigReference(
+            configuration.llms,
+            defaultLLMName
+        );
+
+        if (!llmConfig) {
+            throw new Error("No LLM configuration found");
+        }
+
+        // Check for team building-specific LLM config
+        const teamBuildingLLMName = configuration.llms?.defaults?.teamBuilding;
+        const teamBuildingLLMConfig = teamBuildingLLMName
+            ? configurationService.resolveConfigReference(configuration.llms, teamBuildingLLMName)
+            : undefined;
+
+        // Create the new agent system
+        this.eventRouter = await createAgentSystem({
+            projectPath: this.projectInfo.projectPath,
+            projectContext: {
+                projectId: this.projectInfo.projectEvent.id!,
+                title: this.projectInfo.title,
+                description: this.projectInfo.projectEvent.content,
+                repository: this.projectInfo.repository,
+            },
+            projectEvent: this.projectInfo.projectEvent,
+            agents: this.agentConfigs,
+            llmConfig,
+            teamBuildingLLMConfig,
+            ndk: getNDK(),
+        });
     }
 
-    getAllAgents(): Map<string, Agent> {
-        return this.agentManager.getAllAgents();
+    private async loadAgentConfigs(): Promise<void> {
+        const agentsJsonPath = path.join(this.projectInfo.projectPath, ".tenex", "agents.json");
+        try {
+            const agentsJsonContent = await readFile(agentsJsonPath, "utf-8");
+            const agentsJson = JSON.parse(agentsJsonContent);
+
+            for (const [name, config] of Object.entries(agentsJson)) {
+                const agentConfig = config as { nsec: string; file?: string };
+
+                // Load agent definition from file if available
+                let description = `${name} agent`;
+                let role = `${name} specialist`;
+                let instructions = `You are the ${name} agent for this project.`;
+
+                if (agentConfig.file) {
+                    const agentDefPath = path.join(
+                        this.projectInfo.projectPath,
+                        ".tenex",
+                        "agents",
+                        agentConfig.file
+                    );
+                    if (await fileExists(agentDefPath)) {
+                        const agentDefContent = await readFile(agentDefPath, "utf-8");
+                        const agentDef = JSON.parse(agentDefContent);
+                        description = agentDef.description || description;
+                        role = agentDef.role || role;
+                        instructions = agentDef.instructions || instructions;
+                    }
+                }
+
+                this.agentConfigs.set(name, {
+                    name,
+                    role,
+                    instructions,
+                    nsec: agentConfig.nsec,
+                });
+            }
+        } catch (error) {
+            logInfo(chalk.red(`Failed to load agents.json: ${formatError(error)}`));
+            throw error;
+        }
     }
 
     async handleEvent(event: NDKEvent): Promise<void> {
@@ -111,13 +189,8 @@ export class EventHandler {
             );
         }
 
-        // Use the default agent to handle chat events
-        await this.agentManager.handleChatEvent(
-            event,
-            "default",
-            undefined,
-            mentionedPubkeys.filter((pk): pk is string => pk !== undefined)
-        );
+        // Use the new event router to handle the event
+        await this.eventRouter.handleEvent(event);
     }
 
     private async handleTask(event: NDKEvent): Promise<void> {
@@ -140,12 +213,8 @@ export class EventHandler {
             );
         }
 
-        await this.agentManager.handleTaskEvent(
-            event,
-            "default",
-            undefined,
-            mentionedPubkeys.filter((pk): pk is string => pk !== undefined)
-        );
+        // Use the new event router to handle the event
+        await this.eventRouter.handleEvent(event);
     }
 
     private handleProjectStatus(event: NDKEvent): void {
@@ -175,7 +244,55 @@ export class EventHandler {
             await this.fetchAndSaveAgents(agentEventIds);
         }
 
-        // TODO: Update title, description, etc. in config.json if changed
+        // Update project configuration if details have changed
+        const newTitle = event.tags.find((tag) => tag[0] === "title")?.[1];
+        const newDescription = event.content;
+        const newRepo = event.tags.find((tag) => tag[0] === "repo")?.[1];
+
+        let configUpdated = false;
+        const configPath = path.join(this.projectInfo.projectPath, "config.json");
+
+        try {
+            const configContent = await readFile(configPath, "utf-8");
+            const configData = JSON.parse(configContent);
+            const config = { ...configData };
+
+            if (newTitle && newTitle !== config.title) {
+                config.title = newTitle;
+                this.projectInfo.title = newTitle;
+                configUpdated = true;
+            }
+
+            if (newDescription && newDescription !== config.description) {
+                config.description = newDescription;
+                configUpdated = true;
+            }
+
+            if (newRepo && newRepo !== config.repository) {
+                config.repository = newRepo;
+                this.projectInfo.repository = newRepo;
+                configUpdated = true;
+            }
+
+            if (configUpdated) {
+                await writeJsonFile(configPath, config);
+                logInfo(chalk.green("✅ Updated project configuration"));
+
+                // Update the event router's project context
+                if (this.eventRouter) {
+                    const _updatedContext = {
+                        projectId: this.projectInfo.projectEvent.id!,
+                        title: config.title,
+                        description: config.description,
+                        repository: config.repository,
+                    };
+                    // Note: EventRouter doesn't currently have a method to update context,
+                    // but this is where we would call it
+                }
+            }
+        } catch (error) {
+            logInfo(chalk.yellow(`⚠️  Could not update config.json: ${formatError(error)}`));
+        }
     }
 
     private logProjectUpdate(event: NDKEvent): void {
@@ -261,31 +378,82 @@ export class EventHandler {
 
         const newModelConfig = modelTag[1];
 
-        // Find the agent by pubkey
-        const agent = this.agentManager.getAgentByPubkeySync(targetAgentPubkey);
-        if (!agent) {
-            logInfo(chalk.red(`❌ No agent found with pubkey: ${targetAgentPubkey}`));
+        // Find the agent name by pubkey
+        let targetAgentName: string | undefined;
+        for (const [name, _config] of this.agentConfigs) {
+            const agent = await createAgent({
+                projectPath: this.projectInfo.projectPath,
+                projectTitle: this.projectInfo.title,
+                agentName: name,
+                skipIfExists: true,
+            });
+
+            if (agent && agent.pubkey === targetAgentPubkey) {
+                targetAgentName = name;
+                break;
+            }
+        }
+
+        if (!targetAgentName) {
+            logInfo(chalk.red("❌ No agent found with specified pubkey"));
+            return;
+        }
+
+        // Parse the new model configuration
+        // Expected format: "provider:model" or "provider:model:caching"
+        const parts = newModelConfig.split(":");
+        if (parts.length < 2) {
             logInfo(
-                chalk.yellow(
-                    "Tip: The agent might not be loaded yet. Make sure it has participated in the conversation."
+                chalk.red(
+                    "❌ Invalid model configuration format. Expected: provider:model[:caching]"
                 )
             );
             return;
         }
 
-        logInfo(chalk.gray("Agent:   ") + chalk.white(agent.name));
-        logInfo(chalk.gray("Model:   ") + chalk.white(newModelConfig));
+        const [provider, model, cachingStr] = parts;
+        const enableCaching = cachingStr === "true";
 
-        // Update the agent's LLM configuration
+        // Load current configuration
+        const configuration = await configurationService.loadConfiguration(
+            this.projectInfo.projectPath
+        );
+
+        // Check if we have a valid LLM config to update
+        const currentLLMName = configuration.llms?.defaults?.agents || "default";
+        const currentLLMConfig = configuration.llms?.configurations?.[currentLLMName];
+
+        if (!currentLLMConfig) {
+            logInfo(chalk.red("❌ No current LLM configuration found"));
+            return;
+        }
+
+        // Create new LLM configuration
+        const newLLMConfig = {
+            ...currentLLMConfig,
+            provider: provider as LLMProvider,
+            model: model || currentLLMConfig.model, // Ensure model is never undefined
+            enableCaching,
+        };
+
+        // Update the event router with new LLM provider
         try {
-            await this.agentManager.updateAgentLLMConfig(agent.name, newModelConfig);
-            logInfo(chalk.green(`✅ Updated LLM config for ${agent.name} to ${newModelConfig}`));
+            const { createLLMProvider } = await import(
+                "@/agents/infrastructure/LLMProviderAdapter"
+            );
+            // Use the imported NostrPublisher
+            const publisher = new NostrPublisher(getNDK());
+            const newProvider = createLLMProvider(newLLMConfig, publisher);
+            this.eventRouter.setLLMProvider(newProvider);
 
-            // Notify the agent about the change
-            agent.notifyLLMConfigChange(newModelConfig);
-        } catch (err) {
-            const errorMessage = formatError(err);
-            logInfo(chalk.red(`❌ Failed to update LLM config: ${errorMessage}`));
+            logInfo(chalk.green("✅ LLM configuration updated successfully"));
+            logInfo(chalk.gray("Agent:   ") + chalk.white(targetAgentName));
+            logInfo(
+                chalk.gray("Model:   ") +
+                    chalk.white(`${provider}:${model}${enableCaching ? " (with caching)" : ""}`)
+            );
+        } catch (error) {
+            logInfo(chalk.red(`❌ Failed to update LLM configuration: ${formatError(error)}`));
         }
     }
 
@@ -305,12 +473,7 @@ export class EventHandler {
     }
 
     async cleanup(): Promise<void> {
-        // Cleanup agent manager resources
-        if (this.agentManager) {
-            // Any specific agent manager cleanup needed
-        }
-
-        // Any other cleanup tasks
+        // Any cleanup tasks
         logInfo("EventHandler cleanup completed");
     }
 }

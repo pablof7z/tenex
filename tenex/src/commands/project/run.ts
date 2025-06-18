@@ -40,7 +40,7 @@ export const projectRunCommand = new Command("run")
         }
     });
 
-async function runProjectListener(projectInfo: ProjectRuntimeInfo, ndk: NDK) {
+async function runProjectListener(projectInfo: ProjectRuntimeInfo, _ndk: NDK) {
     try {
         logger.info(
             `Starting listener for project: ${projectInfo.title} (${projectInfo.projectId})`

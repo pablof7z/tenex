@@ -103,7 +103,7 @@ export const updateSpecTool: ToolDefinition = {
             await specEvent.sign(projectSigner);
             await specEvent.publish();
 
-            logger.info(`Agent ${agent.name} updated spec: ${dTag}`);
+            logger.info(`Agent ${context.agentName || "unknown"} updated spec: ${dTag}`);
             logger.debug(`Spec event ID: ${specEvent.id}`);
             logger.debug(`Changelog: ${params.changelog}`);
 

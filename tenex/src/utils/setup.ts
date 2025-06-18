@@ -132,16 +132,7 @@ async function configureLLMs(): Promise<LLMConfig[]> {
 }
 
 async function saveConfiguration(config: DaemonConfig): Promise<void> {
-    const defaultPath = path.join(process.env.HOME || "", ".tenex", "config.json");
-
-    const { savePath } = await inquirer.prompt([
-        {
-            type: "input",
-            name: "savePath",
-            message: "Where should the configuration be saved?",
-            default: defaultPath,
-        },
-    ]);
+    const savePath = path.join(os.homedir(), ".tenex", "config.json");
 
     try {
         const dir = path.dirname(savePath);

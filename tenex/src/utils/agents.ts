@@ -5,8 +5,6 @@ import { NDKEvent, type NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { EVENT_KINDS, logError, logInfo, logWarning } from "@tenex/shared";
 import type { AgentDefinition, AgentsJson } from "@tenex/types/agents";
 import { getErrorMessage } from "@tenex/types/utils";
-import type { Agent } from "./agents/Agent";
-import type { AgentResponse } from "./agents/types";
 
 /**
  * Convert agent name to kebab-case for use as key in agents.json
@@ -71,41 +69,62 @@ export async function publishTypingIndicator(
 
 /**
  * Publish response event - direct NDK usage
+ * Works with the new agent system's response format
  */
 export async function publishResponse(
     originalEvent: NDKEvent,
-    response: AgentResponse,
-    agent: Agent,
-    projectEvent: NDKEvent
+    response: { content: string; signal?: { type: string; reason?: string } },
+    signer: NDKPrivateKeySigner,
+    projectEvent: NDKEvent,
+    metadata?: {
+        model?: string;
+        provider?: string;
+        usage?: {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            total_tokens?: number;
+            cache_read_input_tokens?: number;
+            cost?: number;
+        };
+        temperature?: number;
+        maxTokens?: number;
+        toolCalls?: number;
+        systemPrompt?: string;
+        userPrompt?: string;
+    }
 ): Promise<void> {
     try {
+        const _ndk = await getNDK();
         const responseEvent = originalEvent.reply();
 
-        if (response.renderInChat) {
-            responseEvent.content = JSON.stringify({
-                type: response.renderInChat.type,
-                data: response.renderInChat.data,
-                content: response.content,
-            });
-            responseEvent.tags.push(["render-type", response.renderInChat.type]);
-        } else {
-            responseEvent.content = response.content;
-        }
+        responseEvent.content = response.content;
 
+        // Remove duplicate p-tags
         responseEvent.tags = responseEvent.tags.filter((tag) => tag[0] !== "p");
         responseEvent.tag(projectEvent);
 
-        addLLMMetadata(responseEvent, response);
+        // Add metadata if provided
+        if (metadata) {
+            addLLMMetadata(responseEvent, metadata);
 
-        if (response.metadata?.systemPrompt) {
-            responseEvent.tags.push(["system-prompt", response.metadata.systemPrompt]);
-        }
-        if (response.metadata?.userPrompt) {
-            responseEvent.tags.push(["prompt", response.metadata.userPrompt]);
+            if (metadata.systemPrompt) {
+                responseEvent.tags.push(["system-prompt", metadata.systemPrompt]);
+            }
+            if (metadata.userPrompt) {
+                responseEvent.tags.push(["prompt", metadata.userPrompt]);
+            }
         }
 
-        await responseEvent.sign(agent.signer);
-        responseEvent.publish();
+        // Add signal if present
+        if (response.signal) {
+            responseEvent.tags.push(["signal", response.signal.type]);
+            if (response.signal.reason) {
+                responseEvent.tags.push(["signal-reason", response.signal.reason]);
+            }
+        }
+
+        await responseEvent.sign(signer);
+        await responseEvent.publish();
     } catch (error) {
         logError(`Failed to publish response: ${getErrorMessage(error)}`);
     }
@@ -114,10 +133,23 @@ export async function publishResponse(
 /**
  * Add LLM metadata tags to an event
  */
-function addLLMMetadata(event: NDKEvent, response: AgentResponse): void {
-    const metadata = response.metadata;
-    if (!metadata) return;
-
+function addLLMMetadata(
+    event: NDKEvent,
+    metadata: {
+        model?: string;
+        provider?: string;
+        usage?: {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            total_tokens?: number;
+            cache_read_input_tokens?: number;
+            cost?: number;
+        };
+        temperature?: number;
+        maxTokens?: number;
+        toolCalls?: number;
+    }
+): void {
     if (metadata.model) {
         event.tags.push(["llm-model", metadata.model]);
     }
@@ -142,10 +174,6 @@ function addLLMMetadata(event: NDKEvent, response: AgentResponse): void {
         if (usage.cost) {
             event.tags.push(["llm-cost", String(usage.cost)]);
         }
-    }
-
-    if (response.confidence !== undefined) {
-        event.tags.push(["llm-confidence", String(response.confidence)]);
     }
 
     if (metadata.temperature !== undefined) {

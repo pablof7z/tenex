@@ -26,12 +26,14 @@ debug
     .option("--agent <name>", "Agent name", "default")
     .action((options) => runDebugSystemPrompt(options));
 debug
-    .command("agent")
-    .description("Start an interactive debug agent for the current project")
-    .option("-n, --name <name>", "Agent name", "debug")
+    .command("chat [agent]")
+    .description("Start an interactive debug chat session with an agent")
+    .option("-s, --system-prompt", "Show the agent's system prompt on first request")
     .option("-m, --message <message>", "Initial message to send")
-    .action((options) => {
-        import("../src/commands/debug/agent").then(({ runDebugAgent }) => runDebugAgent(options));
+    .action((agent, options) => {
+        import("../src/commands/debug/chat").then(({ runDebugChat }) =>
+            runDebugChat(agent, options)
+        );
     });
 
 // Initialize NDK before parsing commands
