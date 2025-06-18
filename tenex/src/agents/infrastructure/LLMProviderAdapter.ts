@@ -1,7 +1,9 @@
 import { createLLMProvider as createExistingProvider } from "@/llm/LLMFactory";
 import type { LLMProvider as ExistingLLMProvider } from "@/llm/types";
+import { TypingAwareLLMProvider } from "@/llm/TypingAwareLLMProvider";
 import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import type { LLMConfig } from "@/utils/agents/types";
+import type { NDKSigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
 import { LLMError } from "../core/errors";
 import type {
@@ -13,29 +15,28 @@ import type {
 } from "../core/types";
 
 /**
- * Adapter that wraps the existing LLM providers with typing indicator support
+ * Adapter that converts between agent system's LLMProvider interface 
+ * and the main LLM system's interface
  */
-export class LLMProviderWithTyping implements ILLMProvider {
+export class LLMProviderAdapter implements ILLMProvider {
     private provider: ExistingLLMProvider;
+    private toolRegistry?: ToolRegistry;
 
     constructor(
         private config: LLMConfig,
         private publisher: NostrPublisher,
-        toolRegistry?: ToolRegistry
+        toolRegistry?: ToolRegistry,
+        provider?: ExistingLLMProvider
     ) {
-        // Use existing factory to create provider
-        this.provider = toolRegistry
+        this.toolRegistry = toolRegistry;
+        // Use provided provider or create one
+        this.provider = provider || (toolRegistry
             ? createExistingProvider(config, toolRegistry)
-            : createExistingProvider(config);
+            : createExistingProvider(config));
     }
 
     async complete(request: CompletionRequest): Promise<CompletionResponse> {
         const context = request.context;
-        const shouldPublishTyping =
-            context &&
-            "originalEvent" in context &&
-            "projectId" in context &&
-            "conversationId" in context;
 
         try {
             // Convert our request format to existing format
@@ -44,18 +45,14 @@ export class LLMProviderWithTyping implements ILLMProvider {
                 content: msg.content,
             }));
 
-            // Start typing indicator if we have full context
-            if (shouldPublishTyping && context) {
-                const eventContext = context as EventContext & { agentName: string };
-                // Extract system prompt and user prompt from messages
-                const systemPrompt = existingMessages.find((m) => m.role === "system")?.content;
-                const userPrompt = existingMessages.find((m) => m.role === "user")?.content;
-
-                await this.publisher.publishTypingIndicator(context.agentName, true, eventContext, {
-                    systemPrompt,
-                    userPrompt,
-                });
-            }
+            // Create LLMContext if we have the necessary information
+            const llmContext = (context && 'ndk' in context && 'projectEvent' in context) ? {
+                ...context,
+                ndk: context.ndk,
+                projectEvent: context.projectEvent,
+                agentName: context.agentName,
+                conversationId: context.conversationId,
+            } : undefined;
 
             // Use existing provider
             const response = await this.provider.generateResponse(
@@ -65,7 +62,7 @@ export class LLMProviderWithTyping implements ILLMProvider {
                     maxTokens: request.maxTokens || this.config.maxTokens,
                     temperature: request.temperature ?? this.config.temperature,
                 },
-                undefined // LLMContext requires ndk and projectEvent which we don't have here
+                llmContext
             );
 
             // Convert response format
@@ -89,12 +86,6 @@ export class LLMProviderWithTyping implements ILLMProvider {
                 `LLM completion failed: ${error instanceof Error ? error.message : "Unknown error"}`,
                 { provider: this.config.provider, model: this.config.model }
             );
-        } finally {
-            // Stop typing indicator
-            if (shouldPublishTyping && context) {
-                const eventContext = context as EventContext & { agentName: string };
-                await this.publisher.publishTypingIndicator(context.agentName, false, eventContext);
-            }
         }
     }
 }
@@ -105,5 +96,39 @@ export function createLLMProvider(
     publisher: NostrPublisher,
     toolRegistry?: ToolRegistry
 ): ILLMProvider {
-    return new LLMProviderWithTyping(config, publisher, toolRegistry);
+    return new LLMProviderAdapter(config, publisher, toolRegistry);
+}
+
+// For backward compatibility
+export { LLMProviderAdapter as LLMProviderWithTyping };
+
+/**
+ * Enhance an existing LLM provider with typing indicator support.
+ * This is used when we have the agent context (name and signer) available.
+ */
+export function enhanceWithTypingIndicators(
+    provider: ILLMProvider,
+    publisher: NostrPublisher,
+    agentName: string,
+    signer: NDKSigner
+): ILLMProvider {
+    // Extract the underlying provider from the adapter
+    const baseProvider = (provider as any).provider as ExistingLLMProvider;
+    if (!baseProvider) {
+        logger.warn("Could not enhance provider with typing indicators - provider structure not recognized");
+        return provider;
+    }
+    
+    // Wrap with typing awareness
+    const typingAwareProvider = new TypingAwareLLMProvider(
+        baseProvider,
+        publisher,
+        agentName,
+        signer
+    );
+    
+    // Return a new adapter with the typing-aware provider
+    // IMPORTANT: Do NOT pass toolRegistry here, as the baseProvider already has tools
+    const config = (provider as any).config;
+    return new LLMProviderAdapter(config, publisher, undefined, typingAwareProvider);
 }

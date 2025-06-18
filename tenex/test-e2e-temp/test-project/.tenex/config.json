@@ -1,0 +1,20 @@
+{
+  "title": "Test Project",
+  "projectNaddr": "naddr1qqqqgenv94skxerfwsek6ceyd96x2anyd93j66fdwd6rsefwdehku7n904mn4mcvfy0v",
+  "projectPath": "/Users/pablofernandez/test123/TENEX-pfkmc9/tenex/test-e2e-temp/test-project",
+  "llms": {
+    "defaults": {
+      "agents": "claude-sonnet"
+    },
+    "llms": {
+      "claude-sonnet": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "apiKey": "${ANTHROPIC_API_KEY}",
+        "temperature": 0.7,
+        "maxTokens": 4096,
+        "enableCaching": true
+      }
+    }
+  }
+}

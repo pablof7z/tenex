@@ -1,5 +1,8 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Copy, Check } from "lucide-react";
+import { useState, useMemo } from "react";
+import { copyThreadToClipboard } from "../../utils/copyConversation";
+import { useProfilesMap } from "../../hooks/useProfilesMap";
 import { ParticipantAvatarsWithModels } from "../common/ParticipantAvatarsWithModels";
 import { Button } from "../ui/button";
 
@@ -26,6 +29,31 @@ export function ChatHeader({
     availableModels,
     onBack,
 }: ChatHeaderProps) {
+    const [copied, setCopied] = useState(false);
+
+    // Get all unique participants from messages
+    const allParticipants = useMemo(() => {
+        if (!messages || messages.length === 0) return [];
+        const participantSet = new Set<string>();
+        for (const message of messages) {
+            participantSet.add(message.pubkey);
+        }
+        return Array.from(participantSet);
+    }, [messages]);
+
+    // Fetch profiles for all participants
+    const profiles = useProfilesMap(allParticipants);
+
+    const handleCopyConversation = async () => {
+        if (!messages || messages.length === 0) return;
+        
+        const success = await copyThreadToClipboard(messages, profiles, title);
+        if (success) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     if (!onBack) return null;
 
     return (
@@ -49,18 +77,36 @@ export function ChatHeader({
                         )}
                     </div>
                 </div>
-                {participants && participants.length > 0 && (
-                    <ParticipantAvatarsWithModels
-                        participants={participants}
-                        messages={messages || []}
-                        projectPubkey={projectPubkey || ""}
-                        projectId={projectId}
-                        projectEvent={projectEvent}
-                        availableModels={availableModels}
-                        maxVisible={4}
-                        size="sm"
-                    />
-                )}
+                <div className="flex items-center gap-2">
+                    {/* Copy conversation button */}
+                    {messages && messages.length > 0 && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleCopyConversation}
+                            className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+                            title="Copy conversation to clipboard"
+                        >
+                            {copied ? (
+                                <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                            ) : (
+                                <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+                            )}
+                        </Button>
+                    )}
+                    {participants && participants.length > 0 && (
+                        <ParticipantAvatarsWithModels
+                            participants={participants}
+                            messages={messages || []}
+                            projectPubkey={projectPubkey || ""}
+                            projectId={projectId}
+                            projectEvent={projectEvent}
+                            availableModels={availableModels}
+                            maxVisible={4}
+                            size="sm"
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );

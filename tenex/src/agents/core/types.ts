@@ -71,6 +71,7 @@ export interface ConversationStage {
     purpose: string;
     expectedOutcome: string;
     transitionCriteria: string;
+    primarySpeaker?: string;
 }
 
 export interface TeamFormationRequest {
@@ -166,7 +167,8 @@ export interface NostrPublisher {
             message?: string;
             systemPrompt?: string;
             userPrompt?: string;
-        }
+        },
+        signer?: NDKSigner
     ): Promise<void>;
 }
 

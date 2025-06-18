@@ -2,6 +2,8 @@ import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
+import { SystemPromptComposer } from "../../prompts";
+import { enhanceWithTypingIndicators } from "../infrastructure/LLMProviderAdapter";
 import type {
     AgentConfig,
     AgentResponse,
@@ -18,6 +20,8 @@ export class Agent {
     protected signer: NDKPrivateKeySigner;
     protected pubkey: string;
     private isActiveSpeaker = false;
+    protected teamSize: number = 1; // Default to single agent
+    private typingAwareLLM: LLMProvider;
 
     constructor(
         protected config: AgentConfig,
@@ -29,6 +33,18 @@ export class Agent {
     ) {
         this.signer = new NDKPrivateKeySigner(config.nsec);
         this.pubkey = this.signer.pubkey;
+        
+        // Enhance LLM provider with typing indicators
+        this.typingAwareLLM = enhanceWithTypingIndicators(
+            llm,
+            publisher,
+            config.name,
+            this.signer
+        );
+    }
+
+    setTeamSize(size: number): void {
+        this.teamSize = size;
     }
 
     async initialize(): Promise<void> {
@@ -66,6 +82,14 @@ export class Agent {
             return;
         }
 
+        // CRITICAL: Never respond to our own events
+        if (event.pubkey === this.pubkey) {
+            logger.warn(
+                `Agent ${this.config.name} attempted to respond to its own event - ignoring`
+            );
+            return;
+        }
+
         const response = await this.generateResponse(event, context);
         await this.publisher.publishResponse(response, context, this.signer);
     }
@@ -83,47 +107,55 @@ export class Agent {
             content: systemPrompt,
         });
 
-        // Generate response
-        const completion = await this.llm.complete({
-            messages,
-            context: {
+        try {
+            // Generate response (typing indicators are handled automatically by typingAwareLLM)
+            const completion = await this.typingAwareLLM.complete({
+                messages,
+                context: {
+                    agentName: this.config.name,
+                    conversationId: context.conversationId,
+                    eventId: event.id,
+                    originalEvent: context.originalEvent,
+                    projectId: context.projectId,
+                    projectEvent: context.projectEvent,
+                    ndk: this.ndk,
+                },
+            });
+
+            // Parse response and extract signal
+            const { content, signal } = this.parseResponse(completion.content);
+
+            // Save to conversation history
+            await this.store.appendMessage(context.conversationId, {
+                id: `${Date.now()}-${this.config.name}`,
                 agentName: this.config.name,
-                conversationId: context.conversationId,
-                eventId: event.id,
-            },
-        });
+                content,
+                timestamp: Date.now(),
+                signal,
+            });
 
-        // Parse response and extract signal
-        const { content, signal } = this.parseResponse(completion.content);
+            // Build metadata from completion
+            const metadata: import("../core/types").LLMMetadata = {
+                model: completion.model,
+                provider: this.config.llmConfig?.provider,
+                systemPrompt,
+                userPrompt: event.content,
+                usage: completion.usage
+                    ? {
+                          promptTokens: completion.usage.promptTokens,
+                          completionTokens: completion.usage.completionTokens,
+                          totalTokens: completion.usage.totalTokens,
+                          cacheCreationTokens: completion.usage.cacheCreationTokens,
+                          cacheReadTokens: completion.usage.cacheReadTokens,
+                          cost: completion.usage.cost,
+                      }
+                    : undefined,
+            };
 
-        // Save to conversation history
-        await this.store.appendMessage(context.conversationId, {
-            id: `${Date.now()}-${this.config.name}`,
-            agentName: this.config.name,
-            content,
-            timestamp: Date.now(),
-            signal,
-        });
-
-        // Build metadata from completion
-        const metadata: import("../core/types").LLMMetadata = {
-            model: completion.model,
-            provider: this.config.llmConfig?.provider,
-            systemPrompt,
-            userPrompt: event.content,
-            usage: completion.usage
-                ? {
-                      promptTokens: completion.usage.promptTokens,
-                      completionTokens: completion.usage.completionTokens,
-                      totalTokens: completion.usage.totalTokens,
-                      cacheCreationTokens: completion.usage.cacheCreationTokens,
-                      cacheReadTokens: completion.usage.cacheReadTokens,
-                      cost: completion.usage.cost,
-                  }
-                : undefined,
-        };
-
-        return { content, signal, metadata };
+            return { content, signal, metadata };
+        } catch (error) {
+            throw error;
+        }
     }
 
     public getSystemPrompt(): string {
@@ -131,34 +163,13 @@ export class Agent {
     }
 
     protected buildSystemPrompt(): string {
-        let prompt = `You are ${this.config.name}, ${this.config.role}.
-
-Instructions: ${this.config.instructions}
-`;
-
-        // Add tool instructions if agent has tools
-        if (this.toolRegistry) {
-            const toolPrompt = this.toolRegistry.generateSystemPrompt();
-            if (toolPrompt) {
-                prompt += `\n${toolPrompt}\n`;
-            }
-        }
-
-        prompt += `
-When responding, you should indicate the conversation state using one of these signals:
-- continue: You have more to say in this conversation phase
-- ready_for_transition: You've completed your part and are ready for the next phase
-- need_input: You need input from another team member
-- blocked: You're blocked and need help
-- complete: The entire task/conversation is complete
-
-Format your response as:
-[Your response content]
-
-SIGNAL: <signal_type>
-REASON: <optional reason for the signal>`;
-
-        return prompt;
+        return SystemPromptComposer.composeAgentPrompt({
+            name: this.config.name,
+            role: this.config.role,
+            instructions: this.config.instructions,
+            teamSize: this.teamSize,
+            toolDescriptions: this.toolRegistry?.generateSystemPrompt(),
+        });
     }
 
     protected async buildConversationContext(

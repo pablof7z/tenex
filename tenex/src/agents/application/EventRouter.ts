@@ -10,11 +10,13 @@ import type {
     LLMProvider,
     NostrPublisher,
     ProjectContext,
+    LLMConfig,
 } from "../core/types";
 import { Agent } from "../domain/Agent";
 import { Team } from "../domain/Team";
 import { TeamLead } from "../domain/TeamLead";
 import type { TeamOrchestrator } from "./TeamOrchestrator";
+import { createLLMProvider } from "../infrastructure/LLMProviderAdapter";
 
 export class EventRouter {
     private teamLeads = new Map<string, TeamLead>();
@@ -23,6 +25,7 @@ export class EventRouter {
     private orchestratorLLMProvider?: LLMProvider;
     private toolManager?: ToolManager;
     private projectEvent?: NDKEvent;
+    private llmConfig?: LLMConfig;
 
     constructor(
         private orchestrator: TeamOrchestrator,
@@ -42,6 +45,10 @@ export class EventRouter {
 
     setLLMProvider(provider: LLMProvider): void {
         this.llmProvider = provider;
+    }
+
+    setLLMConfig(config: LLMConfig): void {
+        this.llmConfig = config;
     }
 
     setToolManager(manager: ToolManager): void {
@@ -74,9 +81,14 @@ export class EventRouter {
             }
         }
 
+        // Create a tool-enabled LLM provider for this agent
+        const agentLLMProvider = toolRegistry && (agentConfig.llmConfig || this.llmConfig)
+            ? createLLMProvider(agentConfig.llmConfig || this.llmConfig!, this.publisher, toolRegistry)
+            : this.llmProvider;
+
         const agent = new Agent(
             agentConfig,
-            this.llmProvider,
+            agentLLMProvider,
             this.store,
             this.publisher,
             this.ndk,
@@ -194,10 +206,15 @@ export class EventRouter {
             }
         }
 
+        // Create tool-enabled LLM provider for team lead
+        const leadLLMProvider = leadToolRegistry && (leadConfig.llmConfig || this.llmConfig)
+            ? createLLMProvider(leadConfig.llmConfig || this.llmConfig!, this.publisher, leadToolRegistry)
+            : this.llmProvider;
+
         // Create team lead
         const teamLead = new TeamLead(
             leadConfig,
-            this.llmProvider,
+            leadLLMProvider,
             this.store,
             this.publisher,
             this.ndk,
@@ -240,9 +257,14 @@ export class EventRouter {
                 }
             }
 
+            // Create tool-enabled LLM provider for member
+            const memberLLMProvider = memberToolRegistry && (memberConfig.llmConfig || this.llmConfig)
+                ? createLLMProvider(memberConfig.llmConfig || this.llmConfig!, this.publisher, memberToolRegistry)
+                : this.llmProvider;
+
             const agent = new Agent(
                 memberConfig,
-                this.llmProvider,
+                memberLLMProvider,
                 this.store,
                 this.publisher,
                 this.ndk,

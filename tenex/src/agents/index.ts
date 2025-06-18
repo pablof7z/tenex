@@ -48,7 +48,7 @@ import { ToolManager } from "@/utils/agents/tools/ToolManager";
 import { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import type { LLMConfig } from "@/utils/agents/types";
 import type NDK from "@nostr-dev-kit/ndk";
-import type { NDKProject } from "@nostr-dev-kit/ndk";
+import type { NDKProject, NDKSigner } from "@nostr-dev-kit/ndk";
 import { EventRouter } from "./application/EventRouter";
 import { TeamOrchestrator } from "./application/TeamOrchestrator";
 import type { AgentConfig, ProjectContext } from "./core/types";
@@ -60,6 +60,7 @@ export interface AgentSystemConfig {
     projectPath: string;
     projectContext: ProjectContext;
     projectEvent?: NDKProject; // Optional project event for LLM context
+    projectSigner?: NDKSigner; // Optional project signer for publishing events
     agents: Map<string, AgentConfig>;
     llmConfig: LLMConfig;
     teamBuildingLLMConfig?: LLMConfig; // Optional separate config for team formation
@@ -71,7 +72,7 @@ export async function createAgentSystem(config: AgentSystemConfig): Promise<Even
     const store = new FileConversationStore(config.projectPath);
     await store.initialize();
 
-    const publisher = new NostrPublisher(config.ndk);
+    const publisher = new NostrPublisher(config.ndk, config.projectSigner);
 
     // Create tool manager
     const toolManager = new ToolManager();
@@ -79,7 +80,8 @@ export async function createAgentSystem(config: AgentSystemConfig): Promise<Even
     // Create event router
     const router = new EventRouter(
         new TeamOrchestrator(
-            createLLMProvider(config.teamBuildingLLMConfig || config.llmConfig, publisher)
+            createLLMProvider(config.teamBuildingLLMConfig || config.llmConfig, publisher),
+            publisher
         ),
         store,
         publisher,
@@ -113,7 +115,9 @@ export async function createAgentSystem(config: AgentSystemConfig): Promise<Even
     }
 
     router.setAgentConfigs(agentConfigsWithDefaults);
+    // Create a basic LLM provider without tools as fallback
     router.setLLMProvider(createLLMProvider(config.llmConfig, publisher));
+    router.setLLMConfig(config.llmConfig);
     router.setToolManager(toolManager);
 
     return router;

@@ -124,6 +124,12 @@
     html {
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
             "Helvetica Neue", Arial, sans-serif !important;
+        /* Disable smooth scrolling to prevent jumpy behavior */
+        scroll-behavior: auto !important;
+    }
+    /* Ensure scroll containers also use instant scrolling */
+    #chat-messages-container {
+        scroll-behavior: auto !important;
     }
 }
 

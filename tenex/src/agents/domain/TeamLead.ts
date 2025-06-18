@@ -2,6 +2,7 @@ import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
+import { SystemPromptComposer } from "../../prompts";
 import type {
     AgentConfig,
     ConversationSignal,
@@ -12,12 +13,14 @@ import type {
 } from "../core/types";
 import { Agent } from "./Agent";
 import type { Team } from "./Team";
+import { TurnManager } from "./TurnManager";
 
 export class TeamLead extends Agent {
     private team: Team;
     private currentStageIndex = 0;
     private agents = new Map<string, Agent>();
     private activeSpeakers = new Set<string>();
+    private turnManager: TurnManager;
 
     constructor(
         config: AgentConfig,
@@ -30,9 +33,19 @@ export class TeamLead extends Agent {
     ) {
         super(config, llm, store, publisher, ndk, toolRegistry);
         this.team = team;
+        
+        // Set team size for proper prompt generation
+        this.teamSize = team.members.length;
 
         // Team lead is always active
         this.setActiveSpeaker(true);
+
+        // Initialize turn manager with first stage
+        const firstStage = team.plan.stages[0];
+        this.turnManager = new TurnManager({
+            stageParticipants: firstStage?.participants || [],
+            primarySpeaker: firstStage?.primarySpeaker,
+        });
 
         // Initialize with first stage participants
         this.updateActiveSpeakers();
@@ -40,6 +53,12 @@ export class TeamLead extends Agent {
 
     setTeamAgents(agents: Map<string, Agent>): void {
         this.agents = agents;
+        
+        // Set team size for all agents
+        for (const agent of agents.values()) {
+            agent.setTeamSize(this.teamSize);
+        }
+        
         // Update active speakers for current stage
         this.updateActiveSpeakers();
     }
@@ -48,6 +67,12 @@ export class TeamLead extends Agent {
         logger.info(
             `Team lead ${this.config.name} handling event for conversation ${context.conversationId}`
         );
+
+        // CRITICAL: Never respond to our own events (applies to team lead too)
+        if (event.pubkey === this.pubkey) {
+            logger.warn(`Team lead ${this.config.name} received its own event - ignoring`);
+            return;
+        }
 
         // First, let active speakers respond
         await this.routeToActiveSpeakers(event, context);
@@ -59,31 +84,57 @@ export class TeamLead extends Agent {
     }
 
     private async routeToActiveSpeakers(event: NDKEvent, context: EventContext): Promise<void> {
-        const responses = new Map<string, ConversationSignal | undefined>();
+        // Check if this is a user message or agent message
+        const isUserMessage = !this.isAgentMessage(event);
 
-        // Let each active speaker respond
-        for (const agentName of this.activeSpeakers) {
-            if (agentName === this.config.name) continue; // Skip self
+        // Select appropriate speaker
+        const selectedSpeaker = this.turnManager.selectSpeaker(event, isUserMessage);
 
-            const agent = this.agents.get(agentName);
-            if (!agent) {
-                logger.warn(`Active speaker ${agentName} not found in team agents`);
-                continue;
-            }
-
-            // Let agent respond
-            await agent.handleEvent(event, context);
-
-            // Check last message for signal
-            const messages = await this.store.getMessages(context.conversationId);
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage && lastMessage.agentName === agentName) {
-                responses.set(agentName, lastMessage.signal);
-            }
+        if (!selectedSpeaker) {
+            logger.debug("No speaker selected for this event");
+            return;
         }
 
-        // Check if we should transition based on signals
-        await this.checkForTransition(responses, context);
+        // Skip if speaker is team lead (will handle separately)
+        if (selectedSpeaker === this.config.name) {
+            return;
+        }
+
+        const agent = this.agents.get(selectedSpeaker);
+        if (!agent) {
+            logger.warn(`Selected speaker ${selectedSpeaker} not found in team agents`);
+            return;
+        }
+
+        // Set current speaker
+        this.turnManager.setCurrentSpeaker(selectedSpeaker);
+
+        // Let selected agent respond
+        await agent.handleEvent(event, context);
+
+        // Record speech
+        this.turnManager.recordSpeech(selectedSpeaker);
+
+        // Check last message for signal
+        const messages = await this.store.getMessages(context.conversationId);
+        const lastMessage = messages[messages.length - 1];
+
+        if (lastMessage && lastMessage.agentName === selectedSpeaker && lastMessage.signal) {
+            await this.checkForTransition(
+                new Map([[selectedSpeaker, lastMessage.signal]]),
+                context
+            );
+        }
+    }
+
+    private isAgentMessage(event: NDKEvent): boolean {
+        // Check if the event author is one of our agents
+        for (const agent of this.agents.values()) {
+            if (event.pubkey === agent.getPubkey()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private async checkForTransition(
@@ -146,7 +197,9 @@ export class TeamLead extends Agent {
     private updateActiveSpeakers(): void {
         this.activeSpeakers.clear();
 
-        const participants = this.team.getCurrentStageParticipants(this.currentStageIndex);
+        const stage = this.team.plan.stages[this.currentStageIndex];
+        const participants = stage?.participants || [];
+
         for (const participant of participants) {
             this.activeSpeakers.add(participant);
 
@@ -163,6 +216,9 @@ export class TeamLead extends Agent {
                 agent.setActiveSpeaker(false);
             }
         }
+
+        // Update turn manager with new stage participants
+        this.turnManager.updateStageParticipants(participants, stage?.primarySpeaker);
 
         logger.info(`Updated active speakers: ${Array.from(this.activeSpeakers).join(", ")}`);
     }
@@ -199,31 +255,28 @@ export class TeamLead extends Agent {
     }
 
     protected buildSystemPrompt(): string {
-        const basePrompt = super.buildSystemPrompt();
         const stageInfo =
             this.currentStageIndex < this.team.plan.stages.length
                 ? this.team.plan.stages[this.currentStageIndex]
                 : null;
 
-        return `${basePrompt}
-
-You are the TEAM LEAD for this conversation.
-Current team: ${this.team.members.join(", ")}
-${
-    stageInfo
-        ? `
-Current stage: ${stageInfo.purpose}
+        const currentStageInfo = stageInfo
+            ? `Current stage: ${stageInfo.purpose}
 Expected outcome: ${stageInfo.expectedOutcome}
-Transition criteria: ${stageInfo.transitionCriteria}
-Active speakers: ${Array.from(this.activeSpeakers).join(", ")}
-`
-        : "Conversation is in final stage."
-}
+Transition criteria: ${stageInfo.transitionCriteria}`
+            : "Conversation is in final stage.";
 
-As team lead, you should:
-- Guide the conversation toward the expected outcome
-- Decide when to transition to the next stage
-- Intervene if team members are blocked
-- Summarize progress when transitioning stages`;
+        const teamInfo = `Current team: ${this.team.members.join(", ")}
+Active speakers: ${Array.from(this.activeSpeakers).join(", ")}`;
+
+        return SystemPromptComposer.composeTeamLeadPrompt({
+            name: this.config.name,
+            role: this.config.role,
+            instructions: this.config.instructions,
+            teamSize: this.teamSize,
+            toolDescriptions: this.toolRegistry?.generateSystemPrompt(),
+            teamInfo,
+            stageInfo: currentStageInfo,
+        });
     }
 }

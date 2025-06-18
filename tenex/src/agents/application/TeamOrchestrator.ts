@@ -1,15 +1,20 @@
 import { logger } from "@tenex/shared/logger";
+import { TEAM_ORCHESTRATOR_PROMPT } from "../../prompts";
 import { TeamFormationError } from "../core/errors";
 import type {
     AgentConfig,
     ConversationPlan,
     LLMProvider,
+    NostrPublisher,
     TeamFormationRequest,
     TeamFormationResult,
 } from "../core/types";
 
 export class TeamOrchestrator {
-    constructor(private llm: LLMProvider) {}
+    constructor(
+        private llm: LLMProvider,
+        private publisher: NostrPublisher
+    ) {}
 
     async formTeam(request: TeamFormationRequest): Promise<TeamFormationResult> {
         logger.info("TeamOrchestrator: Analyzing request and forming team");
@@ -55,33 +60,7 @@ export class TeamOrchestrator {
     }
 
     private getSystemPrompt(): string {
-        return `You are an expert team orchestrator for a multi-agent AI system. Your job is to analyze user requests and form optimal teams to handle them.
-
-When forming teams:
-1. Select a team lead who will coordinate the conversation
-2. Choose team members based on the expertise required
-3. Design a conversation plan with clear stages
-4. Each stage should have specific participants, purpose, and transition criteria
-
-You must respond in valid JSON format with this structure:
-{
-    "team": {
-        "lead": "agent_name",
-        "members": ["agent1", "agent2", "agent3"]
-    },
-    "conversationPlan": {
-        "stages": [
-            {
-                "participants": ["agent1", "agent2"],
-                "purpose": "Define requirements and approach",
-                "expectedOutcome": "Clear specification of what needs to be built",
-                "transitionCriteria": "When both agents agree on the approach"
-            }
-        ],
-        "estimatedComplexity": 5
-    },
-    "reasoning": "Explanation of why this team and plan were chosen"
-}`;
+        return TEAM_ORCHESTRATOR_PROMPT();
     }
 
     private buildTeamFormationPrompt(request: TeamFormationRequest): string {
@@ -99,11 +78,13 @@ Project Context:
 Available Agents:
 ${agentDescriptions}
 
-Form an optimal team to handle this request. Consider:
-1. What expertise is needed?
-2. Who should lead the conversation?
-3. What stages should the conversation go through?
-4. When should different agents participate?
+Analyze this request and form the MINIMAL team needed:
+1. Can a single agent handle this entire request? If yes, use only that agent.
+2. What specific expertise is needed?
+3. Is coordination between multiple specialists truly necessary?
+4. If multiple agents are needed, what stages should the conversation go through?
+
+Remember: Prefer single-agent teams for straightforward requests. Only use multi-agent teams when the complexity genuinely requires it.
 
 Respond with a team composition and conversation plan in JSON format.`;
     }

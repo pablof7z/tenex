@@ -60,6 +60,7 @@ export class EventHandler {
                 repository: this.projectInfo.repository,
             },
             projectEvent: this.projectInfo.projectEvent,
+            projectSigner: this.projectInfo.projectSigner,
             agents: this.agentConfigs,
             llmConfig,
             teamBuildingLLMConfig,
@@ -399,42 +400,25 @@ export class EventHandler {
             return;
         }
 
-        // Parse the new model configuration
-        // Expected format: "provider:model" or "provider:model:caching"
-        const parts = newModelConfig.split(":");
-        if (parts.length < 2) {
-            logInfo(
-                chalk.red(
-                    "❌ Invalid model configuration format. Expected: provider:model[:caching]"
-                )
-            );
-            return;
-        }
-
-        const [provider, model, cachingStr] = parts;
-        const enableCaching = cachingStr === "true";
-
         // Load current configuration
         const configuration = await configurationService.loadConfiguration(
             this.projectInfo.projectPath
         );
 
-        // Check if we have a valid LLM config to update
-        const currentLLMName = configuration.llms?.defaults?.agents || "default";
-        const currentLLMConfig = configuration.llms?.configurations?.[currentLLMName];
-
-        if (!currentLLMConfig) {
-            logInfo(chalk.red("❌ No current LLM configuration found"));
+        // Model config must be a named configuration from llms.json
+        const newLLMConfig = configuration.llms?.configurations?.[newModelConfig];
+        
+        if (!newLLMConfig) {
+            const availableConfigs = Object.keys(configuration.llms?.configurations || {});
+            logInfo(
+                chalk.red(
+                    `❌ Configuration '${newModelConfig}' not found. Available configurations: ${availableConfigs.join(", ") || "none"}`
+                )
+            );
             return;
         }
-
-        // Create new LLM configuration
-        const newLLMConfig = {
-            ...currentLLMConfig,
-            provider: provider as LLMProvider,
-            model: model || currentLLMConfig.model, // Ensure model is never undefined
-            enableCaching,
-        };
+        
+        logInfo(chalk.gray("Using configuration: ") + chalk.white(newModelConfig));
 
         // Update the event router with new LLM provider
         try {
@@ -450,7 +434,7 @@ export class EventHandler {
             logInfo(chalk.gray("Agent:   ") + chalk.white(targetAgentName));
             logInfo(
                 chalk.gray("Model:   ") +
-                    chalk.white(`${provider}:${model}${enableCaching ? " (with caching)" : ""}`)
+                    chalk.white(`${newLLMConfig.provider}:${newLLMConfig.model}${newLLMConfig.enableCaching ? " (with caching)" : ""}`)
             );
         } catch (error) {
             logInfo(chalk.red(`❌ Failed to update LLM configuration: ${formatError(error)}`));

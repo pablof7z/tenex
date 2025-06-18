@@ -16,6 +16,7 @@ export const EVENT_KINDS = {
 
     // TENEX-specific kinds
     TASK: 1934 as NDKKind,
+    TASK_UPDATE: 1935 as NDKKind, // Task status update
     AGENT_REQUEST: 3199 as NDKKind,
     AGENT_REQUEST_LIST: 13199 as NDKKind, // List of agent requests (10000 + 3199)
     AGENT_LESSON: 4124 as NDKKind,

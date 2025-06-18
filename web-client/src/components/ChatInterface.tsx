@@ -9,12 +9,12 @@ import {
 import { EVENT_KINDS } from "@tenex/types/events";
 import { useAtom } from "jotai";
 import { ArrowDown, Send } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useMentionAutocomplete } from "../hooks/useMentionAutocomplete";
 import { useProjectAgents } from "../hooks/useProjectAgents";
 import { useProjectLLMConfigs } from "../hooks/useProjectLLMConfigs";
 import { useScrollManagement } from "../hooks/useScrollManagement";
-import { selectedTaskAtom } from "../lib/store";
+import { messageDraftsAtom, selectedTaskAtom } from "../lib/store";
 import { BackendButtons } from "./BackendButtons";
 import { ChatDebugDialog } from "./chat/ChatDebugDialog";
 import { ChatHeader } from "./chat/ChatHeader";
@@ -125,18 +125,61 @@ export function ChatInterface({
     onBack,
 }: ChatInterfaceProps) {
     const { ndk } = useNDK();
-    const [messageInput, setMessageInput] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [kind11Event, setKind11Event] = useState<NDKEvent | null>(null);
     const [showDebugDialog, setShowDebugDialog] = useState(false);
     const [debugIndicator, setDebugIndicator] = useState<NDKEvent | null>(null);
     const [, setSelectedTask] = useAtom(selectedTaskAtom);
+    const [messageDrafts, setMessageDrafts] = useAtom(messageDraftsAtom);
 
     // Determine if we're in thread mode
     const isThreadMode = !!(project && threadTitle);
 
     // Get project agents for @mentions
     const projectAgents = useProjectAgents(project?.tagId());
+
+    // Generate a stable conversation ID for draft persistence
+    const conversationId = useMemo(() => {
+        if (isThreadMode) {
+            // For existing threads, use the thread event ID
+            if (threadId && threadId !== "new") return threadId;
+            // For new threads, use a stable identifier based on thread title
+            if (threadTitle) return `new-${threadTitle}`;
+        } else if (taskId) {
+            // For task conversations, use the task ID
+            return taskId;
+        }
+        return null;
+    }, [isThreadMode, threadId, threadTitle, taskId]);
+
+    // Initialize message input from drafts
+    const [messageInput, setMessageInput] = useState(() => {
+        if (conversationId) {
+            return messageDrafts.get(conversationId) || "";
+        }
+        return "";
+    });
+
+    // Update draft when messageInput changes
+    useEffect(() => {
+        if (!conversationId) return;
+
+        if (messageInput.trim()) {
+            // Save draft if there's content
+            setMessageDrafts((prev) => {
+                const newDrafts = new Map(prev);
+                newDrafts.set(conversationId, messageInput);
+                return newDrafts;
+            });
+        } else {
+            // Remove draft if empty
+            setMessageDrafts((prev) => {
+                const newDrafts = new Map(prev);
+                newDrafts.delete(conversationId);
+                return newDrafts;
+            });
+        }
+    }, [messageInput, conversationId, setMessageDrafts]);
 
     // Get project directory and LLM configurations
     // Extract just the d-tag from the project's tagId (format: 31933:pubkey:d-tag)
@@ -155,6 +198,16 @@ export function ChatInterface({
         insertMention,
         extractMentions,
     } = useMentionAutocomplete(projectAgents, messageInput, setMessageInput);
+
+    // Auto-focus the input when thread view opens
+    useEffect(() => {
+        if (isThreadMode && textareaRef.current) {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 100);
+        }
+    }, [isThreadMode]);
 
     // Subscribe to existing thread if we have a threadId (but not for 'new' threads)
     const existingThread = useEvent(threadId && threadId !== "new" ? threadId : false);
@@ -383,10 +436,19 @@ export function ChatInterface({
                     await event.publish();
                     setMessageInput("");
 
+                    // Clean up draft for new thread since it now has a real ID
+                    if (conversationId && conversationId.startsWith("new-")) {
+                        setMessageDrafts((prev) => {
+                            const newDrafts = new Map(prev);
+                            newDrafts.delete(conversationId);
+                            return newDrafts;
+                        });
+                    }
+
                     // Scroll to bottom after creating thread
-                    setTimeout(() => {
+                    requestAnimationFrame(() => {
                         scrollToBottom(true); // Force scroll after sending
-                    }, 100);
+                    });
 
                     return; // Exit early since we've handled publishing
                 } else {
@@ -403,9 +465,9 @@ export function ChatInterface({
             setMessageInput("");
 
             // Scroll to bottom after sending
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 scrollToBottom(true); // Force scroll after sending
-            }, 100);
+            });
         } catch (_error) {
         } finally {
             setIsSending(false);
@@ -424,6 +486,8 @@ export function ChatInterface({
         projectAgents,
         scrollToBottom,
         extractMentions,
+        conversationId,
+        setMessageDrafts,
     ]);
 
     const handleKeyPress = useCallback(

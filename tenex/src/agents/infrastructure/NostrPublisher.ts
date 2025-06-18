@@ -4,7 +4,10 @@ import { logger } from "@tenex/shared/logger";
 import type { AgentResponse, EventContext, NostrPublisher as INostrPublisher } from "../core/types";
 
 export class NostrPublisher implements INostrPublisher {
-    constructor(private ndk: NDK) {}
+    constructor(
+        private ndk: NDK,
+        private projectSigner?: NDKSigner
+    ) {}
 
     async publishResponse(
         response: AgentResponse,
@@ -14,6 +17,24 @@ export class NostrPublisher implements INostrPublisher {
         try {
             const responseEvent = context.originalEvent.reply();
             responseEvent.content = response.content;
+
+            // Get agent's pubkey to filter it out
+            const agentUser = await agentSigner.user();
+            const agentPubkey = agentUser.pubkey;
+
+            // Remove the agent's own p-tag to prevent self-replies
+            const originalPTagCount = responseEvent.tags.filter((tag) => tag[0] === "p").length;
+            responseEvent.tags = responseEvent.tags.filter((tag) => {
+                // Keep all non-p tags, and p-tags that don't reference the agent
+                return tag[0] !== "p" || tag[1] !== agentPubkey;
+            });
+            const newPTagCount = responseEvent.tags.filter((tag) => tag[0] === "p").length;
+
+            if (originalPTagCount > newPTagCount) {
+                logger.debug(
+                    `Removed agent's own p-tag from reply (${originalPTagCount} -> ${newPTagCount} p-tags)`
+                );
+            }
 
             // Tag the project event for proper association
             if (context.projectEvent) {
@@ -108,16 +129,19 @@ export class NostrPublisher implements INostrPublisher {
             message?: string;
             systemPrompt?: string;
             userPrompt?: string;
-        }
+        },
+        signer?: NDKSigner
     ): Promise<void> {
         try {
             const typingEvent = new NDKEvent(this.ndk);
             typingEvent.kind = isTyping ? 24111 : 24112; // typing start/stop
-            typingEvent.content = options?.message || "";
+            typingEvent.content = isTyping 
+                ? (options?.message || `${agentName} is typing...`)
+                : "";
 
-            // Tag the conversation
+            // Tag the root conversation event
             typingEvent.tags = [
-                ["e", context.originalEvent.id!],
+                ["e", context.conversationId],
                 ["agent", agentName],
             ];
 
@@ -136,8 +160,13 @@ export class NostrPublisher implements INostrPublisher {
                 }
             }
 
-            // Use project signer for typing indicators
-            // In real implementation, this would come from project context
+            // Sign with the provided signer (agent's signer when agent is typing)
+            // or project signer (when orchestrator is typing), otherwise use NDK default
+            const signerToUse = signer || this.projectSigner;
+            if (signerToUse) {
+                typingEvent.sig = await typingEvent.sign(signerToUse);
+            }
+            
             await typingEvent.publish();
 
             logger.debug(

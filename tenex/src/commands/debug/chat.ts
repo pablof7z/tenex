@@ -181,9 +181,8 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
         const conversationId = `debug-${Date.now()}`;
 
         // Create a simple publisher that logs responses
-        const debugPublisher = {
-            ndk,
-            publish: async (response: { content: string; [key: string]: unknown }) => {
+        const debugPublisher: NostrPublisher = {
+            publishResponse: async (response, _context, _agentSigner) => {
                 // Display the agent's response
                 logInfo(chalk.green(`\n[${agentName}]: `) + response.content);
                 if (response.signal) {
@@ -192,6 +191,15 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
                             `Signal: ${response.signal.type}${response.signal.reason ? ` - ${response.signal.reason}` : ""}`
                         )
                     );
+                }
+            },
+            publishTypingIndicator: async (agentName, isTyping, _context, options) => {
+                // Log typing indicator for debug purposes
+                if (isTyping) {
+                    logInfo(chalk.gray(`[${agentName} is typing...]`));
+                    if (options?.userPrompt) {
+                        logInfo(chalk.gray(`Processing: "${options.userPrompt.substring(0, 50)}..."`));
+                    }
                 }
             },
         };
@@ -256,6 +264,7 @@ async function sendDebugMessage(
             conversationId,
             projectId: projectInfo.projectEvent.id!,
             originalEvent: debugEvent,
+            projectEvent: projectInfo.projectEvent,
         };
 
         // Process the event - bypass team formation for debug

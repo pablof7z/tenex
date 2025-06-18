@@ -111,6 +111,7 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`OpenAIProvider`** - GPT integration with function calling
 - **`OpenRouterProvider`** - Multi-model provider with automatic fallbacks
 - **`ToolEnabledProvider`** - Universal tool-calling wrapper for any LLM
+- **`TypingAwareLLMProvider`** - Wrapper that automatically publishes typing indicators with actual prompts
 - **`LLMFactory`** - Provider instantiation with configuration and caching
 - **`costCalculator`** - LLM usage cost tracking and reporting
 
@@ -166,7 +167,8 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 
 ### Adapters
 - **`ConsoleLoggerAdapter`** - Logging integration for orchestration
-- **`LLMProviderAdapter`** - LLM integration for orchestration decisions
+- **`LLMProviderAdapter`** - Bridge between agent system and main LLM system interfaces
+- **`enhanceWithTypingIndicators`** - Factory function to add typing indicator support to any LLM provider
 
 ---
 
@@ -255,6 +257,7 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **Configuration** - Unified config system with environment-specific overrides
 - **Event System** - Standardized Nostr event handling across components
 - **State Management** - Jotai for web client, in-memory for CLI components
+- **Typing Indicators** - Automatic publishing of actual LLM prompts via TypingAwareLLMProvider
 
 ---
 
@@ -314,6 +317,13 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 ---
 
 ## 🆕 Recent Updates
+
+### Typing Indicator Architecture Enhancement (January 2025)
+- **Added TypingAwareLLMProvider** - Wrapper that automatically publishes typing indicators with actual system/user prompts
+- **Fixed architectural issue** - Typing indicators now show the exact prompts sent to LLMs
+- **Enhanced LLMProviderAdapter** - Added `enhanceWithTypingIndicators` factory function
+- **Automatic integration** - Agents automatically get typing indicators without manual publishing
+- **Privacy protection** - Prompts are truncated intelligently for privacy while preserving context
 
 ### Phased Delivery Strategy Addition (January 2025)
 - **Added PhasedDeliveryStrategy** - New orchestration strategy for complex multi-phase tasks

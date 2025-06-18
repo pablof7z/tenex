@@ -85,3 +85,8 @@ export const toggleThemeAtom = atom(null, (get, set) => {
         document.documentElement.classList.remove("dark");
     }
 });
+
+// Thread/conversation drafts - Map<conversationId, draftText>
+// For threads: conversationId is the thread event ID (or 'new-{threadTitle}' for new threads)
+// For tasks: conversationId is the task ID
+export const messageDraftsAtom = atom<Map<string, string>>(new Map());

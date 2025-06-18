@@ -86,6 +86,7 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
         }
 
         claudeProcess.stdout?.on("data", (chunk: string) => {
+            console.log("[CC] Received chunk:", chunk); // Debugging output
             const messages = parser.parseLines(chunk);
 
             // Capture the final result
@@ -97,6 +98,8 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
                     if (message.is_error) {
                         hasError = true;
                     }
+                } else {
+                    logDebug(`${chalk.gray("Claude Code output:")} ${message.type} - ${JSON.stringify(message)}`);
                 }
             }
         });
