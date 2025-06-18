@@ -6,7 +6,7 @@ import { EVENT_KINDS } from "@tenex/types/events";
 export const addTaskTool: ToolDefinition = {
   name: "add_task",
   description:
-    "Publish a task to the project, making it visible to all agents and users. Use this to create structured development tasks.",
+    "CREATE a task without implementing it. This tool only publishes a task description for others to work on later - it does NOT write any code or make changes. Use add_task for planning and task management, but use claude_code to actually implement code changes.",
   parameters: [
     {
       name: "title",

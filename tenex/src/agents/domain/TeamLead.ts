@@ -144,6 +144,7 @@ export class TeamLead extends Agent {
     // Count transition signals
     let readyForTransition = 0;
     let blocked = 0;
+    let continueCount = 0;
 
     for (const [agentName, signal] of responses) {
       if (signal?.type === "ready_for_transition") {
@@ -155,7 +156,22 @@ export class TeamLead extends Agent {
       } else if (signal?.type === "blocked") {
         blocked++;
         teamLogger.warning(`Agent ${agentName} is blocked: ${signal.reason}`);
+      } else if (signal?.type === "continue") {
+        continueCount++;
+        teamLogger.info(
+          `Agent ${agentName} signaled continue: ${signal.reason || "awaiting further input"}`,
+          "verbose"
+        );
       }
+    }
+
+    // If any agent signals continue, maintain current state without transition
+    if (continueCount > 0) {
+      teamLogger.info(
+        `${continueCount} agent(s) signaled continue - maintaining current conversation state`
+      );
+      // No transition needed - agents remain active for next turn
+      return;
     }
 
     // Transition if all active speakers are ready or if majority are ready

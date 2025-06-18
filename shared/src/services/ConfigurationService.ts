@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/logger";
-import type { AgentsJson } from "@tenex/types/agents";
+import type { AgentsJson, TrackedAgentsJson, TrackedAgentConfigEntry, ConfigurationLoadOptions } from "@tenex/types/agents";
 import type {
     GlobalConfig,
     ProjectConfig,
@@ -183,7 +183,11 @@ export class ConfigurationService {
     /**
      * Load the complete configuration for a context (global or project)
      */
-    async loadConfiguration(contextPath: string, isGlobal = false): Promise<TenexConfiguration> {
+    async loadConfiguration(
+        contextPath: string, 
+        isGlobal = false,
+        options?: ConfigurationLoadOptions
+    ): Promise<TenexConfiguration> {
         const basePath = isGlobal ? this.getGlobalPath() : this.getProjectPath(contextPath);
 
         // Load config.json
@@ -201,14 +205,25 @@ export class ConfigurationService {
             agents = await this.loadAgentsConfig(basePath);
         }
 
-        // For project configurations, merge with global agents
-        if (!isGlobal) {
+        // For project configurations, merge with global agents (unless disabled)
+        if (!isGlobal && !options?.skipGlobal) {
             const globalAgentsPath = path.join(this.getGlobalPath(), "agents.json");
             if (await fileExists(globalAgentsPath)) {
                 const globalAgents = await this.loadAgentsConfig(this.getGlobalPath());
-                // Merge: global as base, project overrides
-                agents = { ...globalAgents, ...(agents || {}) };
+                // Merge with source tracking
+                agents = await this.mergeAgentsWithTracking(
+                    globalAgents,
+                    agents || {},
+                    this.getGlobalPath(),
+                    basePath
+                );
+            } else if (agents) {
+                // Only project agents, add source tracking
+                agents = this.addSourceTracking(agents, basePath, 'project');
             }
+        } else if (agents) {
+            // Add source tracking for non-merged agents
+            agents = this.addSourceTracking(agents, basePath, isGlobal ? 'global' : 'project');
         }
 
         return {
@@ -512,6 +527,66 @@ export class ConfigurationService {
         const basePath = isGlobal ? this.getGlobalPath() : this.getProjectPath(contextPath);
         const filePath = path.join(basePath, `${configType}.json`);
         return fileExists(filePath);
+    }
+
+    /**
+     * Add source tracking to agent configurations
+     */
+    private addSourceTracking(
+        agents: AgentsJson,
+        basePath: string,
+        source: 'global' | 'project'
+    ): TrackedAgentsJson {
+        const tracked: TrackedAgentsJson = {};
+        
+        for (const [key, agent] of Object.entries(agents)) {
+            tracked[key] = {
+                ...agent,
+                _source: source,
+                _basePath: basePath
+            };
+        }
+        
+        return tracked;
+    }
+
+    /**
+     * Merge global and project agents with source tracking and warnings
+     */
+    private async mergeAgentsWithTracking(
+        globalAgents: AgentsJson,
+        projectAgents: AgentsJson,
+        globalPath: string,
+        projectPath: string
+    ): Promise<TrackedAgentsJson> {
+        const merged: TrackedAgentsJson = {};
+        
+        // Add global agents with tracking
+        for (const [key, agent] of Object.entries(globalAgents)) {
+            merged[key] = {
+                ...agent,
+                _source: 'global',
+                _basePath: globalPath
+            };
+        }
+        
+        // Add/override with project agents
+        for (const [key, agent] of Object.entries(projectAgents)) {
+            if (merged[key]) {
+                // Warn about override
+                logger.warn(
+                    `Agent '${key}' from global configuration is being overridden by project configuration`
+                );
+            }
+            
+            merged[key] = {
+                ...agent,
+                _source: 'project',
+                _basePath: projectPath
+            };
+        }
+        
+        return merged;
     }
 }
 

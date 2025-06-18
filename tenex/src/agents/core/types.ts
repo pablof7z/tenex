@@ -18,7 +18,6 @@ export interface AgentConfig {
   nsec: string;
   tools?: string[]; // List of tool names this agent has access to
   eventId?: string; // NDKAgent event ID
-  hasOrchestrationCapability?: boolean; // Whether agent can orchestrate
   llmConfig?: LLMConfig; // LLM configuration for this agent
 }
 
@@ -48,7 +47,6 @@ export interface AgentResponse {
   // Tool-related properties
   toolCalls?: ToolCall[];
   hasNativeToolCalls?: boolean;
-  tool_calls?: unknown[];
 }
 
 export interface ConversationSignal {
@@ -148,7 +146,6 @@ export interface CompletionResponse {
   // Tool-related properties
   toolCalls?: ToolCall[];
   hasNativeToolCalls?: boolean;
-  tool_calls?: unknown[];
 }
 
 export interface Message {
@@ -182,11 +179,6 @@ export interface EventContext {
   eventId?: string;
 }
 
-export interface TypingIndicator {
-  start(agentName: string, eventContext: EventContext): Promise<void>;
-  update(message: string): Promise<void>;
-  stop(): Promise<void>;
-}
 
 export interface NostrPublisher {
   publishResponse(
@@ -225,11 +217,6 @@ export interface ConversationMessage {
   content: string;
   timestamp: number;
   signal?: ConversationSignal;
-  metadata?: {
-    wasStreamed?: boolean;
-    chunks?: number;
-    [key: string]: unknown;
-  };
 }
 
 // ============================================================================

@@ -3,26 +3,70 @@ import { ClaudeCodeOutputParser } from "@/utils/agents/tools/claudeCode/ClaudeCo
 import type { ClaudeCodeOptions } from "@/utils/agents/tools/claudeCode/types";
 import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { logDebug, logError, logInfo } from "@tenex/shared/logger";
+import { NDKTask } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 
 export const claudeCodeTool: ToolDefinition = {
   name: "claude_code",
   description:
-    "Use Claude Code to drive code implementations. This tool invokes Claude Code for ANY task that requires writing, modifying, or analyzing code files.",
+    "ACTUALLY IMPLEMENT code changes by invoking Claude Code. Use this tool when you need to WRITE, MODIFY, CREATE, or ANALYZE code files. This tool does the actual work - it doesn't just create a task, it executes the implementation. Use claude_code for: writing new code, modifying existing files, debugging, refactoring, creating new features, fixing bugs, or any hands-on coding work.",
   parameters: [
+    {
+      name: "title",
+      type: "string",
+      description:
+        "A concise title (3-8 words) describing what this code task will accomplish.",
+      required: true,
+    },
     {
       name: "prompt",
       type: "string",
       description:
-        "The prompt for Claude Code. Claude Code will determine what context and files it needs.",
+        "The detailed prompt for Claude Code. Claude Code will determine what context and files it needs.",
       required: true,
     },
   ],
   execute: async (params, toolContext?: ToolContext) => {
+    const title = params.title as string;
     const prompt = params.prompt as string;
 
     logInfo(chalk.blue("\n🚀 Starting Claude Code..."));
+    logDebug(chalk.gray(`Title: "${title}"`));
     logDebug(chalk.gray(`Prompt: "${prompt.substring(0, 100)}..."`));
+
+    // Create NDKTask for this claude_code execution
+    let taskEvent: NDKTask | undefined;
+    if (toolContext?.ndk && toolContext?.projectEvent && toolContext?.rootEventId && toolContext?.agent) {
+      try {
+        taskEvent = new NDKTask(toolContext.ndk);
+        taskEvent.title = title;
+        taskEvent.content = prompt;
+        
+        // Tag the task with the project
+        taskEvent.tag(toolContext.projectEvent);
+        
+        // E-tag the thread if we have a rootEventId
+        taskEvent.tags.push(["e", toolContext.rootEventId]);
+        
+        // Add agent tag if available
+        if (toolContext.agentName) {
+          taskEvent.tags.push(["agent", toolContext.agentName]);
+        }
+        
+        // Add tool tag to identify this as a claude_code task
+        taskEvent.tags.push(["tool", "claude_code"]);
+        
+        // Sign and publish the task using agent's signer
+        await taskEvent.sign(toolContext.agent.getSigner());
+        await taskEvent.publish();
+        
+        logInfo(chalk.green(`📋 Created task: ${title}`));
+        logDebug(chalk.gray(`Task ID: ${taskEvent.id}`));
+      } catch (error) {
+        logError(chalk.red(`Failed to create task: ${error}`));
+        // Continue without task if creation fails
+      }
+    }
 
     try {
       const result = await executeClaudeCode(
@@ -32,7 +76,8 @@ export const claudeCodeTool: ToolDefinition = {
           outputFormat: "stream-json",
           dangerouslySkipPermissions: true,
         },
-        toolContext
+        toolContext,
+        taskEvent
       );
 
       return {
@@ -49,7 +94,7 @@ export const claudeCodeTool: ToolDefinition = {
   },
 };
 
-function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext): Promise<string> {
+function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext, taskEvent?: NDKTask): Promise<string> {
   return new Promise((resolve, reject) => {
     // Match the working command format
     const args = [
@@ -76,7 +121,7 @@ function executeClaudeCode(options: ClaudeCodeOptions, toolContext?: ToolContext
 
     logDebug(`${chalk.gray("Claude process PID:")} ${claudeProcess.pid}`);
 
-    const parser = new ClaudeCodeOutputParser(toolContext);
+    const parser = new ClaudeCodeOutputParser(toolContext, taskEvent);
     let finalResult = "";
     let hasError = false;
 

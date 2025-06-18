@@ -271,6 +271,18 @@ export function ChatInterface({
         [currentThreadEvent?.id]
     );
 
+    // Subscribe to tasks that specifically E-tag this thread (like claude_code tasks)
+    const { events: threadTasks } = useSubscribe(
+        currentThreadEvent
+            ? [{ 
+                kinds: [NDKTask.kind],
+                "#E": [currentThreadEvent.id]  // Tasks that E-tag this thread
+              }]
+            : false,
+        {},
+        [currentThreadEvent?.id]
+    );
+
     // Subscribe to typing indicators when we have a thread or task
     const { events: typingIndicatorEvents } = useSubscribe(
         currentThreadEvent || taskId
@@ -334,14 +346,19 @@ export function ChatInterface({
             messages.push(...threadReplies);
         }
 
-        // Add all related tasks
+        // Add all related tasks (project-level tasks)
         if (relatedTasks && relatedTasks.length > 0) {
             messages.push(...relatedTasks);
         }
 
+        // Add all thread-specific tasks (E-tagged tasks like claude_code)
+        if (threadTasks && threadTasks.length > 0) {
+            messages.push(...threadTasks);
+        }
+
         // Sort by created_at timestamp
         return messages.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
-    }, [currentThreadEvent, threadReplies, relatedTasks]);
+    }, [currentThreadEvent, threadReplies, relatedTasks, threadTasks]);
 
     // Get unique participants from thread messages and p-tags
     const threadParticipants = useMemo(() => {

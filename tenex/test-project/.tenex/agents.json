@@ -1,0 +1,9 @@
+{
+  "default": {
+    "nsec": "nsec1test1234567890",
+    "file": "test-agent.json"
+  },
+  "code": {
+    "nsec": "nsec1test0987654321"
+  }
+}

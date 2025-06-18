@@ -5,7 +5,7 @@
  * ensuring consistency across the entire system.
  */
 
-import type { AgentsJson } from "../agents/config";
+import type { AgentsJson, TrackedAgentsJson } from "../agents";
 import type { LLMConfig } from "../llm/config";
 
 /**
@@ -134,9 +134,9 @@ export interface TenexConfiguration {
     llms: UnifiedLLMConfig;
 
     /**
-     * Agent configurations (project-only)
+     * Agent configurations (with source tracking when loaded)
      */
-    agents?: AgentsJson;
+    agents?: AgentsJson | TrackedAgentsJson;
 }
 
 /**

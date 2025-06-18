@@ -1,6 +1,7 @@
 import type { ClaudeCodeMessage } from "@/utils/agents/tools/claudeCode/types";
 import type { ToolContext } from "@/utils/agents/tools/types";
 import { logDebug, logError, logInfo } from "@tenex/shared/logger";
+import { NDKTask } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 
 export class ClaudeCodeOutputParser {
@@ -9,9 +10,46 @@ export class ClaudeCodeOutputParser {
   private totalCost = 0;
   private startTime = Date.now();
   private toolContext?: ToolContext;
+  private taskEvent?: NDKTask;
 
-  constructor(toolContext?: ToolContext) {
+  constructor(toolContext?: ToolContext, taskEvent?: NDKTask) {
     this.toolContext = toolContext;
+    this.taskEvent = taskEvent;
+  }
+
+  private async publishTaskUpdate(content: string) {
+    if (!this.taskEvent || !this.toolContext?.publisher || !this.toolContext?.agent) return;
+    
+    try {
+      // Create proper context for the task update
+      const updateContext = {
+        originalEvent: this.taskEvent, // Use the task as the original event to reply to
+        projectEvent: this.toolContext.projectEvent,
+        rootEventId: this.toolContext.rootEventId,
+        projectId: this.toolContext.projectEvent.tagId(),
+      };
+
+      // Create AgentResponse for the task update
+      const response = {
+        content,
+        metadata: {
+          isToolUpdate: true,
+          tool: "claude_code",
+        },
+      };
+
+      // Use NostrPublisher.publishResponse which will properly create a reply using taskEvent.reply()
+      await this.toolContext.publisher.publishResponse(
+        response,
+        updateContext,
+        this.toolContext.agent.getSigner(),
+        this.toolContext.agentName
+      );
+      
+      logDebug(chalk.gray(`Published task update: ${content.substring(0, 50)}...`));
+    } catch (error) {
+      logError(`Failed to publish task update: ${error}`);
+    }
   }
 
   parseLines(data: string): ClaudeCodeMessage[] {
@@ -69,16 +107,8 @@ export class ClaudeCodeOutputParser {
           const formattedText = this.formatText(content.text);
           logInfo(`${chalk.cyan("\n🤖 Claude:")} ${formattedText}`);
 
-          // Send typing indicator with Claude Code's actual output
-          if (this.toolContext?.updateTypingIndicator) {
-            // Extract the first meaningful line or summary
-            const lines = content.text
-              .trim()
-              .split("\n")
-              .filter((line) => line.trim());
-            const summary = lines[0] || "Claude Code is processing...";
-            await this.toolContext.updateTypingIndicator(`[Claude Code] ${summary.slice(0, 200)}`);
-          }
+          // Publish task update instead of typing indicator
+          await this.publishTaskUpdate(`🤖 **Claude Code**: ${content.text.trim()}`);
         }
       }
 
@@ -101,14 +131,14 @@ export class ClaudeCodeOutputParser {
   private async handleToolUse(message: ClaudeCodeMessage) {
     logInfo(chalk.yellow("\n🔧 Tool Use Detected"));
 
-    // Send typing indicator for tool use
-    if (this.toolContext?.updateTypingIndicator && message.tool_use) {
+    // Publish task update for tool use
+    if (message.tool_use) {
       const toolName = message.tool_use.name || "tool";
-      await this.toolContext.updateTypingIndicator(`[Claude Code] Using ${toolName}...`);
+      await this.publishTaskUpdate(`🔧 **Tool Use**: Using ${toolName}...`);
     }
   }
 
-  private handleResult(message: ClaudeCodeMessage) {
+  private async handleResult(message: ClaudeCodeMessage) {
     const duration = Date.now() - this.startTime;
     const seconds = (duration / 1000).toFixed(1);
 
@@ -146,6 +176,17 @@ export class ClaudeCodeOutputParser {
 
     if (message.is_error) {
       logError(chalk.red("\n❌ Error occurred during execution"));
+      await this.publishTaskUpdate(`❌ **Task Failed**: Error occurred during execution`);
+    } else {
+      // Publish completion update
+      let completionMessage = `✅ **Task Complete**`;
+      if (message.result) {
+        completionMessage += `\n\n**Summary**: ${message.result}`;
+      }
+      if (stats.length > 0) {
+        completionMessage += `\n\n**Stats**: ${stats.join(" | ")}`;
+      }
+      await this.publishTaskUpdate(completionMessage);
     }
   }
 

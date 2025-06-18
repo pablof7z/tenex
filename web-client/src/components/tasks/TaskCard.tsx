@@ -1,8 +1,9 @@
 import type { NDKTask } from "@nostr-dev-kit/ndk";
 import { StringUtils, TaskUtils } from "@tenex/shared";
-import { Circle } from "lucide-react";
+import { Circle, Code2 } from "lucide-react";
 import { memo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 
 interface TaskCardProps {
@@ -32,7 +33,19 @@ export const TaskCard = memo(
             return StringUtils.truncate(preview, 100);
         };
 
+        // Check if this is a claude_code task
+        const isClaudeCodeTask = () => {
+            return task.tags?.some(tag => tag[0] === "tool" && tag[1] === "claude_code");
+        };
+
+        // Get agent name
+        const getAgentName = () => {
+            return task.tags?.find(tag => tag[0] === "agent")?.[1];
+        };
+
         const complexity = getTaskComplexity();
+        const isCodeTask = isClaudeCodeTask();
+        const agentName = getAgentName();
 
         return (
             <Card
@@ -41,12 +54,23 @@ export const TaskCard = memo(
             >
                 <div className="flex items-start gap-3">
                     <div className="mt-0.5">
-                        <Circle className="w-4 h-4 text-gray-400" />
+                        {isCodeTask ? (
+                            <Code2 className="w-4 h-4 text-blue-500" />
+                        ) : (
+                            <Circle className="w-4 h-4 text-gray-400" />
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-foreground mb-1">
-                            {getTaskTitle()}
-                        </h4>
+                        <div className="flex items-start gap-2 mb-1">
+                            <h4 className="text-sm font-medium text-foreground flex-1">
+                                {getTaskTitle()}
+                            </h4>
+                            {isCodeTask && (
+                                <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    Claude Code
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                             {getTaskPreview()}
                         </p>
@@ -54,6 +78,11 @@ export const TaskCard = memo(
                             {complexity && (
                                 <span className="px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
                                     Complexity: {complexity}/10
+                                </span>
+                            )}
+                            {agentName && (
+                                <span className="px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
+                                    {agentName}
                                 </span>
                             )}
                             <span className="text-muted-foreground">

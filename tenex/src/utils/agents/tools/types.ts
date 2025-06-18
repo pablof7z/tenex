@@ -22,6 +22,7 @@ export interface ToolContext {
   agentEventId?: string; // The NDKAgent event ID
   projectEvent: NDKProject; // The project event (kind 31933) - REQUIRED
   eventId?: string; // Event ID that triggered the tool execution
+  publisher?: import("../core/types").NostrPublisher; // NostrPublisher instance for proper response publishing
 }
 
 // Type-safe tool parameters

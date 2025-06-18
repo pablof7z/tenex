@@ -171,7 +171,7 @@ export class NostrPublisher implements INostrPublisher {
       );
     } catch (error) {
       // Don't throw on typing indicator failures - they're not critical
-      nostrLogger.warning("Failed to publish typing indicator:", error);
+      nostrLogger.warning("Failed to publish typing indicator:", error, "normal" as VerbosityLevel);
     }
   }
 }

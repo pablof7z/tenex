@@ -297,6 +297,7 @@ export class Agent {
       projectEvent: context.projectEvent,
       ndk: this.ndk,
       agent: this,
+      publisher: this.publisher,
     };
 
     const toolResults = await executor.executeTools(toolCalls, toolContext);
