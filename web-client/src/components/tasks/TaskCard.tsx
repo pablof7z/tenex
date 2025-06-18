@@ -2,9 +2,12 @@ import type { NDKTask } from "@nostr-dev-kit/ndk";
 import { StringUtils, TaskUtils } from "@tenex/shared";
 import { Circle, Code2 } from "lucide-react";
 import { memo } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
+import { NDKKind, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 
 interface TaskCardProps {
     task: NDKTask;
@@ -47,6 +50,12 @@ export const TaskCard = memo(
         const isCodeTask = isClaudeCodeTask();
         const agentName = getAgentName();
 
+        const { events: updates } = useSubscribe([
+            { kinds: [NDKKind.GenericReply], ...task.filter(), limit: 1 },
+        ])
+        const latestUpdate = updates
+            .sort((a, b) => b.created_at - a.created_at)[0];
+
         return (
             <Card
                 className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${className || ""}`}
@@ -65,29 +74,39 @@ export const TaskCard = memo(
                             <h4 className="text-sm font-medium text-foreground flex-1">
                                 {getTaskTitle()}
                             </h4>
+                            {agentName && (
+                                <span className="text-sm px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
+                                    {agentName}
+                                </span>
+                            )}
                             {isCodeTask && (
-                                <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                <Badge
+                                    variant="secondary"
+                                    className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                >
                                     Claude Code
                                 </Badge>
                             )}
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                            {getTaskPreview()}
-                        </p>
+                        {latestUpdate ? (
+                            <div className="mb-2 p-2 border-l-4 border-zinc-400 rounded-r">
+                                <div className="text-xs line-clamp-2 prose prose-sm prose-p:my-0">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {latestUpdate.content}
+                                    </ReactMarkdown>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                {getTaskPreview()}
+                            </p>
+                        )}
                         <div className="flex items-center gap-2 text-xs">
                             {complexity && (
                                 <span className="px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
                                     Complexity: {complexity}/10
                                 </span>
                             )}
-                            {agentName && (
-                                <span className="px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
-                                    {agentName}
-                                </span>
-                            )}
-                            <span className="text-muted-foreground">
-                                Created {formatDateOnly(task.created_at || 0)}
-                            </span>
                         </div>
                     </div>
                 </div>
