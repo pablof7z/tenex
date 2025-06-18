@@ -14,11 +14,13 @@ import { logError, logInfo, logSuccess } from "@tenex/shared/logger";
 import { configurationService } from "@tenex/shared/services";
 import { EVENT_KINDS } from "@tenex/types/events";
 import chalk from "chalk";
+import inquirer from "inquirer";
 import { v4 as uuidv4 } from "uuid";
 
 interface DebugChatOptions {
     systemPrompt?: boolean;
     message?: string;
+    llm?: string | boolean;  // string if config name provided, true if flag used without value
 }
 
 export async function runDebugChat(agentName: string | undefined, options: DebugChatOptions) {
@@ -38,15 +40,66 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
         const agentsJson = JSON.parse(fs.readFileSync(agentsPath, "utf-8"));
         const availableAgents = Object.keys(agentsJson);
 
-        // If no agent specified, show available agents and exit
+        // If user wants to see LLM configurations and no agent specified
+        if (options.llm === true && !agentName) {
+            // Load configuration to show LLM options
+            const configuration = await configurationService.loadConfiguration(projectPath);
+            const availableConfigs = Object.keys(configuration.llms.configurations);
+            
+            if (availableConfigs.length === 0) {
+                logError("No LLM configurations found in project.");
+                process.exit(1);
+            }
+            
+            // Create choices for inquirer
+            const llmChoices = availableConfigs.map(configName => {
+                const config = configuration.llms.configurations[configName];
+                const isDefault = configuration.llms.defaults.default === configName;
+                const agentDefault = Object.entries(configuration.llms.defaults)
+                    .filter(([agent, llm]) => agent !== "default" && llm === configName)
+                    .map(([agent]) => agent);
+                
+                let name = `${configName} (${config?.provider}/${config?.model})`;
+                if (isDefault) name += chalk.green(" [default]");
+                if (agentDefault.length > 0) {
+                    name += chalk.gray(` [default for: ${agentDefault.join(", ")}]`);
+                }
+                
+                return {
+                    name,
+                    value: configName,
+                    short: configName
+                };
+            });
+            
+            console.log(chalk.cyan("\n✨ Select LLM configuration:\n"));
+            
+            const { selectedLLM } = await inquirer.prompt([
+                {
+                    type: "list",
+                    name: "selectedLLM",
+                    message: "Choose an LLM configuration:",
+                    choices: llmChoices,
+                    loop: false
+                }
+            ]);
+            
+            // Set the selected LLM in options
+            options.llm = selectedLLM;
+            
+            // Continue to agent selection
+            logInfo(`Selected LLM configuration: ${chalk.yellow(selectedLLM)}`);
+        }
+
+        // If no agent specified, show available agents and let user select
         if (!agentName) {
             if (availableAgents.length === 0) {
                 logError("No agents found in project configuration.");
                 process.exit(1);
             }
 
-            console.log(chalk.cyan("\n✨ Available agents for this project:\n"));
-            for (const name of availableAgents) {
+            // Create choices for inquirer
+            const agentChoices = availableAgents.map(name => {
                 const agentData = agentsJson[name];
                 let role = `${name} specialist`;
 
@@ -70,15 +123,31 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
                     }
                 }
 
-                console.log(chalk.yellow(`  ${name}`) + chalk.gray(` - ${role}`));
-            }
-            console.log(chalk.gray("\n💡 Usage: tenex debug chat <agent-name>"));
-            console.log(chalk.gray("Example: tenex debug chat code\n"));
-            process.exit(0);
+                return {
+                    name: `${name} - ${chalk.gray(role)}`,
+                    value: name,
+                    short: name
+                };
+            });
+
+            console.log(chalk.cyan("\n✨ Select an agent for debug chat:\n"));
+            
+            const { selectedAgent } = await inquirer.prompt([
+                {
+                    type: "list",
+                    name: "selectedAgent",
+                    message: "Choose an agent:",
+                    choices: agentChoices,
+                    loop: false
+                }
+            ]);
+            
+            agentName = selectedAgent;
+            logInfo(`Selected agent: ${chalk.yellow(agentName)}`);
         }
 
         // Check if specified agent exists
-        if (!agentsJson[agentName]) {
+        if (!agentName || !agentsJson[agentName]) {
             logError(`Agent '${agentName}' not found in project configuration.`);
             console.log(chalk.gray("\nAvailable agents:"));
             for (const name of availableAgents) {
@@ -98,17 +167,102 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
 
         // Load configuration for LLM
         const configuration = await configurationService.loadConfiguration(projectPath);
-        const defaultLLMName = configuration.llms?.defaults?.agents || "default";
-        const llmConfig = configurationService.resolveConfigReference(
-            configuration.llms,
-            defaultLLMName
-        );
-
-        if (!llmConfig) {
-            throw new Error("No LLM configuration found");
+        
+        // Handle LLM configuration selection
+        let selectedLLMConfig: any;
+        
+        if (options.llm === true) {
+            // User provided --llm flag without value, show interactive selection
+            const availableConfigs = Object.keys(configuration.llms.configurations);
+            
+            if (availableConfigs.length === 0) {
+                logError("No LLM configurations found in project.");
+                process.exit(1);
+            }
+            
+            // Create choices for inquirer
+            const llmChoices = availableConfigs.map(configName => {
+                const config = configuration.llms.configurations[configName];
+                const isDefault = configuration.llms.defaults.default === configName;
+                const isAgentDefault = agentName ? configuration.llms.defaults[agentName] === configName : false;
+                const agentDefault = Object.entries(configuration.llms.defaults)
+                    .filter(([agent, llm]) => agent !== "default" && llm === configName)
+                    .map(([agent]) => agent);
+                
+                let name = `${configName} (${config?.provider}/${config?.model})`;
+                if (isAgentDefault) {
+                    name += chalk.green(` [default for ${agentName}]`);
+                } else if (isDefault) {
+                    name += chalk.green(" [global default]");
+                }
+                if (agentDefault.length > 0 && !isAgentDefault) {
+                    name += chalk.gray(` [default for: ${agentDefault.join(", ")}]`);
+                }
+                
+                return {
+                    name,
+                    value: configName,
+                    short: configName
+                };
+            });
+            
+            console.log(chalk.cyan("\n✨ Select LLM configuration:\n"));
+            
+            const { selectedLLM } = await inquirer.prompt([
+                {
+                    type: "list",
+                    name: "selectedLLM",
+                    message: "Choose an LLM configuration:",
+                    choices: llmChoices,
+                    loop: false
+                }
+            ]);
+            
+            selectedLLMConfig = configurationService.resolveConfigReference(
+                configuration.llms,
+                selectedLLM
+            );
+            
+            logInfo(`📡 Using LLM configuration: ${chalk.yellow(selectedLLM)}`);
+        } else if (typeof options.llm === "string") {
+            // User provided a specific LLM configuration name
+            selectedLLMConfig = configurationService.resolveConfigReference(
+                configuration.llms,
+                options.llm
+            );
+            
+            if (!selectedLLMConfig) {
+                logError(`LLM configuration '${options.llm}' not found.`);
+                console.log(chalk.gray("\nAvailable configurations:"));
+                for (const name of Object.keys(configuration.llms.configurations)) {
+                    console.log(chalk.yellow(`  - ${name}`));
+                }
+                process.exit(1);
+            }
+            
+            logInfo(`📡 Using LLM configuration: ${chalk.yellow(options.llm)}`);
+        } else {
+            // No --llm flag provided, use default for the agent
+            const agentDefaultName = (agentName && configuration.llms?.defaults?.[agentName]) || 
+                                   configuration.llms?.defaults?.default || 
+                                   "default";
+            selectedLLMConfig = configurationService.resolveConfigReference(
+                configuration.llms,
+                agentDefaultName
+            );
+            
+            if (!selectedLLMConfig) {
+                throw new Error("No LLM configuration found");
+            }
         }
+        
+        const llmConfig = selectedLLMConfig;
 
         // Create agent config
+        if (!agentName) {
+            throw new Error("No agent selected");
+        }
+        
         const agentData = agentsJson[agentName];
         let role = `${agentName} specialist`;
         let instructions = `You are the ${agentName} agent for this project.`;
@@ -175,6 +329,7 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
         logInfo(chalk.cyan(`Chat with: ${chalk.bold(agentName)}`));
         logInfo(chalk.cyan(`Project: ${projectInfo.title}`));
         logInfo(chalk.cyan(`Role: ${role}`));
+        logInfo(chalk.cyan(`LLM: ${llmConfig.provider}/${llmConfig.model}`));
         logInfo(chalk.cyan("═══════════════════════════════════════════════════════════════\n"));
 
         // Create a debug conversation ID
@@ -182,7 +337,7 @@ export async function runDebugChat(agentName: string | undefined, options: Debug
 
         // Create a simple publisher that logs responses
         const debugPublisher: NostrPublisher = {
-            publishResponse: async (response, _context, _agentSigner) => {
+            publishResponse: async (response, _context, _agentSigner, _agentName) => {
                 // Display the agent's response
                 logInfo(chalk.green(`\n[${agentName}]: `) + response.content);
                 if (response.signal) {
@@ -273,16 +428,8 @@ async function sendDebugMessage(
             agent.setActiveSpeaker(true);
             await agent.initialize();
 
-            // Generate and display response
-            const response = await agent.generateResponse(debugEvent, context);
-            logInfo(chalk.green(`\n[${agent.getName()}]: `) + response.content);
-            if (response.signal) {
-                logInfo(
-                    chalk.gray(
-                        `Signal: ${response.signal.type}${response.signal.reason ? ` - ${response.signal.reason}` : ""}`
-                    )
-                );
-            }
+            // Use handleEvent instead of generateResponse to ensure tools are executed
+            await agent.handleEvent(debugEvent, context);
         }
     } catch (error) {
         logError(`Failed to send message: ${formatError(error)}`);

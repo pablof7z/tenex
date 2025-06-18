@@ -1,5 +1,5 @@
 import type { LLMConfig } from "@/utils/agents/types";
-import type { NDKEvent, NDKSigner } from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKSigner, NDKProject } from "@nostr-dev-kit/ndk";
 
 // Re-export LLMConfig from existing system
 export type { LLMConfig } from "@/utils/agents/types";
@@ -34,12 +34,20 @@ export interface LLMMetadata {
     confidence?: number;
     systemPrompt?: string;
     userPrompt?: string;
+    rawResponse?: string;
+    isToolResult?: boolean;
+    isPartial?: boolean;
+    chunkIndex?: number;
 }
 
 export interface AgentResponse {
     content: string;
     signal?: ConversationSignal;
     metadata?: LLMMetadata;
+    // Tool-related properties
+    toolCalls?: any[];
+    hasNativeToolCalls?: boolean;
+    tool_calls?: any[];
 }
 
 export interface ConversationSignal {
@@ -54,7 +62,7 @@ export interface ConversationSignal {
 
 export interface Team {
     id: string;
-    conversationId: string;
+    rootEventId: string;
     lead: string;
     members: string[];
     plan: ConversationPlan;
@@ -110,8 +118,15 @@ export interface CompletionRequest {
     temperature?: number;
     context?: {
         agentName: string;
-        conversationId: string;
+        rootEventId: string;
         eventId?: string;
+        originalEvent?: NDKEvent;
+        projectId?: string;
+        projectEvent?: NDKEvent;
+        ndk?: any;
+        agent?: any;
+        immediateResponse?: boolean;
+        typingIndicator?: (content: string) => Promise<void>;
     };
 }
 
@@ -129,6 +144,10 @@ export interface CompletionResponse {
         cacheReadTokens?: number;
         cost?: number;
     };
+    // Tool-related properties
+    toolCalls?: any[];
+    hasNativeToolCalls?: boolean;
+    tool_calls?: any[];
 }
 
 export interface Message {
@@ -140,11 +159,26 @@ export interface Message {
 // Event & Publishing Types
 // ============================================================================
 
+export interface SpecSummary {
+    title: string;
+    summary: string;
+    dTag: string;
+}
+
+export interface AgentSummary {
+    name: string;
+    role: string;
+    description: string;
+}
+
 export interface EventContext {
-    conversationId: string;
+    rootEventId: string;
     projectId: string;
     originalEvent: NDKEvent;
-    projectEvent?: NDKEvent;
+    projectEvent: NDKProject;  // REQUIRED - critical for system functioning
+    availableSpecs?: SpecSummary[];
+    availableAgents?: AgentSummary[];
+    eventId?: string;
 }
 
 export interface TypingIndicator {
@@ -157,7 +191,8 @@ export interface NostrPublisher {
     publishResponse(
         response: AgentResponse,
         context: EventContext,
-        agentSigner: NDKSigner
+        agentSigner: NDKSigner,
+        agentName?: string
     ): Promise<void>;
     publishTypingIndicator(
         agentName: string,
@@ -170,6 +205,14 @@ export interface NostrPublisher {
         },
         signer?: NDKSigner
     ): Promise<void>;
+    publishResponseUpdate?(
+        originalEventId: string,
+        updatedContent: string,
+        context: EventContext,
+        agentSigner: NDKSigner,
+        agentName?: string
+    ): Promise<void>;
+    clearPartialTracking?(rootEventId: string, agentName?: string): void;
 }
 
 // ============================================================================
@@ -177,10 +220,10 @@ export interface NostrPublisher {
 // ============================================================================
 
 export interface ConversationStore {
-    saveTeam(conversationId: string, team: Team): Promise<void>;
-    getTeam(conversationId: string): Promise<Team | null>;
-    appendMessage(conversationId: string, message: ConversationMessage): Promise<void>;
-    getMessages(conversationId: string): Promise<ConversationMessage[]>;
+    saveTeam(rootEventId: string, team: Team): Promise<void>;
+    getTeam(rootEventId: string): Promise<Team | null>;
+    appendMessage(rootEventId: string, message: ConversationMessage): Promise<void>;
+    getMessages(rootEventId: string): Promise<ConversationMessage[]>;
 }
 
 export interface ConversationMessage {
@@ -189,6 +232,11 @@ export interface ConversationMessage {
     content: string;
     timestamp: number;
     signal?: ConversationSignal;
+    metadata?: {
+        wasStreamed?: boolean;
+        chunks?: number;
+        [key: string]: any;
+    };
 }
 
 // ============================================================================

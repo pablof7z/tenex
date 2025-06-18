@@ -5,6 +5,8 @@ import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
 import type { LLMConfig } from "@/utils/agents/types";
 import type { NDKSigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
+
+const llmLogger = logger.forModule("llm");
 import { LLMError } from "../core/errors";
 import type {
     CompletionRequest,
@@ -52,6 +54,7 @@ export class LLMProviderAdapter implements ILLMProvider {
                 projectEvent: context.projectEvent,
                 agentName: context.agentName,
                 conversationId: context.conversationId,
+                agent: context.agent,
             } : undefined;
 
             // Use existing provider
@@ -65,7 +68,7 @@ export class LLMProviderAdapter implements ILLMProvider {
                 llmContext
             );
 
-            // Convert response format
+            // Convert response format, preserving tool-related properties
             return {
                 content: response.content,
                 model: response.model,
@@ -79,9 +82,13 @@ export class LLMProviderAdapter implements ILLMProvider {
                           cost: response.usage.cost,
                       }
                     : undefined,
+                // Preserve tool-related properties if they exist
+                ...(response.toolCalls && { toolCalls: response.toolCalls }),
+                ...(response.hasNativeToolCalls && { hasNativeToolCalls: response.hasNativeToolCalls }),
+                ...(response.tool_calls && { tool_calls: response.tool_calls }),
             };
         } catch (error) {
-            logger.error("LLM provider error:", error);
+            llmLogger.error("LLM provider error:", error);
             throw new LLMError(
                 `LLM completion failed: ${error instanceof Error ? error.message : "Unknown error"}`,
                 { provider: this.config.provider, model: this.config.model }
@@ -115,7 +122,7 @@ export function enhanceWithTypingIndicators(
     // Extract the underlying provider from the adapter
     const baseProvider = (provider as any).provider as ExistingLLMProvider;
     if (!baseProvider) {
-        logger.warn("Could not enhance provider with typing indicators - provider structure not recognized");
+        llmLogger.warning("Could not enhance provider with typing indicators - provider structure not recognized");
         return provider;
     }
     

@@ -1,5 +1,7 @@
 import type { NDKSigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
+
+const llmLogger = logger.forModule("llm");
 import type { EventContext, NostrPublisher } from "../agents/core/types";
 import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } from "./types";
 import type { LLMConfig } from "@/utils/agents/types";
@@ -49,7 +51,7 @@ export class TypingAwareLLMProvider implements LLMProvider {
                 );
             } catch (error) {
                 // Don't fail the LLM call if typing indicator fails
-                logger.error(`Failed to publish typing start indicator: ${error}`);
+                llmLogger.debug(`Failed to publish typing start indicator: ${error}`, "verbose");
             }
         }
 
@@ -57,6 +59,7 @@ export class TypingAwareLLMProvider implements LLMProvider {
             // Call the underlying LLM provider
             const response = await this.baseProvider.generateResponse(messages, config, context, tools);
             
+            // Preserve all properties from the response (including toolCalls, hasNativeToolCalls, etc.)
             return response;
         } finally {
             // Always publish typing stop indicator if we published start
@@ -71,7 +74,7 @@ export class TypingAwareLLMProvider implements LLMProvider {
                     );
                 } catch (error) {
                     // Don't fail if typing stop fails
-                    logger.error(`Failed to publish typing stop indicator: ${error}`);
+                    llmLogger.debug(`Failed to publish typing stop indicator: ${error}`, "verbose");
                 }
             }
         }
