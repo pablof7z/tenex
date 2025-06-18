@@ -2,11 +2,11 @@
  * Team lead system prompt for managing team conversations
  */
 export const TEAM_LEAD_PROMPT = (
-    name: string, 
-    role: string, 
-    instructions: string, 
-    teamInfo: string, 
-    stageInfo: string
+  name: string,
+  role: string,
+  instructions: string,
+  teamInfo: string,
+  stageInfo: string
 ) => `You are ${name}, ${role}.
 
 Instructions: ${instructions}

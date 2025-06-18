@@ -1,10 +1,11 @@
 import type { NDKArticle, NDKProject } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, Calendar, Clock, Edit3, Hash } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Copy, Edit3, Hash } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { toast } from "sonner";
 
 interface DocumentationViewProps {
     project: NDKProject;
@@ -35,6 +36,16 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
         return `${minutes} min read`;
     };
 
+    const handleCopySpecEncoding = async () => {
+        try {
+            const encoded = article.encode();
+            await navigator.clipboard.writeText(encoded);
+            toast.success("Spec encoding copied to clipboard");
+        } catch (error) {
+            toast.error("Failed to copy spec encoding");
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-background">
             {/* Header */}
@@ -55,13 +66,25 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                             </h1>
                         </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="w-8 h-8 sm:w-9 sm:h-9 text-foreground hover:bg-accent"
-                    >
-                        <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleCopySpecEncoding}
+                            className="w-8 h-8 sm:w-9 sm:h-9 text-foreground hover:bg-accent"
+                            title="Copy spec encoding"
+                        >
+                            <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 sm:w-9 sm:h-9 text-foreground hover:bg-accent"
+                            title="Edit document"
+                        >
+                            <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -168,16 +191,21 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                                                     </code>
                                                 );
                                             }
+                                            // Block code (inside pre) - no background
                                             return (
                                                 <code
-                                                    className="block bg-muted p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4"
+                                                    className={`font-mono text-sm ${className || ''}`}
                                                     {...props}
                                                 >
                                                     {children}
                                                 </code>
                                             );
                                         },
-                                        pre: ({ children }) => <>{children}</>,
+                                        pre: ({ children }) => (
+                                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4 whitespace-pre">
+                                                {children}
+                                            </pre>
+                                        ),
                                         blockquote: ({ children }) => (
                                             <blockquote className="border-l-4 border-muted-foreground/30 pl-4 italic mb-4">
                                                 {children}

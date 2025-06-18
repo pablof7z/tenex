@@ -441,7 +441,7 @@ All errors include rich context for debugging:
 const errorContext = {
     agent: context.agentName,
     project: context.projectName,
-    conversation: context.conversationId,
+    conversation: context.rootEventId,
     model: this.defaultModel,
     timestamp: new Date().toISOString(),
     requestId: generateRequestId()

@@ -10,6 +10,7 @@ describe("NostrPublisher", () => {
     let mockEvent: NDKEvent;
     let agentSigner: NDKPrivateKeySigner;
     let agentPubkey: string;
+    let mockProjectEvent: any;
 
     beforeEach(async () => {
         ndk = new NDK();
@@ -38,7 +39,15 @@ describe("NostrPublisher", () => {
             ];
             replyEvent.sign = vi.fn().mockResolvedValue(undefined);
             replyEvent.publish = vi.fn().mockResolvedValue(undefined);
+            replyEvent.tag = vi.fn(); // Mock the tag method
             return replyEvent;
+        });
+
+        // Create mock project event
+        mockProjectEvent = new NDKEvent(ndk, {
+            kind: 31933,
+            tags: [],
+            pubkey: "project-pubkey"
         });
     });
 
@@ -49,9 +58,10 @@ describe("NostrPublisher", () => {
             };
 
             const context: EventContext = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: mockEvent,
+                projectEvent: mockProjectEvent,
             };
 
             const replyEvent = mockEvent.reply();
@@ -80,15 +90,17 @@ describe("NostrPublisher", () => {
             };
 
             const context: EventContext = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: mockEvent,
+                projectEvent: mockProjectEvent,
             };
 
             const replyEvent = mockEvent.reply();
             // Add some other tags
             replyEvent.tags.push(["t", "test"]);
             replyEvent.tags.push(["custom", "value"]);
+            replyEvent.tag = vi.fn(); // Mock the tag method
 
             mockEvent.reply = vi.fn().mockReturnValue(replyEvent);
 
@@ -107,9 +119,10 @@ describe("NostrPublisher", () => {
             };
 
             const context: EventContext = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: mockEvent,
+                projectEvent: mockProjectEvent,
             };
 
             // Create reply without agent's p-tag
@@ -122,6 +135,7 @@ describe("NostrPublisher", () => {
             ];
             replyEvent.sign = vi.fn().mockResolvedValue(undefined);
             replyEvent.publish = vi.fn().mockResolvedValue(undefined);
+            replyEvent.tag = vi.fn(); // Mock the tag method
 
             mockEvent.reply = vi.fn().mockReturnValue(replyEvent);
 

@@ -6,7 +6,7 @@
  */
 
 export interface TypingIndicatorContent {
-    conversationId?: string;
+    rootEventId?: string;
     taskId?: string;
     systemPrompt?: string;
     userPrompt?: string;
@@ -14,7 +14,7 @@ export interface TypingIndicatorContent {
 }
 
 export interface ChatMetadata {
-    conversationId?: string;
+    rootEventId?: string;
     taskId?: string;
     parentId?: string;
     rootId?: string;

@@ -6,132 +6,130 @@ import type { UnifiedLLMConfig } from "@tenex/types/config";
 import chalk from "chalk";
 
 export class ProjectDisplay {
-    async displayProjectInfo(projectInfo: ProjectRuntimeInfo): Promise<void> {
-        this.displayBasicInfo(projectInfo);
-        await this.displayAgentConfigurations(
-            projectInfo.projectEvent,
-            projectInfo.projectPath,
-            projectInfo.agents
-        );
-        this.displayLLMSettings(projectInfo.llmConfig);
-        // Note: Documentation display moved to after subscription EOSE
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+  async displayProjectInfo(projectInfo: ProjectRuntimeInfo): Promise<void> {
+    this.displayBasicInfo(projectInfo);
+    await this.displayAgentConfigurations(
+      projectInfo.projectEvent,
+      projectInfo.projectPath,
+      projectInfo.agents
+    );
+    this.displayLLMSettings(projectInfo.llmConfig);
+    // Note: Documentation display moved to after subscription EOSE
+    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+  }
+
+  private displayBasicInfo(projectInfo: ProjectRuntimeInfo): void {
+    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    logInfo(chalk.cyan("📦 Project Information"));
+    logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    logInfo(chalk.gray("Title:      ") + chalk.white(projectInfo.title));
+    logInfo(chalk.gray("Repository: ") + chalk.white(projectInfo.repository));
+    logInfo(chalk.gray("Path:       ") + chalk.white(projectInfo.projectPath));
+    if (projectInfo.projectEvent.id) {
+      logInfo(
+        chalk.gray("Event ID:   ") +
+          chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`)
+      );
+    }
+  }
+
+  private async displayAgentConfigurations(
+    _projectEvent: NDKEvent,
+    _projectPath: string,
+    agents: Map<string, Agent>
+  ): Promise<void> {
+    if (agents.size === 0) {
+      logInfo(chalk.yellow("No agent configurations found for this project."));
+      return;
     }
 
-    private displayBasicInfo(projectInfo: ProjectRuntimeInfo): void {
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.cyan("📦 Project Information"));
-        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.gray("Title:      ") + chalk.white(projectInfo.title));
-        logInfo(chalk.gray("Repository: ") + chalk.white(projectInfo.repository));
-        logInfo(chalk.gray("Path:       ") + chalk.white(projectInfo.projectPath));
-        if (projectInfo.projectEvent.id) {
-            logInfo(
-                chalk.gray("Event ID:   ") +
-                    chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`)
-            );
-        }
+    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    logInfo(chalk.cyan("🤖 Agent Configurations"));
+    logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+
+    for (const [, agent] of agents) {
+      this.displayAgent(agent.eventId, agents);
+    }
+  }
+
+  private displayAgent(eventId: string, agents: Map<string, Agent>): void {
+    // Find agent by eventId
+    const agentEntry = Array.from(agents.entries()).find(([, agent]) => agent.eventId === eventId);
+
+    if (!agentEntry) {
+      logInfo(chalk.red(`No agent instance found for event: ${eventId}`));
+      return;
     }
 
-    private async displayAgentConfigurations(
-        _projectEvent: NDKEvent,
-        _projectPath: string,
-        agents: Map<string, Agent>
-    ): Promise<void> {
-        if (agents.size === 0) {
-            logInfo(chalk.yellow("No agent configurations found for this project."));
-            return;
-        }
+    const [_agentKey, agent] = agentEntry;
 
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.cyan("🤖 Agent Configurations"));
-        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    // Display agent information with instance pubkey
+    logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
+    logInfo(chalk.gray("Description: ") + chalk.white(agent.description));
+    if (agent.role) {
+      logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
+    }
+    logInfo(chalk.gray("Pubkey:      ") + chalk.white(agent.pubkey));
+    logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
+  }
 
-        for (const [, agent] of agents) {
-            this.displayAgent(agent.eventId, agents);
-        }
+  private displayLLMSettings(llmConfig: UnifiedLLMConfig): void {
+    const configurations = llmConfig?.configurations || {};
+    const defaults = llmConfig?.defaults || {};
+    const defaultConfig = defaults.default;
+
+    const configNames = Object.keys(configurations);
+
+    if (configNames.length === 0) {
+      // Don't show the header if there are no configs
+      return;
     }
 
-    private displayAgent(eventId: string, agents: Map<string, Agent>): void {
-        // Find agent by eventId
-        const agentEntry = Array.from(agents.entries()).find(
-            ([, agent]) => agent.eventId === eventId
-        );
+    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    logInfo(chalk.cyan("🤖 Available LLM Configurations"));
+    logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-        if (!agentEntry) {
-            logInfo(chalk.red(`No agent instance found for event: ${eventId}`));
-            return;
-        }
+    for (const name of configNames) {
+      const config = configurations[name];
+      if (typeof config !== "object" || !config) continue;
 
-        const [_agentKey, agent] = agentEntry;
+      const isDefault = name === defaultConfig;
+      logInfo(
+        chalk.gray("\nName:       ") +
+          chalk.yellow(name) +
+          (isDefault ? chalk.green(" (default)") : "")
+      );
+      logInfo(chalk.gray("Provider:   ") + chalk.white(config.provider));
+      logInfo(chalk.gray("Model:      ") + chalk.white(config.model));
+      if (config.baseURL) {
+        logInfo(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
+      }
+    }
+  }
 
-        // Display agent information with instance pubkey
-        logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
-        logInfo(chalk.gray("Description: ") + chalk.white(agent.description));
-        if (agent.role) {
-            logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
-        }
-        logInfo(chalk.gray("Pubkey:      ") + chalk.white(agent.pubkey));
-        logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
+  private async displaySpecificationDocuments(projectInfo: ProjectRuntimeInfo): Promise<void> {
+    const specs = projectInfo.specCache.getAllSpecMetadata();
+
+    if (specs.length === 0) {
+      return;
     }
 
-    private displayLLMSettings(llmConfig: UnifiedLLMConfig): void {
-        const configurations = llmConfig?.configurations || {};
-        const defaults = llmConfig?.defaults || {};
-        const defaultConfig = defaults.default;
+    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    logInfo(chalk.cyan("📋 Living Documentation (NDKArticle Events)"));
+    logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
-        const configNames = Object.keys(configurations);
-
-        if (configNames.length === 0) {
-            // Don't show the header if there are no configs
-            return;
-        }
-
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.cyan("🤖 Available LLM Configurations"));
-        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-
-        for (const name of configNames) {
-            const config = configurations[name];
-            if (typeof config !== "object" || !config) continue;
-
-            const isDefault = name === defaultConfig;
-            logInfo(
-                chalk.gray("\nName:       ") +
-                    chalk.yellow(name) +
-                    (isDefault ? chalk.green(" (default)") : "")
-            );
-            logInfo(chalk.gray("Provider:   ") + chalk.white(config.provider));
-            logInfo(chalk.gray("Model:      ") + chalk.white(config.model));
-            if (config.baseURL) {
-                logInfo(chalk.gray("Base URL:   ") + chalk.white(config.baseURL));
-            }
-        }
+    for (const spec of specs) {
+      const lastUpdated = new Date(spec.updatedAt * 1000).toLocaleDateString();
+      logInfo(chalk.gray("\nDocument:    ") + chalk.yellow(spec.id));
+      logInfo(chalk.gray("Title:       ") + chalk.white(spec.title));
+      logInfo(chalk.gray("Last Updated:") + chalk.white(lastUpdated));
+      if (spec.summary) {
+        logInfo(chalk.gray("Summary:     ") + chalk.white(spec.summary));
+      }
     }
+  }
 
-    private async displaySpecificationDocuments(projectInfo: ProjectRuntimeInfo): Promise<void> {
-        const specs = projectInfo.specCache.getAllSpecMetadata();
-
-        if (specs.length === 0) {
-            return;
-        }
-
-        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        logInfo(chalk.cyan("📋 Living Documentation (NDKArticle Events)"));
-        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-
-        for (const spec of specs) {
-            const lastUpdated = new Date(spec.updatedAt * 1000).toLocaleDateString();
-            logInfo(chalk.gray("\nDocument:    ") + chalk.yellow(spec.id));
-            logInfo(chalk.gray("Title:       ") + chalk.white(spec.title));
-            logInfo(chalk.gray("Last Updated:") + chalk.white(lastUpdated));
-            if (spec.summary) {
-                logInfo(chalk.gray("Summary:     ") + chalk.white(spec.summary));
-            }
-        }
-    }
-
-    async displayAllDocumentation(projectInfo: ProjectRuntimeInfo): Promise<void> {
-        await this.displaySpecificationDocuments(projectInfo);
-    }
+  async displayAllDocumentation(projectInfo: ProjectRuntimeInfo): Promise<void> {
+    await this.displaySpecificationDocuments(projectInfo);
+  }
 }

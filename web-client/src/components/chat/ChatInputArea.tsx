@@ -1,4 +1,4 @@
-import { AtSign, Send } from "lucide-react";
+import { AtSign, Mic, Send } from "lucide-react";
 import { forwardRef } from "react";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
 import { Button } from "../ui/button";
@@ -15,6 +15,7 @@ interface ChatInputAreaProps {
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     onSendMessage: () => void;
     onSelectAgent: (agent: ProjectAgent) => void;
+    onVoiceRecord?: () => void;
 }
 
 // Agent mention dropdown component
@@ -64,6 +65,7 @@ export const ChatInputArea = forwardRef<HTMLTextAreaElement, ChatInputAreaProps>
             onKeyDown,
             onSendMessage,
             onSelectAgent,
+            onVoiceRecord,
         },
         ref
     ) => {
@@ -91,6 +93,17 @@ export const ChatInputArea = forwardRef<HTMLTextAreaElement, ChatInputAreaProps>
                             />
                         )}
                     </div>
+                    {onVoiceRecord && (
+                        <Button
+                            onClick={onVoiceRecord}
+                            variant="ghost"
+                            size="sm"
+                            className="px-3 py-2 h-10"
+                            title="Record voice message"
+                        >
+                            <Mic className="w-4 h-4" />
+                        </Button>
+                    )}
                     <Button
                         onClick={onSendMessage}
                         disabled={!messageInput.trim() || isSending}

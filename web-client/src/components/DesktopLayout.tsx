@@ -1,6 +1,7 @@
 import {
     type NDKArticle,
     type NDKEvent,
+    type NDKTask,
     NDKProject,
     useNDKCurrentUser,
 } from "@nostr-dev-kit/ndk-hooks";
@@ -26,10 +27,6 @@ export function DesktopLayout() {
     const currentUser = useNDKCurrentUser();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
-    const [showOptionsDialog, setShowOptionsDialog] = useState(false);
-    const [showVoiceDialog, setShowVoiceDialog] = useState(false);
-    const [showThreadDialog, setShowThreadDialog] = useState(false);
-    const [selectedProjectForTask, setSelectedProjectForTask] = useState<NDKProject | null>(null);
     const [manuallyToggled, setManuallyToggled] = useState<Map<string, boolean>>(new Map());
     const [selectedTask, setSelectedTask] = useAtom(selectedTaskAtom);
     const [selectedThread, setSelectedThread] = useAtom(selectedThreadAtom);
@@ -80,20 +77,19 @@ export function DesktopLayout() {
     };
 
     const handleCreateAction = (project: NDKProject) => {
-        setSelectedProjectForTask(project);
-        setShowOptionsDialog(true);
-    };
+        // Directly create a new thread without title/agents - will be auto-generated
+        const tempThread = {
+            id: "new",
+            content: "",
+            tags: [
+                ["title", ""], // Empty title - will be generated when user types
+                ["a", project.tagId()],
+            ],
+            selectedAgents: [], // No pre-selected agents
+        } as unknown as NDKEvent & { selectedAgents?: ProjectAgent[] };
 
-    const handleOptionSelect = (option: "voice" | "thread") => {
-        setShowOptionsDialog(false);
-        switch (option) {
-            case "voice":
-                setShowVoiceDialog(true);
-                break;
-            case "thread":
-                setShowThreadDialog(true);
-                break;
-        }
+        // Set the thread as selected to open in drawer
+        setSelectedThread(tempThread);
     };
 
     if (!currentUser) {
@@ -134,35 +130,8 @@ export function DesktopLayout() {
             <LayoutDialogs
                 showCreateDialog={showCreateDialog}
                 showSearchDialog={showSearchDialog}
-                showOptionsDialog={showOptionsDialog}
-                showVoiceDialog={showVoiceDialog}
-                showThreadDialog={showThreadDialog}
-                selectedProjectForTask={selectedProjectForTask}
                 onCreateDialogChange={setShowCreateDialog}
                 onSearchDialogChange={setShowSearchDialog}
-                onOptionsDialogChange={setShowOptionsDialog}
-                onVoiceDialogChange={setShowVoiceDialog}
-                onThreadDialogChange={setShowThreadDialog}
-                onOptionSelect={handleOptionSelect}
-                onThreadStart={(title, selectedAgents) => {
-                    setShowThreadDialog(false);
-
-                    // Create a temporary thread object to open the chat interface
-                    // No event is published yet - that happens when the first message is sent
-                    const tempThread = {
-                        id: "new",
-                        content: "",
-                        tags: [
-                            ["title", title],
-                            ["a", selectedProjectForTask?.tagId() || ""],
-                        ],
-                        selectedAgents, // Store agents temporarily on the object
-                    } as NDKEvent & { selectedAgents?: ProjectAgent[] };
-
-                    // Set the thread as selected to open in drawer
-                    setSelectedThread(tempThread);
-                    setSelectedProjectForTask(null);
-                }}
             />
 
             {/* Drawers */}
@@ -177,7 +146,7 @@ export function DesktopLayout() {
                 onArticleClose={() => setSelectedArticle(null)}
                 onTaskSelect={(_, taskId) => {
                     // Task will be fetched by the drawer component itself
-                    setSelectedTask({ id: taskId } as any);
+                    setSelectedTask({ id: taskId } as NDKTask);
                 }}
                 onEditProject={goToProjectSettings}
                 onThreadStart={(project, threadTitle, selectedAgents) => {
@@ -198,7 +167,7 @@ export function DesktopLayout() {
                 }}
                 onThreadSelect={(_, threadId) => {
                     // Thread will be fetched by the drawer component itself
-                    setSelectedThread({ id: threadId } as any);
+                    setSelectedThread({ id: threadId } as NDKEvent);
                 }}
                 onArticleSelect={(_, article) => {
                     setSelectedArticle(article);

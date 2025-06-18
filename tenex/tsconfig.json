@@ -1,21 +1,21 @@
 {
-    "extends": "../tsconfig.base.json",
-    "compilerOptions": {
-        "allowImportingTsExtensions": true,
-        "noEmit": true,
-        "rootDir": "..",
-        "outDir": "./dist",
-        "baseUrl": ".",
-        "paths": {
-            "@/*": ["./src/*"],
-            "@tenex/types": ["../packages/types/src/index.ts"],
-            "@tenex/types/*": ["../packages/types/src/*"],
-            "@tenex/shared": ["../shared/src/index.ts"],
-            "@tenex/shared/*": ["../shared/src/*"]
-        },
-        "noUnusedLocals": false,
-        "noUnusedParameters": false
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "rootDir": "..",
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@tenex/types": ["../packages/types/src/index.ts"],
+      "@tenex/types/*": ["../packages/types/src/*"],
+      "@tenex/shared": ["../shared/src/index.ts"],
+      "@tenex/shared/*": ["../shared/src/*"]
     },
-    "include": ["src/**/*", "bin/**/*"],
-    "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src/**/*", "bin/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

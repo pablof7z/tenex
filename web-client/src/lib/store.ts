@@ -86,7 +86,7 @@ export const toggleThemeAtom = atom(null, (get, set) => {
     }
 });
 
-// Thread/conversation drafts - Map<conversationId, draftText>
-// For threads: conversationId is the thread event ID (or 'new-{threadTitle}' for new threads)
-// For tasks: conversationId is the task ID
+// Thread/conversation drafts - Map<rootEventId, draftText>
+// For threads: rootEventId is the thread event ID (or 'new-{threadTitle}' for new threads)
+// For tasks: rootEventId is the task ID
 export const messageDraftsAtom = atom<Map<string, string>>(new Map());

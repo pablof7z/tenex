@@ -46,6 +46,11 @@ The system features living documentation, agent learning, rich communication, an
 
 **For the complete system architecture, see `/SPEC.md` and `/SYSTEM_MAP.md`**
 
+**For detailed technical specifications of core systems within `tenex/`, see:**
+- `/tenex/docs/AGENT_SYSTEM_TECHNICAL_SPEC.md` - Multi-agent orchestration, team coordination, and conversation management
+- `/tenex/docs/LLM_PROVIDER_SYSTEM_TECHNICAL_SPEC.md` - LLM provider abstraction, caching, and integrations
+- `/tenex/docs/TOOL_SYSTEM_TECHNICAL_SPEC.md` - Extensible tool framework and agent capabilities
+
 ## Common Development Commands
 
 ### Web Client Development

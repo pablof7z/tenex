@@ -65,7 +65,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
             );
         },
         pre({ children }) {
-            return <div className="my-2 overflow-x-auto font-mono">{children}</div>;
+            return <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4 whitespace-pre">{children}</pre>;
         },
         ul({ children }) {
             return <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>;
@@ -197,6 +197,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
             "llm-cost-usd",
             "llm-system-prompt",
             "llm-user-prompt",
+            "llm-raw-response",
         ];
 
         for (const tag of llmTags) {

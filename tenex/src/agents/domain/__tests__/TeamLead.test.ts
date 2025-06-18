@@ -40,7 +40,7 @@ describe("TeamLead Turn-Based Speaking", () => {
         ndk = new NDK();
 
         // Create team with stages
-        team = new Team("team-1", "conv-1", "lead", ["lead", "agent1", "agent2"], {
+        team = new Team("team-1", "root-event-1", "lead", ["lead", "agent1", "agent2"], {
             stages: [
                 {
                     participants: ["lead", "agent1"],
@@ -110,7 +110,7 @@ describe("TeamLead Turn-Based Speaking", () => {
             userEvent.pubkey = "user-pubkey";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "root-event-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };
@@ -128,7 +128,7 @@ describe("TeamLead Turn-Based Speaking", () => {
             agentEvent.pubkey = "agent1-pubkey";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "root-event-1",
                 projectId: "proj-1",
                 originalEvent: agentEvent,
             };
@@ -170,7 +170,7 @@ describe("TeamLead Turn-Based Speaking", () => {
             userEvent.pubkey = "user-pubkey";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "root-event-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };
@@ -194,7 +194,7 @@ describe("TeamLead Turn-Based Speaking", () => {
                 .then((u) => u.pubkey);
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "root-event-1",
                 projectId: "proj-1",
                 originalEvent: ownEvent,
             };
@@ -234,7 +234,7 @@ describe("TeamLead Turn-Based Speaking", () => {
             userEvent.pubkey = "user-pubkey";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "root-event-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };

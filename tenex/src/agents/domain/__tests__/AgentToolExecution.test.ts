@@ -78,7 +78,7 @@ describe("Agent Tool Execution", () => {
             userEvent.id = "user-event-id";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };
@@ -113,7 +113,7 @@ describe("Agent Tool Execution", () => {
             userEvent.id = "user-event-id";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };
@@ -143,7 +143,7 @@ describe("Agent Tool Execution", () => {
             userEvent.id = "test-id";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };

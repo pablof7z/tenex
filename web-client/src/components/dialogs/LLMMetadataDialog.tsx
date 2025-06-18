@@ -335,6 +335,26 @@ export function LLMMetadataDialog({ open, onOpenChange, metadata }: LLMMetadataD
                                 </div>
                             </>
                         )}
+
+                        {/* Raw Response */}
+                        {metadata["llm-raw-response"] && (
+                            <>
+                                <Separator />
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                                        <MessageSquare className="w-4 h-4" />
+                                        Raw LLM Response
+                                    </h3>
+                                    <div className="space-y-4 ml-6">
+                                        {renderPromptSection(
+                                            "Raw Response",
+                                            metadata["llm-raw-response"],
+                                            "raw-response"
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </ScrollArea>
             </DialogContent>

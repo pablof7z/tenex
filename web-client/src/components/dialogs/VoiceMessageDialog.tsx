@@ -2,6 +2,7 @@ import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { Loader2, Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useLLMConfig } from "../../hooks/useLLMConfig";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
@@ -19,6 +20,7 @@ export function VoiceMessageDialog({
     onMessageSent,
 }: VoiceMessageDialogProps) {
     const { ndk } = useNDK();
+    const { getSpeechConfig } = useLLMConfig();
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -109,27 +111,44 @@ export function VoiceMessageDialog({
     };
 
     const transcribeAudio = async (audioBlob: Blob) => {
-        const openaiApiKey = localStorage.getItem("openaiApiKey");
-        if (!openaiApiKey) {
-            alert("Please set your OpenAI API key in settings first.");
+        const speechConfig = getSpeechConfig();
+        if (!speechConfig) {
+            alert("Please configure speech-to-text in settings first.");
             onOpenChange(false);
             return;
         }
 
         setIsTranscribing(true);
         try {
-            // Transcribe the audio using OpenAI Whisper
+            // Transcribe the audio using configured speech provider
             const formData = new FormData();
             formData.append("file", audioBlob, "audio.wav");
-            formData.append("model", "whisper-1");
+            formData.append("model", speechConfig.config.model);
+            
+            if (speechConfig.config.language) {
+                formData.append("language", speechConfig.config.language);
+            }
+
+            const baseURL = speechConfig.credentials.baseUrl || 
+                           (speechConfig.config.provider === 'openai' 
+                               ? "https://api.openai.com/v1"
+                               : "https://openrouter.ai/api/v1");
+
+            const headers: Record<string, string> = {
+                Authorization: `Bearer ${speechConfig.credentials.apiKey}`,
+            };
+
+            // Add OpenRouter-specific headers
+            if (speechConfig.config.provider === 'openrouter') {
+                headers["HTTP-Referer"] = window.location.origin;
+                headers["X-Title"] = "TENEX Web Client";
+            }
 
             const transcriptionResponse = await fetch(
-                "https://api.openai.com/v1/audio/transcriptions",
+                `${baseURL}/audio/transcriptions`,
                 {
                     method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${openaiApiKey}`,
-                    },
+                    headers,
                     body: formData,
                 }
             );

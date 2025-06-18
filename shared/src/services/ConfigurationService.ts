@@ -194,12 +194,20 @@ export class ConfigurationService {
         // Load llms.json
         const llms = await this.loadLLMConfig(basePath);
 
-        // Load agents.json (project only, optional)
+        // Load agents.json
         let agents: AgentsJson | undefined;
+        const agentsPath = path.join(basePath, "agents.json");
+        if (await fileExists(agentsPath)) {
+            agents = await this.loadAgentsConfig(basePath);
+        }
+
+        // For project configurations, merge with global agents
         if (!isGlobal) {
-            const agentsPath = path.join(basePath, "agents.json");
-            if (await fileExists(agentsPath)) {
-                agents = await this.loadAgentsConfig(basePath);
+            const globalAgentsPath = path.join(this.getGlobalPath(), "agents.json");
+            if (await fileExists(globalAgentsPath)) {
+                const globalAgents = await this.loadAgentsConfig(this.getGlobalPath());
+                // Merge: global as base, project overrides
+                agents = { ...globalAgents, ...(agents || {}) };
             }
         }
 
@@ -230,8 +238,8 @@ export class ConfigurationService {
         // Save llms.json
         await this.saveLLMConfig(basePath, configuration.llms);
 
-        // Save agents.json (project only, if provided)
-        if (!isGlobal && configuration.agents) {
+        // Save agents.json (if provided)
+        if (configuration.agents) {
             await this.saveAgentsConfig(basePath, configuration.agents);
         }
     }

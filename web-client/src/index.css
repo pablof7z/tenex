@@ -113,23 +113,25 @@
 @layer base {
     * {
         @apply border-border outline-ring/50;
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            "Helvetica Neue", Arial, sans-serif !important;
     }
     body {
         @apply bg-background text-foreground font-sans;
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            "Helvetica Neue", Arial, sans-serif !important;
+            "Helvetica Neue", Arial, sans-serif;
     }
     html {
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            "Helvetica Neue", Arial, sans-serif !important;
+            "Helvetica Neue", Arial, sans-serif;
         /* Disable smooth scrolling to prevent jumpy behavior */
         scroll-behavior: auto !important;
     }
     /* Ensure scroll containers also use instant scrolling */
     #chat-messages-container {
         scroll-behavior: auto !important;
+    }
+    /* Define font-mono for monospace elements */
+    .font-mono {
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
     }
 }
 

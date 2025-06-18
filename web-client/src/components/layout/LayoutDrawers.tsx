@@ -110,12 +110,16 @@ export function LayoutDrawers({
 
                             if (!project) return null;
 
-                            const threadTitle =
-                                selectedThread.tags?.find(
-                                    (tag: string[]) => tag[0] === "title"
-                                )?.[1] ||
-                                selectedThread.content?.split("\n")[0] ||
-                                "Thread";
+                            const titleTag = selectedThread.tags?.find(
+                                (tag: string[]) => tag[0] === "title"
+                            )?.[1];
+                            
+                            // For new threads with empty titles, pass undefined to trigger auto-generation
+                            const threadTitle = (titleTag && titleTag.trim()) 
+                                ? titleTag 
+                                : selectedThread.id === "new" 
+                                    ? undefined 
+                                    : selectedThread.content?.split("\n")[0] || "Thread";
 
                             // Extract selected agents from temporary thread object
                             const tempThread = selectedThread as NDKEvent & {

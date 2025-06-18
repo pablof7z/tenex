@@ -15,11 +15,13 @@ import { useProjectAgents } from "../hooks/useProjectAgents";
 import { useProjectLLMConfigs } from "../hooks/useProjectLLMConfigs";
 import { useScrollManagement } from "../hooks/useScrollManagement";
 import { messageDraftsAtom, selectedTaskAtom } from "../lib/store";
+import { generateThreadTitle } from "../utils/openai";
 import { BackendButtons } from "./BackendButtons";
 import { ChatDebugDialog } from "./chat/ChatDebugDialog";
 import { ChatHeader } from "./chat/ChatHeader";
 import { ChatInputArea } from "./chat/ChatInputArea";
 import { ChatTypingIndicator } from "./chat/ChatTypingIndicator";
+import { VoiceMessageDialog } from "./dialogs/VoiceMessageDialog";
 import { AgentDiscoveryCard } from "./common/AgentDiscoveryCard";
 import { CommandExecutionCard } from "./common/CommandExecutionCard";
 import { StatusUpdate } from "./tasks/StatusUpdate";
@@ -132,14 +134,14 @@ export function ChatInterface({
     const [, setSelectedTask] = useAtom(selectedTaskAtom);
     const [messageDrafts, setMessageDrafts] = useAtom(messageDraftsAtom);
 
-    // Determine if we're in thread mode
-    const isThreadMode = !!(project && threadTitle);
+    // Determine if we're in thread mode (include new threads without titles)
+    const isThreadMode = !!(project && (threadTitle !== undefined || threadId === "new"));
 
     // Get project agents for @mentions
     const projectAgents = useProjectAgents(project?.tagId());
 
-    // Generate a stable conversation ID for draft persistence
-    const conversationId = useMemo(() => {
+    // Generate a stable root event ID for draft persistence
+    const rootEventId = useMemo(() => {
         if (isThreadMode) {
             // For existing threads, use the thread event ID
             if (threadId && threadId !== "new") return threadId;
@@ -154,32 +156,38 @@ export function ChatInterface({
 
     // Initialize message input from drafts
     const [messageInput, setMessageInput] = useState(() => {
-        if (conversationId) {
-            return messageDrafts.get(conversationId) || "";
+        if (rootEventId) {
+            return messageDrafts.get(rootEventId) || "";
         }
         return "";
     });
 
+    // State for new thread detection
+    const isNewThread = threadId === "new" && (threadTitle === undefined || threadTitle === "");
+
+    // State for voice dialog
+    const [showVoiceDialog, setShowVoiceDialog] = useState(false);
+
     // Update draft when messageInput changes
     useEffect(() => {
-        if (!conversationId) return;
+        if (!rootEventId) return;
 
         if (messageInput.trim()) {
             // Save draft if there's content
             setMessageDrafts((prev) => {
                 const newDrafts = new Map(prev);
-                newDrafts.set(conversationId, messageInput);
+                newDrafts.set(rootEventId, messageInput);
                 return newDrafts;
             });
         } else {
             // Remove draft if empty
             setMessageDrafts((prev) => {
                 const newDrafts = new Map(prev);
-                newDrafts.delete(conversationId);
+                newDrafts.delete(rootEventId);
                 return newDrafts;
             });
         }
-    }, [messageInput, conversationId, setMessageDrafts]);
+    }, [messageInput, rootEventId, setMessageDrafts]);
 
     // Get project directory and LLM configurations
     // Extract just the d-tag from the project's tagId (format: 31933:pubkey:d-tag)
@@ -217,7 +225,7 @@ export function ChatInterface({
 
     // Get thread title from the thread event if we don't have it from props
     const effectiveThreadTitle = useMemo(() => {
-        if (threadTitle) return threadTitle;
+        // If we have a current thread event (created after submit), use its title
         if (currentThreadEvent) {
             const titleTag = currentThreadEvent.tags?.find(
                 (tag: string[]) => tag[0] === "title"
@@ -227,8 +235,17 @@ export function ChatInterface({
             const firstLine = currentThreadEvent.content?.split("\n")[0] || "Thread";
             return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
         }
+        
+        // For new threads without a created event yet, show "New Thread"
+        if (isNewThread) {
+            return "New Thread";
+        }
+        
+        // Use the threadTitle prop as fallback
+        if (threadTitle) return threadTitle;
+        
         return "Thread";
-    }, [threadTitle, currentThreadEvent]);
+    }, [currentThreadEvent, isNewThread, threadTitle]);
 
     // Subscribe to thread messages when currentThreadEvent is available
     const { events: threadReplies } = useSubscribe(
@@ -403,8 +420,21 @@ export function ChatInterface({
                     event = new NDKEvent(ndk);
                     event.kind = EVENT_KINDS.CHAT;
                     event.content = cleanContent;
+                    
+                    // Generate title if this is a new thread
+                    let finalTitle = threadTitle;
+                    if (isNewThread) {
+                        try {
+                            finalTitle = await generateThreadTitle(messageInput);
+                        } catch (error) {
+                            console.warn("Failed to generate thread title:", error);
+                            // Fallback to a simple title based on first few words
+                            finalTitle = messageInput.trim().split(' ').slice(0, 4).join(' ').slice(0, 30) + '...';
+                        }
+                    }
+                    
                     event.tags = [
-                        ["title", threadTitle!],
+                        ["title", finalTitle || "New Thread"],
                         ["a", project?.tagId()],
                     ];
 
@@ -437,10 +467,10 @@ export function ChatInterface({
                     setMessageInput("");
 
                     // Clean up draft for new thread since it now has a real ID
-                    if (conversationId && conversationId.startsWith("new-")) {
+                    if (rootEventId && rootEventId.startsWith("new-")) {
                         setMessageDrafts((prev) => {
                             const newDrafts = new Map(prev);
-                            newDrafts.delete(conversationId);
+                            newDrafts.delete(rootEventId);
                             return newDrafts;
                         });
                     }
@@ -486,8 +516,10 @@ export function ChatInterface({
         projectAgents,
         scrollToBottom,
         extractMentions,
-        conversationId,
+        rootEventId,
         setMessageDrafts,
+        isNewThread,
+        generateThreadTitle,
     ]);
 
     const handleKeyPress = useCallback(
@@ -597,7 +629,7 @@ export function ChatInterface({
                     {(project || threadId) && (
                         <CommandExecutionCard
                             projectId={project?.tagId() || ""}
-                            conversationId={threadId || currentThreadEvent?.id}
+                            rootEventId={threadId || currentThreadEvent?.id}
                         />
                     )}
 
@@ -647,6 +679,7 @@ export function ChatInterface({
                     onKeyDown={handleKeyPress}
                     onSendMessage={handleSendMessage}
                     onSelectAgent={insertMention}
+                    onVoiceRecord={isThreadMode && project ? () => setShowVoiceDialog(true) : undefined}
                 />
             )}
 
@@ -657,6 +690,20 @@ export function ChatInterface({
                     onClose={() => {
                         setShowDebugDialog(false);
                         setDebugIndicator(null);
+                    }}
+                />
+            )}
+
+            {/* Voice Message Dialog */}
+            {showVoiceDialog && project && (
+                <VoiceMessageDialog
+                    open={showVoiceDialog}
+                    onOpenChange={setShowVoiceDialog}
+                    project={project}
+                    onMessageSent={() => {
+                        setShowVoiceDialog(false);
+                        // Voice messages are published directly by the dialog
+                        // No need to handle the transcription here
                     }}
                 />
             )}

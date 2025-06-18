@@ -12,6 +12,7 @@ export function ChatDebugDialog({ indicator, onClose }: ChatDebugDialogProps) {
 
     const systemPromptTag = indicator.tags.find((tag) => tag[0] === "system-prompt");
     const promptTag = indicator.tags.find((tag) => tag[0] === "prompt");
+    const rawResponseTag = indicator.tags.find((tag) => tag[0] === "llm-raw-response");
 
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -39,6 +40,16 @@ export function ChatDebugDialog({ indicator, onClose }: ChatDebugDialogProps) {
                             <h4 className="font-semibold mb-2">User Prompt</h4>
                             <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
                                 {promptTag[1]}
+                            </pre>
+                        </div>
+                    )}
+
+                    {/* Raw Response */}
+                    {rawResponseTag && (
+                        <div>
+                            <h4 className="font-semibold mb-2">Raw LLM Response</h4>
+                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
+                                {rawResponseTag[1]}
                             </pre>
                         </div>
                     )}

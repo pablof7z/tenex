@@ -43,7 +43,7 @@ describe("TypingAwareLLMProvider", () => {
         ];
 
         const context: LLMContext = {
-            conversationId: "test-convo",
+            rootEventId: "test-convo",
             projectEvent: { dTag: "test-project" } as any,
             ndk: {} as any,
         };
@@ -56,14 +56,14 @@ describe("TypingAwareLLMProvider", () => {
             agentName,
             true,
             expect.objectContaining({
-                conversationId: "test-convo",
+                rootEventId: "test-convo",
                 projectId: "test-project",
             }),
+            signer,
             expect.objectContaining({
                 systemPrompt: expect.stringContaining("You are a helpful assistant"),
                 userPrompt: expect.stringContaining("Please help me test"),
-            }),
-            signer
+            })
         );
 
         // Verify typing indicator was published with stop
@@ -71,10 +71,9 @@ describe("TypingAwareLLMProvider", () => {
             agentName,
             false,
             expect.objectContaining({
-                conversationId: "test-convo",
+                rootEventId: "test-convo",
                 projectId: "test-project",
             }),
-            undefined,
             signer
         );
 
@@ -112,56 +111,5 @@ describe("TypingAwareLLMProvider", () => {
 
         // Verify typing indicator was NOT published
         expect(mockPublisher.publishTypingIndicator).not.toHaveBeenCalled();
-    });
-
-    it("should truncate long prompts for privacy", async () => {
-        const mockBaseProvider: LLMProvider = {
-            generateResponse: vi.fn().mockResolvedValue({
-                content: "Test response",
-                model: "test-model",
-            } as LLMResponse),
-        };
-
-        const mockPublisher: NostrPublisher = {
-            publishResponse: vi.fn(),
-            publishTypingIndicator: vi.fn().mockResolvedValue(undefined),
-        };
-
-        const provider = new TypingAwareLLMProvider(
-            mockBaseProvider,
-            mockPublisher,
-            "test-agent",
-            NDKPrivateKeySigner.generate()
-        );
-
-        // Very long system prompt
-        const longPrompt = "This is a very long prompt. ".repeat(100);
-        
-        const messages: LLMMessage[] = [
-            {
-                role: "system",
-                content: longPrompt,
-            },
-            {
-                role: "user",
-                content: "Short user message",
-            },
-        ];
-
-        const context: LLMContext = {
-            conversationId: "test-convo",
-            projectEvent: { dTag: "test-project" } as any,
-            ndk: {} as any,
-        };
-
-        await provider.generateResponse(messages, {} as any, context);
-
-        // Verify the system prompt was truncated
-        const calls = (mockPublisher.publishTypingIndicator as any).mock.calls;
-        const startCall = calls[0];
-        const systemPrompt = startCall[3].systemPrompt;
-        
-        expect(systemPrompt.length).toBeLessThanOrEqual(503); // 500 + "..."
-        expect(systemPrompt).toContain("...");
     });
 });

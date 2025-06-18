@@ -65,7 +65,7 @@ describe("Agent Self-Reply Guard", () => {
             ownEvent.id = "own-event-id";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: ownEvent,
             };
@@ -94,7 +94,7 @@ describe("Agent Self-Reply Guard", () => {
             });
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };
@@ -123,7 +123,7 @@ describe("Agent Self-Reply Guard", () => {
             });
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: otherAgentEvent,
             };
@@ -145,7 +145,7 @@ describe("Agent Self-Reply Guard", () => {
             userEvent.id = "user-event-id";
 
             const context = {
-                conversationId: "conv-1",
+                rootEventId: "conv-1",
                 projectId: "proj-1",
                 originalEvent: userEvent,
             };

@@ -1,7 +1,8 @@
 /**
  * Team orchestrator system prompt for forming optimal teams
  */
-export const TEAM_ORCHESTRATOR_PROMPT = () => `You are an expert team orchestrator for a multi-agent AI system. Your job is to analyze user requests and form optimal teams to handle them.
+export const TEAM_ORCHESTRATOR_PROMPT =
+  () => `You are an expert team orchestrator for a multi-agent AI system. Your job is to analyze user requests and form optimal teams to handle them.
 
 IMPORTANT: Always prefer single-agent teams for simple requests. Only form multi-agent teams when the task genuinely requires multiple specialists working together.
 

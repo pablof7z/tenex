@@ -52,11 +52,14 @@ function parseModuleVerbosity(): ModuleVerbosityConfig {
     if (typeof process !== "undefined" && process.env) {
         Object.keys(process.env).forEach(key => {
             const match = key.match(/^LOG_MODULE_(.+)$/);
-            if (match) {
+            if (match && match[1]) {
                 const moduleName = match[1].toLowerCase();
                 const level = process.env[key] as VerbosityLevel;
                 if (level && verbosityLevels[level] !== undefined) {
-                    config.modules![moduleName] = level;
+                    if (!config.modules) {
+                        config.modules = {};
+                    }
+                    config.modules[moduleName] = level;
                 }
             }
         });

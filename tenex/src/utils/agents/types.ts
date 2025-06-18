@@ -10,34 +10,34 @@ export type { AgentConfig } from "@tenex/types/agents";
 
 // Extend base conversation message for CLI needs
 export interface ConversationMessage extends BaseConversationMessage {
-    event?: NDKEvent | SerializedNDKEvent; // NDKEvent when in memory, raw event object when serialized
+  event?: NDKEvent | SerializedNDKEvent; // NDKEvent when in memory, raw event object when serialized
 }
 
 export interface AgentResponseMetadata {
-    model?: string;
-    provider?: string;
-    usage?: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-        cache_creation_input_tokens?: number;
-        cache_read_input_tokens?: number;
-        cost?: number;
-    };
-    systemPrompt?: string;
-    userPrompt?: string;
-    // Additional metadata should be specifically typed rather than using [key: string]: unknown
-    temperature?: number;
-    maxTokens?: number;
-    toolCalls?: number;
+  model?: string;
+  provider?: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+    cost?: number;
+  };
+  systemPrompt?: string;
+  userPrompt?: string;
+  // Additional metadata should be specifically typed rather than using [key: string]: unknown
+  temperature?: number;
+  maxTokens?: number;
+  toolCalls?: number;
 }
 
 export interface AgentResponse {
-    content: string;
-    confidence?: number;
-    metadata?: AgentResponseMetadata;
-    renderInChat?: {
-        type: string;
-        data: unknown;
-    };
+  content: string;
+  confidence?: number;
+  metadata?: AgentResponseMetadata;
+  renderInChat?: {
+    type: string;
+    data: unknown;
+  };
 }

@@ -18,10 +18,10 @@ interface CommandData {
 
 interface CommandExecutionCardProps {
     projectId: string;
-    conversationId?: string;
+    rootEventId?: string;
 }
 
-export function CommandExecutionCard({ projectId, conversationId }: CommandExecutionCardProps) {
+export function CommandExecutionCard({ projectId, rootEventId }: CommandExecutionCardProps) {
     const [executions, setExecutions] = useState<
         Map<
             string,
@@ -42,7 +42,7 @@ export function CommandExecutionCard({ projectId, conversationId }: CommandExecu
         {
             kinds: [24200 as NDKKind],
             "#a": [projectId],
-            ...(conversationId ? { "#e": [conversationId] } : {}),
+            ...(rootEventId ? { "#e": [rootEventId] } : {}),
         },
     ]);
 
