@@ -97,11 +97,17 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`AgentOrchestrator`** - High-level agent communication and task distribution
 - **`AgentCore`** - Agent identity, configuration, and state management
 - **`AgentResponseGenerator`** - Response generation with context and tools
+- **`Team`** - Team management with participants, stages, and conversation planning
+- **`TeamLead`** - Lead agent coordination for team-based conversations
+- **`TurnManager`** - Turn-based conversation management for multi-agent interactions
 
 ### Conversation System
 - **`Conversation`** - Thread-safe conversation management with participant tracking
 - **`ConversationStorage`** - Persistent conversation storage with 30-day retention
 - **`ConversationOptimizer`** - Token usage optimization and context window management
+- **`ConversationStore`** - Storage implementations:
+  - **`FileConversationStore`** - File-based persistence with JSONL format
+  - **`InMemoryConversationStore`** - Memory-based storage for testing
 - **`ChatEventHandler`** - Chat message processing and routing
 - **`TaskEventHandler`** - Task-related conversation handling
 
@@ -110,10 +116,23 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`AnthropicProviderWithCache`** - Enhanced caching implementation
 - **`OpenAIProvider`** - GPT integration with function calling
 - **`OpenRouterProvider`** - Multi-model provider with automatic fallbacks
+- **`OllamaProvider`** - Local LLM integration via Ollama
 - **`ToolEnabledProvider`** - Universal tool-calling wrapper for any LLM
 - **`TypingAwareLLMProvider`** - Wrapper that automatically publishes typing indicators with actual prompts
 - **`LLMFactory`** - Provider instantiation with configuration and caching
+- **`LLMConfigManager`** - Runtime configuration management for LLM settings
 - **`costCalculator`** - LLM usage cost tracking and reporting
+
+### LLM Infrastructure
+- **`ResponseCache`** & **`CacheManager`** - Response caching with TTL, eviction, and hit rate tracking
+- **`MessageFormatter`** - Provider-specific message formatting:
+  - **`AnthropicMessageFormatter`** - Claude message format
+  - **`OpenAIMessageFormatter`** - OpenAI message format
+  - **`OpenRouterMessageFormatter`** - OpenRouter extensions
+  - **`OllamaMessageFormatter`** - Ollama chat format
+  - **`MessageFormatterFactory`** - Dynamic formatter selection
+- **`ProviderRegistry`** - Dynamic provider registration with feature detection
+- **`MockLLMProvider`** & **`MockProviderFactory`** - Comprehensive testing infrastructure
 
 ### Tool System (`tools/`)
 - **`ToolRegistry`** - Dynamic tool registration with priority and dependency management
@@ -137,6 +156,21 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
   - **`ProjectSpecsBuilder`** - Living documentation integration
   - **`StaticInstructionsBuilder`** - Base instruction templates
 - **`SpecCache`** - Efficient specification caching and invalidation
+
+### Utility Systems (`utils/`)
+- **`agents.ts`** - Basic agent utilities:
+  - `toKebabCase` - Convert agent names to kebab-case
+  - `readAgentsJson` - Read agent configuration from project
+- **`ClaudeOutputParser`** - Claude CLI output parsing with:
+  - Event-based parsing architecture
+  - Session management
+  - Tool result formatting
+  - Token usage tracking
+- **`RulesManager`** - Project rules management:
+  - Rule fetching and caching from Nostr
+  - Agent-specific rule application
+  - Disk-based persistence
+  - Formatted prompt generation
 
 ---
 
@@ -184,6 +218,12 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`project/init.ts`** - Project initialization from Nostr events
 - **`project/run.ts`** - Multi-agent orchestration startup
 - **`debug/index.ts`** - Debugging and diagnostic tools
+- **`debug/chat.ts`** - Interactive agent testing interface
+- **`setup/llm.ts`** - LLM configuration wizard with:
+  - **`LLMConfigEditor`** - Interactive configuration management
+  - Dynamic model fetching for Ollama and OpenRouter
+  - Configuration testing and validation
+  - Global and project-specific settings
 
 ### Event Handling (`commands/run/`)
 - **`AgentEventHandler`** - Agent-specific event processing
@@ -191,6 +231,11 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`ProjectDisplay`** - Project status and information display
 - **`ProjectLoader`** - Project configuration loading with enhanced metadata.json parsing (includes project nsec)
 - **`StatusPublisher`** - Project status broadcasting
+- **`ProcessedEventStore`** - Event deduplication with:
+  - Persistent storage of processed event IDs
+  - Debounced saving for performance
+  - LRU-style cleanup to prevent unbounded growth
+- **`SubscriptionManager`** - NDK subscription lifecycle management
 
 ---
 
@@ -243,12 +288,15 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 ### Design Patterns Used
 1. **Dependency Injection** - Core classes use DI for testability and modularity
 2. **Strategy Pattern** - Orchestration strategies, LLM providers, tool execution
-3. **Observer Pattern** - Event monitoring, real-time status updates
-4. **Factory Pattern** - LLM provider creation, tool instantiation
+3. **Observer Pattern** - Event monitoring, real-time status updates, ClaudeOutputParser
+4. **Factory Pattern** - LLM provider creation, tool instantiation, MessageFormatterFactory
 5. **Adapter Pattern** - LLM provider interfaces, tool format standardization
 6. **Repository Pattern** - Conversation storage, agent configuration management
-7. **Builder Pattern** - Prompt construction, system configuration
-8. **Registry Pattern** - Tool management, plugin-like architecture
+7. **Builder Pattern** - Prompt construction, system configuration, MockProviderFactory
+8. **Registry Pattern** - Tool management, plugin-like architecture, ProviderRegistry
+9. **Cache Pattern** - ResponseCache for LLM responses, SpecCache for specifications
+10. **Facade Pattern** - LLMConfigManager simplifies configuration management
+11. **Parser Pattern** - ClaudeOutputParser for structured output processing
 
 ### Integration Patterns
 - **NDK Integration** - All components use `@nostr-dev-kit/ndk` directly (no wrappers)
@@ -270,6 +318,10 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - Agent system core (`tenex/src/utils/agents/`)
 - Tool registry and execution system
 - LLM provider abstractions
+- ResponseCache and CacheManager system
+- MessageFormatter classes and factory
+- ProviderRegistry for dynamic provider management
+- MockLLMProvider testing infrastructure
 
 ### Moderately Reusable (70-90% reuse potential)
 - Specific LLM provider implementations
@@ -277,6 +329,10 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - Orchestration strategies
 - File system abstractions
 - Test utilities and mocks
+- RulesManager for project rules
+- ClaudeOutputParser for CLI output
+- ProcessedEventStore for event tracking
+- ConversationStore implementations
 
 ### Project-Specific (50-70% reuse potential)
 - Page-level components
@@ -325,6 +381,12 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **Automatic integration** - Agents automatically get typing indicators without manual publishing
 - **Privacy protection** - Prompts are truncated intelligently for privacy while preserving context
 
+### Tool Execution Fix in Agent System (January 2025)
+- **Fixed double tool registry wrapping** - When enhancing providers with typing indicators, no longer pass toolRegistry twice
+- **Preserved tool functionality** - Tools are executed correctly when agents use them
+- **Corrected provider chain** - ToolEnabledProvider -> TypingAwareLLMProvider -> LLMProviderAdapter works properly
+- **Agent tool calls** - Agents can now successfully use tools like claude_code without raw tool blocks appearing in responses
+
 ### Phased Delivery Strategy Addition (January 2025)
 - **Added PhasedDeliveryStrategy** - New orchestration strategy for complex multi-phase tasks
 - **Sequential phase execution** - Tasks broken down into phases with specific deliverables
@@ -339,7 +401,43 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **Project profile creation** - Automatic kind:0 Nostr profile events for improved discoverability
 - **Backwards compatibility** - Graceful handling of projects without nsec (requires re-initialization)
 
+### Prompt Clarity Enhancement (January 2025)
+- **Fixed agent response confusion** - Clarified the structure of agent responses to prevent mixing SIGNAL and tool_use formats
+- **Updated prompt templates** - Modified base-agent.ts and single-agent.ts to explicitly structure responses with CONTENT and SIGNAL sections
+- **Enhanced tool instructions** - ToolRegistry now clearly indicates tool_use blocks go within CONTENT section, not after SIGNAL
+- **Added response examples** - Tool instructions now include a complete example showing correct response structure
+- **Clear section separation** - Agents now understand that tool uses happen in content, signals come at the very end
+
+### LLM Infrastructure Expansion (January 2025)
+- **Added OllamaProvider** - Local LLM support via Ollama with OpenAI-compatible API
+- **Implemented ResponseCache** - Intelligent caching system with TTL, eviction, and hit rate tracking
+- **Created MessageFormatter system** - Provider-specific message formatting with factory pattern
+- **Built ProviderRegistry** - Dynamic provider registration with feature detection and validation
+- **Enhanced testing infrastructure** - MockLLMProvider with scenario-based testing support
+- **Added LLMConfigManager** - Runtime configuration management with caching control
+
+### CLI Enhancement (January 2025)
+- **Added ProcessedEventStore** - Event deduplication with persistent storage and LRU cleanup
+- **Created LLMConfigEditor** - Interactive configuration wizard with model fetching and testing
+- **Built ClaudeOutputParser** - Event-based parsing for Claude CLI output
+- **Implemented RulesManager** - Project rules fetching, caching, and agent-specific application
+- **Enhanced debug capabilities** - Added interactive agent chat for testing
+
+### Legacy Code Cleanup (January 2025)
+- **Removed duplicate typing indicator implementation** - Consolidated to use only `NostrPublisher` class
+- **Removed duplicate response publishing** - All publishing now goes through modern agent infrastructure
+- **Cleaned up utils/agents.ts** - Retained only essential utilities (toKebabCase, readAgentsJson)
+- **Unified publishing architecture** - All Nostr event publishing now uses dependency-injected `NostrPublisher`
+
+### Tool Execution Fix in Agent System (January 2025)
+- **Fixed tool property preservation** - Tool-related properties (toolCalls, hasNativeToolCalls) now preserved through entire provider chain
+- **Updated TypingAwareLLMProvider** - Now preserves all response properties when wrapping providers
+- **Enhanced LLMProviderAdapter** - Spreads tool properties when converting response formats
+- **Fixed Agent.generateResponse** - Returns tool properties for proper detection in handleEvent
+- **Updated debug chat** - Now uses handleEvent() instead of generateResponse() for proper tool execution
+- **Added comprehensive tests** - Verified tool execution flow with AgentToolExecution.test.ts
+
 ---
 
 *Last Updated: January 2025*
-*Inventory Version: 1.1.0*
+*Inventory Version: 1.2.1*
