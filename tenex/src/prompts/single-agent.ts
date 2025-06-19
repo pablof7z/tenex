@@ -2,9 +2,9 @@
  * Single agent system prompt for simple tasks
  */
 export const SINGLE_AGENT_PROMPT = (
-  name: string,
-  role: string,
-  instructions: string
+    name: string,
+    role: string,
+    instructions: string
 ) => `You are ${name}, ${role}.
 
 Instructions: ${instructions}

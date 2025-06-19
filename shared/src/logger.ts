@@ -2,7 +2,7 @@ import chalk from "chalk";
 
 export type VerbosityLevel = "silent" | "normal" | "verbose" | "debug";
 
-export type LogModule = 
+export type LogModule =
     | "agent"
     | "team"
     | "conversation"
@@ -50,9 +50,9 @@ function parseModuleVerbosity(): ModuleVerbosityConfig {
     // Format: LOG_MODULE_<MODULE>=<level>
     // Example: LOG_MODULE_TEAM=debug LOG_MODULE_LLM=silent
     if (typeof process !== "undefined" && process.env) {
-        Object.keys(process.env).forEach(key => {
+        Object.keys(process.env).forEach((key) => {
             const match = key.match(/^LOG_MODULE_(.+)$/);
-            if (match && match[1]) {
+            if (match?.[1]) {
                 const moduleName = match[1].toLowerCase();
                 const level = process.env[key] as VerbosityLevel;
                 if (level && verbosityLevels[level] !== undefined) {
@@ -104,18 +104,23 @@ function getAgentColor(agentName: string): typeof chalk.red {
     return agentColorMap.get(agentName) || chalk.white;
 }
 
-function shouldLog(level: string, module?: LogModule, verbosityRequired: VerbosityLevel = "normal"): boolean {
+function shouldLog(
+    level: string,
+    module?: LogModule,
+    verbosityRequired: VerbosityLevel = "normal"
+): boolean {
     // Always show errors and warnings
     if (level === "error" || level === "warning") return true;
-    
+
     // Debug logs respect the debug flag
     if (level === "debug" && !globalConfig.debugEnabled) return false;
 
     // Get module-specific verbosity
     const moduleConfig = globalConfig.moduleVerbosity;
-    const moduleVerbosity = module && moduleConfig?.modules?.[module] 
-        ? moduleConfig.modules[module] 
-        : moduleConfig?.default || "normal";
+    const moduleVerbosity =
+        module && moduleConfig?.modules?.[module]
+            ? moduleConfig.modules[module]
+            : moduleConfig?.default || "normal";
 
     const currentLevel = verbosityLevels[moduleVerbosity];
     const requiredLevel = verbosityLevels[verbosityRequired];
@@ -132,39 +137,68 @@ export function logError(message: string, error?: unknown, module?: LogModule): 
     if (!shouldLog("error", module)) return;
     const prefix = globalConfig.useEmoji ? "❌" : globalConfig.useLabels ? "[ERROR]" : "";
     const modulePrefix = formatModulePrefix(module);
-    const fullMessage = prefix ? `${prefix} ${modulePrefix}${message}` : `${modulePrefix}${message}`;
+    const fullMessage = prefix
+        ? `${prefix} ${modulePrefix}${message}`
+        : `${modulePrefix}${message}`;
     console.error(chalk.redBright(fullMessage), error || "");
 }
 
-export function logInfo(message: string, module?: LogModule, verbosity: VerbosityLevel = "normal", ...args: unknown[]): void {
+export function logInfo(
+    message: string,
+    module?: LogModule,
+    verbosity: VerbosityLevel = "normal",
+    ...args: unknown[]
+): void {
     if (!shouldLog("info", module, verbosity)) return;
     const prefix = globalConfig.useEmoji ? "ℹ️" : globalConfig.useLabels ? "[INFO]" : "";
     const modulePrefix = formatModulePrefix(module);
-    const fullMessage = prefix ? `${prefix} ${modulePrefix}${message}` : `${modulePrefix}${message}`;
+    const fullMessage = prefix
+        ? `${prefix} ${modulePrefix}${message}`
+        : `${modulePrefix}${message}`;
     console.log(chalk.blueBright(fullMessage), ...args);
 }
 
-export function logSuccess(message: string, module?: LogModule, verbosity: VerbosityLevel = "normal"): void {
+export function logSuccess(
+    message: string,
+    module?: LogModule,
+    verbosity: VerbosityLevel = "normal"
+): void {
     if (!shouldLog("success", module, verbosity)) return;
     const prefix = globalConfig.useEmoji ? "✅" : globalConfig.useLabels ? "[SUCCESS]" : "";
     const modulePrefix = formatModulePrefix(module);
-    const fullMessage = prefix ? `${prefix} ${modulePrefix}${message}` : `${modulePrefix}${message}`;
+    const fullMessage = prefix
+        ? `${prefix} ${modulePrefix}${message}`
+        : `${modulePrefix}${message}`;
     console.log(chalk.greenBright(fullMessage));
 }
 
-export function logWarning(message: string, module?: LogModule, verbosity: VerbosityLevel = "normal", ...args: unknown[]): void {
+export function logWarning(
+    message: string,
+    module?: LogModule,
+    verbosity: VerbosityLevel = "normal",
+    ...args: unknown[]
+): void {
     if (!shouldLog("warning", module, verbosity)) return;
     const prefix = globalConfig.useEmoji ? "⚠️" : globalConfig.useLabels ? "[WARNING]" : "";
     const modulePrefix = formatModulePrefix(module);
-    const fullMessage = prefix ? `${prefix} ${modulePrefix}${message}` : `${modulePrefix}${message}`;
+    const fullMessage = prefix
+        ? `${prefix} ${modulePrefix}${message}`
+        : `${modulePrefix}${message}`;
     console.warn(chalk.yellowBright(fullMessage), ...args);
 }
 
-export function logDebug(message: string, module?: LogModule, verbosity: VerbosityLevel = "debug", ...args: unknown[]): void {
+export function logDebug(
+    message: string,
+    module?: LogModule,
+    verbosity: VerbosityLevel = "debug",
+    ...args: unknown[]
+): void {
     if (!shouldLog("debug", module, verbosity)) return;
     const prefix = globalConfig.useEmoji ? "🔍" : globalConfig.useLabels ? "[DEBUG]" : "";
     const modulePrefix = formatModulePrefix(module);
-    const fullMessage = prefix ? `${prefix} ${modulePrefix}${message}` : `${modulePrefix}${message}`;
+    const fullMessage = prefix
+        ? `${prefix} ${modulePrefix}${message}`
+        : `${modulePrefix}${message}`;
     console.log(chalk.magentaBright(fullMessage), ...args);
 }
 
@@ -185,7 +219,12 @@ export class AgentLogger {
         this.module = module;
     }
 
-    private formatMessage(emoji: string, message: string, colorFn: typeof chalk.red, verbosity: VerbosityLevel): string {
+    private formatMessage(
+        emoji: string,
+        message: string,
+        colorFn: typeof chalk.red,
+        verbosity: VerbosityLevel
+    ): string {
         if (!shouldLog("info", this.module, verbosity)) return "";
         const projectPrefix = this.projectName ? `${chalk.gray(`[${this.projectName}]`)} ` : "";
         const agentPrefix = `${this.color(`[${this.agentName}]`)} `;
@@ -261,8 +300,10 @@ export const logger = {
     info: (message: string, ...args: unknown[]) => logInfo(message, undefined, "normal", ...args),
     error: (message: string, error?: unknown) => logError(message, error),
     success: (message: string) => logSuccess(message),
-    warn: (message: string, ...args: unknown[]) => logWarning(message, undefined, "normal", ...args),
-    warning: (message: string, ...args: unknown[]) => logWarning(message, undefined, "normal", ...args),
+    warn: (message: string, ...args: unknown[]) =>
+        logWarning(message, undefined, "normal", ...args),
+    warning: (message: string, ...args: unknown[]) =>
+        logWarning(message, undefined, "normal", ...args),
     debug: (message: string, ...args: unknown[]) => logDebug(message, undefined, "debug", ...args),
     createAgent: createAgentLogger,
     forModule: (module: LogModule) => new ScopedLogger(module),

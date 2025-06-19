@@ -46,7 +46,7 @@ export function ChatHeader({
 
     const handleCopyConversation = async () => {
         if (!messages || messages.length === 0) return;
-        
+
         const success = await copyThreadToClipboard(messages, profiles, title);
         if (success) {
             setCopied(true);

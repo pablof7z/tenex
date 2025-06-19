@@ -15,7 +15,10 @@ import { logError } from "../logger.js";
 // File operations
 export async function readFile(filePath: string, encoding?: BufferEncoding): Promise<string>;
 export async function readFile(filePath: string, encoding: null): Promise<Buffer>;
-export async function readFile(filePath: string, encoding?: BufferEncoding | null): Promise<string | Buffer> {
+export async function readFile(
+    filePath: string,
+    encoding?: BufferEncoding | null
+): Promise<string | Buffer> {
     return await fsPromises.readFile(filePath, encoding as any);
 }
 

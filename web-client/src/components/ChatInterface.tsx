@@ -235,15 +235,15 @@ export function ChatInterface({
             const firstLine = currentThreadEvent.content?.split("\n")[0] || "Thread";
             return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
         }
-        
+
         // For new threads without a created event yet, show "New Thread"
         if (isNewThread) {
             return "New Thread";
         }
-        
+
         // Use the threadTitle prop as fallback
         if (threadTitle) return threadTitle;
-        
+
         return "Thread";
     }, [currentThreadEvent, isNewThread, threadTitle]);
 
@@ -274,10 +274,12 @@ export function ChatInterface({
     // Subscribe to tasks that specifically E-tag this thread (like claude_code tasks)
     const { events: threadTasks } = useSubscribe(
         currentThreadEvent
-            ? [{ 
-                kinds: [NDKTask.kind],
-                "#E": [currentThreadEvent.id]  // Tasks that E-tag this thread
-              }]
+            ? [
+                  {
+                      kinds: [NDKTask.kind],
+                      "#E": [currentThreadEvent.id], // Tasks that E-tag this thread
+                  },
+              ]
             : false,
         {},
         [currentThreadEvent?.id]
@@ -437,7 +439,7 @@ export function ChatInterface({
                     event = new NDKEvent(ndk);
                     event.kind = EVENT_KINDS.CHAT;
                     event.content = cleanContent;
-                    
+
                     // Generate title if this is a new thread
                     let finalTitle = threadTitle;
                     if (isNewThread) {
@@ -446,10 +448,11 @@ export function ChatInterface({
                         } catch (error) {
                             console.warn("Failed to generate thread title:", error);
                             // Fallback to a simple title based on first few words
-                            finalTitle = messageInput.trim().split(' ').slice(0, 4).join(' ').slice(0, 30) + '...';
+                            finalTitle =
+                                `${messageInput.trim().split(" ").slice(0, 4).join(" ").slice(0, 30)}...`;
                         }
                     }
-                    
+
                     event.tags = [
                         ["title", finalTitle || "New Thread"],
                         ["a", project?.tagId()],
@@ -484,7 +487,7 @@ export function ChatInterface({
                     setMessageInput("");
 
                     // Clean up draft for new thread since it now has a real ID
-                    if (rootEventId && rootEventId.startsWith("new-")) {
+                    if (rootEventId?.startsWith("new-")) {
                         setMessageDrafts((prev) => {
                             const newDrafts = new Map(prev);
                             newDrafts.delete(rootEventId);
@@ -696,7 +699,9 @@ export function ChatInterface({
                     onKeyDown={handleKeyPress}
                     onSendMessage={handleSendMessage}
                     onSelectAgent={insertMention}
-                    onVoiceRecord={isThreadMode && project ? () => setShowVoiceDialog(true) : undefined}
+                    onVoiceRecord={
+                        isThreadMode && project ? () => setShowVoiceDialog(true) : undefined
+                    }
                 />
             )}
 

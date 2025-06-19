@@ -113,7 +113,9 @@ export function ProjectTabs({
                     <div className="px-3 sm:px-4 py-3 sm:py-4">
                         <div className="flex items-center gap-2 mb-3">
                             <Info className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm font-medium text-foreground">📦 Project Information</span>
+                            <span className="text-sm font-medium text-foreground">
+                                📦 Project Information
+                            </span>
                         </div>
                         <div className="space-y-2 text-xs text-muted-foreground">
                             <div className="flex items-center justify-between">
@@ -138,7 +140,8 @@ export function ProjectTabs({
                                     <span className="font-medium">Project Identity:</span>
                                     <div className="flex items-center gap-1">
                                         <code className="bg-accent px-2 py-1 rounded text-xs font-mono">
-                                            {projectOwnPubkey.slice(0, 8)}...{projectOwnPubkey.slice(-8)}
+                                            {projectOwnPubkey.slice(0, 8)}...
+                                            {projectOwnPubkey.slice(-8)}
                                         </code>
                                         <Button
                                             variant="ghost"
@@ -159,7 +162,9 @@ export function ProjectTabs({
                                 </code>
                             </div>
                             {copiedPubkey && (
-                                <div className="text-green-600 text-xs">Pubkey copied to clipboard!</div>
+                                <div className="text-green-600 text-xs">
+                                    Pubkey copied to clipboard!
+                                </div>
                             )}
                         </div>
                     </div>
@@ -167,9 +172,11 @@ export function ProjectTabs({
             )}
 
             {/* Tab Navigation */}
-            <div className={`bg-card/80 backdrop-blur-sm sticky z-30 border-b border-border/60 ${
-                showProjectInfo ? "top-[170px] sm:top-[190px]" : "top-[60px] sm:top-[68px]"
-            }`}>
+            <div
+                className={`bg-card/80 backdrop-blur-sm sticky z-30 border-b border-border/60 ${
+                    showProjectInfo ? "top-[170px] sm:top-[190px]" : "top-[60px] sm:top-[68px]"
+                }`}
+            >
                 <div className="flex px-1 sm:px-2">
                     <button
                         className={`flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-200 border-b-2 ${

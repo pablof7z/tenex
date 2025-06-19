@@ -4,7 +4,6 @@ import { Circle, Code2 } from "lucide-react";
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { NDKKind, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
@@ -17,8 +16,6 @@ interface TaskCardProps {
 
 export const TaskCard = memo(
     function TaskCard({ task, onClick, className }: TaskCardProps) {
-        const { formatDateOnly } = useTimeFormat();
-
         // Get task title
         const getTaskTitle = () => {
             return TaskUtils.getTaskTitle(task);
@@ -38,12 +35,12 @@ export const TaskCard = memo(
 
         // Check if this is a claude_code task
         const isClaudeCodeTask = () => {
-            return task.tags?.some(tag => tag[0] === "tool" && tag[1] === "claude_code");
+            return task.tags?.some((tag) => tag[0] === "tool" && tag[1] === "claude_code");
         };
 
         // Get agent name
         const getAgentName = () => {
-            return task.tags?.find(tag => tag[0] === "agent")?.[1];
+            return task.tags?.find((tag) => tag[0] === "agent")?.[1];
         };
 
         const complexity = getTaskComplexity();
@@ -52,9 +49,8 @@ export const TaskCard = memo(
 
         const { events: updates } = useSubscribe([
             { kinds: [NDKKind.GenericReply], ...task.filter(), limit: 1 },
-        ])
-        const latestUpdate = updates
-            .sort((a, b) => b.created_at - a.created_at)[0];
+        ]);
+        const latestUpdate = updates.sort((a, b) => b.created_at - a.created_at)[0];
 
         return (
             <Card

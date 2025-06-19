@@ -32,9 +32,7 @@ export function TaskCreationOptionsDialog({
                         <Mic className="w-5 h-5 text-green-600" />
                         <div className="text-left">
                             <div className="font-medium">Voice</div>
-                            <div className="text-xs text-slate-500">
-                                Record voice message
-                            </div>
+                            <div className="text-xs text-slate-500">Record voice message</div>
                         </div>
                     </Button>
 

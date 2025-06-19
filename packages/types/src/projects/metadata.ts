@@ -40,7 +40,6 @@ export interface ProjectInitOptions {
     skipAgents?: boolean;
 }
 
-
 /**
  * Project rules structure
  */

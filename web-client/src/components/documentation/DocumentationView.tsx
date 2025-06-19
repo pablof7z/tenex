@@ -41,7 +41,7 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
             const encoded = article.encode();
             await navigator.clipboard.writeText(encoded);
             toast.success("Spec encoding copied to clipboard");
-        } catch (error) {
+        } catch (_error) {
             toast.error("Failed to copy spec encoding");
         }
     };
@@ -194,7 +194,7 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                                             // Block code (inside pre) - no background
                                             return (
                                                 <code
-                                                    className={`font-mono text-sm ${className || ''}`}
+                                                    className={`font-mono text-sm ${className || ""}`}
                                                     {...props}
                                                 >
                                                     {children}

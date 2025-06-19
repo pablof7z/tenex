@@ -2,7 +2,7 @@ import {
     type NDKArticle,
     type NDKEvent,
     type NDKTask,
-    NDKProject,
+    type NDKProject,
     useNDKCurrentUser,
 } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom, useAtomValue } from "jotai";

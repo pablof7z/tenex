@@ -57,19 +57,21 @@ export function LayoutDrawers({
                     {selectedTask &&
                         (() => {
                             // Find the project for this task if it's a real task with tags
-                            const project = selectedTask.tags ? projects.find((p) => {
-                                const projectReference = selectedTask.tags?.find(
-                                    (tag) => tag[0] === "a"
-                                )?.[1];
-                                if (projectReference) {
-                                    const parts = projectReference.split(":");
-                                    if (parts.length >= 3) {
-                                        const projectTagId = parts[2];
-                                        return p.tagValue("d") === projectTagId;
-                                    }
-                                }
-                                return false;
-                            }) : null;
+                            const project = selectedTask.tags
+                                ? projects.find((p) => {
+                                      const projectReference = selectedTask.tags?.find(
+                                          (tag) => tag[0] === "a"
+                                      )?.[1];
+                                      if (projectReference) {
+                                          const parts = projectReference.split(":");
+                                          if (parts.length >= 3) {
+                                              const projectTagId = parts[2];
+                                              return p.tagValue("d") === projectTagId;
+                                          }
+                                      }
+                                      return false;
+                                  })
+                                : null;
 
                             if (!project) return null;
 
@@ -94,32 +96,35 @@ export function LayoutDrawers({
                     {selectedThread &&
                         (() => {
                             // Find the project for this thread if it's a real thread with tags
-                            const project = selectedThread.tags ? projects.find((p) => {
-                                const projectRef = selectedThread.tags?.find(
-                                    (tag) => tag[0] === "a"
-                                )?.[1];
-                                if (projectRef) {
-                                    const parts = projectRef.split(":");
-                                    if (parts.length >= 3) {
-                                        const projectTagId = parts[2];
-                                        return p.tagValue("d") === projectTagId;
-                                    }
-                                }
-                                return false;
-                            }) : null;
+                            const project = selectedThread.tags
+                                ? projects.find((p) => {
+                                      const projectRef = selectedThread.tags?.find(
+                                          (tag) => tag[0] === "a"
+                                      )?.[1];
+                                      if (projectRef) {
+                                          const parts = projectRef.split(":");
+                                          if (parts.length >= 3) {
+                                              const projectTagId = parts[2];
+                                              return p.tagValue("d") === projectTagId;
+                                          }
+                                      }
+                                      return false;
+                                  })
+                                : null;
 
                             if (!project) return null;
 
                             const titleTag = selectedThread.tags?.find(
                                 (tag: string[]) => tag[0] === "title"
                             )?.[1];
-                            
+
                             // For new threads with empty titles, pass undefined to trigger auto-generation
-                            const threadTitle = (titleTag && titleTag.trim()) 
-                                ? titleTag 
-                                : selectedThread.id === "new" 
-                                    ? undefined 
-                                    : selectedThread.content?.split("\n")[0] || "Thread";
+                            const threadTitle =
+                                titleTag?.trim()
+                                    ? titleTag
+                                    : selectedThread.id === "new"
+                                      ? undefined
+                                      : selectedThread.content?.split("\n")[0] || "Thread";
 
                             // Extract selected agents from temporary thread object
                             const tempThread = selectedThread as NDKEvent & {

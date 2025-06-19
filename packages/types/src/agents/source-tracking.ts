@@ -11,8 +11,8 @@ export interface TrackedAgentConfigEntry extends AgentConfigEntry {
     /**
      * Source of this configuration ('global' or 'project')
      */
-    _source: 'global' | 'project';
-    
+    _source: "global" | "project";
+
     /**
      * Base path where this configuration was loaded from
      */

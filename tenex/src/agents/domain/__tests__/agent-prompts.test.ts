@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import type { AgentConfig, LLMProvider, ConversationStore, NostrPublisher } from "../../core/types";
-import type NDK from "@nostr-dev-kit/ndk";
+import type { AgentConfig } from "../../core/types";
 
 // Create test agents that override the buildSystemPrompt method
 class TestAgent {
@@ -18,19 +17,19 @@ class TestAgent {
     getSystemPrompt(): string {
         // Import prompts
         const { SYSTEM_PROMPTS } = require("../../../prompts");
-        
+
         // Use single-agent prompt if team size is 1
         return this.teamSize === 1
             ? SYSTEM_PROMPTS.SINGLE_AGENT(
-                this.config.name,
-                this.config.role,
-                this.config.instructions
-            )
+                  this.config.name,
+                  this.config.role,
+                  this.config.instructions
+              )
             : SYSTEM_PROMPTS.BASE_AGENT(
-                this.config.name,
-                this.config.role,
-                this.config.instructions
-            );
+                  this.config.name,
+                  this.config.role,
+                  this.config.instructions
+              );
     }
 }
 
@@ -48,7 +47,7 @@ class TestTeamLead {
     getSystemPrompt(): string {
         // Import prompts
         const { SYSTEM_PROMPTS } = require("../../../prompts");
-        
+
         // Use single-agent prompt for single-agent teams
         if (this.teamSize === 1) {
             let prompt = SYSTEM_PROMPTS.SINGLE_AGENT(
@@ -79,10 +78,6 @@ Active speakers: TestAgent, Agent2`;
 
 describe("Agent System Prompts", () => {
     let mockConfig: AgentConfig;
-    let mockLLM: LLMProvider;
-    let mockStore: ConversationStore;
-    let mockPublisher: NostrPublisher;
-    let mockNDK: NDK;
 
     beforeEach(() => {
         mockConfig = {
@@ -91,14 +86,6 @@ describe("Agent System Prompts", () => {
             instructions: "Test instructions",
             nsec: "nsec1qgg9947rlpvqu76pj5ecreduf9jxhselq2nae2kghhvd5g7dgjtcxfqrxt",
         };
-
-        mockLLM = {
-            generateResponse: async () => ({ content: "test" }),
-        } as LLMProvider;
-
-        mockStore = {} as ConversationStore;
-        mockPublisher = {} as NostrPublisher;
-        mockNDK = {} as NDK;
     });
 
     describe("Single Agent", () => {
@@ -106,11 +93,13 @@ describe("Agent System Prompts", () => {
             const agent = new TestAgent(mockConfig);
 
             const prompt = agent.getSystemPrompt();
-            
+
             // Should NOT contain multi-agent instructions
             expect(prompt).not.toContain("multi-agent conversation");
-            expect(prompt).not.toContain("Only respond when you are designated as an active speaker");
-            
+            expect(prompt).not.toContain(
+                "Only respond when you are designated as an active speaker"
+            );
+
             // Should contain single-agent specific text
             expect(prompt).toContain("You are TestAgent, Test Role");
             expect(prompt).toContain("Instructions: Test instructions");
@@ -119,10 +108,10 @@ describe("Agent System Prompts", () => {
 
         it("should use multi-agent prompt when team size is greater than 1", () => {
             const agent = new TestAgent(mockConfig);
-            
+
             agent.setTeamSize(3);
             const prompt = agent.getSystemPrompt();
-            
+
             // Should contain multi-agent instructions
             expect(prompt).toContain("IMPORTANT: You are in a multi-agent conversation");
             expect(prompt).toContain("Only respond when you are designated as an active speaker");
@@ -142,12 +131,12 @@ Transition criteria: Test criteria`;
             );
 
             const prompt = teamLead.getSystemPrompt();
-            
+
             // Should NOT contain multi-agent team context
             expect(prompt).not.toContain("TEAM CONTEXT:");
             expect(prompt).not.toContain("LEADERSHIP RESPONSIBILITIES:");
             expect(prompt).not.toContain("multi-agent conversation");
-            
+
             // Should contain stage info
             expect(prompt).toContain("CURRENT STAGE:");
             expect(prompt).toContain("Test purpose");
@@ -166,7 +155,7 @@ Transition criteria: Test criteria`;
             );
 
             const prompt = teamLead.getSystemPrompt();
-            
+
             // Should contain multi-agent team context
             expect(prompt).toContain("TEAM CONTEXT:");
             expect(prompt).toContain("LEADERSHIP RESPONSIBILITIES:");

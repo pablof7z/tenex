@@ -131,7 +131,8 @@
     }
     /* Define font-mono for monospace elements */
     .font-mono {
-        font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+            monospace !important;
     }
 }
 

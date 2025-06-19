@@ -1,6 +1,11 @@
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentConfig, LLMProvider, NostrPublisher, TeamFormationRequest } from "../../core/types";
+import type {
+    AgentConfig,
+    LLMProvider,
+    NostrPublisher,
+    TeamFormationRequest,
+} from "../../core/types";
 import { TeamOrchestrator } from "../TeamOrchestrator";
 
 describe("TeamOrchestrator Single vs Multi-Agent", () => {

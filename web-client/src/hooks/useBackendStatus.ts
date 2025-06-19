@@ -2,6 +2,7 @@ import { useNDKCurrentPubkey, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 import { type BackendInfo, onlineBackendsAtom } from "../lib/store";
+import { parseBackendStatusEvent, migrateBackendStatus, createBackendInfo } from "@tenex/types";
 
 // Custom hook to track online backend status
 export function useBackendStatus() {
@@ -26,28 +27,45 @@ export function useBackendStatus() {
         // Process status events to determine which backends are online
         for (const event of statusEvents) {
             const backendPubkey = event.pubkey;
-            let backendInfo: BackendInfo;
+            let backendInfo: BackendInfo | null = null;
 
             try {
-                // Try to parse JSON content from new format
-                const parsed = JSON.parse(event.content);
-                backendInfo = {
-                    name: `Backend ${backendPubkey.slice(0, 8)}`,
-                    hostname: parsed.hostname || "Unknown",
-                    lastSeen: event.created_at || Date.now() / 1000,
-                    projects: parsed.projects || [],
-                };
+                // Try to parse JSON content from new format with validation
+                const parsed = parseBackendStatusEvent(event.content);
+                if (parsed) {
+                    backendInfo = createBackendInfo({
+                        name: `Backend ${backendPubkey.slice(0, 8)}`,
+                        hostname: parsed.hostname,
+                        lastSeen: event.created_at || Date.now() / 1000,
+                        projects: parsed.projects,
+                    });
+                } else {
+                    // Fallback for invalid format
+                    const rawParsed = JSON.parse(event.content);
+                    const migrated = migrateBackendStatus(rawParsed);
+                    if (migrated) {
+                        backendInfo = createBackendInfo({
+                            name: `Backend ${backendPubkey.slice(0, 8)}`,
+                            hostname: migrated.hostname,
+                            lastSeen: event.created_at || Date.now() / 1000,
+                            projects: migrated.projects,
+                        });
+                    }
+                }
             } catch {
                 // Fallback for old format (plain text hostname)
-                backendInfo = {
+                backendInfo = createBackendInfo({
                     name: event.content || `Backend ${backendPubkey.slice(0, 8)}`,
                     hostname: event.content || "Unknown",
                     lastSeen: event.created_at || Date.now() / 1000,
                     projects: [],
-                };
+                });
             }
 
-            newOnlineBackends.set(backendPubkey, backendInfo);
+            // Only add valid backend info
+            if (backendInfo) {
+                newOnlineBackends.set(backendPubkey, backendInfo);
+            }
         }
 
         setOnlineBackends(newOnlineBackends);

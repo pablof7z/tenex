@@ -29,7 +29,7 @@ export function TaskOverview({ task, statusUpdates, onClick }: TaskOverviewProps
 
     // Get agent profile for latest update
     const profile = useProfileValue(latestUpdate?.pubkey || "");
-    
+
     // Get agent info for latest update
     const AgentInfo = () => {
         if (!latestUpdate) return null;

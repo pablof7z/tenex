@@ -29,9 +29,4 @@ export interface CreateProjectDialogProps {
     onProjectCreated?: () => void;
 }
 
-export type CreateProjectStep =
-    | "details"
-    | "template"
-    | "agents"
-    | "instructions"
-    | "confirm";
+export type CreateProjectStep = "details" | "template" | "agents" | "instructions" | "confirm";

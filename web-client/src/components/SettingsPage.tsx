@@ -15,10 +15,10 @@ interface SettingsPageProps {
     onBack: () => void;
 }
 
-type SettingsTab = 'llm' | 'speech' | 'account' | 'agents';
+type SettingsTab = "llm" | "speech" | "account" | "agents";
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-    const [activeTab, setActiveTab] = useState<SettingsTab>('llm');
+    const [activeTab, setActiveTab] = useState<SettingsTab>("llm");
     const [showNsec, setShowNsec] = useState(false);
     const [copiedNsec, setCopiedNsec] = useState(false);
     const logout = useNDKSessionLogout();
@@ -53,10 +53,10 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     };
 
     const tabs = [
-        { id: 'llm' as SettingsTab, label: 'LLM Models', icon: Settings },
-        { id: 'speech' as SettingsTab, label: 'Speech-to-Text', icon: Mic },
-        { id: 'account' as SettingsTab, label: 'Account', icon: Bot },
-        { id: 'agents' as SettingsTab, label: 'Agents', icon: Bot },
+        { id: "llm" as SettingsTab, label: "LLM Models", icon: Settings },
+        { id: "speech" as SettingsTab, label: "Speech-to-Text", icon: Mic },
+        { id: "account" as SettingsTab, label: "Account", icon: Bot },
+        { id: "agents" as SettingsTab, label: "Agents", icon: Bot },
     ];
 
     return (
@@ -87,8 +87,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 py-4 text-sm font-medium border-b-2 transition-colors ${
                                         activeTab === tab.id
-                                            ? 'border-primary text-primary'
-                                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                                            ? "border-primary text-primary"
+                                            : "border-transparent text-muted-foreground hover:text-foreground"
                                     }`}
                                 >
                                     <Icon className="w-4 h-4" />
@@ -102,11 +102,11 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
             {/* Content */}
             <div className="max-w-6xl mx-auto px-6 py-8">
-                {activeTab === 'llm' && <LLMSettings />}
-                
-                {activeTab === 'speech' && <SpeechSettings />}
-                
-                {activeTab === 'account' && (
+                {activeTab === "llm" && <LLMSettings />}
+
+                {activeTab === "speech" && <SpeechSettings />}
+
+                {activeTab === "account" && (
                     <div className="space-y-6">
                         <div>
                             <h2 className="text-2xl font-semibold">Account Information</h2>
@@ -114,11 +114,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                                 Manage your Nostr identity and account settings
                             </p>
                         </div>
-                        
+
                         <div className="bg-card rounded-lg p-6 space-y-4 max-w-2xl">
                             <div className="space-y-3">
                                 <div>
-                                    <p className="text-sm text-muted-foreground mb-2">Signed in as:</p>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                        Signed in as:
+                                    </p>
                                     <div className="bg-muted/50 rounded-md p-3 font-mono text-sm break-all">
                                         {currentPubkey || "Unknown"}
                                     </div>
@@ -177,8 +179,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                         </div>
                     </div>
                 )}
-                
-                {activeTab === 'agents' && (
+
+                {activeTab === "agents" && (
                     <div className="space-y-6">
                         <div>
                             <h2 className="text-2xl font-semibold">Agent Management</h2>
@@ -186,7 +188,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                                 Manage your AI agents and their configurations
                             </p>
                         </div>
-                        
+
                         <div className="bg-card rounded-lg p-6 max-w-2xl">
                             <div className="space-y-4">
                                 <Button

@@ -4,7 +4,11 @@ import { EVENT_KINDS } from "@tenex/types/events";
 /**
  * Get a display name for a pubkey
  */
-function getDisplayName(pubkey: string, profiles: Map<string, any>, isAgent: boolean = false): string {
+function getDisplayName(
+    pubkey: string,
+    profiles: Map<string, any>,
+    isAgent = false
+): string {
     if (isAgent) {
         const profile = profiles.get(pubkey);
         const agentName = profile?.name || "Agent";
@@ -48,20 +52,22 @@ export function threadToMarkdown(
             markdown += `${author} - ${timestamp}:\n${message.content}\n\n`;
         } else if (message.kind === EVENT_KINDS.TASK) {
             // Task creation
-            const taskTitle = message.tags?.find((tag) => tag[0] === "title")?.[1] || "Untitled Task";
+            const taskTitle =
+                message.tags?.find((tag) => tag[0] === "title")?.[1] || "Untitled Task";
             const complexity = message.tags?.find((tag) => tag[0] === "complexity")?.[1] || "?";
             markdown += `${author} - ${timestamp}:\n`;
             markdown += `[Task: ${taskTitle}] Complexity: ${complexity}/10\n`;
             if (message.content) {
                 markdown += `${message.content}\n`;
             }
-            markdown += `\n`;
+            markdown += "\n";
         } else if (message.kind === EVENT_KINDS.AGENT_REQUEST) {
             // Agent status update
             const agentName = message.tags?.find((tag) => tag[0] === "agent-name")?.[1] || "Agent";
-            const confidence = message.tags?.find((tag) => tag[0] === "confidence-level")?.[1] || "?";
+            const confidence =
+                message.tags?.find((tag) => tag[0] === "confidence-level")?.[1] || "?";
             const title = message.tags?.find((tag) => tag[0] === "title")?.[1] || "";
-            
+
             markdown += `${agentName} - ${timestamp}:\n`;
             if (title) {
                 markdown += `[${title}] `;

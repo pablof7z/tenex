@@ -14,7 +14,7 @@ export function useProjectData(project: NDKProject | null) {
                   },
               ]
             : false,
-        { wrap: true, subId: 'project-data-task' },
+        { wrap: true, subId: "project-data-task" },
         [project?.tagId()]
     );
 

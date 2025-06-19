@@ -66,7 +66,8 @@ describe("Agent Tool Execution", () => {
         it("should execute tools when response contains tool calls", async () => {
             // Mock LLM to return response with tool calls
             mockLLM.complete = vi.fn().mockResolvedValue({
-                content: 'I\'ll help you with that. <tool_use>{"tool": "test_tool", "arguments": {"arg1": "value1"}}</tool_use>',
+                content:
+                    'I\'ll help you with that. <tool_use>{"tool": "test_tool", "arguments": {"arg1": "value1"}}</tool_use>',
                 model: "test-model",
                 toolCalls: [{ id: "test1", name: "test_tool", arguments: { arg1: "value1" } }],
             });
@@ -87,11 +88,11 @@ describe("Agent Tool Execution", () => {
 
             // Should publish initial response without tool calls
             expect(mockPublisher.publishResponse).toHaveBeenCalledTimes(2);
-            
+
             // First call should have cleaned content (no tool_use blocks)
             const firstCall = (mockPublisher.publishResponse as any).mock.calls[0];
             expect(firstCall[0].content).toBe("I'll help you with that.");
-            
+
             // Second call should have tool results
             const secondCall = (mockPublisher.publishResponse as any).mock.calls[1];
             expect(secondCall[0].content).toContain("Here are the results:");
@@ -130,7 +131,8 @@ describe("Agent Tool Execution", () => {
         it("should preserve tool-related properties through generateResponse", async () => {
             // Mock LLM to return response with tool calls
             mockLLM.complete = vi.fn().mockResolvedValue({
-                content: 'Testing tool preservation <tool_use>{"tool": "test", "arguments": {}}</tool_use>',
+                content:
+                    'Testing tool preservation <tool_use>{"tool": "test", "arguments": {}}</tool_use>',
                 model: "test-model",
                 toolCalls: [{ id: "test1", name: "test", arguments: {} }],
                 hasNativeToolCalls: true,

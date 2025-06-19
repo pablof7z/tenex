@@ -2,7 +2,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
 import { logger } from "@tenex/shared/logger";
-import type { AgentsJson, TrackedAgentsJson, TrackedAgentConfigEntry, ConfigurationLoadOptions } from "@tenex/types/agents";
+import type {
+    AgentsJson,
+    TrackedAgentsJson,
+    ConfigurationLoadOptions,
+} from "@tenex/types/agents";
 import type {
     GlobalConfig,
     ProjectConfig,
@@ -184,7 +188,7 @@ export class ConfigurationService {
      * Load the complete configuration for a context (global or project)
      */
     async loadConfiguration(
-        contextPath: string, 
+        contextPath: string,
         isGlobal = false,
         options?: ConfigurationLoadOptions
     ): Promise<TenexConfiguration> {
@@ -219,11 +223,11 @@ export class ConfigurationService {
                 );
             } else if (agents) {
                 // Only project agents, add source tracking
-                agents = this.addSourceTracking(agents, basePath, 'project');
+                agents = this.addSourceTracking(agents, basePath, "project");
             }
         } else if (agents) {
             // Add source tracking for non-merged agents
-            agents = this.addSourceTracking(agents, basePath, isGlobal ? 'global' : 'project');
+            agents = this.addSourceTracking(agents, basePath, isGlobal ? "global" : "project");
         }
 
         return {
@@ -535,18 +539,18 @@ export class ConfigurationService {
     private addSourceTracking(
         agents: AgentsJson,
         basePath: string,
-        source: 'global' | 'project'
+        source: "global" | "project"
     ): TrackedAgentsJson {
         const tracked: TrackedAgentsJson = {};
-        
+
         for (const [key, agent] of Object.entries(agents)) {
             tracked[key] = {
                 ...agent,
                 _source: source,
-                _basePath: basePath
+                _basePath: basePath,
             };
         }
-        
+
         return tracked;
     }
 
@@ -560,16 +564,16 @@ export class ConfigurationService {
         projectPath: string
     ): Promise<TrackedAgentsJson> {
         const merged: TrackedAgentsJson = {};
-        
+
         // Add global agents with tracking
         for (const [key, agent] of Object.entries(globalAgents)) {
             merged[key] = {
                 ...agent,
-                _source: 'global',
-                _basePath: globalPath
+                _source: "global",
+                _basePath: globalPath,
             };
         }
-        
+
         // Add/override with project agents
         for (const [key, agent] of Object.entries(projectAgents)) {
             if (merged[key]) {
@@ -578,14 +582,14 @@ export class ConfigurationService {
                     `Agent '${key}' from global configuration is being overridden by project configuration`
                 );
             }
-            
+
             merged[key] = {
                 ...agent,
-                _source: 'project',
-                _basePath: projectPath
+                _source: "project",
+                _basePath: projectPath,
             };
         }
-        
+
         return merged;
     }
 }

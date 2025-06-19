@@ -65,7 +65,11 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
             );
         },
         pre({ children }) {
-            return <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4 whitespace-pre">{children}</pre>;
+            return (
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4 whitespace-pre">
+                    {children}
+                </pre>
+            );
         },
         ul({ children }) {
             return <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>;

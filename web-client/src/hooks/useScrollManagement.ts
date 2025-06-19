@@ -30,13 +30,13 @@ export function useScrollManagement(messageCount: number) {
 
         const currentScrollTop = container.scrollTop;
         const scrollDelta = Math.abs(currentScrollTop - lastScrollTopRef.current);
-        
+
         // Detect if user is actively scrolling (large delta or scrolling up)
         if (scrollDelta > 10 || currentScrollTop < lastScrollTopRef.current) {
             userScrollingRef.current = true;
             lastUserScrollTimeRef.current = Date.now();
         }
-        
+
         lastScrollTopRef.current = currentScrollTop;
 
         // Clear existing timeout
@@ -47,12 +47,12 @@ export function useScrollManagement(messageCount: number) {
         // Debounce the scroll state update
         scrollTimeoutRef.current = requestAnimationFrame(() => {
             const nearBottom = checkIfNearBottom();
-            
+
             // If user hasn't scrolled for 1.5 seconds, consider them done scrolling
             if (Date.now() - lastUserScrollTimeRef.current > 1500) {
                 userScrollingRef.current = false;
             }
-            
+
             setIsNearBottom(nearBottom);
 
             // Hide new message indicator if user scrolls to bottom
@@ -67,7 +67,7 @@ export function useScrollManagement(messageCount: number) {
         (force = false) => {
             // Don't auto-scroll if user is actively scrolling
             if (!force && userScrollingRef.current) return;
-            
+
             // Only scroll if user is near bottom or if forced
             if (!force && !isNearBottom) return;
 
@@ -95,7 +95,7 @@ export function useScrollManagement(messageCount: number) {
                 prevMessageCountRef.current = messageCount;
                 return;
             }
-            
+
             // Check if user is near bottom before new messages
             const nearBottom = checkIfNearBottom();
 

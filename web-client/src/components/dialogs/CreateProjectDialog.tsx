@@ -135,7 +135,6 @@ export function CreateProjectDialog({
                 }
             }
 
-
             // No need to sign explicitly - publish() will sign with the current user's key
             project.publish();
 
@@ -210,7 +209,6 @@ export function CreateProjectDialog({
                     />
                 );
 
-
             case "confirm":
                 return <ConfirmationStep formData={formData} />;
 
@@ -220,9 +218,7 @@ export function CreateProjectDialog({
     };
 
     const getDialogMaxWidth = () => {
-        return step === "template" ||
-            step === "agents" ||
-            step === "instructions"
+        return step === "template" || step === "agents" || step === "instructions"
             ? "max-w-4xl"
             : "max-w-lg";
     };

@@ -47,7 +47,7 @@ describe("NostrPublisher", () => {
         mockProjectEvent = new NDKEvent(ndk, {
             kind: 31933,
             tags: [],
-            pubkey: "project-pubkey"
+            pubkey: "project-pubkey",
         });
     });
 

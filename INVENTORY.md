@@ -437,6 +437,13 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **Updated debug chat** - Now uses handleEvent() instead of generateResponse() for proper tool execution
 - **Added comprehensive tests** - Verified tool execution flow with AgentToolExecution.test.ts
 
+### LLM Tool Call Prefix Fix (January 2025)
+- **Fixed `default_api.` prefix issue** - LLMs sometimes add unexpected prefixes like `default_api.`, `api.`, or `tools.` to tool names
+- **Enhanced ToolExecutor** - Automatically strips common prefixes and logs warnings when they're detected
+- **Enhanced ToolParser** - Cleans prefixes during parsing for XML and Anthropic-style tool calls
+- **Fuzzy tool matching** - Tools work correctly even when LLMs add unexpected prefixes
+- **Backwards compatible** - Exact tool name matches are always preferred over prefix cleaning
+
 ---
 
 *Last Updated: January 2025*

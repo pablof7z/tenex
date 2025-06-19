@@ -33,7 +33,11 @@ export function ProjectColumn({
     const isOnline = onlineProjects.has(projectDir);
 
     // Use the useProjectData hook to fetch all project-specific data
-    const { tasks: projectTasks, statusUpdates: projectStatusUpdates, threads: projectThreads } = useProjectData(project);
+    const {
+        tasks: projectTasks,
+        statusUpdates: projectStatusUpdates,
+        threads: projectThreads,
+    } = useProjectData(project);
 
     const getProjectAvatar = (project: NDKProject) => {
         if (project.picture) {

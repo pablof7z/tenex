@@ -105,7 +105,6 @@ export interface ProjectConfig {
      * Whitelisted pubkeys for this project
      */
     whitelistedPubkeys?: string[];
-
 }
 
 /**
@@ -116,7 +115,6 @@ export interface GlobalConfig {
      * Whitelisted pubkeys for daemon monitoring
      */
     whitelistedPubkeys?: string[];
-
 }
 
 /**

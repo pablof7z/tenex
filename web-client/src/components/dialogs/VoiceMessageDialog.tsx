@@ -124,34 +124,32 @@ export function VoiceMessageDialog({
             const formData = new FormData();
             formData.append("file", audioBlob, "audio.wav");
             formData.append("model", speechConfig.config.model);
-            
+
             if (speechConfig.config.language) {
                 formData.append("language", speechConfig.config.language);
             }
 
-            const baseURL = speechConfig.credentials.baseUrl || 
-                           (speechConfig.config.provider === 'openai' 
-                               ? "https://api.openai.com/v1"
-                               : "https://openrouter.ai/api/v1");
+            const baseURL =
+                speechConfig.credentials.baseUrl ||
+                (speechConfig.config.provider === "openai"
+                    ? "https://api.openai.com/v1"
+                    : "https://openrouter.ai/api/v1");
 
             const headers: Record<string, string> = {
                 Authorization: `Bearer ${speechConfig.credentials.apiKey}`,
             };
 
             // Add OpenRouter-specific headers
-            if (speechConfig.config.provider === 'openrouter') {
+            if (speechConfig.config.provider === "openrouter") {
                 headers["HTTP-Referer"] = window.location.origin;
                 headers["X-Title"] = "TENEX Web Client";
             }
 
-            const transcriptionResponse = await fetch(
-                `${baseURL}/audio/transcriptions`,
-                {
-                    method: "POST",
-                    headers,
-                    body: formData,
-                }
-            );
+            const transcriptionResponse = await fetch(`${baseURL}/audio/transcriptions`, {
+                method: "POST",
+                headers,
+                body: formData,
+            });
 
             if (!transcriptionResponse.ok) {
                 throw new Error("Transcription failed");
@@ -165,10 +163,8 @@ export function VoiceMessageDialog({
                 const event = new NDKEvent(ndk);
                 event.kind = 1;
                 event.content = `🎤 Voice message: ${transcription}`;
-                event.tags = [
-                    ["a", project.tagId()],
-                ];
-                
+                event.tags = [["a", project.tagId()]];
+
                 event.publish();
                 onMessageSent?.();
             }
