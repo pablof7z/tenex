@@ -42,14 +42,21 @@ let globalConfig: LoggerConfig = {
 
 function parseModuleVerbosity(): ModuleVerbosityConfig {
     const config: ModuleVerbosityConfig = {
-        default: (process.env?.LOG_LEVEL as VerbosityLevel) || "normal",
+        default: "normal" as VerbosityLevel,
         modules: {},
     };
 
-    // Parse module-specific verbosity from environment variables
-    // Format: LOG_MODULE_<MODULE>=<level>
-    // Example: LOG_MODULE_TEAM=debug LOG_MODULE_LLM=silent
+    // Only try to parse environment variables in Node.js environment
     if (typeof process !== "undefined" && process.env) {
+        // Set default level from environment
+        const logLevel = process.env.LOG_LEVEL as VerbosityLevel;
+        if (logLevel && verbosityLevels[logLevel] !== undefined) {
+            config.default = logLevel;
+        }
+
+        // Parse module-specific verbosity from environment variables
+        // Format: LOG_MODULE_<MODULE>=<level>
+        // Example: LOG_MODULE_TEAM=debug LOG_MODULE_LLM=silent
         Object.keys(process.env).forEach((key) => {
             const match = key.match(/^LOG_MODULE_(.+)$/);
             if (match?.[1]) {

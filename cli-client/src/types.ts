@@ -1,4 +1,4 @@
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "@tenex/types";
 
 export { EVENT_KINDS };
 
