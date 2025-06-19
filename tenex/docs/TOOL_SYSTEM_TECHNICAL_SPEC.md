@@ -173,23 +173,6 @@ Parses tool calls from LLM responses:
 }
 ```
 
-#### addTask (`tools/addTask.ts`)
-**Purpose**: Create new tasks in project workflow
-```typescript
-{
-    name: "add_task",
-    description: "Create a new task for the project",
-    parameters: {
-        type: "object",
-        properties: {
-            title: { type: "string" },
-            description: { type: "string" },
-            complexity: { type: "string", enum: ["simple", "moderate", "complex"] }
-        }
-    }
-}
-```
-
 #### findAgent (`tools/findAgent.ts`)
 **Purpose**: Locate and summon other agents
 ```typescript

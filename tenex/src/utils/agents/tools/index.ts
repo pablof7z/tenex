@@ -4,4 +4,3 @@ export * from "./ToolParser";
 export { ToolExecutor } from "@/utils/agents/tools/ToolExecutor";
 export { ToolEnabledProvider } from "@/llm/ToolEnabledProvider";
 export { exampleTools } from "@/utils/agents/tools/examples";
-export { addTaskTool } from "@/utils/agents/tools/addTask";

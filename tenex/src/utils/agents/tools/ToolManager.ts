@@ -1,5 +1,4 @@
 import { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
-import { addTaskTool } from "@/utils/agents/tools/addTask";
 import { claudeCodeTool } from "@/utils/agents/tools/claudeCode";
 import { exampleTools } from "@/utils/agents/tools/examples";
 import { findAgentTool } from "@/utils/agents/tools/findAgent";
@@ -34,9 +33,6 @@ export class ToolManager {
         // Register spec tools
         this.defaultRegistry.register(updateSpecTool);
         this.defaultRegistry.register(readSpecsTool);
-
-        // Register task tools
-        this.defaultRegistry.register(addTaskTool);
 
         // Register shell tool
         this.defaultRegistry.register(shellTool);
