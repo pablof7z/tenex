@@ -6,9 +6,12 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [react()],
 	resolve: {
-		alias: {
-			"@": fileURLToPath(new URL("./src", import.meta.url)),
-		},
+		alias: [
+			{ find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
+			{ find: "@tenex/types/events", replacement: fileURLToPath(new URL("../packages/types/src/events", import.meta.url)) },
+			{ find: "@tenex/types", replacement: fileURLToPath(new URL("../packages/types/src", import.meta.url)) },
+			{ find: "@tenex/shared", replacement: fileURLToPath(new URL("../shared/src", import.meta.url)) },
+		],
 	},
 	optimizeDeps: {
 		exclude: ["@nostr-dev-kit/ndk-cache-sqlite-wasm"],

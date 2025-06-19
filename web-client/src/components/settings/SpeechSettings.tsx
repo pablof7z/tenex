@@ -47,6 +47,14 @@ export function SpeechSettings() {
         }
     }, [currentConfig]);
 
+    // Check if there are unsaved changes
+    const hasUnsavedChanges = currentConfig
+        ? provider !== currentConfig.config.provider ||
+          model !== currentConfig.config.model ||
+          (language || "") !== (currentConfig.config.language || "") ||
+          apiKey !== (currentConfig.credentials.apiKey || "")
+        : apiKey !== "";
+
     const speechModels = getSpeechModels(provider);
 
     // Update model when provider changes
@@ -205,6 +213,11 @@ export function SpeechSettings() {
                 <p className="text-muted-foreground">
                     Configure speech recognition for voice messages and voice input
                 </p>
+                {hasUnsavedChanges && (
+                    <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-2">
+                        You have unsaved changes. Click "Save Changes" to apply them.
+                    </p>
+                )}
             </div>
 
             <Card className="p-6">
@@ -213,10 +226,21 @@ export function SpeechSettings() {
                         <Label htmlFor="speech-provider">Provider</Label>
                         <Select
                             value={provider}
-                            onValueChange={(value: SpeechProvider) => setProvider(value)}
+                            onValueChange={(value: SpeechProvider) => {
+                                setProvider(value);
+                                // Reset test result when provider changes
+                                setTestResult(null);
+                                // Update model to match new provider's available models
+                                const models = getSpeechModels(value);
+                                if (models.length > 0 && !models.find((m) => m.id === model)) {
+                                    setModel(models[0]?.id || "");
+                                }
+                            }}
                         >
-                            <SelectTrigger>
-                                <SelectValue />
+                            <SelectTrigger id="speech-provider">
+                                <div className="flex items-center justify-between w-full">
+                                    <span>{SPEECH_PROVIDER_NAMES[provider] || "Select a provider"}</span>
+                                </div>
                             </SelectTrigger>
                             <SelectContent>
                                 {Object.entries(SPEECH_PROVIDER_NAMES).map(
@@ -344,8 +368,9 @@ export function SpeechSettings() {
                             onClick={handleSave}
                             disabled={!apiKey || testResult === false}
                             className="flex-1"
+                            variant={hasUnsavedChanges ? "primary" : "outline"}
                         >
-                            Save Speech Configuration
+                            {hasUnsavedChanges ? "Save Changes" : "Save Speech Configuration"}
                         </Button>
                         {currentConfig && (
                             <Button variant="outline" onClick={handleRemove}>
