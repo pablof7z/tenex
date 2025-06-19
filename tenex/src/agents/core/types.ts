@@ -184,7 +184,8 @@ export interface NostrPublisher {
         response: AgentResponse,
         context: EventContext,
         agentSigner: NDKSigner,
-        agentName?: string
+        agentName?: string,
+        extraTags?: string[][]
     ): Promise<void>;
     publishTypingIndicator(
         agentName: string,

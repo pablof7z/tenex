@@ -1,0 +1,23 @@
+{
+  "id": "team-1750374019606-gq1snm6zd",
+  "rootEventId": "c3c06d35ece71dea996b9d5c09a9fd974b978e92e424b8d47acf907999e7211f",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the codebase to identify LLM provider implementations and check if they log raw responses.",
+        "expectedOutcome": "Identification of relevant files and a report on whether raw responses are logged.",
+        "transitionCriteria": "Analysis complete and findings documented.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 3
+  },
+  "createdAt": 1750374019606
+}

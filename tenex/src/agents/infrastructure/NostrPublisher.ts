@@ -12,7 +12,8 @@ export class NostrPublisher implements INostrPublisher {
         response: AgentResponse,
         context: EventContext,
         agentSigner: NDKSigner,
-        agentName?: string
+        agentName?: string,
+        extraTags?: string[][]
     ): Promise<void> {
         try {
             const responseEvent = context.originalEvent.reply();
@@ -112,6 +113,13 @@ export class NostrPublisher implements INostrPublisher {
                 // Confidence level
                 if (metadata.confidence) {
                     responseEvent.tags.push(["llm-confidence", metadata.confidence.toString()]);
+                }
+            }
+
+            // Add any extra tags passed to the function
+            if (extraTags && extraTags.length > 0) {
+                for (const tag of extraTags) {
+                    responseEvent.tags.push(tag);
                 }
             }
 

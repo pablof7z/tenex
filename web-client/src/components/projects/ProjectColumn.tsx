@@ -1,11 +1,10 @@
-import type { NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import { Circle, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { useProjectData } from "../../hooks/useProjectData";
-import { onlineProjectsAtom, selectedTaskAtom } from "../../lib/store";
-import { TaskOverview } from "../tasks/TaskOverview";
+import { onlineProjectsAtom } from "../../lib/store";
 import { ThreadOverview } from "../tasks/ThreadOverview";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -25,17 +24,14 @@ export function ProjectColumn({
 }: ProjectColumnProps) {
     const { ndk } = useNDK();
     const title = project.title || project.tagValue("title") || "Untitled Project";
-    const [, setSelectedTask] = useAtom(selectedTaskAtom);
     const onlineProjects = useAtomValue(onlineProjectsAtom);
 
     // Get project directory name from d tag
     const projectDir = project.tagValue("d") || "";
     const isOnline = onlineProjects.has(projectDir);
 
-    // Use the useProjectData hook to fetch all project-specific data
+    // Use the useProjectData hook to fetch project-specific data (threads only)
     const {
-        tasks: projectTasks,
-        statusUpdates: projectStatusUpdates,
         threads: projectThreads,
     } = useProjectData(project);
 
@@ -82,24 +78,15 @@ export function ProjectColumn({
         });
     }, [projectThreads]);
 
-    // Combine tasks and threads into a single list sorted by creation time
+    // Only include threads in the column view (tasks are excluded)
     const combinedItems = useMemo(() => {
         const items: Array<{
-            type: "task" | "thread";
-            item: NDKTask | NDKEvent;
+            type: "thread";
+            item: NDKEvent;
             createdAt: number;
         }> = [];
 
-        // Add tasks
-        for (const task of projectTasks) {
-            items.push({
-                type: "task",
-                item: task,
-                createdAt: task.created_at || 0,
-            });
-        }
-
-        // Add threads
+        // Add threads only (tasks are excluded from column view)
         for (const thread of projectThreads) {
             items.push({
                 type: "thread",
@@ -110,7 +97,7 @@ export function ProjectColumn({
 
         // Sort by creation time, most recent first
         return items.sort((a, b) => b.createdAt - a.createdAt);
-    }, [projectTasks, projectThreads]);
+    }, [projectThreads]);
 
     return (
         <div className="w-80 flex-shrink-0 bg-muted/50 border-x-[1px] border-border flex flex-col h-full">
@@ -190,27 +177,15 @@ export function ProjectColumn({
 
             {/* Column Content */}
             <div className="flex-1 overflow-y-auto">
-                {/* Combined Tasks and Threads */}
-                {combinedItems.map((item) => {
-                    if (item.type === "task") {
-                        return (
-                            <TaskOverview
-                                key={item.item.id}
-                                task={item.item as NDKTask}
-                                statusUpdates={projectStatusUpdates}
-                                onClick={() => setSelectedTask(item.item as NDKTask)}
-                            />
-                        );
-                    }
-                    return (
-                        <ThreadOverview
-                            key={item.item.id}
-                            thread={item.item as NDKEvent}
-                            replies={threadReplies}
-                            onClick={() => onThreadClick?.(item.item as NDKEvent)}
-                        />
-                    );
-                })}
+                {/* Threads Only (Tasks Excluded) */}
+                {combinedItems.map((item) => (
+                    <ThreadOverview
+                        key={item.item.id}
+                        thread={item.item as NDKEvent}
+                        replies={threadReplies}
+                        onClick={() => onThreadClick?.(item.item as NDKEvent)}
+                    />
+                ))}
 
                 {/* Empty State */}
                 {combinedItems.length === 0 && (
@@ -219,7 +194,7 @@ export function ProjectColumn({
                             <Plus className="w-6 h-6 text-muted-foreground" />
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">
-                            No tasks or threads yet
+                            No threads yet
                         </p>
                         <Button variant="ghost" size="sm" onClick={() => onTaskCreate?.(project)}>
                             Create content

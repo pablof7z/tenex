@@ -1,0 +1,23 @@
+{
+  "id": "team-1750373949178-3tt788c51",
+  "rootEventId": "73f61b854c21ddfcafe648755578af4047130401d4074c4aa6bc40294aee8fd7",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the specified function and related code for JSON parsing and string handling issues, identify relevant logging, and provide code snippets and line numbers.",
+        "expectedOutcome": "Detailed analysis of the code with identified potential issues and logging locations.",
+        "transitionCriteria": "Analysis is complete and findings are documented.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 3
+  },
+  "createdAt": 1750373949178
+}

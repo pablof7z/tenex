@@ -4,6 +4,7 @@ import { exampleTools } from "@/utils/agents/tools/examples";
 import { findAgentTool } from "@/utils/agents/tools/findAgent";
 import { readSpecsTool } from "@/utils/agents/tools/readSpecs";
 import { rememberLessonTool } from "@/utils/agents/tools/rememberLesson";
+import { researchTool } from "@/utils/agents/tools/research";
 import { shellTool } from "@/utils/agents/tools/shell";
 import type { ToolDefinition } from "@/utils/agents/tools/types";
 import { updateSpecTool } from "@/utils/agents/tools/updateSpec";
@@ -29,6 +30,9 @@ export class ToolManager {
     private registerDefaultTools(): void {
         // Register Claude Code tool first (highest priority)
         this.defaultRegistry.register(claudeCodeTool);
+
+        // Register research tool
+        this.defaultRegistry.register(researchTool);
 
         // Register spec tools
         this.defaultRegistry.register(updateSpecTool);

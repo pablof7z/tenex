@@ -113,6 +113,45 @@ describe("NostrPublisher", () => {
             expect(replyEvent.tags.some((tag) => tag[0] === "signal")).toBe(true);
         });
 
+        it("should include extra tags when provided", async () => {
+            const response: AgentResponse = {
+                content: "Agent response with session ID",
+            };
+
+            const context: EventContext = {
+                rootEventId: "conv-1",
+                projectId: "proj-1",
+                originalEvent: mockEvent,
+                projectEvent: mockProjectEvent,
+            };
+
+            const extraTags = [["claude-session-id", "test-session-123"]];
+
+            // Create a mock reply event
+            const replyEvent = new NDKEvent(ndk);
+            replyEvent.content = "";
+            replyEvent.tags = [
+                ["e", mockEvent.id!],
+                ["p", "user-pubkey"],
+            ];
+            replyEvent.sign = vi.fn().mockResolvedValue(undefined);
+            replyEvent.publish = vi.fn().mockResolvedValue(undefined);
+            replyEvent.tag = vi.fn();
+
+            // Replace the mock to return our spy
+            mockEvent.reply = vi.fn().mockReturnValue(replyEvent);
+
+            await publisher.publishResponse(response, context, agentSigner, "test-agent", extraTags);
+
+            // Verify the extra tag was added
+            const sessionTag = replyEvent.tags.find((tag) => tag[0] === "claude-session-id");
+            expect(sessionTag).toBeDefined();
+            expect(sessionTag![1]).toBe("test-session-123");
+
+            // Verify event was published
+            expect(replyEvent.publish).toHaveBeenCalled();
+        });
+
         it("should handle case when agent p-tag is not present", async () => {
             const response: AgentResponse = {
                 content: "Agent response",

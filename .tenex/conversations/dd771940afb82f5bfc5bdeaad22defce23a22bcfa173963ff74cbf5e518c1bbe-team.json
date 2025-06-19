@@ -1,0 +1,23 @@
+{
+  "id": "team-1750351865603-hx5ee90es",
+  "rootEventId": "dd771940afb82f5bfc5bdeaad22defce23a22bcfa173963ff74cbf5e518c1bbe",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Respond to the user's question about available tools.",
+        "expectedOutcome": "A clear list or description of the tools the system/coder agent has access to.",
+        "transitionCriteria": "Response is generated and provided to the user.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 1
+  },
+  "createdAt": 1750351865603
+}

@@ -11,6 +11,7 @@ export class ClaudeCodeOutputParser {
     private startTime = Date.now();
     private toolContext?: ToolContext;
     private taskEvent?: NDKTask;
+    private sessionId?: string;
 
     constructor(toolContext?: ToolContext, taskEvent?: NDKTask) {
         this.toolContext = toolContext;
@@ -38,12 +39,19 @@ export class ClaudeCodeOutputParser {
                 },
             };
 
+            // Prepare extra tags with session ID if available
+            const extraTags: string[][] = [];
+            if (this.sessionId) {
+                extraTags.push(["claude-session-id", this.sessionId]);
+            }
+
             // Use NostrPublisher.publishResponse which will properly create a reply using taskEvent.reply()
             await this.toolContext.publisher.publishResponse(
                 response,
                 updateContext,
                 this.toolContext.agent.getSigner(),
-                this.toolContext.agentName
+                this.toolContext.agentName,
+                extraTags
             );
 
             logDebug(chalk.gray(`Published task update: ${content.substring(0, 50)}...`));
@@ -64,6 +72,13 @@ export class ClaudeCodeOutputParser {
                 try {
                     const message = JSON.parse(line) as ClaudeCodeMessage;
                     messages.push(message);
+                    
+                    // Capture session ID if present
+                    if (message.session_id && !this.sessionId) {
+                        this.sessionId = message.session_id;
+                        logDebug(chalk.gray(`Captured Claude session ID: ${this.sessionId}`));
+                    }
+                    
                     // Process message asynchronously without blocking
                     this.processMessage(message).catch((error) => {
                         logError(`Error processing message: ${error}`);
@@ -213,5 +228,9 @@ export class ClaudeCodeOutputParser {
 
     getMessageCount(): number {
         return this.messageCount;
+    }
+
+    getSessionId(): string | undefined {
+        return this.sessionId;
     }
 }

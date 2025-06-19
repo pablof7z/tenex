@@ -1,0 +1,23 @@
+{
+  "id": "team-1750372291530-33h7wwbp9",
+  "rootEventId": "69316eb47fc7d6488c3c4e0820319ac954844add77a66184a5ede56894e9a029",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Understand the request, identify the relevant component, implement the button, dropdown, copy ID functionality, view raw functionality (modal/dialog), and styling.",
+        "expectedOutcome": "The requested feature is fully implemented, including the UI elements, functionality, and styling.",
+        "transitionCriteria": "Implementation is complete and ready for review.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 6
+  },
+  "createdAt": 1750372291530
+}

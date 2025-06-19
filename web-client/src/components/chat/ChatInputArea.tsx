@@ -79,7 +79,7 @@ export const ChatInputArea = forwardRef<HTMLTextAreaElement, ChatInputAreaProps>
                             onChange={onInputChange}
                             onKeyDown={onKeyDown}
                             placeholder={placeholder}
-                            className="resize-none min-h-[40px] max-h-[120px] text-sm"
+                            className="resize-none min-h-[40px] max-h-[50vh] overflow-y-auto text-sm"
                             rows={1}
                             disabled={isSending}
                         />

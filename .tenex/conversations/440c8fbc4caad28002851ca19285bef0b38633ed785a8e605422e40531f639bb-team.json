@@ -1,0 +1,23 @@
+{
+  "id": "team-1750374746120-th4m1lj0j",
+  "rootEventId": "440c8fbc4caad28002851ca19285bef0b38633ed785a8e605422e40531f639bb",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Handle the trivial request.",
+        "expectedOutcome": "Request acknowledged and deemed trivial or invalid.",
+        "transitionCriteria": "Request processed.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 1
+  },
+  "createdAt": 1750374746120
+}

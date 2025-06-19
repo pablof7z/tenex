@@ -1,0 +1,23 @@
+{
+  "id": "team-1750374081462-gza3jjfah",
+  "rootEventId": "84190595503166625cbf179408615ed00a9f39ef360ded155cc5bd00800f0b46",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the specified file and method, explain its purpose and processing logic.",
+        "expectedOutcome": "A clear explanation of the `formatToolCallsAsText` method, its purpose, and how it handles tool call information from the Anthropic API.",
+        "transitionCriteria": "Analysis and explanation are complete.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 2
+  },
+  "createdAt": 1750374081462
+}

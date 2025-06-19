@@ -1,0 +1,23 @@
+{
+  "configurations": {
+    "openrouter-google-gemini-2-5-flash-preview": {
+      "provider": "openrouter",
+      "model": "google/gemini-2.5-flash-preview",
+      "enableCaching": true
+    },
+    "openrouter-deepseek-deepseek-chat-v3-0324": {
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-chat-v3-0324",
+      "enableCaching": false
+    }
+  },
+  "defaults": {
+    "agents": "openrouter-google-gemini-2-5-flash-preview"
+  },
+  "credentials": {
+    "openrouter": {
+      "apiKey": "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",
+      "baseUrl": "https://openrouter.ai/api/v1"
+    }
+  }
+}

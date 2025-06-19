@@ -1,0 +1,8 @@
+{
+  "eventId": "191963646dddc46b32955458b69aeb3cc02e3b6645536456b762d177107adca5",
+  "title": "Simplicity First",
+  "description": "Keep things simple. Avoid overengineering.",
+  "content": "When writing code, prioritize simplicity and clarity. Avoid over-engineering, unnecessary abstraction, or speculative generalization. Do not introduce patterns, optimizations, or features unless they are explicitly required. Prefer readable, minimal solutions that solve the problem directly. If in doubt, choose the simpler path.\n\nFollow the YAGNI principle: \"You Aren’t Gonna Need It.\" Don’t build features, abstractions, or configuration options unless they are necessary for the current problem. Design for now, not for imagined futures.\n\nDesign for the present, but don’t sabotage the near future. Favor simplicity, but leave room for evolution. If a likely extension is obvious and low-cost, make space for it—but don't build it yet. Simple ≠ brittle.\n",
+  "version": "1",
+  "fetchedAt": 1750348841146
+}

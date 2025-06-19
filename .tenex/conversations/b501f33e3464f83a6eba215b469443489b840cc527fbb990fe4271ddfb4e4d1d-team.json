@@ -1,0 +1,23 @@
+{
+  "id": "team-1750372282782-nhy2brpxx",
+  "rootEventId": "b501f33e3464f83a6eba215b469443489b840cc527fbb990fe4271ddfb4e4d1d",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Implement the requested feature in the web client",
+        "expectedOutcome": "Code changes implemented to add the [...] button, dropdown with 'copy ID' and 'view raw' options, and associated functionality.",
+        "transitionCriteria": "Code implementation is complete and ready for review.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 4
+  },
+  "createdAt": 1750372282782
+}

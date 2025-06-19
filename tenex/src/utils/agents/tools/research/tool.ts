@@ -1,40 +1,31 @@
 import { spawn } from "node:child_process";
-import { ClaudeCodeOutputParser } from "@/utils/agents/tools/claudeCode/ClaudeCodeOutputParser";
-import type { ClaudeCodeOptions } from "@/utils/agents/tools/claudeCode/types";
+import type { ResearchOptions } from "@/utils/agents/tools/research/types";
 import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { logDebug, logError, logInfo } from "@tenex/shared/logger";
 import { NDKTask } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
+import { ResearchOutputParser } from "@/utils/agents/tools/research/ResearchOutputParser";
 
-export const claudeCodeTool: ToolDefinition = {
-    name: "claude_code",
+export const researchTool: ToolDefinition = {
+    name: "research",
     description:
-        "Implement code changes by invoking Claude Code. Use this tool when you need to WRITE, MODIFY, CREATE code. Use claude_code for: writing new code, modifying existing files, debugging, refactoring, creating new features, fixing bugs, or any hands-on coding work.",
+        "Generate a comprehensive markdown research report about the current codebase based on the provided query. This tool uses Claude to analyze the codebase and produce a detailed markdown report covering the requested topic. Use this tool for: analyzing architecture, documenting patterns, researching specific functionality, understanding code structure, or generating technical documentation.",
     parameters: [
         {
-            name: "title",
+            name: "query",
             type: "string",
             description:
-                "A concise title (3-8 words) describing what this code task will accomplish.",
-            required: true,
-        },
-        {
-            name: "prompt",
-            type: "string",
-            description:
-                "The detailed prompt for Claude Code. Claude Code will determine what context and files it needs, provide as much information as possible. If you have a backtrace, debug logs, include them. If the human user provided information, make sure to include it verbatim.",
+                "The research query describing what you want to analyze about the codebase. Be specific about what aspects you want to research (e.g., 'authentication system architecture', 'database connection patterns', 'API endpoint documentation').",
             required: true,
         },
     ],
     execute: async (params, toolContext?: ToolContext) => {
-        const title = params.title as string;
-        const prompt = params.prompt as string;
+        const query = params.query as string;
 
-        logInfo(chalk.blue("\n🚀 Starting Claude Code..."));
-        logDebug(chalk.gray(`Title: "${title}"`));
-        logDebug(chalk.gray(`Prompt: "${prompt.substring(0, 100)}..."`));
+        logInfo(chalk.blue("\n🔍 Starting Research..."));
+        logDebug(chalk.gray(`Query: "${query}"`));
 
-        // Create NDKTask for this claude_code execution
+        // Create NDKTask for this research execution
         let taskEvent: NDKTask | undefined;
         if (
             toolContext?.ndk &&
@@ -44,8 +35,8 @@ export const claudeCodeTool: ToolDefinition = {
         ) {
             try {
                 taskEvent = new NDKTask(toolContext.ndk);
-                taskEvent.title = title;
-                taskEvent.content = prompt;
+                taskEvent.title = `Research: ${query}`;
+                taskEvent.content = `Generating research report for: ${query}`;
 
                 // Tag the task with the project
                 taskEvent.tag(toolContext.projectEvent);
@@ -58,14 +49,14 @@ export const claudeCodeTool: ToolDefinition = {
                     taskEvent.tags.push(["agent", toolContext.agentName]);
                 }
 
-                // Add tool tag to identify this as a claude_code task
-                taskEvent.tags.push(["tool", "claude_code"]);
+                // Add tool tag to identify this as a research task
+                taskEvent.tags.push(["tool", "research"]);
 
                 // Sign and publish the task using agent's signer
                 await taskEvent.sign(toolContext.agent.getSigner());
                 await taskEvent.publish();
 
-                logInfo(chalk.green(`📋 Created task: ${title}`));
+                logInfo(chalk.green(`📋 Created research task: ${query}`));
                 logDebug(chalk.gray(`Task ID: ${taskEvent.id}`));
             } catch (error) {
                 logError(chalk.red(`Failed to create task: ${error}`));
@@ -74,12 +65,11 @@ export const claudeCodeTool: ToolDefinition = {
         }
 
         try {
-            const result = await executeClaudeCode(
+            const result = await executeResearch(
                 {
-                    prompt: prompt,
+                    query: query,
                     verbose: true,
-                    outputFormat: "stream-json",
-                    dangerouslySkipPermissions: true,
+                    outputFormat: "markdown",
                 },
                 toolContext,
                 taskEvent
@@ -93,26 +83,39 @@ export const claudeCodeTool: ToolDefinition = {
             return {
                 success: false,
                 output: "",
-                error: error instanceof Error ? error.message : "Claude Code execution failed",
+                error: error instanceof Error ? error.message : "Research execution failed",
             };
         }
     },
 };
 
-function executeClaudeCode(
-    options: ClaudeCodeOptions,
+function executeResearch(
+    options: ResearchOptions,
     toolContext?: ToolContext,
     taskEvent?: NDKTask
 ): Promise<string> {
     return new Promise((resolve, reject) => {
-        // Match the working command format
+        // Create a research prompt that explicitly requests markdown output
+        const researchPrompt = `Please analyze the current codebase and generate a comprehensive markdown research report about: ${options.query}
+
+Your response should be formatted as a well-structured markdown document with:
+- Clear headings and subheadings
+- Code examples where relevant
+- Bullet points for key findings
+- Sections for different aspects of the topic
+- Proper markdown formatting throughout
+
+When asked to plan how to properly implement a feature, come up with as many different approaches as possible, outlining the pros and cons of each approach, and then recommend the best approach based on the analysis.
+
+Query: ${options.query}`;
+
         const args = [
             "-p",
             "--dangerously-skip-permissions",
             "--output-format",
             "stream-json",
             "--verbose",
-            options.prompt,
+            researchPrompt,
         ];
 
         // Show the actual command being run
@@ -120,7 +123,7 @@ function executeClaudeCode(
             `${chalk.gray("Command:")} claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`
         );
         logDebug(`${chalk.gray("Working directory:")} ${options.projectPath || process.cwd()}`);
-        logInfo(chalk.yellow("\nExecuting Claude Code...\n"));
+        logInfo(chalk.yellow("\nExecuting Research via Claude Code...\n"));
 
         const claudeProcess = spawn("claude", args, {
             cwd: options.projectPath || process.cwd(),
@@ -130,7 +133,7 @@ function executeClaudeCode(
 
         logDebug(`${chalk.gray("Claude process PID:")} ${claudeProcess.pid}`);
 
-        const parser = new ClaudeCodeOutputParser(toolContext, taskEvent);
+        const parser = new ResearchOutputParser(toolContext, taskEvent);
         let finalResult = "";
         let hasError = false;
 
@@ -141,7 +144,7 @@ function executeClaudeCode(
 
         claudeProcess.stdout?.on("data", (chunk: string) => {
             const messages = parser.parseLines(chunk);
-
+            
             // Capture the final result
             for (const message of messages) {
                 if (message.type === "result") {
@@ -155,11 +158,9 @@ function executeClaudeCode(
             }
         });
 
-        // stderr is inherited, so it will show directly in console
-
         claudeProcess.on("close", (code) => {
             if (code !== 0 || hasError) {
-                reject(new Error(`Claude Code exited with code ${code}`));
+                reject(new Error(`Research execution failed with code ${code}`));
             } else {
                 // Include summary statistics in the result
                 const stats = [];
@@ -171,7 +172,7 @@ function executeClaudeCode(
                 }
 
                 const summary = stats.length > 0 ? ` (${stats.join(", ")})` : "";
-                let result = finalResult || `Code task completed successfully${summary}`;
+                let result = finalResult || `Research completed successfully${summary}`;
                 
                 // Add session ID to the result if available
                 const sessionId = parser.getSessionId();
@@ -184,12 +185,12 @@ function executeClaudeCode(
         });
 
         claudeProcess.on("error", (error) => {
-            logError(`${chalk.red("Failed to start Claude Code:")} ${error.message}`);
+            logError(`${chalk.red("Failed to start research:")} ${error.message}`);
             if (error.message.includes("ENOENT")) {
                 logError(chalk.yellow("\nMake sure Claude CLI is installed and in your PATH"));
                 logError(chalk.yellow("Install with: npm install -g @anthropic-ai/claude-cli"));
             }
-            reject(new Error(`Failed to start Claude Code: ${error.message}`));
+            reject(new Error(`Failed to start research: ${error.message}`));
         });
     });
 }

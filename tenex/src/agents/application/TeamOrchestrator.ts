@@ -3,6 +3,7 @@ import { logger } from "@tenex/shared/logger";
 const orchestrationLogger = logger.forModule("orchestration");
 import { TEAM_ORCHESTRATOR_PROMPT } from "../../prompts";
 import { TeamFormationError } from "../core/errors";
+import { JSONRepair, JSONRepairError } from "../../utils/agents/tools/JSONRepair";
 import type {
     AgentConfig,
     ConversationPlan,
@@ -22,44 +23,60 @@ export class TeamOrchestrator {
         orchestrationLogger.info("TeamOrchestrator: Analyzing request and forming team", "verbose");
 
         const prompt = this.buildTeamFormationPrompt(request);
+        const maxRetries = 3;
 
-        try {
-            const completion = await this.llm.complete({
-                messages: [
-                    {
-                        role: "system",
-                        content: this.getSystemPrompt(),
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const completion = await this.llm.complete({
+                    messages: [
+                        {
+                            role: "system",
+                            content: this.getSystemPrompt(),
+                        },
+                        {
+                            role: "user",
+                            content: prompt + (attempt > 0 ? this.getRetryGuidance(attempt) : ""),
+                        },
+                    ],
+                    context: {
+                        agentName: "orchestrator",
+                        rootEventId: "team-formation",
+                        eventId: request.event.id,
                     },
-                    {
-                        role: "user",
-                        content: prompt,
-                    },
-                ],
-                context: {
-                    agentName: "orchestrator",
-                    rootEventId: "team-formation",
-                    eventId: request.event.id,
-                },
-                temperature: 0.7,
-            });
+                    temperature: 0.7,
+                });
 
-            const response = this.parseTeamFormationResponse(completion.content);
+                const response = this.parseTeamFormationResponse(completion.content);
 
-            // Validate response
-            this.validateTeamFormation(response, request.availableAgents);
+                // Validate response
+                this.validateTeamFormation(response, request.availableAgents);
 
-            orchestrationLogger.info(
-                `Team formation complete: Lead=${response.team.lead}, Members=${response.team.members.join(",")}`,
-                "normal"
-            );
+                orchestrationLogger.info(
+                    `Team formation complete: Lead=${response.team.lead}, Members=${response.team.members.join(",")}`,
+                    "normal"
+                );
 
-            return response;
-        } catch (error) {
-            orchestrationLogger.error("Team formation failed:", error);
-            throw new TeamFormationError(
-                `Failed to form team: ${error instanceof Error ? error.message : "Unknown error"}`
-            );
+                return response;
+            } catch (error) {
+                orchestrationLogger.error(`Team formation attempt ${attempt + 1} failed:`, error);
+                
+                // If it's a JSON parsing error and we have retries left, try to recover
+                if (error instanceof TeamFormationError && error.details?.rawContent && attempt < maxRetries - 1) {
+                    orchestrationLogger.info(`Attempting to recover from malformed JSON (attempt ${attempt + 2}/${maxRetries})`);
+                    continue;
+                }
+                
+                // If we've exhausted retries or it's not a recoverable error, throw
+                if (attempt === maxRetries - 1) {
+                    throw new TeamFormationError(
+                        `Failed to form team after ${maxRetries} attempts: ${error instanceof Error ? error.message : "Unknown error"}`
+                    );
+                }
+            }
         }
+
+        // This should never be reached, but TypeScript needs it
+        throw new TeamFormationError("Failed to form team: Maximum retries exceeded");
     }
 
     private getSystemPrompt(): string {
@@ -93,6 +110,10 @@ Respond with a team composition and conversation plan in JSON format.`;
     }
 
     private parseTeamFormationResponse(content: string): TeamFormationResult {
+        // Debug logging for raw LLM response
+        orchestrationLogger.debug(`Parsing LLM response content: ${content}`);
+        orchestrationLogger.debug(`LLM response content length: ${content.length}`);
+        
         try {
             // Extract JSON from the response (handle markdown code blocks)
             const jsonMatch = content.match(/```json\n?(.*?)\n?```/s) || content.match(/{.*}/s);
@@ -100,7 +121,34 @@ Respond with a team composition and conversation plan in JSON format.`;
                 throw new Error("No JSON found in response");
             }
 
-            const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+            const rawResponse = jsonMatch[1] || jsonMatch[0];
+            orchestrationLogger.debug(`Raw JSON response to parse: ${rawResponse}`);
+            
+            // Use JSONRepair to parse with automatic fixing
+            let parsed;
+            let wasRepaired = false;
+            try {
+                // First try normal JSON.parse to detect if repairs are needed
+                try {
+                    parsed = JSON.parse(rawResponse);
+                } catch (parseError) {
+                    // Normal parse failed, use JSONRepair
+                    orchestrationLogger.warn("Standard JSON parse failed, attempting repairs:", parseError);
+                    parsed = JSONRepair.parse(rawResponse, { attemptAutoFix: true, maxRetries: 3 });
+                    wasRepaired = true;
+                    orchestrationLogger.info("JSON successfully repaired and parsed");
+                }
+            } catch (repairError) {
+                if (repairError instanceof JSONRepairError) {
+                    orchestrationLogger.error("JSON repair attempts:", repairError.repairAttempts);
+                    orchestrationLogger.debug("Failed to repair JSON content:", rawResponse);
+                }
+                throw repairError;
+            }
+
+            if (wasRepaired) {
+                orchestrationLogger.warn("Team formation response required JSON repairs - the LLM produced malformed JSON");
+            }
 
             // Validate structure
             if (!parsed.team || !parsed.team.lead || !Array.isArray(parsed.team.members)) {
@@ -184,5 +232,44 @@ Respond with a team composition and conversation plan in JSON format.`;
                 }
             }
         }
+    }
+
+    private getRetryGuidance(attemptNumber: number): string {
+        const guidance = [
+            "\n\nIMPORTANT: Your previous response had formatting issues. Please ensure:",
+            "1. The JSON is properly formatted with all strings terminated",
+            "2. No trailing commas in objects or arrays",
+            "3. All brackets and braces are properly closed",
+            "4. Use double quotes for all strings (not single quotes)",
+            "5. Do not include any text outside the JSON code block",
+            "6. Make sure the JSON structure matches this format exactly:",
+            "```json",
+            "{",
+            '  "team": {',
+            '    "lead": "agent_name",',
+            '    "members": ["agent_name1", "agent_name2"]',
+            "  },",
+            '  "conversationPlan": {',
+            '    "stages": [',
+            "      {",
+            '        "participants": ["agent_name"],',
+            '        "purpose": "...",',
+            '        "expectedOutcome": "...",',
+            '        "transitionCriteria": "...",',
+            '        "primarySpeaker": "agent_name"',
+            "      }",
+            "    ],",
+            '    "estimatedComplexity": 1-10',
+            "  },",
+            '  "reasoning": "..."',
+            "}",
+            "```"
+        ];
+
+        if (attemptNumber > 1) {
+            guidance.push("\nThis is your final attempt. Please double-check your JSON formatting!");
+        }
+
+        return guidance.join("\n");
     }
 }

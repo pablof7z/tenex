@@ -1,0 +1,23 @@
+{
+  "id": "team-1750373032157-gl9vqoahg",
+  "rootEventId": "211dbbe8b5966ee07385c570cf5d723351fa6e745bcd6816e6c2270fbe5df55c",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Define and implement the 'research' tool based on the user request, including the parameter definition and logic to interact with Claude for generating a markdown report.",
+        "expectedOutcome": "New tool file created and implemented, ready for testing.",
+        "transitionCriteria": "Tool implementation is complete and reviewed.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 3
+  },
+  "createdAt": 1750373032157
+}

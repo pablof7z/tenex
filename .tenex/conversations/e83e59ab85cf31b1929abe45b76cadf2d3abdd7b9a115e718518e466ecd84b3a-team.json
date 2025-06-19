@@ -1,0 +1,23 @@
+{
+  "id": "team-1750353037606-v4m1d1g3t",
+  "rootEventId": "e83e59ab85cf31b1929abe45b76cadf2d3abdd7b9a115e718518e466ecd84b3a",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the web-client codebase to identify and extract relevant code snippets for microphone input handling, transcription, and event creation.",
+        "expectedOutcome": "File paths and code snippets for microphone initiation, transcription handling, and 'kind:1' event creation logic are identified and provided.",
+        "transitionCriteria": "The relevant code has been found and the information is ready to be presented.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 4
+  },
+  "createdAt": 1750353037606
+}

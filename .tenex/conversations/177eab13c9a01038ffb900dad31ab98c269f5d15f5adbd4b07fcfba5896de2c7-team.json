@@ -1,0 +1,23 @@
+{
+  "id": "team-1750374056382-c3hv6iewt",
+  "rootEventId": "177eab13c9a01038ffb900dad31ab98c269f5d15f5adbd4b07fcfba5896de2c7",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the `AnthropicProvider.ts` file, specifically the `formatToolCallsAsText` method. Explain its purpose and how it processes tool call information from the Anthropic API response.",
+        "expectedOutcome": "A clear explanation of the `formatToolCallsAsText` method's function, its input (Anthropic API tool call response structure), and its output (formatted text representation of tool calls).",
+        "transitionCriteria": "Analysis is complete and explanation is ready.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 2
+  },
+  "createdAt": 1750374056382
+}

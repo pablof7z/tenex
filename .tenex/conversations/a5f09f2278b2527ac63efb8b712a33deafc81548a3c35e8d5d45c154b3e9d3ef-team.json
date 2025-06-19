@@ -1,0 +1,23 @@
+{
+  "id": "team-1750371829336-ghus81yr5",
+  "rootEventId": "a5f09f2278b2527ac63efb8b712a33deafc81548a3c35e8d5d45c154b3e9d3ef",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the codebase to locate and modify the code responsible for rendering the project dashboard column view, specifically excluding tasks.",
+        "expectedOutcome": "Modified code provided with explanation.",
+        "transitionCriteria": "Code analysis and modification are complete.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 5
+  },
+  "createdAt": 1750371829336
+}

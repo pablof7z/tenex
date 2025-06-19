@@ -1,0 +1,23 @@
+{
+  "id": "team-1750352461620-ryuhxztzw",
+  "rootEventId": "b3898b99050adc9efe58332ece1bed9edadad936fad1546d06a92012c0cedca8",
+  "lead": "coder",
+  "members": [
+    "coder"
+  ],
+  "plan": {
+    "stages": [
+      {
+        "participants": [
+          "coder"
+        ],
+        "purpose": "Analyze the codebase in ./tenex/, identify key subsystems, their purpose, interaction, and provide examples like the agentic system. Generate a report suitable for identifying documentation needs.",
+        "expectedOutcome": "A detailed report describing the subsystems, their interactions, and examples, formatted for documentation assessment.",
+        "transitionCriteria": "Report is complete and reviewed.",
+        "primarySpeaker": "coder"
+      }
+    ],
+    "estimatedComplexity": 4
+  },
+  "createdAt": 1750352461620
+}

@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNDKCurrentPubkey, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Brain, Cpu, DollarSign, GitCommit } from "lucide-react";
+import { Brain, Cpu, DollarSign, GitCommit, MoreHorizontal, Copy, Eye } from "lucide-react";
 import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -13,6 +13,8 @@ import { LLMMetadataDialog } from "../dialogs/LLMMetadataDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
 interface StatusUpdateProps {
     event: NDKEvent;
@@ -23,6 +25,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
     const currentPubkey = useNDKCurrentPubkey();
     const { formatRelativeTime } = useTimeFormat();
     const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+    const [showRawEventDialog, setShowRawEventDialog] = useState(false);
 
     // Process content for Nostr entities
     const processedContent = useMemo(() => {
@@ -238,6 +241,18 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
         return Object.keys(metadata).length > 0 ? metadata : null;
     };
 
+    const handleCopyId = async () => {
+        try {
+            await navigator.clipboard.writeText(event.encode());
+        } catch (error) {
+            console.error("Failed to copy event ID:", error);
+        }
+    };
+
+    const getRawEventData = () => {
+        return event.rawEvent();
+    };
+
     // Get p-tagged users
     const pTaggedPubkeys = useMemo(() => {
         const pubkeys: string[] = [];
@@ -315,6 +330,31 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                     <div className="flex items-center gap-2 justify-end text-xs text-muted-foreground mt-1">
                         <span>{formatRelativeTime(event.created_at!)}</span>
                         <PTaggedAvatars />
+                        {/* More options dropdown for user messages */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
+                                    title="Message options"
+                                >
+                                    <MoreHorizontal className="w-3.5 h-3.5" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36">
+                                <DropdownMenuItem onClick={handleCopyId} className="cursor-pointer">
+                                    <Copy className="w-3.5 h-3.5 mr-2" />
+                                    Copy ID
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    onClick={() => setShowRawEventDialog(true)} 
+                                    className="cursor-pointer"
+                                >
+                                    <Eye className="w-3.5 h-3.5 mr-2" />
+                                    View Raw
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>
@@ -363,6 +403,31 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                                 <Cpu className="w-3.5 h-3.5" />
                             </button>
                         )}
+                        {/* More options dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
+                                    title="Message options"
+                                >
+                                    <MoreHorizontal className="w-3.5 h-3.5" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-36">
+                                <DropdownMenuItem onClick={handleCopyId} className="cursor-pointer">
+                                    <Copy className="w-3.5 h-3.5 mr-2" />
+                                    Copy ID
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    onClick={() => setShowRawEventDialog(true)} 
+                                    className="cursor-pointer"
+                                >
+                                    <Eye className="w-3.5 h-3.5 mr-2" />
+                                    View Raw
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         {getConfidenceLevel() && (
                             <Badge variant="secondary" className="text-xs h-5 px-2">
                                 {getConfidenceLevel()}/10
@@ -409,6 +474,20 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                     metadata={getLLMMetadata()!}
                 />
             )}
+
+            {/* Raw Event Dialog */}
+            <Dialog open={showRawEventDialog} onOpenChange={setShowRawEventDialog}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+                    <DialogHeader>
+                        <DialogTitle>Raw Event Data</DialogTitle>
+                    </DialogHeader>
+                    <div className="overflow-auto">
+                        <pre className="bg-muted p-4 rounded-lg text-xs font-mono whitespace-pre-wrap break-all">
+                            {JSON.stringify(getRawEventData(), null, 2)}
+                        </pre>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 });
