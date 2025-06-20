@@ -2,12 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { getConfig } from "../config.js";
 import {
-    addGitCommitDetailsCommand,
-    addGitResetToCommitCommand,
-    addGitValidateCommitCommand,
-} from "../logic/git-reset.js";
-import {
-    addPublishCommand,
     addPublishTaskStatusUpdateCommand,
     addPublishTypingIndicatorCommand,
 } from "../logic/publish.js";
@@ -27,14 +21,8 @@ const mcpServer = new McpServer({
 export async function startMcpServer(): Promise<void> {
     try {
         // Register publish commands
-        addPublishCommand(mcpServer);
         addPublishTaskStatusUpdateCommand(mcpServer);
         addPublishTypingIndicatorCommand(mcpServer);
-
-        // Register git reset commands
-        addGitResetToCommitCommand(mcpServer);
-        addGitCommitDetailsCommand(mcpServer);
-        addGitValidateCommitCommand(mcpServer);
 
         // Register remember_lesson command only if AGENT_EVENT_ID is set
         const config = await getConfig();
