@@ -4,22 +4,22 @@
 import type { AgentSummary } from "@/agents/core/types";
 
 export const AGENT_CATALOG_PROMPT = (agents: AgentSummary[], currentAgentName: string) => {
-    if (!agents || agents.length === 0) {
-        return "";
-    }
+  if (!agents || agents.length === 0) {
+    return "";
+  }
 
-    // Filter out the current agent from the list
-    const otherAgents = agents.filter((agent) => agent.name !== currentAgentName);
+  // Filter out the current agent from the list
+  const otherAgents = agents.filter((agent) => agent.name !== currentAgentName);
 
-    if (otherAgents.length === 0) {
-        return "";
-    }
+  if (otherAgents.length === 0) {
+    return "";
+  }
 
-    const agentList = otherAgents
-        .map((agent) => `- **${agent.name}**: ${agent.role} - ${agent.description}`)
-        .join("\n");
+  const agentList = otherAgents
+    .map((agent) => `- **${agent.name}**: ${agent.role} - ${agent.description}`)
+    .join("\n");
 
-    return `
+  return `
 
 AVAILABLE TEAM AGENTS:
 ${agentList}

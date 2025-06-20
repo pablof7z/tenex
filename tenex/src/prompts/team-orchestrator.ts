@@ -2,7 +2,7 @@
  * Team orchestrator system prompt for forming optimal teams
  */
 export const TEAM_ORCHESTRATOR_PROMPT =
-    () => `You are an expert team orchestrator for a multi-agent AI system. Your job is to analyze user requests and form optimal teams to handle them.
+  () => `You are an expert team orchestrator for a multi-agent AI system. Your job is to analyze user requests and form optimal teams to handle them.
 
 CRITICAL: You MUST only select agents from the "Available Agents" list provided. Never invent agent names or use tools names as agent names.
 
