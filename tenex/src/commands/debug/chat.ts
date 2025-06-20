@@ -297,12 +297,6 @@ export async function runDebugChat(
 
     const eventRouter = await createAgentSystem({
       projectPath: projectInfo.projectPath,
-      projectContext: {
-        projectId: projectInfo.projectEvent.id,
-        title: projectInfo.title,
-        description: projectInfo.projectEvent.content,
-        repository: projectInfo.repository,
-      },
       projectEvent: projectInfo.projectEvent,
       agents: agentConfigs,
       llmConfig,
@@ -414,7 +408,6 @@ async function sendDebugMessage(
     // Create context
     const context: EventContext = {
       rootEventId,
-      projectId: projectInfo.projectEvent.id,
       originalEvent: debugEvent,
       projectEvent: projectInfo.projectEvent,
     };

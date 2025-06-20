@@ -4,6 +4,7 @@ import { OpenRouterProvider } from "../../llm/OpenRouterProvider";
 import type { TeamFormationRequest, AgentConfig, LLMProvider } from "../core/types";
 import { logger } from "@tenex/shared/logger";
 import type { LLMProvider as ActualLLMProvider } from "../../llm/types";
+import { NDKEvent, type NDKProject } from "@nostr-dev-kit/ndk";
 
 const testLogger = logger.forModule("integration-test");
 
@@ -78,22 +79,26 @@ describe("TeamOrchestrator Integration Tests", () => {
         ]);
 
         // Create a request that might trigger complex JSON responses
+        const event = new NDKEvent();
+        event.id = "test-event-1";
+        event.content = "The textarea in the chat interface is limited to 50px height and won't expand. This is a UI bug that needs investigation and fixing.";
+        event.created_at = Math.floor(Date.now() / 1000);
+        event.pubkey = "test-pubkey";
+        event.kind = 1111;
+        event.tags = [];
+        event.sig = "test-sig";
+        
         const request: TeamFormationRequest = {
-            event: {
-                id: "test-event-1",
-                content: "The textarea in the chat interface is limited to 50px height and won't expand. This is a UI bug that needs investigation and fixing.",
-                created_at: Date.now(),
-                pubkey: "test-pubkey",
-                kind: 1111,
-                tags: [],
-                sig: "test-sig"
-            },
+            event,
             availableAgents,
-            projectContext: {
+            projectEvent: {
+                id: "test-project-id",
+                dTag: "test-project",
                 title: "TENEX Project",
                 description: "A multi-agent development platform",
-                repository: "https://github.com/test/tenex"
-            }
+                repo: "https://github.com/test/tenex",
+                content: "A multi-agent development platform"
+            } as unknown as NDKProject
         };
 
         try {
@@ -200,9 +205,14 @@ describe("TeamOrchestrator Integration Tests", () => {
                 sig: "test-sig"
             },
             availableAgents,
-            projectContext: {
-                title: "Test Project"
-            }
+            projectEvent: {
+                id: "test-project-id",
+                dTag: "test-project",
+                title: "Test Project",
+                description: undefined,
+                repo: undefined,
+                content: ""
+            } as unknown as NDKProject
         };
 
         const result = await orchestrator.formTeam(request);
@@ -271,20 +281,26 @@ describe("TeamOrchestrator Integration Tests", () => {
             }]
         ]);
 
+        const event3 = new NDKEvent();
+        event3.id = "test-event";
+        event3.content = "Fix textarea height issue";
+        event3.created_at = Math.floor(Date.now() / 1000);
+        event3.pubkey = "test-pubkey";
+        event3.kind = 1111;
+        event3.tags = [];
+        event3.sig = "test-sig";
+        
         const request: TeamFormationRequest = {
-            event: {
-                id: "test-event",
-                content: "Fix textarea height issue",
-                created_at: Date.now(),
-                pubkey: "test-pubkey",
-                kind: 1111,
-                tags: [],
-                sig: "test-sig"
-            },
+            event: event3,
             availableAgents,
-            projectContext: {
-                title: "Test Project"
-            }
+            projectEvent: {
+                id: "test-project-id",
+                dTag: "test-project",
+                title: "Test Project",
+                description: undefined,
+                repo: undefined,
+                content: ""
+            } as unknown as NDKProject
         };
 
         const result = await orchestrator.formTeam(request);

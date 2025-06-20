@@ -50,7 +50,7 @@ export class LLMProviderAdapter implements ILLMProvider {
 
       // Create LLMContext if we have the necessary information
       const llmContext =
-        context && context.ndk && context.projectEvent
+        context?.ndk && context.projectEvent
           ? {
               ...context,
               ndk: context.ndk,

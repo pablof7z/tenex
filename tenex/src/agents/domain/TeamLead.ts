@@ -23,6 +23,7 @@ export class TeamLead extends Agent {
   private agents = new Map<string, Agent>();
   private activeSpeakers = new Set<string>();
   private turnManager: TurnManager;
+  private isRouting = false;
 
   constructor(
     config: AgentConfig,
@@ -66,14 +67,20 @@ export class TeamLead extends Agent {
   }
 
   async handleEvent(event: NDKEvent, context: EventContext): Promise<void> {
-    teamLogger.info(
-      `Team lead ${this.config.name} handling event for conversation ${context.rootEventId}`,
-      "verbose"
-    );
+    // Always show team lead coordination - this is critical information
+    console.log(`👑 Team lead ${this.config.name} handling event for conversation ${context.rootEventId}`);
 
     // CRITICAL: Never respond to our own events (applies to team lead too)
     if (event.pubkey === this.pubkey) {
       teamLogger.warning(`Team lead ${this.config.name} received its own event - ignoring`);
+      return;
+    }
+
+    // CRITICAL: Prevent infinite recursion when TeamLead is called as an agent
+    if (this.isRouting) {
+      // We're being called as a regular agent, not as a team lead
+      // Just respond directly without routing
+      await super.handleEvent(event, context);
       return;
     }
 
@@ -87,43 +94,51 @@ export class TeamLead extends Agent {
   }
 
   private async routeToActiveSpeakers(event: NDKEvent, context: EventContext): Promise<void> {
-    // Check if this is a user message or agent message
-    const isUserMessage = !this.isAgentMessage(event);
+    // Set routing flag to prevent recursion
+    this.isRouting = true;
+    
+    try {
+      // Check if this is a user message or agent message
+      const isUserMessage = !this.isAgentMessage(event);
 
-    // Select appropriate speaker
-    const selectedSpeaker = this.turnManager.selectSpeaker(event, isUserMessage);
+      // Select appropriate speaker
+      const selectedSpeaker = this.turnManager.selectSpeaker(event, isUserMessage);
 
-    if (!selectedSpeaker) {
-      teamLogger.debug("No speaker selected for this event", "verbose");
-      return;
-    }
+      if (!selectedSpeaker) {
+        teamLogger.debug("No speaker selected for this event", "verbose");
+        return;
+      }
 
-    // Skip if speaker is team lead (will handle separately)
-    if (selectedSpeaker === this.config.name) {
-      return;
-    }
+      // Skip if speaker is team lead (will handle separately)
+      if (selectedSpeaker === this.config.name) {
+        return;
+      }
 
-    const agent = this.agents.get(selectedSpeaker);
-    if (!agent) {
-      teamLogger.warning(`Selected speaker ${selectedSpeaker} not found in team agents`);
-      return;
-    }
+      const agent = this.agents.get(selectedSpeaker);
+      if (!agent) {
+        teamLogger.warning(`Selected speaker ${selectedSpeaker} not found in team agents`);
+        return;
+      }
 
-    // Set current speaker
-    this.turnManager.setCurrentSpeaker(selectedSpeaker);
+      // Set current speaker
+      this.turnManager.setCurrentSpeaker(selectedSpeaker);
 
-    // Let selected agent respond
-    await agent.handleEvent(event, context);
+      // Let selected agent respond
+      await agent.handleEvent(event, context);
 
-    // Record speech
-    this.turnManager.recordSpeech(selectedSpeaker);
+      // Record speech
+      this.turnManager.recordSpeech(selectedSpeaker);
 
-    // Check last message for signal
-    const messages = await this.store.getMessages(context.rootEventId);
-    const lastMessage = messages[messages.length - 1];
+      // Check last message for signal
+      const messages = await this.store.getMessages(context.rootEventId);
+      const lastMessage = messages[messages.length - 1];
 
-    if (lastMessage && lastMessage.agentName === selectedSpeaker && lastMessage.signal) {
-      await this.checkForTransition(new Map([[selectedSpeaker, lastMessage.signal]]), context);
+      if (lastMessage && lastMessage.agentName === selectedSpeaker && lastMessage.signal) {
+        await this.checkForTransition(new Map([[selectedSpeaker, lastMessage.signal]]), context);
+      }
+    } finally {
+      // Always clear the routing flag
+      this.isRouting = false;
     }
   }
 
@@ -149,27 +164,22 @@ export class TeamLead extends Agent {
     for (const [agentName, signal] of responses) {
       if (signal?.type === "ready_for_transition") {
         readyForTransition++;
-        teamLogger.info(
-          `Agent ${agentName} signaled ready for transition: ${signal.reason}`,
-          "verbose"
-        );
+        // Always show transition readiness - this is critical team coordination info
+        console.log(`✅ Agent ${agentName} signaled ready for transition: ${signal.reason}`);
       } else if (signal?.type === "blocked") {
         blocked++;
         teamLogger.warning(`Agent ${agentName} is blocked: ${signal.reason}`);
       } else if (signal?.type === "continue") {
         continueCount++;
-        teamLogger.info(
-          `Agent ${agentName} signaled continue: ${signal.reason || "awaiting further input"}`,
-          "verbose"
-        );
+        // Always show continue signals - this is critical team coordination info
+        console.log(`⏳ Agent ${agentName} signaled continue: ${signal.reason || "awaiting further input"}`);
       }
     }
 
     // If any agent signals continue, maintain current state without transition
     if (continueCount > 0) {
-      teamLogger.info(
-        `${continueCount} agent(s) signaled continue - maintaining current conversation state`
-      );
+      // Always show state maintenance decisions - this is critical team coordination info
+      console.log(`⏸️  ${continueCount} agent(s) signaled continue - maintaining current conversation state`);
       // No transition needed - agents remain active for next turn
       return;
     }
@@ -192,19 +202,18 @@ export class TeamLead extends Agent {
     this.currentStageIndex++;
 
     if (this.team.isComplete(this.currentStageIndex)) {
-      teamLogger.info(`Conversation ${context.rootEventId} complete - all stages finished`);
+      // Always show conversation completion - this is critical information
+      console.log(`🎯 Conversation ${context.rootEventId} complete - all stages finished`);
       await this.markConversationComplete(context);
       return;
     }
 
     const currentStage = this.team.plan.stages[this.currentStageIndex];
     if (currentStage) {
-      teamLogger.info(
-        `Transitioning to stage ${this.currentStageIndex + 1}: ${currentStage.purpose}`,
-        "verbose"
-      );
+      // Always show stage transitions - this is critical team coordination info
+      console.log(`🔄 Transitioning to stage ${this.currentStageIndex + 1}: ${currentStage.purpose}`);
     } else {
-      teamLogger.info("Transitioning to final stage", "verbose");
+      console.log(`🔄 Transitioning to final stage`);
     }
 
     // Update active speakers
@@ -240,10 +249,8 @@ export class TeamLead extends Agent {
     // Update turn manager with new stage participants
     this.turnManager.updateStageParticipants(participants, stage?.primarySpeaker);
 
-    teamLogger.info(
-      `Updated active speakers: ${Array.from(this.activeSpeakers).join(", ")}`,
-      "verbose"
-    );
+    // Always show active speaker updates - this is critical team coordination info
+    console.log(`🗣️  Updated active speakers: [${Array.from(this.activeSpeakers).join(", ")}]`);
   }
 
   private shouldTeamLeadRespond(): boolean {

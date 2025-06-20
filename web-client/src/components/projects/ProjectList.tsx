@@ -1,6 +1,6 @@
 import { type NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { LocalStorageUtils, StringUtils } from "@tenex/shared";
+import { StringUtils } from "@tenex/shared";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../../contexts/NavigationContext";
@@ -22,7 +22,36 @@ import {
 // Remove props - navigation is handled by context
 
 // Create seen tracker for status updates
-const statusUpdateTracker = LocalStorageUtils.createSeenTracker("seenStatusUpdates");
+const statusUpdateTracker = {
+    markMultipleSeen: (ids: string[]) => {
+        try {
+            const seen = JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
+            for (const id of ids) {
+                seen[id] = true;
+            }
+            localStorage.setItem("seenStatusUpdates", JSON.stringify(seen));
+        } catch (error) {
+            console.error("Failed to mark status updates as seen:", error);
+        }
+    },
+    getAllSeen: () => {
+        try {
+            return JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
+        } catch (error) {
+            console.error("Failed to get seen status updates:", error);
+            return {};
+        }
+    },
+    hasSeen: (id: string) => {
+        try {
+            const seen = JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
+            return !!seen[id];
+        } catch (error) {
+            console.error("Failed to check seen status:", error);
+            return false;
+        }
+    }
+};
 
 // Helper function to mark all status updates for a project as seen
 const markProjectStatusUpdatesSeen = (_projectId: string, projectStatusUpdates: NDKEvent[]) => {
@@ -122,7 +151,7 @@ export function ProjectList() {
                                 }
 
                                 // Count unseen updates
-                                if (!statusUpdateTracker.isSeen(update.id)) {
+                                if (!statusUpdateTracker.hasSeen(update.id)) {
                                     const currentUnread = unreadMap.get(projectId) || 0;
                                     unreadMap.set(projectId, currentUnread + 1);
                                 }

@@ -19,6 +19,7 @@ export interface AgentConfig {
   tools?: string[]; // List of tool names this agent has access to
   eventId?: string; // NDKAgent event ID
   llmConfig?: LLMConfig; // LLM configuration for this agent
+  pubkey?: string; // Agent's public key
 }
 
 export interface LLMMetadata {
@@ -61,7 +62,7 @@ export interface ConversationSignal {
 
 export interface TeamFormationRequest {
   event: NDKEvent;
-  projectContext: ProjectContext;
+  projectEvent: NDKProject;
   availableAgents: Map<string, AgentConfig>;
 }
 
@@ -96,16 +97,10 @@ export interface ConversationStage {
   primarySpeaker?: string;
 }
 
-export interface ProjectContext {
-  projectId: string;
-  title: string;
-  description?: string;
-  repository?: string;
-}
 
 export interface TeamFormationRequest {
   event: NDKEvent;
-  projectContext: ProjectContext;
+  projectEvent: NDKProject;
   availableAgents: Map<string, AgentConfig>;
 }
 
@@ -135,7 +130,6 @@ export interface CompletionRequest {
     rootEventId: string;
     eventId?: string;
     originalEvent?: NDKEvent;
-    projectId?: string;
     projectEvent?: NDKEvent;
     ndk?: NDK;
     agent?: Agent;
@@ -186,7 +180,6 @@ export interface AgentSummary {
 
 export interface EventContext {
   rootEventId: string;
-  projectId: string;
   originalEvent: NDKEvent;
   projectEvent: NDKProject; // REQUIRED - critical for system functioning
   availableSpecs?: SpecSummary[];

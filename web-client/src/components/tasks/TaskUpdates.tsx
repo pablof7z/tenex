@@ -23,7 +23,7 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
             ? [
                   {
                       kinds: [1111],
-                      "#e": [task.id],
+                      "#E": [task.id],
                   },
               ]
             : false,
@@ -38,6 +38,24 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
         if (!statusUpdates) return [];
         return [...statusUpdates].sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
     }, [statusUpdates]);
+
+    // Check if the most recent update has a Claude Code session
+    const hasClaudeCodeSession = useMemo(() => {
+        if (!sortedUpdates || sortedUpdates.length === 0) return false;
+        
+        // Get the most recent update
+        const mostRecentUpdate = sortedUpdates[sortedUpdates.length - 1];
+        if (!mostRecentUpdate) return false;
+        
+        // Check if it has a claude-session-id tag
+        const sessionIdTag = mostRecentUpdate.tags?.find(tag => tag[0] === "claude-session-id");
+        return !!sessionIdTag?.[1];
+    }, [sortedUpdates]);
+
+    // Determine the input placeholder based on Claude Code session
+    const inputPlaceholder = hasClaudeCodeSession 
+        ? "Reply to Claude Code session..." 
+        : "Add a comment...";
 
     const getTaskTitle = (task: NDKTask) => {
         const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
@@ -74,6 +92,7 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
                     </h2>
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
+                        {task.id}
                             {formatAbsoluteTime(task.created_at!)}
                         </span>
                         <Badge variant="outline" className="text-xs">
@@ -156,9 +175,9 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
             <div className="flex-1 overflow-hidden">
                 <ChatInterface
                     statusUpdates={sortedUpdates}
-                    taskId={taskId}
+                    task={task}
                     project={project}
-                    inputPlaceholder="Add a comment..."
+                    inputPlaceholder={inputPlaceholder}
                     allowInput={true}
                     className={embedded ? "h-full" : "h-full min-h-screen"}
                 />

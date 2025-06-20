@@ -47,3 +47,6 @@ mcp/tenex-mcp
 tenexd/config.json
 cli-client/dist shared/dist tenex/dist web-client/dist
 **/projects/
+.tenex/conversations
+.tenex/llms.json
+.tenex/processed-events.json

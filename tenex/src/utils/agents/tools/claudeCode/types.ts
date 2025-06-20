@@ -51,4 +51,5 @@ export interface ClaudeCodeOptions {
   outputFormat?: "stream-json";
   dangerouslySkipPermissions?: boolean;
   projectPath?: string;
+  claudeSessionId?: string;
 }

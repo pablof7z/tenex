@@ -52,8 +52,8 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
         tasks.length > 0
             ? [
                   {
-                      kinds: [1],
-                      "#e": tasks.map((t) => t.id),
+                      kinds: [1111],
+                      "#E": tasks.map((t) => t.id),
                   },
               ]
             : false,
@@ -231,7 +231,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
                 ) : (
                     <ChatInterface
                         statusUpdates={selectedTaskUpdates}
-                        taskId={selectedTaskId || undefined}
+                        task={selectedTaskId ? getTaskById(selectedTaskId) : undefined}
                         inputPlaceholder={
                             selectedTaskId
                                 ? "Reply to this task..."

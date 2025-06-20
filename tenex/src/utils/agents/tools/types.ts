@@ -23,6 +23,7 @@ export interface ToolContext {
   projectEvent: NDKProject; // The project event (kind 31933) - REQUIRED
   eventId?: string; // Event ID that triggered the tool execution
   publisher?: import("@/agents/core/types").NostrPublisher; // NostrPublisher instance for proper response publishing
+  claudeSessionId?: string; // Claude Code session ID for resuming sessions
 }
 
 // Type-safe tool parameters

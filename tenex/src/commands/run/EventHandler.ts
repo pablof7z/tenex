@@ -58,12 +58,6 @@ export class EventHandler {
 
     this.eventRouter = await createAgentSystem({
       projectPath: this.projectInfo.projectPath,
-      projectContext: {
-        projectId: this.projectInfo.projectEvent.id,
-        title: this.projectInfo.title,
-        description: this.projectInfo.projectEvent.content,
-        repository: this.projectInfo.repository,
-      },
       projectEvent: this.projectInfo.projectEvent,
       projectSigner: this.projectInfo.projectSigner,
       agents: this.agentConfigs,
@@ -74,45 +68,16 @@ export class EventHandler {
   }
 
   private async loadAgentConfigs(): Promise<void> {
-    const agentsJsonPath = path.join(this.projectInfo.projectPath, ".tenex", "agents.json");
-    try {
-      const agentsJsonContent = await readFile(agentsJsonPath, "utf-8");
-      const agentsJson = JSON.parse(agentsJsonContent);
-
-      for (const [name, config] of Object.entries(agentsJson)) {
-        const agentConfig = config as { nsec: string; file?: string };
-
-        // Load agent definition from file if available
-        let description = `${name} agent`;
-        let role = `${name} specialist`;
-        let instructions = `You are the ${name} agent for this project.`;
-
-        if (agentConfig.file) {
-          const agentDefPath = path.join(
-            this.projectInfo.projectPath,
-            ".tenex",
-            "agents",
-            agentConfig.file
-          );
-          if (await fileExists(agentDefPath)) {
-            const agentDefContent = await readFile(agentDefPath, "utf-8");
-            const agentDef = JSON.parse(agentDefContent);
-            description = agentDef.description || description;
-            role = agentDef.role || role;
-            instructions = agentDef.instructions || instructions;
-          }
-        }
-
-        this.agentConfigs.set(name, {
-          name,
-          role,
-          instructions,
-          nsec: agentConfig.nsec,
-        });
-      }
-    } catch (error) {
-      logInfo(chalk.red(`Failed to load agents.json: ${formatError(error)}`));
-      throw error;
+    // Use the agents already loaded by ProjectLoader which have pubkeys
+    for (const [name, agent] of this.projectInfo.agents) {
+      this.agentConfigs.set(name, {
+        name: agent.name,
+        role: agent.role,
+        instructions: agent.instructions,
+        nsec: agent.signer.privateKey!,
+        eventId: agent.eventId,
+        pubkey: agent.pubkey,
+      });
     }
   }
 

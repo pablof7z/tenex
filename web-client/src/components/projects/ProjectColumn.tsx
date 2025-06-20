@@ -1,9 +1,9 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
-import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
 import { Circle, Plus } from "lucide-react";
 import { useMemo } from "react";
-import { useProjectData } from "../../hooks/useProjectData";
+import { EVENT_KINDS } from "@tenex/types/events";
 import { onlineProjectsAtom } from "../../lib/store";
 import { ThreadOverview } from "../tasks/ThreadOverview";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -30,10 +30,20 @@ export function ProjectColumn({
     const projectDir = project.tagValue("d") || "";
     const isOnline = onlineProjects.has(projectDir);
 
-    // Use the useProjectData hook to fetch project-specific data (threads only)
-    const {
-        threads: projectThreads,
-    } = useProjectData(project);
+    // Subscribe to threads (kind 11) for this project
+    const { events: projectThreads } = useSubscribe(
+        project
+            ? [
+                  {
+                      kinds: [EVENT_KINDS.CHAT],
+                      ...project.filter(),
+                      limit: 50,
+                  },
+              ]
+            : false,
+        {},
+        [project?.tagId()]
+    );
 
     const getProjectAvatar = (project: NDKProject) => {
         if (project.picture) {
@@ -70,10 +80,10 @@ export function ProjectColumn({
 
     // Get thread replies
     const threadReplies = useMemo(() => {
-        return projectThreads.filter((thread) => {
+        return projectThreads.filter((thread: NDKEvent) => {
             // Check if this is a reply to another thread
-            const rootTag = thread.tags?.find((tag) => tag[0] === "e" && tag[3] === "root")?.[1];
-            const replyTag = thread.tags?.find((tag) => tag[0] === "e" && tag[3] === "reply")?.[1];
+            const rootTag = thread.tags?.find((tag: string[]) => tag[0] === "e" && tag[3] === "root")?.[1];
+            const replyTag = thread.tags?.find((tag: string[]) => tag[0] === "e" && tag[3] === "reply")?.[1];
             return rootTag || replyTag;
         });
     }, [projectThreads]);

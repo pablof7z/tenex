@@ -72,14 +72,19 @@ describe("TeamOrchestrator Single vs Multi-Agent", () => {
             event.content = "I want to build a calculator";
             event.id = "event1";
 
+            const mockProjectEvent = {
+                id: "proj1",
+                dTag: "proj1",
+                title: "Test Project",
+                description: "A test project",
+                repo: undefined,
+                content: "A test project",
+            } as unknown as NDKProject;
+
             const request: TeamFormationRequest = {
                 event,
                 availableAgents,
-                projectContext: {
-                    projectId: "proj1",
-                    title: "Test Project",
-                    description: "A test project",
-                },
+                projectEvent: mockProjectEvent,
             };
 
             // Mock LLM response for single agent
@@ -121,13 +126,19 @@ describe("TeamOrchestrator Single vs Multi-Agent", () => {
             event.content = "Help me debug this";
             event.id = "event2";
 
+            const mockProjectEvent = {
+                id: "proj1",
+                dTag: "proj1",
+                title: "Test Project",
+                description: undefined,
+                repo: undefined,
+                content: "",
+            } as unknown as NDKProject;
+
             const request: TeamFormationRequest = {
                 event,
                 availableAgents,
-                projectContext: {
-                    projectId: "proj1",
-                    title: "Test Project",
-                },
+                projectEvent: mockProjectEvent,
             };
 
             // Mock LLM response with invalid agent
@@ -164,13 +175,19 @@ describe("TeamOrchestrator Single vs Multi-Agent", () => {
             event.content = "Build a full-stack web application with authentication";
             event.id = "event3";
 
+            const mockProjectEvent = {
+                id: "proj1",
+                dTag: "proj1",
+                title: "Full-Stack App",
+                description: undefined,
+                repo: undefined,
+                content: "",
+            } as unknown as NDKProject;
+
             const request: TeamFormationRequest = {
                 event,
                 availableAgents,
-                projectContext: {
-                    projectId: "proj1",
-                    title: "Full-Stack App",
-                },
+                projectEvent: mockProjectEvent,
             };
 
             // Mock LLM response for multi-agent team
@@ -218,13 +235,19 @@ describe("TeamOrchestrator Single vs Multi-Agent", () => {
             event.content = "Complex task";
             event.id = "event4";
 
+            const mockProjectEvent = {
+                id: "proj1",
+                dTag: "proj1",
+                title: "Test",
+                description: undefined,
+                repo: undefined,
+                content: "",
+            } as unknown as NDKProject;
+
             const request: TeamFormationRequest = {
                 event,
                 availableAgents,
-                projectContext: {
-                    projectId: "proj1",
-                    title: "Test",
-                },
+                projectEvent: mockProjectEvent,
             };
 
             // Mock response where lead is not in members
@@ -262,13 +285,19 @@ describe("TeamOrchestrator Single vs Multi-Agent", () => {
             event.content = "Simple request";
             event.id = "event5";
 
+            const mockProjectEvent = {
+                id: "proj1",
+                dTag: "proj1",
+                title: "Test",
+                description: undefined,
+                repo: undefined,
+                content: "",
+            } as unknown as NDKProject;
+
             const request: TeamFormationRequest = {
                 event,
                 availableAgents,
-                projectContext: {
-                    projectId: "proj1",
-                    title: "Test",
-                },
+                projectEvent: mockProjectEvent,
             };
 
             // Spy on LLM complete to check the prompt

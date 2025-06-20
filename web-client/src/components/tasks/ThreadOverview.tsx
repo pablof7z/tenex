@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Clock, MessageCircle, Users } from "lucide-react";
+import { Clock, MessageCircle } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 
@@ -35,15 +35,6 @@ export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps
             .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
     }, [replies, thread.id]);
 
-    // Get unique participants
-    const participants = useMemo(() => {
-        const participantSet = new Set<string>();
-        participantSet.add(thread.pubkey);
-        for (const reply of threadReplies) {
-            participantSet.add(reply.pubkey);
-        }
-        return Array.from(participantSet);
-    }, [thread.pubkey, threadReplies]);
 
     // Get latest reply
     const latestReply = threadReplies[0];
@@ -103,8 +94,8 @@ export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps
 
                     <div className="space-y-2">
                         {/* Latest activity preview */}
-                        <div className="text-xs text-muted-foreground">
-                            {latestReply ? (
+                        {latestReply && (
+                            <div className="text-xs text-muted-foreground">
                                 <div>
                                     <AuthorInfo pubkey={latestActivity.pubkey} />
                                     <span className="mx-1">replied:</span>
@@ -114,24 +105,11 @@ export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps
                                             : latestActivity.content}
                                     </span>
                                 </div>
-                            ) : (
-                                <div>
-                                    <span>Started by </span>
-                                    <AuthorInfo pubkey={thread.pubkey} />
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         {/* Thread stats */}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                                <MessageCircle className="w-3 h-3" />
-                                <span>{threadReplies.length} replies</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                <span>{participants.length} participants</span>
-                            </div>
                             <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 <span>{formatRelativeTime(latestActivity.created_at!)}</span>

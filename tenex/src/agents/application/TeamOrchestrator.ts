@@ -2,7 +2,7 @@ import { logger } from "@tenex/shared/logger";
 
 const orchestrationLogger = logger.forModule("orchestration");
 import { TEAM_ORCHESTRATOR_PROMPT } from "../../prompts";
-import { JSONRepair, JSONRepairError } from "../../utils/agents/tools/JSONRepair";
+import { JSONRepairError, parseJSON } from "../../utils/agents/tools/JSONRepair";
 import { TeamFormationError } from "../core/errors";
 import type {
   AgentConfig,
@@ -20,7 +20,9 @@ export class TeamOrchestrator {
   ) {}
 
   async formTeam(request: TeamFormationRequest): Promise<TeamFormationResult> {
-    orchestrationLogger.info("TeamOrchestrator: Analyzing request and forming team", "verbose");
+    // Always show team formation start - this is critical information
+    console.log("🤖 TeamOrchestrator: Analyzing request and forming team...");
+    console.log(`📝 User Request: "${request.event.content}"`);
 
     const prompt = this.buildTeamFormationPrompt(request);
     const maxRetries = 3;
@@ -51,9 +53,13 @@ export class TeamOrchestrator {
         // Validate response
         this.validateTeamFormation(response, request.availableAgents);
 
-        orchestrationLogger.info(
-          `Team formation complete: Lead=${response.team.lead}, Members=${response.team.members.join(",")}`,
-          "normal"
+        // Always show team formation result - this is critical information
+        console.log(
+          `✅ Team formation complete: Lead=${response.team.lead}, Members=[${response.team.members.join(", ")}]`
+        );
+        console.log(`💭 Reasoning: ${response.reasoning}`);
+        console.log(
+          `📋 Conversation Plan: ${response.conversationPlan.stages.length} stages, complexity ${response.conversationPlan.estimatedComplexity}/10`
         );
 
         return response;
@@ -68,8 +74,8 @@ export class TeamOrchestrator {
           "rawContent" in error.details &&
           attempt < maxRetries - 1
         ) {
-          orchestrationLogger.info(
-            `Attempting to recover from malformed JSON (attempt ${attempt + 2}/${maxRetries})`
+          console.log(
+            `🔄 Attempting to recover from malformed JSON (attempt ${attempt + 2}/${maxRetries})`
           );
           continue;
         }
@@ -92,16 +98,16 @@ export class TeamOrchestrator {
   }
 
   private buildTeamFormationPrompt(request: TeamFormationRequest): string {
-    const agentDescriptions = Array.from(request.availableAgents.entries())
-      .map(([name, config]) => `- ${name}: ${config.role} - ${config.instructions}`)
+    const { event, projectEvent, availableAgents } = request;
+    const agentDescriptions = Array.from(availableAgents.entries())
+      .map(([name, config]) => `- ${name}: ${config.role}`)
       .join("\n");
 
-    return `User Request: "${request.event.content}"
+    return `User Request: "${event.content}"
 
 Project Context:
-- Title: ${request.projectContext.title}
-- Description: ${request.projectContext.description || "N/A"}
-- Repository: ${request.projectContext.repository || "N/A"}
+- Title: ${projectEvent.title}
+- Description: ${projectEvent.description || "N/A"}
 
 Available Agents:
 ${agentDescriptions}
@@ -146,7 +152,7 @@ Respond with a team composition and conversation plan in JSON format.`;
             "normal",
             parseError
           );
-          parsed = JSONRepair.parse(rawResponse, {
+          parsed = parseJSON(rawResponse, {
             attemptAutoFix: true,
             maxRetries: 3,
           }) as TeamFormationResult;

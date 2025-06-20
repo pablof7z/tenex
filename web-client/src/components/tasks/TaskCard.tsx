@@ -50,7 +50,7 @@ export const TaskCard = memo(
         const { events: updates } = useSubscribe([
             { kinds: [NDKKind.GenericReply], ...task.filter(), limit: 1 },
         ]);
-        const latestUpdate = updates.sort((a, b) => b.created_at - a.created_at)[0];
+        const latestUpdate = updates.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0];
 
         return (
             <Card

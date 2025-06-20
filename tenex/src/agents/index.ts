@@ -8,7 +8,6 @@ export type {
   LLMProvider,
   Message,
   NostrPublisher,
-  ProjectContext,
   Team as TeamType,
   CompletionRequest,
   CompletionResponse,
@@ -48,15 +47,14 @@ import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKProject, NDKSigner } from "@nostr-dev-kit/ndk";
 import { EventRouter } from "./application/EventRouter";
 import { TeamOrchestrator } from "./application/TeamOrchestrator";
-import type { AgentConfig, ProjectContext } from "./core/types";
+import type { AgentConfig } from "./core/types";
 import { FileConversationStore } from "./infrastructure/ConversationStore";
 import { createLLMProvider } from "./infrastructure/LLMProviderAdapter";
 import { NostrPublisher } from "./infrastructure/NostrPublisher";
 
 export interface AgentSystemConfig {
   projectPath: string;
-  projectContext: ProjectContext;
-  projectEvent?: NDKProject; // Optional project event for LLM context
+  projectEvent: NDKProject; // Required project event
   projectSigner?: NDKSigner; // Optional project signer for publishing events
   agents: Map<string, AgentConfig>;
   llmConfig: LLMConfig;
@@ -83,7 +81,6 @@ export async function createAgentSystem(config: AgentSystemConfig): Promise<Even
     store,
     publisher,
     config.ndk,
-    config.projectContext,
     config.projectEvent
   );
 

@@ -30,7 +30,7 @@ import { Button } from "./ui/button";
 
 interface ChatInterfaceProps {
     statusUpdates?: NDKEvent[];
-    taskId?: string;
+    task?: NDKTask;
     inputPlaceholder?: string;
     allowInput?: boolean;
     onReplyToTask?: (taskId: string) => void;
@@ -115,7 +115,7 @@ MessageList.displayName = "MessageList";
 
 export function ChatInterface({
     statusUpdates = [],
-    taskId,
+    task,
     inputPlaceholder = "Add a comment...",
     allowInput = true,
     onReplyToTask,
@@ -147,12 +147,12 @@ export function ChatInterface({
             if (threadId && threadId !== "new") return threadId;
             // For new threads, use a stable identifier based on thread title
             if (threadTitle) return `new-${threadTitle}`;
-        } else if (taskId) {
+        } else if (task?.id) {
             // For task conversations, use the task ID
-            return taskId;
+            return task.id;
         }
         return null;
-    }, [isThreadMode, threadId, threadTitle, taskId]);
+    }, [isThreadMode, threadId, threadTitle, task?.id]);
 
     // Initialize message input from drafts
     const [messageInput, setMessageInput] = useState(() => {
@@ -287,20 +287,20 @@ export function ChatInterface({
 
     // Subscribe to typing indicators when we have a thread or task
     const { events: typingIndicatorEvents } = useSubscribe(
-        currentThreadEvent || taskId
+        currentThreadEvent || task?.id
             ? [
                   {
                       kinds: [
                           EVENT_KINDS.TYPING_INDICATOR as NDKKind,
                           EVENT_KINDS.TYPING_INDICATOR_STOP as NDKKind,
                       ],
-                      "#e": currentThreadEvent ? [currentThreadEvent.id] : taskId ? [taskId] : [],
+                      "#e": currentThreadEvent ? [currentThreadEvent.id] : task?.id ? [task?.id] : [],
                       since: Math.floor(Date.now() / 1000) - 60, // Only show indicators from last minute
                   },
               ]
             : false,
         {},
-        [currentThreadEvent?.id, taskId]
+        [currentThreadEvent?.id, task?.id]
     );
 
     // Process typing indicators - only keep latest per pubkey
@@ -408,8 +408,8 @@ export function ChatInterface({
     const handleSendMessage = useCallback(async () => {
         if (!messageInput.trim() || !ndk?.signer || isSending) return;
 
-        // For task mode, require taskId
-        if (!isThreadMode && !taskId) return;
+        // For task mode, require task?.id
+        if (!isThreadMode && !task?.id) return;
 
         setIsSending(true);
         try {
@@ -506,8 +506,47 @@ export function ChatInterface({
                     // This shouldn't happen in normal flow, but let's handle it
                     return;
                 }
+            } else if (task?.id) {
+                // Task mode - create a reply to the task
+                event = task.reply();
+                event.content = cleanContent;
+
+                // Remove all p-tags that NDK's .reply() generated
+                event.tags = event.tags.filter((tag) => tag[0] !== "p");  
+                
+                if (project) {
+                    event.tags.push(["a", project.tagId()]); // Project reference
+                }
+                
+                // Find the most recent agent from status updates
+                const sortedUpdates = [...statusUpdates].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+                const mostRecentUpdate = sortedUpdates[0];
+
+                const claudeSessionId = statusUpdates.find(s => !!s.hasTag("claude-session-id"))
+                    ?.tagValue("claude-session-id");
+                if (!claudeSessionId) {
+                    alert("No claude-session-id found in status updates. This is a bug");
+                    return;
+                }
+                
+                if (mostRecentUpdate) {
+                    // P-tag the most recent agent that responded
+                    event.tags.push(["p", mostRecentUpdate.pubkey]);
+
+                    // Check if there's a claude-session-id in the most recent update
+                    event.tags.push(["claude-session-id", claudeSessionId]);
+                }
+                
+                // Add mentioned agents to the reply (explicit p-tags)
+                for (const agent of mentionedAgents) {
+                    // Don't add duplicate p-tags
+                    if (!event.tags.some((tag) => tag[0] === "p" && tag[1] === agent.pubkey)) {
+                        event.tags.push(["p", agent.pubkey]);
+                    }
+                }
             } else {
-                throw new Error("Task mode not implemented yet");
+                // This shouldn't happen due to the check above, but TypeScript needs this
+                return;
             }
 
             // Publish the reply event
@@ -518,29 +557,11 @@ export function ChatInterface({
             requestAnimationFrame(() => {
                 scrollToBottom(true); // Force scroll after sending
             });
-        } catch (_error) {
+        } catch { /**/
         } finally {
             setIsSending(false);
         }
-    }, [
-        messageInput,
-        ndk,
-        isSending,
-        isThreadMode,
-        taskId,
-        currentThreadEvent,
-        kind11Event,
-        project,
-        threadTitle,
-        initialAgentPubkeys,
-        projectAgents,
-        scrollToBottom,
-        extractMentions,
-        rootEventId,
-        setMessageDrafts,
-        isNewThread,
-        generateThreadTitle,
-    ]);
+    }, [messageInput, ndk, isSending, isThreadMode, task, extractMentions, currentThreadEvent, kind11Event, project, threadTitle, isNewThread, initialAgentPubkeys, rootEventId, projectAgents, setMessageDrafts, scrollToBottom, statusUpdates]);
 
     const handleKeyPress = useCallback(
         (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -634,10 +655,10 @@ export function ChatInterface({
                             <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed mb-6">
                                 Status updates and conversations will appear here.
                             </p>
-                            {taskId && project && (
+                            {task?.id && project && (
                                 <div className="max-w-sm mx-auto">
                                     <BackendButtons
-                                        taskId={taskId}
+                                        taskId={task?.id}
                                         projectTagId={project.tagId()}
                                     />
                                 </div>
@@ -686,12 +707,12 @@ export function ChatInterface({
             </div>
 
             {/* Input Area */}
-            {allowInput && (isThreadMode || taskId) && (
+            {allowInput && (isThreadMode || task?.id) && (
                 <ChatInputArea
                     ref={textareaRef}
                     messageInput={messageInput}
                     isSending={isSending}
-                    placeholder={isThreadMode ? "Share your thoughts..." : inputPlaceholder}
+                    placeholder={isThreadMode ? "Write something..." : inputPlaceholder}
                     showAgentMenu={showAgentMenu}
                     filteredAgents={filteredAgents}
                     selectedAgentIndex={selectedAgentIndex}

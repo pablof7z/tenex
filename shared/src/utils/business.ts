@@ -1,4 +1,3 @@
-import { logger } from "@tenex/shared/logger";
 /**
  * Common business logic utilities
  * Consolidates repeated patterns found across the codebase

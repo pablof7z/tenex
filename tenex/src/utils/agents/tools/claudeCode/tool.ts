@@ -79,6 +79,7 @@ export const claudeCodeTool: ToolDefinition = {
           verbose: true,
           outputFormat: "stream-json",
           dangerouslySkipPermissions: true,
+          claudeSessionId: toolContext?.claudeSessionId,
         },
         toolContext,
         taskEvent
@@ -166,8 +167,15 @@ function executeClaudeCode(
       "--output-format",
       "stream-json",
       "--verbose",
-      options.prompt,
     ];
+    
+    // If we have a claude-session-id, add the -r flag to resume the session
+    if (options.claudeSessionId) {
+      args.push("-r", options.claudeSessionId);
+    }
+    
+    // Add the prompt as the last argument
+    args.push(options.prompt);
 
     logDebug(
       `${chalk.gray("Command:")} claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`

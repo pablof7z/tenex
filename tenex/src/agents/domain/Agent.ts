@@ -95,7 +95,12 @@ export class Agent {
     }
 
     const response = await this.generateResponse(event, context);
-    await this.publisher.publishResponse(response, context, this.signer, this.config.name);
+    
+    // Check if the incoming event has a claude-session-id tag
+    const sessionIdTag = event.tags?.find(tag => tag[0] === "claude-session-id");
+    const extraTags = sessionIdTag ? [sessionIdTag] : undefined;
+    
+    await this.publisher.publishResponse(response, context, this.signer, this.config.name, extraTags);
   }
 
   async generateResponse(event: NDKEvent, context: EventContext): Promise<AgentResponse> {
@@ -134,7 +139,6 @@ export class Agent {
           rootEventId: context.rootEventId,
           eventId: event.id,
           originalEvent: context.originalEvent,
-          projectId: context.projectId,
           projectEvent: context.projectEvent,
           ndk: this.ndk,
           agent: this,
@@ -193,6 +197,27 @@ export class Agent {
         };
       }
 
+      // Check if we have tool registry before attempting to execute tools
+      if (!this.toolRegistry) {
+        agentLogger.error(
+          `Agent ${this.config.name} generated tool calls but has no tool registry. Tool calls: ${JSON.stringify(toolCalls)}`
+        );
+        
+        // Return error response
+        const errorContent = `I attempted to use tools but no tool registry is configured. This is a configuration error. Original response contained tool calls that could not be executed.`;
+        
+        return {
+          content: errorContent,
+          metadata: {
+            model: initialResponse.model,
+            provider: this.config.llmConfig?.provider,
+            systemPrompt,
+            userPrompt: event.content,
+            rawResponse: initialResponse.content
+          }
+        };
+      }
+
       // Execute tools
       const toolResults = await this.executeTools(toolCalls, context);
 
@@ -214,7 +239,6 @@ export class Agent {
           rootEventId: context.rootEventId,
           eventId: event.id,
           originalEvent: context.originalEvent,
-          projectId: context.projectId,
           projectEvent: context.projectEvent,
           ndk: this.ndk,
           agent: this,
@@ -338,17 +362,58 @@ export class Agent {
   }
 
   protected parseResponse(content: string): { content: string; signal?: ConversationSignal } {
-    // Look for signal JSON in the response
-    const signalMatch = content.match(/<!-- SIGNAL: ({.*?}) -->/);
-    if (signalMatch && signalMatch[1]) {
-      try {
-        const signal = JSON.parse(signalMatch[1]) as ConversationSignal;
-        // Remove signal from content
-        const cleanContent = content.replace(signalMatch[0], "").trim();
-        return { content: cleanContent, signal };
-      } catch (error) {
-        agentLogger.warning("Failed to parse signal JSON", "normal", error);
+    // Look for signal in the format specified in prompts:
+    // SIGNAL: <signal_type>
+    // REASON: <optional reason>
+    // Must be at the very end of the content
+    const lines = content.split('\n');
+    let signalLineIndex = -1;
+    
+    // Find the last occurrence of SIGNAL: at the start of a line
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i]?.trim().startsWith('SIGNAL:')) {
+        signalLineIndex = i;
+        break;
       }
+    }
+    
+    if (signalLineIndex === -1) {
+      return { content };
+    }
+    
+    // Extract signal type
+    const signalLine = lines[signalLineIndex];
+    const signalTypeMatch = signalLine?.match(/SIGNAL:\s*(\w+)/);
+    if (!signalTypeMatch) {
+      return { content };
+    }
+    
+    const signalType = signalTypeMatch[1]?.toLowerCase();
+    
+    // Check if next line is REASON:
+    let reason: string | undefined;
+    if (signalLineIndex + 1 < lines.length && lines[signalLineIndex + 1]?.trim().startsWith('REASON:')) {
+      // Collect all lines from REASON: to the end
+      const reasonLines = lines.slice(signalLineIndex + 1).join('\n');
+      const reasonMatch = reasonLines.match(/REASON:\s*([\s\S]*)/);
+      if (reasonMatch) {
+        reason = reasonMatch[1]?.trim();
+      }
+    }
+    
+    // Validate signal type
+    const validSignals = ["continue", "ready_for_transition", "need_input", "blocked", "complete"];
+    if (signalType && validSignals.includes(signalType)) {
+      const signal: ConversationSignal = {
+        type: signalType as ConversationSignal["type"],
+        ...(reason && { reason })
+      };
+      
+      // Remove signal section from content
+      const cleanContent = lines.slice(0, signalLineIndex).join('\n').trim();
+      return { content: cleanContent, signal };
+    } else {
+      agentLogger.warning(`Invalid signal type: ${signalType}`, "normal");
     }
 
     return { content };
@@ -364,17 +429,21 @@ export class Agent {
 
     const executor = new ToolExecutor(this.toolRegistry);
 
+    // Extract claude-session-id from the original event if present
+    const sessionIdTag = context.originalEvent.tags?.find(tag => tag[0] === "claude-session-id");
+    const claudeSessionId = sessionIdTag?.[1];
+
     // Create tool context with all necessary information
     const toolContext = {
       agentName: this.config.name,
       rootEventId: context.rootEventId,
       eventId: context.eventId,
       originalEvent: context.originalEvent,
-      projectId: context.projectId,
       projectEvent: context.projectEvent,
       ndk: this.ndk,
       agent: this,
       publisher: this.publisher,
+      claudeSessionId,
     };
 
     return executor.executeTools(toolCalls, toolContext);

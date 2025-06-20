@@ -13,7 +13,6 @@ import type {
   LLMConfig,
   LLMProvider,
   NostrPublisher,
-  ProjectContext,
   SpecSummary,
 } from "../core/types";
 import { Agent } from "../domain/Agent";
@@ -26,9 +25,7 @@ export class EventRouter {
   private teamLeads = new Map<string, TeamLead>();
   private agentConfigs: Map<string, AgentConfig>;
   private llmProvider!: LLMProvider;
-  private orchestratorLLMProvider?: LLMProvider;
   private toolManager?: ToolManager;
-  private projectEvent?: NDKProject;
   private llmConfig?: LLMConfig;
 
   constructor(
@@ -36,11 +33,9 @@ export class EventRouter {
     private store: ConversationStore,
     private publisher: NostrPublisher,
     private ndk: NDK,
-    private projectContext: ProjectContext,
-    projectEvent?: NDKProject
+    private projectEvent: NDKProject
   ) {
     this.agentConfigs = new Map();
-    this.projectEvent = projectEvent;
   }
 
   setAgentConfigs(configs: Map<string, AgentConfig>): void {
@@ -107,18 +102,12 @@ export class EventRouter {
   ): Promise<void> {
     routerLogger.info(`EventRouter handling event ${event.id}`, "verbose");
 
-    // Ensure we have a project event
-    if (!this.projectEvent) {
-      throw new Error("Project event is required for EventRouter to function");
-    }
-
     // Extract root event ID
     const rootEventId = this.extractRootEventId(event);
 
     // Create event context
     const context: EventContext = {
       rootEventId,
-      projectId: this.projectContext.projectId,
       originalEvent: event,
       projectEvent: this.projectEvent,
       availableSpecs,
@@ -144,13 +133,71 @@ export class EventRouter {
       // Route to team lead
       await teamLead.handleEvent(event, context);
     } else {
+      // Extract p-tags (mentioned agent pubkeys) from the event
+      const mentionedAgentPubkeys = event.tags
+        .filter(tag => tag[0] === "p" && tag[1])
+        .map(tag => tag[1]);
+
+      if (mentionedAgentPubkeys.length > 0) {
+        // Direct routing to p-tagged agents - no team formation needed
+        routerLogger.info(`Direct routing to p-tagged agents for conversation ${rootEventId}`);
+        
+        // Find which agents match the p-tagged pubkeys
+        const matchedAgents: string[] = [];
+        for (const [name, config] of this.agentConfigs.entries()) {
+          if (config.pubkey && mentionedAgentPubkeys.includes(config.pubkey)) {
+            matchedAgents.push(name);
+          }
+        }
+
+        if (matchedAgents.length > 0) {
+          // Create a simple team with the first matched agent as lead
+          const lead = matchedAgents[0]!; // Safe because we checked length > 0
+          const teamDomain = Team.create(
+            rootEventId,
+            lead,
+            matchedAgents,
+            {
+              stages: [{
+                participants: matchedAgents,
+                purpose: "Direct response to user request",
+                expectedOutcome: "Address user's specific request",
+                transitionCriteria: "Request is fulfilled",
+                primarySpeaker: lead
+              }],
+              estimatedComplexity: 3
+            }
+          );
+
+          // Store as the interface type
+          const teamData: ITeam = {
+            id: teamDomain.id,
+            rootEventId: teamDomain.rootEventId,
+            lead: teamDomain.lead,
+            members: teamDomain.members,
+            plan: teamDomain.plan,
+            createdAt: teamDomain.createdAt,
+          };
+          await this.store.saveTeam(rootEventId, teamData);
+
+          // Create team lead and agents
+          const teamLead = await this.createTeamLead(teamDomain);
+          this.teamLeads.set(rootEventId, teamLead);
+
+          // Start handling the event
+          await teamLead.handleEvent(event, context);
+          return;
+        }
+      }
+
+      // No p-tags or no matching agents - fall back to team formation
       routerLogger.info(`No existing team for conversation ${rootEventId}, forming new team`);
 
       // Form new team
       const teamFormation = await this.orchestrator.formTeam({
         event,
         availableAgents: this.agentConfigs,
-        projectContext: this.projectContext,
+        projectEvent: this.projectEvent,
       });
 
       // Create team and save it

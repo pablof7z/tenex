@@ -56,15 +56,22 @@ export class ToolManager {
    * Copies all default tools and allows for agent-specific additions
    */
   createAgentRegistry(agentName: string): ToolRegistry {
+    // Check if registry already exists for this agent
+    const existingRegistry = this.agentRegistries.get(agentName);
+    if (existingRegistry) {
+      return existingRegistry;
+    }
+
     const agentRegistry = new ToolRegistry();
+
+    // Store the registry for future reference BEFORE registering tools
+    // This prevents duplicate registrations if createAgentRegistry is called again
+    this.agentRegistries.set(agentName, agentRegistry);
 
     // Copy all default tools to the agent registry
     for (const tool of this.defaultRegistry.getAllTools()) {
       agentRegistry.register(tool);
     }
-
-    // Store the registry for future reference
-    this.agentRegistries.set(agentName, agentRegistry);
 
     return agentRegistry;
   }
@@ -119,7 +126,10 @@ export class ToolManager {
   enableRememberLessonTool(agentName: string, agentEventId: string, ndk: NDK): void {
     const agentRegistry = this.agentRegistries.get(agentName);
     if (agentRegistry && agentEventId && ndk) {
-      agentRegistry.register(rememberLessonTool);
+      // Check if tool is already registered
+      if (!agentRegistry.getTool(rememberLessonTool.name)) {
+        agentRegistry.register(rememberLessonTool);
+      }
     }
   }
 
@@ -130,7 +140,10 @@ export class ToolManager {
   enableFindAgentTool(agentName: string): void {
     const agentRegistry = this.agentRegistries.get(agentName);
     if (agentRegistry) {
-      agentRegistry.register(findAgentTool);
+      // Check if tool is already registered
+      if (!agentRegistry.getTool(findAgentTool.name)) {
+        agentRegistry.register(findAgentTool);
+      }
     }
   }
 

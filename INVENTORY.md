@@ -65,7 +65,6 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 - **`EmptyState`**, **`ErrorState`**, **`LoadingState`** - Standard state components
 
 ### Custom Hooks (`hooks/`)
-- **`useProjectData`** - Comprehensive project data subscription (tasks, threads, articles, status)
 - **`useAgentActions`** - Agent CRUD operations (create, edit, delete, configure)
 - **`useProjectStatus`** - Real-time project online/offline status tracking
 - **`useBackendStatus`** - Backend health monitoring and connection status
