@@ -1,3 +1,3 @@
-export * from "./ProjectManager";
-export * from "./EventMonitor";
-export * from "./ProcessManager";
+export * from "../daemon/ProjectManager";
+export * from "../daemon/EventMonitor";
+export * from "../daemon/ProcessManager";

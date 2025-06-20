@@ -12,7 +12,7 @@
     }
   },
   "defaults": {
-    "agents": "openrouter-google-gemini-2-5-flash-preview"
+    "default": "openrouter-google-gemini-2-5-flash-preview"
   },
   "credentials": {
     "openrouter": {

@@ -1,4 +1,4 @@
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "@tenex/types/core";
 
 export const STATUS_KIND = EVENT_KINDS.PROJECT_STATUS;
 export const STATUS_INTERVAL_MS = 60000; // 60 seconds
@@ -8,14 +8,12 @@ export function getEventKindName(kind: number): string {
   switch (kind) {
     case EVENT_KINDS.METADATA:
       return "Profile";
-    case EVENT_KINDS.TEXT_NOTE:
-      return "Status Update";
     case EVENT_KINDS.CONTACT_LIST:
       return "Contact List";
     case EVENT_KINDS.CHAT:
       return "Chat Message";
-    case EVENT_KINDS.THREAD_REPLY:
-      return "Chat Reply";
+    case EVENT_KINDS.GENERIC_REPLY:
+      return "Reply";
     case EVENT_KINDS.TASK:
       return "Task";
     case EVENT_KINDS.AGENT_REQUEST:

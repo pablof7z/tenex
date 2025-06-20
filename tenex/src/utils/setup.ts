@@ -1,15 +1,12 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { LLMConfigEditor } from "@/commands/setup/llm";
 import { logger } from "@tenex/shared";
-import type { LLMConfig } from "@tenex/types";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
 interface DaemonConfig {
   whitelistedPubkeys: string[];
-  llms: LLMConfig[];
 }
 
 export async function runInteractiveSetup(): Promise<DaemonConfig> {
@@ -19,15 +16,11 @@ export async function runInteractiveSetup(): Promise<DaemonConfig> {
   // Step 1: Get whitelisted pubkeys
   const pubkeys = await promptForPubkeys();
 
-  // Step 2: Configure LLMs
-  const llms = await configureLLMs();
-
   const config: DaemonConfig = {
     whitelistedPubkeys: pubkeys,
-    llms,
   };
 
-  // Step 3: Save configuration
+  // Step 2: Save configuration
   await saveConfiguration(config);
 
   return config;
@@ -78,57 +71,6 @@ async function promptForPubkeys(): Promise<string[]> {
   return pubkeys;
 }
 
-async function configureLLMs(): Promise<LLMConfig[]> {
-  logger.info(chalk.yellow("Step 2: LLM Configuration"));
-  logger.info("Configure the Large Language Models (LLMs) for your agents.");
-  logger.info("This will use the same configuration system as 'tenex setup llm'.\n");
-
-  // Use the global LLM configuration system
-  const globalConfigDir = path.join(os.homedir(), ".tenex");
-
-  // Ensure global config directory exists
-  try {
-    await fs.mkdir(globalConfigDir, { recursive: true });
-  } catch (error) {
-    logger.error(`Failed to create global config directory: ${error}`);
-    throw error;
-  }
-
-  const llmManager = new LLMConfigEditor(globalConfigDir, true);
-  await llmManager.runOnboardingFlow();
-
-  // Load the configurations that were just set up
-  const globalConfigPath = path.join(globalConfigDir, "config.json");
-  try {
-    const globalConfig = await fs.readFile(globalConfigPath, "utf-8");
-    const config = JSON.parse(globalConfig);
-    const llmsConfig = config.llms || {};
-
-    // Convert to LLMConfig array
-    const llms: LLMConfig[] = [];
-    for (const [key, value] of Object.entries(llmsConfig)) {
-      if (key !== "default" && typeof value === "object") {
-        llms.push(value as LLMConfig);
-      }
-    }
-
-    if (llms.length === 0) {
-      logger.info(
-        chalk.yellow("\n⚠️  No LLM configurations found. Projects won't have default LLM settings.")
-      );
-    } else {
-      logger.info(
-        chalk.green(`\n✓ Using ${llms.length} LLM configuration(s) from global config\n`)
-      );
-    }
-
-    return llms;
-  } catch (error) {
-    logger.warn("Failed to load LLM configurations from global config", { error });
-    return [];
-  }
-}
-
 async function saveConfiguration(config: DaemonConfig): Promise<void> {
   const savePath = path.join(os.homedir(), ".tenex", "config.json");
 
@@ -145,7 +87,7 @@ async function saveConfiguration(config: DaemonConfig): Promise<void> {
       // File doesn't exist, use empty config
     }
 
-    // Update with daemon config (but LLMs are already saved via LLMConfigEditor)
+    // Update with daemon config
     existingConfig.whitelistedPubkeys = config.whitelistedPubkeys;
 
     await fs.writeFile(savePath, JSON.stringify(existingConfig, null, 2), "utf-8");

@@ -1,11 +1,9 @@
 export function formatError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-export function createError(message: string, cause?: unknown): Error {
-  const error = new Error(message);
-  if (cause) {
-    error.cause = cause;
+  if (error instanceof Error) {
+    return error.message;
   }
-  return error;
+  if (typeof error === "string") {
+    return error;
+  }
+  return String(error);
 }

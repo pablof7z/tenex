@@ -1,10 +1,3 @@
-/**
- * Core consolidated types for TENEX
- * This module provides single source of truth for commonly duplicated types
- */
-
-export * from "./llm";
-export * from "./agent";
 export * from "./conversation";
 export * from "./usage";
 export * from "./provider-responses";

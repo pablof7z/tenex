@@ -92,7 +92,7 @@ export function ProjectDetail({
         threads.length > 0
             ? [
                   {
-                      kinds: [EVENT_KINDS.THREAD_REPLY],
+                      kinds: [EVENT_KINDS.GENERIC_REPLY],
                       "#e": threads.map((t) => t.id),
                   },
               ]
@@ -106,7 +106,7 @@ export function ProjectDetail({
         tasks.length > 0
             ? [
                   {
-                      kinds: [EVENT_KINDS.THREAD_REPLY],
+                      kinds: [EVENT_KINDS.GENERIC_REPLY],
                       "#E": tasks.map((t) => t.id),
                   },
               ]

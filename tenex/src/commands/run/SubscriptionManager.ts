@@ -9,12 +9,7 @@ import {
   loadProcessedEvents,
 } from "@/commands/run/processedEventTracking";
 import { getNDK } from "@/nostr/ndkClient";
-import {
-  NDKArticle,
-  type NDKEvent,
-  type NDKFilter,
-  type NDKSubscription,
-} from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { EVENT_KINDS } from "@tenex/types/events";
@@ -42,9 +37,6 @@ export class SubscriptionManager {
     // 1. Subscribe to project updates (NDKProject events)
     await this.subscribeToProjectUpdates();
 
-    // 2. Subscribe to spec documents (kind 30023)
-    await this.subscribeToSpecDocuments();
-
     // 3. Subscribe to all project-related events
     await this.subscribeToProjectEvents(startupSince);
 
@@ -70,32 +62,6 @@ export class SubscriptionManager {
 
     this.subscriptions.push(projectSubscription);
     logger.info(chalk.green("    ✓ Project update subscription active"));
-  }
-
-  private async subscribeToSpecDocuments(): Promise<void> {
-    // Filter for spec documents (kind 30023) that tag this project
-    const specFilter: NDKFilter = {
-      kinds: NDKArticle.kinds,
-      authors: [this.projectInfo.projectSigner.pubkey],
-      ...this.projectInfo.projectEvent.filter(),
-    };
-
-    logger.info(chalk.blue("  • Setting up spec document subscription..."));
-    logger.debug("Spec document filter:", specFilter);
-
-    const ndk = getNDK();
-    const specSubscription = ndk.subscribe(specFilter, {
-      closeOnEose: false,
-      groupable: false,
-      wrap: true,
-    });
-
-    specSubscription.on("event", (event: NDKEvent) => {
-      this.handleIncomingEvent(event, "spec document");
-    });
-
-    this.subscriptions.push(specSubscription);
-    logger.info(chalk.green("    ✓ Spec document subscription active"));
   }
 
   private async subscribeToProjectEvents(since: number): Promise<void> {

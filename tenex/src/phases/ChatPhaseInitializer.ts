@@ -1,0 +1,49 @@
+import type { Agent } from "@/types/agent";
+import type { ConversationState } from "@/conversations/types";
+import { getProjectContext } from "@/runtime";
+import type { Phase } from "@/types/conversation";
+import { BasePhaseInitializer } from "./PhaseInitializer";
+import type { PhaseInitializationResult } from "./types";
+
+/**
+ * Chat Phase Initializer
+ *
+ * In the chat phase, the project itself responds initially to gather
+ * requirements and understand the user's needs. No specific agent is
+ * assigned yet.
+ */
+export class ChatPhaseInitializer extends BasePhaseInitializer {
+  phase: Phase = "chat";
+
+  async initialize(
+    conversation: ConversationState,
+    availableAgents: Agent[]
+  ): Promise<PhaseInitializationResult> {
+    this.log("Initializing chat phase", {
+      conversationId: conversation.id,
+      title: conversation.title,
+    });
+
+    try {
+      const projectContext = getProjectContext();
+
+      // In chat phase, the project responds directly
+      // No specific agent is needed yet
+      return {
+        success: true,
+        message: "Chat phase initialized. Project will respond to gather requirements.",
+        metadata: {
+          projectPubkey: projectContext.projectSigner.pubkey,
+          availableAgents: availableAgents.length,
+          phase: "chat",
+        },
+      };
+    } catch (error) {
+      this.logError("Failed to initialize chat phase", error);
+      return {
+        success: false,
+        message: `Chat phase initialization failed: ${error}`,
+      };
+    }
+  }
+}

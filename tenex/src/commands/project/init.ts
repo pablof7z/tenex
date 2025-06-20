@@ -1,7 +1,7 @@
 import path from "node:path";
 import { logger } from "@tenex/shared";
 import { Command } from "commander";
-import { ProjectManager } from "../../core/ProjectManager";
+import { ProjectManager } from "../../daemon/ProjectManager";
 import { getNDK, initNDK, shutdownNDK } from "../../nostr/ndkClient";
 import { formatError } from "../../utils/errors";
 

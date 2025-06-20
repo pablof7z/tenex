@@ -1,7 +1,7 @@
 import path from "node:path";
-import { EventMonitor } from "@/core/EventMonitor";
-import { ProcessManager } from "@/core/ProcessManager";
-import { ProjectManager } from "@/core/ProjectManager";
+import { EventMonitor } from "@/daemon/EventMonitor";
+import { ProcessManager } from "@/daemon/ProcessManager";
+import { ProjectManager } from "@/daemon/ProjectManager";
 import { initNDK, shutdownNDK } from "@/nostr/ndkClient";
 import { runInteractiveSetup } from "@/utils/setup";
 import { logger } from "@tenex/shared";

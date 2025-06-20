@@ -1,10 +1,12 @@
 {
   "coder": {
     "nsec": "nsec1fnk04546ath7c7p4xu4ce3zytn5sshvwnmlkahssgqse39hgqwvsedwm0w",
-    "file": "0d0675be84841226a9e043b6ae98d7d4e055cc5531066ffe1a281c8a756529ae.json"
+    "file": "0d0675be84841226a9e043b6ae98d7d4e055cc5531066ffe1a281c8a756529ae.json",
+    "pubkey": "1bf8d8fd9127f0bbdea1bf06e3a5160e9307a72ff47d21c337a8eec1be3bee30"
   },
   "debugger": {
     "nsec": "nsec17jx3ekc2vqzdctf5x4qyx4kyrgkrs8h8q630cyypdwkhl3d00zlskvkgas",
-    "file": "fb7e4429db055f6fc53bb74e3b8689b997eb5cd47b8e37c44a7821e00fbc4779.json"
+    "file": "fb7e4429db055f6fc53bb74e3b8689b997eb5cd47b8e37c44a7821e00fbc4779.json",
+    "pubkey": "c168e3ef00c8875bfd0db321af50769ba348a7c5df4fbff0fa601f4d45c7172d"
   }
 }

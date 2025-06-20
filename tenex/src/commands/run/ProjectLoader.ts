@@ -1,7 +1,6 @@
 import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
-import { type RuleMapping, RulesManager } from "@/utils/RulesManager";
-import { SpecCache } from "@/utils/SpecCache";
+import { RulesManager } from "@/utils/RulesManager";
 import { NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/node";
@@ -21,7 +20,6 @@ export interface Agent {
 
 export interface ProjectRuntimeInfo {
   config: ProjectConfig;
-  llmConfig: TenexConfiguration["llms"];
   projectEvent: NDKProject;
   projectPath: string;
   title: string;
@@ -30,7 +28,6 @@ export interface ProjectRuntimeInfo {
   projectSigner: NDKPrivateKeySigner;
   agents: Map<string, Agent>;
   rulesManager: RulesManager;
-  specCache: SpecCache;
 }
 
 export class ProjectLoader {
@@ -52,9 +49,6 @@ export class ProjectLoader {
     // Fetch and cache rules
     await rulesManager.fetchAndCacheRules(ruleMappings);
 
-    // Initialize spec cache
-    const specCache = new SpecCache();
-
     // Create project signer
     const projectSigner = config.nsec
       ? new NDKPrivateKeySigner(config.nsec)
@@ -63,12 +57,10 @@ export class ProjectLoader {
     return this.extractProjectInfo(
       projectEvent,
       config,
-      configuration.llms,
       projectPath,
       projectSigner,
       agents,
-      rulesManager,
-      specCache
+      rulesManager
     );
   }
 
@@ -179,12 +171,10 @@ export class ProjectLoader {
   private extractProjectInfo(
     projectEvent: NDKProject,
     config: ProjectConfig,
-    llmConfig: TenexConfiguration["llms"],
     projectPath: string,
     projectSigner: NDKPrivateKeySigner,
     agents: Map<string, Agent>,
-    rulesManager: RulesManager,
-    specCache: SpecCache
+    rulesManager: RulesManager
   ): ProjectRuntimeInfo {
     const titleTag = projectEvent.tags.find((tag) => tag[0] === "title");
     const repoTag = projectEvent.tags.find((tag) => tag[0] === "repo");
@@ -192,7 +182,6 @@ export class ProjectLoader {
 
     return {
       config,
-      llmConfig,
       projectEvent,
       projectPath,
       title: titleTag?.[1] || config.title || "Untitled Project",
@@ -201,7 +190,6 @@ export class ProjectLoader {
       projectSigner,
       agents,
       rulesManager,
-      specCache,
     };
   }
 }

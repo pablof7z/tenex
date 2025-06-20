@@ -7,16 +7,14 @@ import type { NDKKind } from "@nostr-dev-kit/ndk";
 export const EVENT_KINDS = {
     // Standard Nostr kinds
     METADATA: 0 as NDKKind,
-    TEXT_NOTE: 1 as NDKKind,
     CONTACT_LIST: 3 as NDKKind,
 
     // Chat-related
     CHAT: 11 as NDKKind,
-    THREAD_REPLY: 1111 as NDKKind,
+    GENERIC_REPLY: 1111 as NDKKind,
 
     // TENEX-specific kinds
     TASK: 1934 as NDKKind,
-    TASK_UPDATE: 1935 as NDKKind, // Task status update
     AGENT_REQUEST: 3199 as NDKKind,
     AGENT_REQUEST_LIST: 13199 as NDKKind, // List of agent requests (10000 + 3199)
     AGENT_LESSON: 4124 as NDKKind,

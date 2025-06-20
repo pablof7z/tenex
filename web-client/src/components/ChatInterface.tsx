@@ -252,7 +252,7 @@ export function ChatInterface({
         currentThreadEvent && typeof currentThreadEvent.nip22Filter === "function"
             ? [
                   {
-                      kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind],
+                      kinds: [EVENT_KINDS.GENERIC_REPLY as NDKKind],
                       ...currentThreadEvent.nip22Filter(),
                   },
               ]

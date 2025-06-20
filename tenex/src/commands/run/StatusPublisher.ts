@@ -78,7 +78,7 @@ export class StatusPublisher {
 
       // Also check if there are agent-specific defaults
       for (const [agentName, configRef] of Object.entries(llms.defaults)) {
-        if (agentName === "default" || agentName === "orchestrator") continue;
+        if (agentName === "default") continue;
 
         const config = configRef ? llms.configurations[configRef] : undefined;
         if (config?.model) {

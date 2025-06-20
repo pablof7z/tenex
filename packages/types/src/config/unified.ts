@@ -6,56 +6,7 @@
  */
 
 import type { AgentsJson, TrackedAgentsJson } from "../agents";
-import type { LLMConfig } from "../llm/config";
 
-/**
- * LLM provider credentials for authentication
- */
-export interface LLMCredentials {
-    apiKey?: string;
-    baseUrl?: string;
-    headers?: Record<string, string>;
-}
-
-/**
- * Unified LLM configuration structure
- * Used in both global (~/.tenex/llms.json) and project (.tenex/llms.json)
- */
-export interface UnifiedLLMConfig {
-    /**
-     * Named LLM configurations
-     */
-    configurations: {
-        [name: string]: LLMConfig;
-    };
-
-    /**
-     * Default configurations for different contexts
-     */
-    defaults: {
-        /**
-         * Default configuration for general use
-         */
-        default?: string;
-
-        /**
-         * Configuration for orchestrator LLM
-         */
-        orchestrator?: string;
-
-        /**
-         * Agent-specific default configurations
-         */
-        [agentName: string]: string | undefined;
-    };
-
-    /**
-     * Provider credentials (only stored in global config)
-     */
-    credentials?: {
-        [provider: string]: LLMCredentials;
-    };
-}
 
 /**
  * Project-specific configuration stored in .tenex/config.json
@@ -127,11 +78,6 @@ export interface TenexConfiguration {
     config: ProjectConfig | GlobalConfig;
 
     /**
-     * LLM configurations
-     */
-    llms: UnifiedLLMConfig;
-
-    /**
      * Agent configurations (with source tracking when loaded)
      */
     agents?: AgentsJson | TrackedAgentsJson;
@@ -146,10 +92,6 @@ export const CONFIG_PATHS = {
      */
     CONFIG: "config.json",
 
-    /**
-     * LLM configuration file (llms.json)
-     */
-    LLMS: "llms.json",
 
     /**
      * Agents configuration file (agents.json)
