@@ -1,18 +1,18 @@
 /**
  * Spec catalog template for available project specifications
  */
-import type { SpecSummary } from "./composer";
+import type { SpecSummary } from "@/agents/core/types";
 
 export const SPEC_CATALOG_PROMPT = (specs: SpecSummary[]) => {
-  if (!specs || specs.length === 0) {
-    return "";
-  }
+    if (!specs || specs.length === 0) {
+        return "";
+    }
 
-  const specList = specs
-    .map((spec) => `- **${spec.title}**: ${spec.summary} (d-tag: ${spec.dTag})`)
-    .join("\n");
+    const specList = specs
+        .map((spec) => `- **${spec.title}**: ${spec.summary} (d-tag: ${spec.dTag})`)
+        .join("\n");
 
-  return `
+    return `
 
 AVAILABLE PROJECT SPECIFICATIONS:
 ${specList}

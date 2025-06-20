@@ -6,7 +6,7 @@ describe("ClaudeParser Integration", () => {
     it("should handle real Claude CLI output stream", async () => {
         const publishedUpdates: string[] = [];
         let sessionId: string | undefined;
-        
+
         // Mock publish function
         const mockPublish = vi.fn(async (content: string, sid?: string) => {
             publishedUpdates.push(content);
@@ -28,7 +28,7 @@ describe("ClaudeParser Integration", () => {
                         }
                     }
                     break;
-                    
+
                 case "tool_use":
                     if (message.tool_use) {
                         const toolName = message.tool_use.name || "tool";
@@ -38,7 +38,7 @@ describe("ClaudeParser Integration", () => {
                         );
                     }
                     break;
-                    
+
                 case "result":
                     if (message.is_error) {
                         await mockPublish(
@@ -46,10 +46,7 @@ describe("ClaudeParser Integration", () => {
                             parser.getSessionId()
                         );
                     } else {
-                        await mockPublish(
-                            "✅ **Task Complete**",
-                            parser.getSessionId()
-                        );
+                        await mockPublish("✅ **Task Complete**", parser.getSessionId());
                     }
                     break;
             }
@@ -61,7 +58,7 @@ describe("ClaudeParser Integration", () => {
             `{"type":"assistant","message":{"id":"msg_1","type":"message","role":"assistant","model":"claude-3","content":[{"type":"text","text":"Let me analyze the code"}],"usage":{"input_tokens":100,"output_tokens":10}},"session_id":"session-abc-123"}\n`,
             `{"type":"tool_use","tool_use":{"id":"tool_1","name":"read_file","input":{"path":"test.ts"}}}\n`,
             `{"type":"assistant","message":{"content":[{"type":"text","text":"Found the issue"}]}}\n`,
-            `{"type":"result","result":"Fixed the bug successfully","cost_usd":0.005}\n`
+            `{"type":"result","result":"Fixed the bug successfully","cost_usd":0.005}\n`,
         ];
 
         // Process stream
@@ -70,30 +67,27 @@ describe("ClaudeParser Integration", () => {
         }
 
         // Wait for async handlers
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Verify results
         expect(parser.getSessionId()).toBe("session-abc-123");
         expect(parser.getMessageCount()).toBe(2); // Two assistant messages
         expect(parser.getTotalCost()).toBe(0.005);
-        
+
         // Verify published updates
         expect(publishedUpdates).toContain("🤖 **Claude Code**: Let me analyze the code");
         expect(publishedUpdates).toContain("🔧 **Tool Use**: Using read_file...");
         expect(publishedUpdates).toContain("🤖 **Claude Code**: Found the issue");
         expect(publishedUpdates).toContain("✅ **Task Complete**");
-        
+
         // Verify session ID was passed
         expect(sessionId).toBe("session-abc-123");
-        expect(mockPublish).toHaveBeenCalledWith(
-            expect.any(String),
-            "session-abc-123"
-        );
+        expect(mockPublish).toHaveBeenCalledWith(expect.any(String), "session-abc-123");
     });
 
     it("should handle research tool pattern", async () => {
         const publishedUpdates: string[] = [];
-        
+
         // Create parser with handler that mimics research tool
         const parser = new ClaudeParser(async (message: ClaudeCodeMessage) => {
             switch (message.type) {
@@ -108,12 +102,16 @@ describe("ClaudeParser Integration", () => {
                         }
                     }
                     break;
-                    
+
                 case "result":
                     if (message.is_error) {
-                        publishedUpdates.push("❌ **Research Failed**: Error occurred during research");
+                        publishedUpdates.push(
+                            "❌ **Research Failed**: Error occurred during research"
+                        );
                     } else {
-                        publishedUpdates.push("✅ **Research Complete**: Report generated successfully");
+                        publishedUpdates.push(
+                            "✅ **Research Complete**: Report generated successfully"
+                        );
                     }
                     break;
             }
@@ -122,12 +120,12 @@ describe("ClaudeParser Integration", () => {
         // Simulate research output
         const chunk = `{"type":"assistant","message":{"content":[{"type":"text","text":"Analyzing the codebase architecture and identifying key patterns..."}]}}\n`;
         parser.parseLines(chunk);
-        
+
         const result = `{"type":"result","result":"# Research Report\\n\\nDetailed analysis..."}\n`;
         parser.parseLines(result);
 
         // Wait for async handlers
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         // Verify
         expect(publishedUpdates).toHaveLength(2);

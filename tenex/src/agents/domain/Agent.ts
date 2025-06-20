@@ -18,14 +18,12 @@ import type {
   Message,
   NostrPublisher,
 } from "../core/types";
-import { enhanceWithTypingIndicators } from "../infrastructure/LLMProviderAdapter";
 
 export class Agent {
   protected signer: NDKPrivateKeySigner;
   protected pubkey: string;
   private isActiveSpeaker = false;
   protected teamSize = 1; // Default to single agent
-  private typingAwareLLM: LLMProvider;
 
   constructor(
     protected config: AgentConfig,
@@ -37,9 +35,6 @@ export class Agent {
   ) {
     this.signer = new NDKPrivateKeySigner(config.nsec);
     this.pubkey = this.signer.pubkey;
-
-    // Enhance LLM provider with typing indicators
-    this.typingAwareLLM = enhanceWithTypingIndicators(llm, publisher, config.name, this.signer);
   }
 
   setTeamSize(size: number): void {
@@ -50,32 +45,41 @@ export class Agent {
     // Get actual pubkey from signer
     const user = await this.signer.user();
     this.pubkey = user.pubkey;
-    agentLogger.info(`Initialized agent ${this.config.name} with pubkey ${this.pubkey}`);
   }
 
   getName(): string {
     return this.config.name;
   }
 
-  getSigner(): NDKPrivateKeySigner {
-    return this.signer;
+  getRole(): string {
+    return this.config.role;
   }
 
-  getPubkey(): string {
-    return this.pubkey;
-  }
-
-  getConfig(): AgentConfig {
-    return this.config;
+  getInstructions(): string {
+    return this.config.instructions;
   }
 
   setActiveSpeaker(active: boolean): void {
     this.isActiveSpeaker = active;
-    agentLogger.debug(`Agent ${this.config.name} active speaker: ${active}`, "verbose");
+  }
+
+  isActive(): boolean {
+    return this.isActiveSpeaker;
+  }
+
+  getPublicKey(): string {
+    return this.pubkey;
+  }
+
+  getLLMConfig(): LLMConfig | undefined {
+    return this.config.llmConfig;
+  }
+
+  getSigner(): NDKPrivateKeySigner {
+    return this.signer;
   }
 
   async handleEvent(event: NDKEvent, context: EventContext): Promise<void> {
-    // Only respond if we're an active speaker
     if (!this.isActiveSpeaker) {
       agentLogger.debug(`Agent ${this.config.name} ignoring event - not active speaker`, "verbose");
       return;
@@ -121,73 +125,109 @@ export class Agent {
       role: "system",
       content: systemPrompt,
     });
-    // Generate response (typing indicators are handled automatically by typingAwareLLM)
-    const completion = await this.typingAwareLLM.complete({
-      messages,
-      context: {
-        agentName: this.config.name,
-        rootEventId: context.rootEventId,
-        eventId: event.id,
-        originalEvent: context.originalEvent,
-        projectId: context.projectId,
-        projectEvent: context.projectEvent,
-        ndk: this.ndk,
-        agent: this,
-        immediateResponse: true, // Tell ToolEnabledProvider to return immediately
-        typingIndicator: async (content: string) => {
-          await this.publisher.publishTypingIndicator(
-            this.config.name,
-            true,
-            context,
-            this.signer,
-            { message: content }
-          );
+    
+    // Extract user prompt from the event
+    const userPrompt = event.content;
+
+    // Publish typing start indicator
+    try {
+      await this.publisher.publishTypingIndicator(
+        this.config.name,
+        true,
+        context,
+        this.signer,
+        {
+          systemPrompt,
+          userPrompt,
+        }
+      );
+    } catch (error) {
+      // Don't fail the LLM call if typing indicator fails
+      agentLogger.debug(`Failed to publish typing start indicator: ${error}`, "verbose");
+    }
+
+    try {
+      // Generate response
+      const completion = await this.llm.complete({
+        messages,
+        context: {
+          agentName: this.config.name,
+          rootEventId: context.rootEventId,
+          eventId: event.id,
+          originalEvent: context.originalEvent,
+          projectId: context.projectId,
+          projectEvent: context.projectEvent,
+          ndk: this.ndk,
+          agent: this,
+          immediateResponse: true, // Tell ToolEnabledProvider to return immediately
+          typingIndicator: async (content: string) => {
+            await this.publisher.publishTypingIndicator(
+              this.config.name,
+              true,
+              context,
+              this.signer,
+              { message: content }
+            );
+          },
         },
-      },
-    });
+      });
 
-    // Parse response and extract signal
-    const { content, signal } = this.parseResponse(completion.content);
+      // Parse response and extract signal
+      const { content, signal } = this.parseResponse(completion.content);
 
-    // Save to conversation history
-    await this.store.appendMessage(context.rootEventId, {
-      id: `${Date.now()}-${this.config.name}`,
-      agentName: this.config.name,
-      content,
-      timestamp: Date.now(),
-      signal,
-    });
+      // Save to conversation history
+      await this.store.appendMessage(context.rootEventId, {
+        id: `${Date.now()}-${this.config.name}`,
+        agentName: this.config.name,
+        content,
+        timestamp: Date.now(),
+        signal,
+      });
 
-    // Build metadata from completion
-    const metadata: import("../core/types").LLMMetadata = {
-      model: completion.model,
-      provider: this.config.llmConfig?.provider,
-      systemPrompt,
-      userPrompt: event.content,
-      rawResponse: completion.content,
-      usage: completion.usage
-        ? {
-            promptTokens: completion.usage.promptTokens,
-            completionTokens: completion.usage.completionTokens,
-            totalTokens: completion.usage.totalTokens,
-            cacheCreationTokens: completion.usage.cacheCreationTokens,
-            cacheReadTokens: completion.usage.cacheReadTokens,
-            cost: completion.usage.cost,
-          }
-        : undefined,
-    };
+      // Build metadata from completion
+      const metadata: import("../core/types").LLMMetadata = {
+        model: completion.model,
+        provider: this.config.llmConfig?.provider,
+        systemPrompt,
+        userPrompt: event.content,
+        rawResponse: completion.content,
+        usage: completion.usage
+          ? {
+              promptTokens: completion.usage.promptTokens,
+              completionTokens: completion.usage.completionTokens,
+              totalTokens: completion.usage.totalTokens,
+              cacheCreationTokens: completion.usage.cacheCreationTokens,
+              cacheReadTokens: completion.usage.cacheReadTokens,
+              cost: completion.usage.cost,
+            }
+          : undefined,
+      };
 
-    // Return response with tool-related properties if they exist
-    return {
-      content,
-      signal,
-      metadata,
-      // Preserve tool-related properties from completion
-      ...(completion.toolCalls && { toolCalls: completion.toolCalls }),
-      ...(completion.hasNativeToolCalls && {
-        hasNativeToolCalls: completion.hasNativeToolCalls,
-      }),
-    };
+      // Return response with tool-related properties if they exist
+      return {
+        content,
+        signal,
+        metadata,
+        // Preserve tool-related properties from completion
+        ...(completion.toolCalls && { toolCalls: completion.toolCalls }),
+        ...(completion.hasNativeToolCalls && {
+          hasNativeToolCalls: completion.hasNativeToolCalls,
+        }),
+      };
+    } finally {
+      // Always publish typing stop indicator
+      try {
+        await this.publisher.publishTypingIndicator(
+          this.config.name,
+          false,
+          context,
+          this.signer
+        );
+      } catch (error) {
+        // Don't fail if typing stop fails
+        agentLogger.debug(`Failed to publish typing stop indicator: ${error}`, "verbose");
+      }
+    }
   }
 
   public getSystemPrompt(): string {
@@ -215,16 +255,15 @@ export class Agent {
     // Get conversation history
     const history = await this.store.getMessages(context.rootEventId);
 
-    // Add recent history (last 10 messages for context)
-    const recentHistory = history.slice(-10);
-    for (const msg of recentHistory) {
+    // Build messages from history
+    for (const msg of history) {
       messages.push({
         role: "assistant",
-        content: `${msg.agentName}: ${msg.content}`,
+        content: `[${msg.agentName}]: ${msg.content}`,
       });
     }
 
-    // Add current user message
+    // Add the current user message
     messages.push({
       role: "user",
       content: event.content,
@@ -233,53 +272,39 @@ export class Agent {
     return messages;
   }
 
-  protected parseResponse(rawContent: string): { content: string; signal?: ConversationSignal } {
-    const lines = rawContent.split("\n");
-    const content = [];
-    let signal: ConversationSignal | undefined;
-    let inSignalSection = false;
-
-    for (const line of lines) {
-      if (line.startsWith("SIGNAL:")) {
-        inSignalSection = true;
-        const signalType = line.replace("SIGNAL:", "").trim() as ConversationSignal["type"];
-        signal = { type: signalType };
-      } else if (inSignalSection && line.startsWith("REASON:")) {
-        if (signal) {
-          signal.reason = line.replace("REASON:", "").trim();
-        }
-      } else if (!inSignalSection) {
-        content.push(line);
+  protected parseResponse(content: string): { content: string; signal?: ConversationSignal } {
+    // Look for signal JSON in the response
+    const signalMatch = content.match(/<!-- SIGNAL: ({.*?}) -->/);
+    if (signalMatch && signalMatch[1]) {
+      try {
+        const signal = JSON.parse(signalMatch[1]) as ConversationSignal;
+        // Remove signal from content
+        const cleanContent = content.replace(signalMatch[0], "").trim();
+        return { content: cleanContent, signal };
+      } catch (error) {
+        agentLogger.warning("Failed to parse signal JSON", "normal", error);
       }
     }
 
-    return {
-      content: content.join("\n").trim(),
-      signal,
-    };
+    return { content };
   }
 
   private async executeToolsAndPublishResults(
     response: AgentResponse,
     context: EventContext
   ): Promise<void> {
-    if (!this.toolRegistry) {
-      agentLogger.warning("No tool registry available for executing tools");
+    if (!response.toolCalls || !this.toolRegistry) {
       return;
     }
 
     const executor = new ToolExecutor(this.toolRegistry);
-    const toolCalls = response.toolCalls || [];
 
-    if (toolCalls.length === 0) {
-      return;
-    }
-
-    // Execute tools
+    // Create tool context with all necessary information
     const toolContext = {
       agentName: this.config.name,
       rootEventId: context.rootEventId,
-      eventId: context.originalEvent.id,
+      eventId: context.eventId,
+      originalEvent: context.originalEvent,
       projectId: context.projectId,
       projectEvent: context.projectEvent,
       ndk: this.ndk,
@@ -287,35 +312,30 @@ export class Agent {
       publisher: this.publisher,
     };
 
-    const toolResults = await executor.executeTools(toolCalls, toolContext);
+    const toolResponses = await executor.executeTools(response.toolCalls, toolContext);
 
-    // Format tool results as a follow-up message
-    let resultContent = "Here are the results:\n\n";
-    for (const result of toolResults) {
-      const toolCall = toolCalls.find((tc) => tc.id === result.tool_call_id);
+    // Build tool results content
+    let toolResultsContent = "### Tool Results\n\n";
+    for (const toolResponse of toolResponses) {
+      const toolCall = response.toolCalls.find((tc) => tc.id === toolResponse.tool_call_id);
       if (toolCall) {
-        resultContent += `**${toolCall.name}:**\n${result.output}\n\n`;
+        toolResultsContent += `**${toolCall.name}**:\n${toolResponse.output}\n\n`;
       }
     }
 
-    // Save tool results to conversation history
-    await this.store.appendMessage(context.rootEventId, {
-      id: `${Date.now()}-${this.config.name}-tools`,
-      agentName: this.config.name,
-      content: resultContent.trim(),
-      timestamp: Date.now(),
-    });
-
-    // Publish tool results as a follow-up response
-    const toolResponse: AgentResponse = {
-      content: resultContent.trim(),
+    // Publish tool results as a follow-up message
+    const toolResultResponse: AgentResponse = {
+      content: toolResultsContent.trim(),
       metadata: {
         isToolResult: true,
-        model: response.metadata?.model,
-        provider: response.metadata?.provider,
       },
     };
 
-    await this.publisher.publishResponse(toolResponse, context, this.signer, this.config.name);
+    await this.publisher.publishResponse(
+      toolResultResponse,
+      context,
+      this.signer,
+      this.config.name
+    );
   }
 }

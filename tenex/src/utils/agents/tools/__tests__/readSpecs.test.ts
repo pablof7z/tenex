@@ -1,6 +1,6 @@
 import { readSpecsTool } from "../readSpecs";
 import type { ToolContext } from "../types";
-import { type NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 

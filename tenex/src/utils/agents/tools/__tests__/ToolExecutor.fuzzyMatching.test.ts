@@ -18,8 +18,8 @@ describe("ToolExecutor - Fuzzy Matching", () => {
             parameters: [],
             execute: async () => ({
                 success: true,
-                output: "Mock spec content"
-            })
+                output: "Mock spec content",
+            }),
         };
 
         toolRegistry.register(mockTool);
@@ -29,7 +29,7 @@ describe("ToolExecutor - Fuzzy Matching", () => {
         const toolCall: ToolCall = {
             id: "test-1",
             name: "read_specs",
-            arguments: {}
+            arguments: {},
         };
 
         const result = await toolExecutor.executeTool(toolCall);
@@ -42,7 +42,7 @@ describe("ToolExecutor - Fuzzy Matching", () => {
         const toolCall: ToolCall = {
             id: "test-2",
             name: "default_api.read_specs",
-            arguments: {}
+            arguments: {},
         };
 
         const result = await toolExecutor.executeTool(toolCall);
@@ -55,7 +55,7 @@ describe("ToolExecutor - Fuzzy Matching", () => {
         const toolCall: ToolCall = {
             id: "test-3",
             name: "api.read_specs",
-            arguments: {}
+            arguments: {},
         };
 
         const result = await toolExecutor.executeTool(toolCall);
@@ -68,7 +68,7 @@ describe("ToolExecutor - Fuzzy Matching", () => {
         const toolCall: ToolCall = {
             id: "test-4",
             name: "tools.read_specs",
-            arguments: {}
+            arguments: {},
         };
 
         const result = await toolExecutor.executeTool(toolCall);
@@ -81,7 +81,7 @@ describe("ToolExecutor - Fuzzy Matching", () => {
         const toolCall: ToolCall = {
             id: "test-5",
             name: "default_api.nonexistent_tool",
-            arguments: {}
+            arguments: {},
         };
 
         const result = await toolExecutor.executeTool(toolCall);
@@ -99,8 +99,8 @@ describe("ToolExecutor - Fuzzy Matching", () => {
             parameters: [],
             execute: async () => ({
                 success: true,
-                output: "Prefixed tool output"
-            })
+                output: "Prefixed tool output",
+            }),
         };
 
         toolRegistry.register(prefixedTool);
@@ -108,7 +108,7 @@ describe("ToolExecutor - Fuzzy Matching", () => {
         const toolCall: ToolCall = {
             id: "test-6",
             name: "default_api.read_specs",
-            arguments: {}
+            arguments: {},
         };
 
         const result = await toolExecutor.executeTool(toolCall);

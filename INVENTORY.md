@@ -33,7 +33,6 @@ TENEX is a sophisticated multi-agent orchestration platform with a monorepo arch
 
 ### Business Utilities (`src/utils/business.ts`)
 - **`StringUtils`** - Text manipulation, truncation, initials generation, slugification
-- **`LocalStorageUtils`** - Secure browser storage with type-safe operations
 - **`ProfileUtils`** - Avatar URLs, display names, profile initials
 - **`StatusUtils`** - Status colors, icons, and visual indicators
 - **`TaskUtils`** - Task title extraction, complexity parsing, priority handling

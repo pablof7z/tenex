@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { JSONRepair, JSONRepairError } from "./JSONRepair";
+import { JSONRepair, JSONRepairError } from "../JSONRepair";
 
 describe("JSONRepair", () => {
     describe("parse", () => {

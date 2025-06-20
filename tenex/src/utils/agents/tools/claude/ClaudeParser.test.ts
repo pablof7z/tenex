@@ -16,7 +16,7 @@ describe("ClaudeParser", () => {
 
     it("should handle partial lines with buffering", () => {
         const parser = new ClaudeParser();
-        
+
         // First chunk ends mid-JSON
         const chunk1 = `{"type":"system","message":"Start`;
         const messages1 = parser.parseLines(chunk1);
@@ -74,7 +74,7 @@ describe("ClaudeParser", () => {
         parser.parseLines(data);
 
         // Wait for async handlers
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(handler).toHaveBeenCalledTimes(2);
         expect(handler).toHaveBeenCalledWith({ type: "system" });
@@ -93,10 +93,10 @@ describe("ClaudeParser", () => {
 
     it("should track duration", async () => {
         const parser = new ClaudeParser();
-        
+
         // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         const duration = parser.getDuration();
         expect(duration).toBeGreaterThanOrEqual(50);
         expect(duration).toBeLessThan(200); // Should complete quickly
@@ -123,7 +123,7 @@ describe("ClaudeParser", () => {
         expect(() => parser.parseLines(data)).not.toThrow();
 
         // Wait for async handlers
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(errorHandler).toHaveBeenCalled();
     });
@@ -144,14 +144,14 @@ describe("ClaudeParser", () => {
                     input_tokens: 100,
                     cache_read_input_tokens: 50,
                     output_tokens: 20,
-                    service_tier: "standard"
-                }
+                    service_tier: "standard",
+                },
             },
             session_id: "session_123",
-            cost_usd: 0.002
+            cost_usd: 0.002,
         };
 
-        const data = JSON.stringify(complexMessage) + "\n";
+        const data = `${JSON.stringify(complexMessage)}\n`;
         const messages = parser.parseLines(data);
 
         expect(messages).toHaveLength(1);

@@ -141,7 +141,13 @@ describe("NostrPublisher", () => {
             // Replace the mock to return our spy
             mockEvent.reply = vi.fn().mockReturnValue(replyEvent);
 
-            await publisher.publishResponse(response, context, agentSigner, "test-agent", extraTags);
+            await publisher.publishResponse(
+                response,
+                context,
+                agentSigner,
+                "test-agent",
+                extraTags
+            );
 
             // Verify the extra tag was added
             const sessionTag = replyEvent.tags.find((tag) => tag[0] === "claude-session-id");
