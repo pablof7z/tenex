@@ -125,6 +125,7 @@ export class ToolCallParser {
               for (const toolCall of message.tool_calls) {
                 const parsed = ToolCallParser.parseOpenAIToolCall(toolCall);
                 if (parsed) toolCalls.push(parsed);
+              }
             }
           }
           break;

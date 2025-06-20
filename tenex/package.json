@@ -10,7 +10,8 @@
   "files": ["dist", "bin"],
   "scripts": {
     "start": "bun run ./bin/tenex.ts",
-    "build": "bun scripts/build-simple.js",
+    "build": "bun scripts/build-bundled.js",
+    "build:simple": "bun scripts/build-simple.js",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "test:watch": "bun test --watch"

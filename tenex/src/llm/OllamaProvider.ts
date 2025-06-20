@@ -91,7 +91,7 @@ export class OllamaProvider extends BaseLLMProvider {
 
   protected extractToolCallData(
     toolCall: OpenAIToolCall
-  ): { name: string; arguments: unknown } | null {
+  ): { name: string; arguments: Record<string, unknown> } | null {
     if (toolCall.function) {
       try {
         return {

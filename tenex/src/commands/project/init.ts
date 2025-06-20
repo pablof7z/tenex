@@ -1,9 +1,9 @@
 import path from "node:path";
 import { logger } from "@tenex/shared";
 import { Command } from "commander";
-import { ProjectManager } from "../../core/ProjectManager.js";
-import { getNDK, initNDK, shutdownNDK } from "../../nostr/ndkClient.js";
-import { formatError } from "../../utils/errors.js";
+import { ProjectManager } from "../../core/ProjectManager";
+import { getNDK, initNDK, shutdownNDK } from "../../nostr/ndkClient";
+import { formatError } from "../../utils/errors";
 
 export const projectInitCommand = new Command("init")
   .description("Initialize a new TENEX project")

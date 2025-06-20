@@ -253,7 +253,11 @@ export async function runDebugChat(
       }
     }
 
-    const llmConfig = selectedLLMConfig;
+    if (!selectedLLMConfig) {
+      // This should never happen due to the checks above, but TypeScript needs this
+      throw new Error("No LLM configuration found");
+    }
+    const llmConfig: LLMConfig = selectedLLMConfig;
 
     // Create agent config
     if (!agentName) {

@@ -1,3 +1,3 @@
-export * from "./ProjectManager.js";
-export * from "./EventMonitor.js";
-export * from "./ProcessManager.js";
+export * from "./ProjectManager";
+export * from "./EventMonitor";
+export * from "./ProcessManager";

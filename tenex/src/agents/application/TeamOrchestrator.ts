@@ -63,7 +63,9 @@ export class TeamOrchestrator {
         // If it's a JSON parsing error and we have retries left, try to recover
         if (
           error instanceof TeamFormationError &&
-          error.details?.rawContent &&
+          error.details &&
+          typeof error.details === "object" &&
+          "rawContent" in error.details &&
           attempt < maxRetries - 1
         ) {
           orchestrationLogger.info(
@@ -139,21 +141,21 @@ Respond with a team composition and conversation plan in JSON format.`;
           parsed = JSON.parse(rawResponse);
         } catch (parseError) {
           // Normal parse failed, use JSONRepair
-          orchestrationLogger.warn("Standard JSON parse failed, attempting repairs:", parseError);
+          orchestrationLogger.warning("Standard JSON parse failed, attempting repairs:", "normal", parseError);
           parsed = JSONRepair.parse(rawResponse, { attemptAutoFix: true, maxRetries: 3 });
           wasRepaired = true;
           orchestrationLogger.info("JSON successfully repaired and parsed");
         }
       } catch (repairError) {
         if (repairError instanceof JSONRepairError) {
-          orchestrationLogger.error("JSON repair attempts:", repairError.repairAttempts);
-          orchestrationLogger.debug("Failed to repair JSON content:", rawResponse);
+          orchestrationLogger.error(`JSON repair attempts: ${JSON.stringify(repairError.repairAttempts)}`);
+          orchestrationLogger.debug("Failed to repair JSON content:", "debug", rawResponse);
         }
         throw repairError;
       }
 
       if (wasRepaired) {
-        orchestrationLogger.warn(
+        orchestrationLogger.warning(
           "Team formation response required JSON repairs - the LLM produced malformed JSON"
         );
       }

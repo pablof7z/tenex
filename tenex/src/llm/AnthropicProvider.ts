@@ -106,7 +106,7 @@ export class AnthropicProvider extends BaseLLMProvider {
 
   protected extractToolCallData(
     toolCall: AnthropicContent
-  ): { name: string; arguments: unknown } | null {
+  ): { name: string; arguments: Record<string, unknown> } | null {
     return ToolCallParser.parseAnthropicToolCall(toolCall);
   }
 }

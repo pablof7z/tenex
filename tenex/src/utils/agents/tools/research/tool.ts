@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { ResearchOutputParser } from "@/utils/agents/tools/research/ResearchOutputParser";
+import { ClaudeParser } from "@/utils/agents/tools/claude/ClaudeParser";
+import type { ClaudeCodeMessage } from "@/utils/agents/tools/claudeCode/types";
 import type { ResearchOptions } from "@/utils/agents/tools/research/types";
 import type { ToolContext, ToolDefinition } from "@/utils/agents/tools/types";
 import { NDKTask } from "@nostr-dev-kit/ndk";
@@ -89,13 +90,55 @@ export const researchTool: ToolDefinition = {
   },
 };
 
+async function publishResearchUpdate(
+  content: string,
+  sessionId: string | undefined,
+  toolContext?: ToolContext,
+  taskEvent?: NDKTask
+) {
+  if (!taskEvent || !toolContext?.publisher || !toolContext?.agent) return;
+
+  try {
+    const updateContext = {
+      originalEvent: taskEvent,
+      projectEvent: toolContext.projectEvent,
+      rootEventId: toolContext.rootEventId,
+      projectId: toolContext.projectEvent.tagId(),
+    };
+
+    const response = {
+      content,
+      metadata: {
+        isToolUpdate: true,
+        tool: "research",
+      },
+    };
+
+    const extraTags: string[][] = [];
+    if (sessionId) {
+      extraTags.push(["claude-session-id", sessionId]);
+    }
+
+    await toolContext.publisher.publishResponse(
+      response,
+      updateContext,
+      toolContext.agent.getSigner(),
+      toolContext.agentName,
+      extraTags
+    );
+
+    logDebug(chalk.gray(`Published research update: ${content.substring(0, 50)}...`));
+  } catch (error) {
+    logError(`Failed to publish research update: ${error}`);
+  }
+}
+
 function executeResearch(
   options: ResearchOptions,
   toolContext?: ToolContext,
   taskEvent?: NDKTask
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    // Create a research prompt that explicitly requests markdown output
     const researchPrompt = `Please analyze the current codebase and generate a comprehensive markdown research report about: ${options.query}
 
 Your response should be formatted as a well-structured markdown document with:
@@ -118,7 +161,6 @@ Query: ${options.query}`;
       researchPrompt,
     ];
 
-    // Show the actual command being run
     logDebug(
       `${chalk.gray("Command:")} claude ${args.map((arg) => (arg.includes(" ") ? `'${arg}'` : arg)).join(" ")}`
     );
@@ -128,41 +170,68 @@ Query: ${options.query}`;
     const claudeProcess = spawn("claude", args, {
       cwd: options.projectPath || process.cwd(),
       env: { ...process.env },
-      stdio: ["ignore", "pipe", "inherit"], // ignore stdin, pipe stdout, inherit stderr
+      stdio: ["ignore", "pipe", "inherit"],
     });
 
     logDebug(`${chalk.gray("Claude process PID:")} ${claudeProcess.pid}`);
 
-    const parser = new ResearchOutputParser(toolContext, taskEvent);
     let finalResult = "";
     let hasError = false;
 
-    // Set encoding for better string handling
-    if (claudeProcess.stdout) {
-      claudeProcess.stdout.setEncoding("utf8");
-    }
+    // Create parser with message handler
+    const parser = new ClaudeParser(async (message: ClaudeCodeMessage) => {
+      switch (message.type) {
+        case "assistant":
+          if (message.message?.content) {
+            for (const content of message.message.content) {
+              if (content.type === "text" && content.text) {
+                await publishResearchUpdate(
+                  `🔍 **Research Progress**: ${content.text.substring(0, 200)}...`,
+                  parser.getSessionId(),
+                  toolContext,
+                  taskEvent
+                );
+              }
+            }
+          }
+          break;
 
-    claudeProcess.stdout?.on("data", (chunk: string) => {
-      const messages = parser.parseLines(chunk);
-
-      // Capture the final result
-      for (const message of messages) {
-        if (message.type === "result") {
+        case "result":
           if (message.result) {
             finalResult = message.result;
           }
           if (message.is_error) {
             hasError = true;
           }
-        }
+          break;
       }
     });
 
-    claudeProcess.on("close", (code) => {
+    if (claudeProcess.stdout) {
+      claudeProcess.stdout.setEncoding("utf8");
+    }
+
+    claudeProcess.stdout?.on("data", (chunk: string) => {
+      parser.parseLines(chunk);
+    });
+
+    claudeProcess.on("close", async (code) => {
       if (code !== 0 || hasError) {
+        await publishResearchUpdate(
+          "❌ **Research Failed**: Error occurred during research",
+          parser.getSessionId(),
+          toolContext,
+          taskEvent
+        );
         reject(new Error(`Research execution failed with code ${code}`));
       } else {
-        // Include summary statistics in the result
+        await publishResearchUpdate(
+          "✅ **Research Complete**: Report generated successfully",
+          parser.getSessionId(),
+          toolContext,
+          taskEvent
+        );
+
         const stats = [];
         if (parser.getMessageCount() > 0) {
           stats.push(`${parser.getMessageCount()} messages`);
@@ -174,7 +243,6 @@ Query: ${options.query}`;
         const summary = stats.length > 0 ? ` (${stats.join(", ")})` : "";
         let result = finalResult || `Research completed successfully${summary}`;
 
-        // Add session ID to the result if available
         const sessionId = parser.getSessionId();
         if (sessionId) {
           result += `\n\nSession ID: ${sessionId}`;
