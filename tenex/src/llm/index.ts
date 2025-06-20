@@ -45,11 +45,25 @@ export { BaseLLMProvider } from "./BaseLLMProvider";
 
 // Utilities
 export { ToolCallParser, type ParsedToolCall } from "./utils/ToolCallParser";
-export { LLMLogger, type RequestSummary, type ResponseSummary } from "./utils/LLMLogger";
+export { 
+    logLLMRequest, 
+    logLLMResponse, 
+    logLLMError,
+    setVerboseMode,
+    isVerboseMode,
+    type RequestSummary, 
+    type ResponseSummary 
+} from "./utils/llmLogging";
 export {
-    ConfigValidator,
+    validateLLMConfig,
+    validatePartialLLMConfig,
+    getProviderRequirements,
+    getSupportedProviders as getConfigSupportedProviders,
+    isProviderSupported,
+    getValidModels,
+    supportsFeature,
     type ProviderRequirements,
-} from "./utils/ConfigValidator";
+} from "./utils/configValidation";
 export {
     LLMProviderError,
     LLMValidationError,

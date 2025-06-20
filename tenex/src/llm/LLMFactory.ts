@@ -10,7 +10,6 @@ import type { LLMProvider } from "./types";
 
 // Import providers for registration
 import { AnthropicProvider } from "./AnthropicProvider";
-import { AnthropicProviderWithCache } from "./AnthropicProviderWithCache";
 import { OllamaProvider } from "./OllamaProvider";
 import { OpenAIProvider } from "./OpenAIProvider";
 import { OpenRouterProvider } from "./OpenRouterProvider";
@@ -21,34 +20,16 @@ const legacyProviders: Map<string, LLMProvider> = new Map();
 
 // Initialize provider registry
 function initializeProviderRegistry(): void {
-    // Register Anthropic providers
+    // Register Anthropic provider (now with integrated caching)
     ProviderRegistry.register(
         "anthropic",
-        new ConditionalProviderFactory(AnthropicProvider, (config) => !config.enableCaching, 1),
+        new SimpleProviderFactory(AnthropicProvider, undefined, 1),
         {
-            description: "Anthropic Claude provider without caching",
+            description: "Anthropic Claude provider with optional caching",
             features: {
                 tools: true,
                 streaming: false,
-                caching: false,
-                multimodal: true,
-            },
-        }
-    );
-
-    ProviderRegistry.register(
-        "anthropic-cached",
-        new ConditionalProviderFactory(
-            AnthropicProviderWithCache,
-            (config) => config.enableCaching !== false,
-            2 // Higher priority when caching is enabled
-        ),
-        {
-            description: "Anthropic Claude provider with caching",
-            features: {
-                tools: true,
-                streaming: false,
-                caching: true,
+                caching: true, // Now supports caching based on config
                 multimodal: true,
             },
         }
@@ -156,10 +137,7 @@ function createLegacyProvider(
 
     switch (config.provider.toLowerCase()) {
         case "anthropic":
-            baseProvider =
-                config.enableCaching !== false
-                    ? new AnthropicProviderWithCache()
-                    : new AnthropicProvider();
+            baseProvider = new AnthropicProvider();
             break;
         case "openai":
             baseProvider = new OpenAIProvider();

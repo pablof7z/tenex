@@ -151,17 +151,6 @@ export class OpenRouterProvider extends BaseLLMProvider {
         });
     }
 
-    protected logResponse(data: OpenRouterResponse): void {
-        super.logResponse(data);
-
-        // Log cache usage if available
-        if (data.usage?.cached_tokens) {
-            logger.info(`OpenRouter cache hit! Cached tokens: ${data.usage.cached_tokens}`);
-        }
-        if (data.cache_discount) {
-            logger.info(`Cache discount: ${data.cache_discount}`);
-        }
-    }
 
     protected parseResponse(data: OpenRouterResponse): LLMResponse {
         // Validate response structure

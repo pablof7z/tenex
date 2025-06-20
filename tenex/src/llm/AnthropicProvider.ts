@@ -38,6 +38,11 @@ export class AnthropicProvider extends BaseLLMProvider {
             requestBody.tool_choice = { type: "auto" };
         }
 
+        // Add cache control if caching is enabled
+        if (config.enableCaching !== false) {
+            return this.addCacheControl(requestBody, messages);
+        }
+
         return requestBody;
     }
 
@@ -108,5 +113,57 @@ export class AnthropicProvider extends BaseLLMProvider {
         toolCall: AnthropicContent
     ): { name: string; arguments: Record<string, unknown> } | null {
         return ToolCallParser.parseAnthropicToolCall(toolCall);
+    }
+
+    private addCacheControl(
+        requestBody: Record<string, unknown>,
+        messages: LLMMessage[]
+    ): Record<string, unknown> {
+        const modifiedBody = { ...requestBody };
+
+        // Add cache control to system message if it exists and is long enough
+        if (modifiedBody.system && typeof modifiedBody.system === "string") {
+            const systemLength = modifiedBody.system.length;
+            if (systemLength > 2048) {
+                // Cache threshold
+                modifiedBody.system = [
+                    {
+                        type: "text",
+                        text: modifiedBody.system,
+                        cache_control: { type: "ephemeral" },
+                    },
+                ];
+            }
+        }
+
+        // Add cache control to messages - cache the last long message that qualifies
+        if (Array.isArray(modifiedBody.messages)) {
+            const messagesArray = modifiedBody.messages as LLMMessage[];
+
+            // Find the last message that's long enough to cache (working backwards)
+            for (let i = messagesArray.length - 1; i >= 0; i--) {
+                const message = messagesArray[i];
+                if (message?.content && typeof message.content === "string") {
+                    const contentLength = message.content.length;
+                    if (contentLength > 2048) {
+                        // Cache threshold
+                        // Convert string content to array format with cache control
+                        (messagesArray[i] as any) = {
+                            ...message,
+                            content: [
+                                {
+                                    type: "text",
+                                    text: message.content as string,
+                                    cache_control: { type: "ephemeral" },
+                                },
+                            ],
+                        };
+                        break; // Only cache one message to avoid excessive cache usage
+                    }
+                }
+            }
+        }
+
+        return modifiedBody;
     }
 }

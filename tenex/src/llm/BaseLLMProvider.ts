@@ -2,8 +2,8 @@ import type { LLMContext, LLMMessage, LLMProvider, LLMResponse, ProviderTool } f
 import type { LLMConfig } from "@/utils/agents/types";
 import { logger } from "@tenex/shared/logger";
 import chalk from "chalk";
-import { ConfigValidator } from "./utils/ConfigValidator";
-import { LLMLogger } from "./utils/LLMLogger";
+import { validateLLMConfig } from "./utils/configValidation";
+import { logLLMRequest, logLLMResponse, logLLMError } from "./utils/llmLogging";
 import {
     LLMAuthenticationError,
     LLMProviderError,
@@ -14,12 +14,6 @@ export abstract class BaseLLMProvider implements LLMProvider {
     protected abstract readonly providerName: string;
     protected abstract readonly defaultModel: string;
     protected abstract readonly defaultBaseURL: string;
-    protected readonly logger: LLMLogger;
-
-    constructor() {
-        // Initialize logger after the concrete class sets providerName
-        this.logger = new LLMLogger(this.constructor.name.replace("Provider", ""));
-    }
 
     // Public getters for testing
     get provider(): string {
@@ -36,7 +30,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
         context?: LLMContext,
         tools?: ProviderTool[]
     ): Promise<LLMResponse> {
-        ConfigValidator.validate(config);
+        validateLLMConfig(config);
 
         const baseURL = config.baseURL || this.defaultBaseURL;
         const model = config.model || this.defaultModel;
@@ -44,7 +38,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
         const requestBody = this.buildRequestBody(messages, config, model, tools);
 
         // Log request details with full prompts for orchestration
-        this.logger.logRequest(messages, context, config);
+        logLLMRequest(this.providerName, messages, context, config);
 
         try {
             const response = await this.makeRequest(baseURL, requestBody, config);
@@ -58,14 +52,14 @@ export abstract class BaseLLMProvider implements LLMProvider {
             const data = await response.json();
 
             // Log response summary - this keeps the "Response Telemetry" logs
-            this.logger.logResponse(data, model);
+            logLLMResponse(this.providerName, data, model);
 
             const result = this.parseResponse(data);
 
             return result;
         } catch (error) {
             if (error instanceof LLMProviderError) {
-                this.logger.logError(error.message, {
+                logLLMError(this.providerName, error.message, {
                     provider: error.provider,
                     statusCode: error.statusCode,
                     context: error.context,
@@ -159,134 +153,9 @@ export abstract class BaseLLMProvider implements LLMProvider {
                 : undefined,
         };
 
-        this.logger.logError(errorMessage, errorDetails);
+        logLLMError(this.providerName, errorMessage, errorDetails);
     }
 
-    protected logRequest(messages: LLMMessage[], context?: LLMContext, config?: LLMConfig): void {
-        const userMessage = messages.find((msg) => msg.role === "user");
-        const systemMessage = messages.find((msg) => msg.role === "system");
-
-        if (context) {
-            // Log LLM configuration details with colors
-            if (config) {
-                logger.info(chalk.blue.bold(`\n🤖 ${this.providerName} LLM Configuration:`));
-                logger.info(chalk.cyan(`   Agent: ${context.agentName}`));
-                logger.info(chalk.cyan(`   Model: ${config.model || this.defaultModel}`));
-                logger.info(chalk.cyan(`   Base URL: ${config.baseURL || this.defaultBaseURL}`));
-                logger.info(chalk.cyan(`   Max Tokens: ${config.maxTokens || "default"}`));
-                logger.info(chalk.cyan(`   Temperature: ${config.temperature ?? "default"}`));
-
-                if (config.enableCaching) {
-                    logger.info(chalk.green("   Caching: enabled"));
-                }
-            }
-
-            // Always show full prompts with distinctive colors
-            logger.info(
-                chalk.magenta.bold(`\n🚀 LLM REQUEST TO ${this.providerName.toUpperCase()}:`)
-            );
-            logger.info(chalk.gray(`Agent: ${context.agentName} | Messages: ${messages.length}`));
-
-            if (systemMessage) {
-                logger.info(chalk.yellow.bold("\n🔧 SYSTEM PROMPT:"));
-                logger.info(chalk.yellow("═".repeat(80)));
-                logger.info(chalk.white(systemMessage.content));
-                logger.info(chalk.yellow("═".repeat(80)));
-            }
-
-            if (userMessage) {
-                logger.info(chalk.green.bold("\n👤 USER PROMPT:"));
-                logger.info(chalk.green("═".repeat(80)));
-                logger.info(chalk.white(userMessage.content));
-                logger.info(chalk.green("═".repeat(80)));
-            }
-
-            // Log all other messages (assistant, tool, etc.)
-            const otherMessages = messages.filter(
-                (msg) => msg.role !== "system" && msg.role !== "user"
-            );
-            if (otherMessages.length > 0) {
-                logger.info(chalk.blue.bold("\n💬 OTHER MESSAGES:"));
-                logger.info(chalk.blue("═".repeat(80)));
-                otherMessages.forEach((msg, index) => {
-                    const roleColor =
-                        msg.role === "assistant"
-                            ? chalk.greenBright
-                            : msg.role === "tool"
-                              ? chalk.magentaBright
-                              : chalk.gray;
-                    logger.info(
-                        roleColor.bold(`Message ${index + 1} (${msg.role.toUpperCase()}):`)
-                    );
-                    logger.info(chalk.white(msg.content));
-                    if (index < otherMessages.length - 1) {
-                        logger.info(chalk.blue("─".repeat(40)));
-                    }
-                });
-                logger.info(chalk.blue("═".repeat(80)));
-            }
-
-            // Log message summary
-            logger.info(chalk.cyan.bold("\n📊 Message Summary:"));
-            logger.info(chalk.cyan(`   Total messages: ${messages.length}`));
-            logger.info(
-                chalk.cyan(`   System message: ${systemMessage?.content?.length || 0} chars`)
-            );
-            logger.info(chalk.cyan(`   User message: ${userMessage?.content?.length || 0} chars`));
-            logger.info(chalk.cyan(`   Other messages: ${otherMessages.length}`));
-            logger.info(chalk.magenta("─".repeat(80)));
-        }
-    }
-
-    protected logResponse(data: unknown, model?: string): void {
-        const usage = this.extractUsage(data);
-        const content = this.extractResponseContent(data);
-
-        // Always show LLM response with colors
-        logger.info(chalk.red.bold(`\n📨 LLM RESPONSE FROM ${this.providerName.toUpperCase()}:`));
-
-        if (content) {
-            logger.info(chalk.red("═".repeat(80)));
-            logger.info(chalk.white(content));
-            logger.info(chalk.red("═".repeat(80)));
-        }
-
-        if (usage) {
-            const totalTokens = (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
-            logger.info(chalk.yellow.bold("\n📊 Response Telemetry:"));
-            if (model) {
-                logger.info(chalk.yellow(`   Model: ${model}`));
-            }
-            logger.info(chalk.yellow(`   Prompt tokens: ${usage.prompt_tokens || 0}`));
-            logger.info(chalk.yellow(`   Completion tokens: ${usage.completion_tokens || 0}`));
-            logger.info(chalk.yellow(`   Total tokens: ${totalTokens}`));
-
-            if (content) {
-                logger.info(chalk.yellow(`   Response length: ${content.length} characters`));
-
-                // Log token efficiency
-                if (totalTokens > 0) {
-                    const charsPerToken = content.length / totalTokens;
-                    logger.info(
-                        chalk.yellow(`   Efficiency: ${charsPerToken.toFixed(2)} chars/token`)
-                    );
-                }
-            }
-
-            // Show cost if available
-            const dataWithUsage = data as any;
-            if (dataWithUsage.usage?.cost) {
-                logger.info(chalk.green(`   Cost: $${dataWithUsage.usage.cost}`));
-            }
-
-            // Show cache hit if available
-            if (dataWithUsage.usage?.cached_tokens) {
-                logger.info(chalk.green(`   Cache hit: ${dataWithUsage.usage.cached_tokens} tokens`));
-            }
-        }
-
-        logger.info(chalk.red("─".repeat(80)));
-    }
 
     protected extractResponseContent(data: unknown): string {
         // Try to extract response content for different provider formats

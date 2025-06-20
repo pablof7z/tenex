@@ -1,5 +1,11 @@
 import type { EventHandler } from "@/commands/run/EventHandler";
-import { ProcessedEventStore } from "@/commands/run/ProcessedEventStore";
+import {
+    loadProcessedEvents,
+    hasProcessedEvent,
+    addProcessedEvent,
+    flushProcessedEvents,
+    clearProcessedEvents
+} from "@/commands/run/processedEventTracking";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
@@ -16,21 +22,19 @@ import chalk from "chalk";
 
 export class SubscriptionManager {
     private subscriptions: NDKSubscription[] = [];
-    private processedEventStore: ProcessedEventStore;
     private eventHandler: EventHandler;
     private projectInfo: ProjectRuntimeInfo;
 
     constructor(eventHandler: EventHandler, projectInfo: ProjectRuntimeInfo) {
         this.eventHandler = eventHandler;
         this.projectInfo = projectInfo;
-        this.processedEventStore = new ProcessedEventStore(projectInfo.projectPath);
     }
 
     async start(): Promise<void> {
         logger.info(chalk.cyan("📡 Setting up project subscriptions..."));
 
         // Load previously processed event IDs from disk
-        await this.processedEventStore.load();
+        await loadProcessedEvents(this.projectInfo.projectPath);
 
         // Calculate the "since" timestamp for startup (5 seconds ago)
         const startupSince = Math.floor(Date.now() / 1000) - 5;
@@ -123,13 +127,13 @@ export class SubscriptionManager {
 
     private async handleIncomingEvent(event: NDKEvent, source: string): Promise<void> {
         // Check for duplicate events
-        if (this.processedEventStore.has(event.id)) {
+        if (hasProcessedEvent(event.id)) {
             logger.debug(`Skipping duplicate event ${event.id} from ${source}`);
             return;
         }
 
         // Mark as processed
-        this.processedEventStore.add(event.id);
+        addProcessedEvent(this.projectInfo.projectPath, event.id);
 
         // Log receipt
         if (event.kind !== EVENT_KINDS.PROJECT_STATUS) {
@@ -155,8 +159,8 @@ export class SubscriptionManager {
         this.subscriptions = [];
 
         // Flush any pending saves to disk before stopping
-        await this.processedEventStore.flush();
-        this.processedEventStore.clear();
+        await flushProcessedEvents(this.projectInfo.projectPath);
+        clearProcessedEvents();
 
         logger.info("All subscriptions stopped");
     }
