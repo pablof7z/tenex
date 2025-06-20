@@ -11,7 +11,7 @@ const projectRoot = path.resolve(__dirname, "..");
 // Create the bin directory if it doesn't exist
 const binDir = path.join(projectRoot, "bin");
 if (!fs.existsSync(binDir)) {
-    fs.mkdirSync(binDir);
+  fs.mkdirSync(binDir);
 }
 
 // Create the Node.js compatible CLI entry point
@@ -33,8 +33,8 @@ packageJson.devDependencies = undefined;
 // Update paths for workspace dependencies if they're published separately
 // For now, we'll keep them as is but you may want to publish them separately
 fs.writeFileSync(
-    path.join(projectRoot, "dist", "package.json"),
-    JSON.stringify(packageJson, null, 2)
+  path.join(projectRoot, "dist", "package.json"),
+  JSON.stringify(packageJson, null, 2)
 );
 
 console.log("✅ Copied package.json to dist");

@@ -2,9 +2,9 @@
  * Base agent system prompt for multi-agent conversations
  */
 export const BASE_AGENT_PROMPT = (
-    name: string,
-    role: string,
-    instructions: string
+  name: string,
+  role: string,
+  instructions: string
 ) => `You are ${name}, ${role}.
 
 Instructions: ${instructions}

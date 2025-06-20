@@ -12,26 +12,26 @@ const projectRoot = path.resolve(__dirname, "..");
 // Clean dist directory
 const distDir = path.join(projectRoot, "dist");
 if (fs.existsSync(distDir)) {
-    fs.rmSync(distDir, { recursive: true });
+  fs.rmSync(distDir, { recursive: true });
 }
 fs.mkdirSync(distDir);
 
 // Build the CLI
 await esbuild.build({
-    entryPoints: [path.join(projectRoot, "src/cli.ts")],
-    bundle: true,
-    platform: "node",
-    target: "node18",
-    format: "esm",
-    outfile: path.join(distDir, "cli.js"),
-    packages: "external",
-    loader: {
-        ".ts": "ts",
-    },
-    sourcemap: true,
-    minify: false,
-    banner: {
-        js: `
+  entryPoints: [path.join(projectRoot, "src/cli.ts")],
+  bundle: true,
+  platform: "node",
+  target: "node18",
+  format: "esm",
+  outfile: path.join(distDir, "cli.js"),
+  packages: "external",
+  loader: {
+    ".ts": "ts",
+  },
+  sourcemap: true,
+  minify: false,
+  banner: {
+    js: `
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -39,18 +39,18 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 `,
-    },
+  },
 });
 
 console.log("✅ Built CLI entry point");
 
 // Create type definitions (best effort, ignore errors)
 try {
-    const { execSync } = await import("node:child_process");
-    execSync("tsc -p tsconfig.build.json --emitDeclarationOnly", { stdio: "inherit" });
-    console.log("✅ Generated type definitions");
+  const { execSync } = await import("node:child_process");
+  execSync("tsc -p tsconfig.build.json --emitDeclarationOnly", { stdio: "inherit" });
+  console.log("✅ Generated type definitions");
 } catch (_error) {
-    console.log("⚠️  Could not generate type definitions (this is okay for npm publishing)");
+  console.log("⚠️  Could not generate type definitions (this is okay for npm publishing)");
 }
 
 // Copy package.json (without scripts and devDependencies)
@@ -60,7 +60,7 @@ packageJson.devDependencies = undefined;
 
 // Update bin path to compiled version
 packageJson.bin = {
-    tenex: "./bin/tenex.js",
+  tenex: "./bin/tenex.js",
 };
 
 fs.writeFileSync(path.join(distDir, "package.json"), JSON.stringify(packageJson, null, 2));
@@ -70,7 +70,7 @@ console.log("✅ Created dist/package.json");
 // Create the bin directory and CLI wrapper
 const binDir = path.join(projectRoot, "bin");
 if (!fs.existsSync(binDir)) {
-    fs.mkdirSync(binDir);
+  fs.mkdirSync(binDir);
 }
 
 const cliWrapperContent = `#!/usr/bin/env node
@@ -84,8 +84,8 @@ console.log("✅ Created bin/tenex.js wrapper");
 // Copy README if it exists
 const readmePath = path.join(projectRoot, "README.md");
 if (fs.existsSync(readmePath)) {
-    fs.copyFileSync(readmePath, path.join(distDir, "README.md"));
-    console.log("✅ Copied README.md");
+  fs.copyFileSync(readmePath, path.join(distDir, "README.md"));
+  console.log("✅ Copied README.md");
 }
 
 console.log("\n📦 Build complete! Package is ready for publishing.");

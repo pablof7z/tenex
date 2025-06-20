@@ -1,6 +1,7 @@
 import { ToolExecutor } from "@/utils/agents/tools/ToolExecutor";
-import { removeToolCalls } from "@/utils/agents/tools/ToolParser";
+import { parseToolCalls, removeToolCalls } from "@/utils/agents/tools/ToolParser";
 import type { ToolRegistry } from "@/utils/agents/tools/ToolRegistry";
+import type { ToolCall } from "@/utils/agents/tools/types";
 import { type NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared/logger";
@@ -94,23 +95,7 @@ export class Agent {
     }
 
     const response = await this.generateResponse(event, context);
-
-    // Check if response contains tool calls that need execution
-    if (response.toolCalls || response.hasNativeToolCalls) {
-      // Publish the initial response immediately (without tool results)
-      const initialResponse = {
-        content: removeToolCalls(response.content),
-        signal: response.signal,
-        metadata: response.metadata,
-      };
-      await this.publisher.publishResponse(initialResponse, context, this.signer, this.config.name);
-
-      // Execute tools and publish results as a follow-up
-      await this.executeToolsAndPublishResults(response, context);
-    } else {
-      // No tools, publish normally
-      await this.publisher.publishResponse(response, context, this.signer, this.config.name);
-    }
+    await this.publisher.publishResponse(response, context, this.signer, this.config.name);
   }
 
   async generateResponse(event: NDKEvent, context: EventContext): Promise<AgentResponse> {
@@ -125,30 +110,24 @@ export class Agent {
       role: "system",
       content: systemPrompt,
     });
-    
+
     // Extract user prompt from the event
     const userPrompt = event.content;
 
     // Publish typing start indicator
     try {
-      await this.publisher.publishTypingIndicator(
-        this.config.name,
-        true,
-        context,
-        this.signer,
-        {
-          systemPrompt,
-          userPrompt,
-        }
-      );
+      await this.publisher.publishTypingIndicator(this.config.name, true, context, this.signer, {
+        systemPrompt,
+        userPrompt,
+      });
     } catch (error) {
       // Don't fail the LLM call if typing indicator fails
       agentLogger.debug(`Failed to publish typing start indicator: ${error}`, "verbose");
     }
 
     try {
-      // Generate response
-      const completion = await this.llm.complete({
+      // Get initial LLM response
+      const initialResponse = await this.llm.complete({
         messages,
         context: {
           agentName: this.config.name,
@@ -159,7 +138,6 @@ export class Agent {
           projectEvent: context.projectEvent,
           ndk: this.ndk,
           agent: this,
-          immediateResponse: true, // Tell ToolEnabledProvider to return immediately
           typingIndicator: async (content: string) => {
             await this.publisher.publishTypingIndicator(
               this.config.name,
@@ -172,57 +150,144 @@ export class Agent {
         },
       });
 
-      // Parse response and extract signal
-      const { content, signal } = this.parseResponse(completion.content);
+      // Check for tool calls in the response
+      const toolCalls = parseToolCalls(initialResponse.content);
 
-      // Save to conversation history
+      // If no tool calls, return the response as-is
+      if (toolCalls.length === 0) {
+        // Parse response and extract signal
+        const { content, signal } = this.parseResponse(initialResponse.content);
+
+        // Save to conversation history
+        await this.store.appendMessage(context.rootEventId, {
+          id: `${Date.now()}-${this.config.name}`,
+          agentName: this.config.name,
+          content,
+          timestamp: Date.now(),
+          signal,
+        });
+
+        // Build metadata from completion
+        const metadata: import("../core/types").LLMMetadata = {
+          model: initialResponse.model,
+          provider: this.config.llmConfig?.provider,
+          systemPrompt,
+          userPrompt: event.content,
+          rawResponse: initialResponse.content,
+          usage: initialResponse.usage
+            ? {
+                promptTokens: initialResponse.usage.promptTokens,
+                completionTokens: initialResponse.usage.completionTokens,
+                totalTokens: initialResponse.usage.totalTokens,
+                cacheCreationTokens: initialResponse.usage.cacheCreationTokens,
+                cacheReadTokens: initialResponse.usage.cacheReadTokens,
+                cost: initialResponse.usage.cost,
+              }
+            : undefined,
+        };
+
+        return {
+          content,
+          signal,
+          metadata,
+        };
+      }
+
+      // Execute tools
+      const toolResults = await this.executeTools(toolCalls, context);
+
+      // Build messages for final response
+      const finalMessages = [
+        ...messages,
+        { role: "assistant" as const, content: initialResponse.content },
+        ...toolResults.map((result) => ({
+          role: "tool" as const,
+          content: result.output,
+        })),
+      ];
+
+      // Get final response after tool execution
+      const finalResponse = await this.llm.complete({
+        messages: finalMessages,
+        context: {
+          agentName: this.config.name,
+          rootEventId: context.rootEventId,
+          eventId: event.id,
+          originalEvent: context.originalEvent,
+          projectId: context.projectId,
+          projectEvent: context.projectEvent,
+          ndk: this.ndk,
+          agent: this,
+        },
+      });
+
+      // Parse response and extract signal
+      const { content, signal } = this.parseResponse(finalResponse.content);
+
+      // Save complete interaction to conversation history
       await this.store.appendMessage(context.rootEventId, {
         id: `${Date.now()}-${this.config.name}`,
+        agentName: this.config.name,
+        content: removeToolCalls(initialResponse.content),
+        timestamp: Date.now(),
+      });
+
+      // Save tool results
+      for (const result of toolResults) {
+        const toolCall = toolCalls.find((tc) => tc.id === result.tool_call_id);
+        if (toolCall) {
+          await this.store.appendMessage(context.rootEventId, {
+            id: `${Date.now()}-tool-${toolCall.name}`,
+            agentName: `${this.config.name} (tool: ${toolCall.name})`,
+            content: result.output,
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      // Save final response
+      await this.store.appendMessage(context.rootEventId, {
+        id: `${Date.now()}-${this.config.name}-final`,
         agentName: this.config.name,
         content,
         timestamp: Date.now(),
         signal,
       });
 
-      // Build metadata from completion
+      // Build metadata combining both responses
       const metadata: import("../core/types").LLMMetadata = {
-        model: completion.model,
+        model: finalResponse.model || initialResponse.model,
         provider: this.config.llmConfig?.provider,
         systemPrompt,
         userPrompt: event.content,
-        rawResponse: completion.content,
-        usage: completion.usage
-          ? {
-              promptTokens: completion.usage.promptTokens,
-              completionTokens: completion.usage.completionTokens,
-              totalTokens: completion.usage.totalTokens,
-              cacheCreationTokens: completion.usage.cacheCreationTokens,
-              cacheReadTokens: completion.usage.cacheReadTokens,
-              cost: completion.usage.cost,
-            }
-          : undefined,
+        rawResponse: finalResponse.content,
+        usage: {
+          promptTokens:
+            (initialResponse.usage?.promptTokens || 0) + (finalResponse.usage?.promptTokens || 0),
+          completionTokens:
+            (initialResponse.usage?.completionTokens || 0) +
+            (finalResponse.usage?.completionTokens || 0),
+          totalTokens:
+            (initialResponse.usage?.totalTokens || 0) + (finalResponse.usage?.totalTokens || 0),
+          cacheCreationTokens:
+            (initialResponse.usage?.cacheCreationTokens || 0) +
+            (finalResponse.usage?.cacheCreationTokens || 0),
+          cacheReadTokens:
+            (initialResponse.usage?.cacheReadTokens || 0) +
+            (finalResponse.usage?.cacheReadTokens || 0),
+          cost: (initialResponse.usage?.cost || 0) + (finalResponse.usage?.cost || 0),
+        },
       };
 
-      // Return response with tool-related properties if they exist
       return {
         content,
         signal,
         metadata,
-        // Preserve tool-related properties from completion
-        ...(completion.toolCalls && { toolCalls: completion.toolCalls }),
-        ...(completion.hasNativeToolCalls && {
-          hasNativeToolCalls: completion.hasNativeToolCalls,
-        }),
       };
     } finally {
       // Always publish typing stop indicator
       try {
-        await this.publisher.publishTypingIndicator(
-          this.config.name,
-          false,
-          context,
-          this.signer
-        );
+        await this.publisher.publishTypingIndicator(this.config.name, false, context, this.signer);
       } catch (error) {
         // Don't fail if typing stop fails
         agentLogger.debug(`Failed to publish typing stop indicator: ${error}`, "verbose");
@@ -289,12 +354,12 @@ export class Agent {
     return { content };
   }
 
-  private async executeToolsAndPublishResults(
-    response: AgentResponse,
+  private async executeTools(
+    toolCalls: ToolCall[],
     context: EventContext
-  ): Promise<void> {
-    if (!response.toolCalls || !this.toolRegistry) {
-      return;
+  ): Promise<{ tool_call_id: string; output: string }[]> {
+    if (!this.toolRegistry || toolCalls.length === 0) {
+      return [];
     }
 
     const executor = new ToolExecutor(this.toolRegistry);
@@ -312,30 +377,6 @@ export class Agent {
       publisher: this.publisher,
     };
 
-    const toolResponses = await executor.executeTools(response.toolCalls, toolContext);
-
-    // Build tool results content
-    let toolResultsContent = "### Tool Results\n\n";
-    for (const toolResponse of toolResponses) {
-      const toolCall = response.toolCalls.find((tc) => tc.id === toolResponse.tool_call_id);
-      if (toolCall) {
-        toolResultsContent += `**${toolCall.name}**:\n${toolResponse.output}\n\n`;
-      }
-    }
-
-    // Publish tool results as a follow-up message
-    const toolResultResponse: AgentResponse = {
-      content: toolResultsContent.trim(),
-      metadata: {
-        isToolResult: true,
-      },
-    };
-
-    await this.publisher.publishResponse(
-      toolResultResponse,
-      context,
-      this.signer,
-      this.config.name
-    );
+    return executor.executeTools(toolCalls, toolContext);
   }
 }

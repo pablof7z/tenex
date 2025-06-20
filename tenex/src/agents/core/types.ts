@@ -12,47 +12,47 @@ export type { LLMConfig } from "@/utils/agents/types";
 // ============================================================================
 
 export interface AgentConfig {
-    name: string;
-    role: string;
-    instructions: string;
-    nsec: string;
-    tools?: string[]; // List of tool names this agent has access to
-    eventId?: string; // NDKAgent event ID
-    llmConfig?: LLMConfig; // LLM configuration for this agent
+  name: string;
+  role: string;
+  instructions: string;
+  nsec: string;
+  tools?: string[]; // List of tool names this agent has access to
+  eventId?: string; // NDKAgent event ID
+  llmConfig?: LLMConfig; // LLM configuration for this agent
 }
 
 export interface LLMMetadata {
-    model?: string;
-    provider?: string;
-    usage?: {
-        promptTokens: number;
-        completionTokens: number;
-        totalTokens: number;
-        cacheCreationTokens?: number;
-        cacheReadTokens?: number;
-        cost?: number;
-        costUsd?: number;
-    };
-    confidence?: number;
-    systemPrompt?: string;
-    userPrompt?: string;
-    rawResponse?: string;
-    isToolResult?: boolean;
+  model?: string;
+  provider?: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    cacheCreationTokens?: number;
+    cacheReadTokens?: number;
+    cost?: number;
+    costUsd?: number;
+  };
+  confidence?: number;
+  systemPrompt?: string;
+  userPrompt?: string;
+  rawResponse?: string;
+  isToolResult?: boolean;
 }
 
 export interface AgentResponse {
-    content: string;
-    signal?: ConversationSignal;
-    metadata?: LLMMetadata;
-    // Tool-related properties
-    toolCalls?: ToolCall[];
-    hasNativeToolCalls?: boolean;
+  content: string;
+  signal?: ConversationSignal;
+  metadata?: LLMMetadata;
+  // Tool-related properties
+  toolCalls?: ToolCall[];
+  hasNativeToolCalls?: boolean;
 }
 
 export interface ConversationSignal {
-    type: "continue" | "ready_for_transition" | "need_input" | "blocked" | "complete";
-    reason?: string;
-    suggestedNext?: string;
+  type: "continue" | "ready_for_transition" | "need_input" | "blocked" | "complete";
+  reason?: string;
+  suggestedNext?: string;
 }
 
 // ============================================================================
@@ -60,62 +60,62 @@ export interface ConversationSignal {
 // ============================================================================
 
 export interface TeamFormationRequest {
-    event: NDKEvent;
-    projectContext: ProjectContext;
-    availableAgents: Map<string, AgentConfig>;
+  event: NDKEvent;
+  projectContext: ProjectContext;
+  availableAgents: Map<string, AgentConfig>;
 }
 
 export interface TeamFormationResult {
-    team: {
-        lead: string;
-        members: string[];
-    };
-    conversationPlan: ConversationPlan;
-    reasoning: string;
+  team: {
+    lead: string;
+    members: string[];
+  };
+  conversationPlan: ConversationPlan;
+  reasoning: string;
 }
 
 export interface Team {
-    id: string;
-    rootEventId: string;
-    lead: string;
-    members: string[];
-    plan: ConversationPlan;
-    createdAt: number;
+  id: string;
+  rootEventId: string;
+  lead: string;
+  members: string[];
+  plan: ConversationPlan;
+  createdAt: number;
 }
 
 export interface ConversationPlan {
-    stages: ConversationStage[];
-    estimatedComplexity: number;
+  stages: ConversationStage[];
+  estimatedComplexity: number;
 }
 
 export interface ConversationStage {
-    participants: string[];
-    purpose: string;
-    expectedOutcome: string;
-    transitionCriteria: string;
-    primarySpeaker?: string;
+  participants: string[];
+  purpose: string;
+  expectedOutcome: string;
+  transitionCriteria: string;
+  primarySpeaker?: string;
 }
 
 export interface ProjectContext {
-    projectId: string;
-    title: string;
-    description?: string;
-    repository?: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  repository?: string;
 }
 
 export interface TeamFormationRequest {
-    event: NDKEvent;
-    projectContext: ProjectContext;
-    availableAgents: Map<string, AgentConfig>;
+  event: NDKEvent;
+  projectContext: ProjectContext;
+  availableAgents: Map<string, AgentConfig>;
 }
 
 export interface TeamFormationResult {
-    team: {
-        lead: string;
-        members: string[];
-    };
-    conversationPlan: ConversationPlan;
-    reasoning: string;
+  team: {
+    lead: string;
+    members: string[];
+  };
+  conversationPlan: ConversationPlan;
+  reasoning: string;
 }
 
 // ============================================================================
@@ -123,49 +123,49 @@ export interface TeamFormationResult {
 // ============================================================================
 
 export interface LLMProvider {
-    complete(request: CompletionRequest): Promise<CompletionResponse>;
+  complete(request: CompletionRequest): Promise<CompletionResponse>;
 }
 
 export interface CompletionRequest {
-    messages: Message[];
-    maxTokens?: number;
-    temperature?: number;
-    context?: {
-        agentName: string;
-        rootEventId: string;
-        eventId?: string;
-        originalEvent?: NDKEvent;
-        projectId?: string;
-        projectEvent?: NDKEvent;
-        ndk?: NDK;
-        agent?: Agent;
-        immediateResponse?: boolean;
-        typingIndicator?: (content: string) => Promise<void>;
-    };
+  messages: Message[];
+  maxTokens?: number;
+  temperature?: number;
+  context?: {
+    agentName: string;
+    rootEventId: string;
+    eventId?: string;
+    originalEvent?: NDKEvent;
+    projectId?: string;
+    projectEvent?: NDKEvent;
+    ndk?: NDK;
+    agent?: Agent;
+    immediateResponse?: boolean;
+    typingIndicator?: (content: string) => Promise<void>;
+  };
 }
 
 export interface UsageStats {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
 }
 
 export interface CompletionResponse {
-    content: string;
-    model?: string;
-    usage?: UsageStats & {
-        cacheCreationTokens?: number;
-        cacheReadTokens?: number;
-        cost?: number;
-    };
-    // Tool-related properties
-    toolCalls?: ToolCall[];
-    hasNativeToolCalls?: boolean;
+  content: string;
+  model?: string;
+  usage?: UsageStats & {
+    cacheCreationTokens?: number;
+    cacheReadTokens?: number;
+    cost?: number;
+  };
+  // Tool-related properties
+  toolCalls?: ToolCall[];
+  hasNativeToolCalls?: boolean;
 }
 
 export interface Message {
-    role: "system" | "user" | "assistant";
-    content: string;
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
 }
 
 // ============================================================================
@@ -173,46 +173,46 @@ export interface Message {
 // ============================================================================
 
 export interface SpecSummary {
-    title: string;
-    summary: string;
-    dTag: string;
+  title: string;
+  summary: string;
+  dTag: string;
 }
 
 export interface AgentSummary {
-    name: string;
-    role: string;
-    description: string;
+  name: string;
+  role: string;
+  description: string;
 }
 
 export interface EventContext {
-    rootEventId: string;
-    projectId: string;
-    originalEvent: NDKEvent;
-    projectEvent: NDKProject; // REQUIRED - critical for system functioning
-    availableSpecs?: SpecSummary[];
-    availableAgents?: AgentSummary[];
-    eventId?: string;
+  rootEventId: string;
+  projectId: string;
+  originalEvent: NDKEvent;
+  projectEvent: NDKProject; // REQUIRED - critical for system functioning
+  availableSpecs?: SpecSummary[];
+  availableAgents?: AgentSummary[];
+  eventId?: string;
 }
 
 export interface NostrPublisher {
-    publishResponse(
-        response: AgentResponse,
-        context: EventContext,
-        agentSigner: NDKSigner,
-        agentName?: string,
-        extraTags?: string[][]
-    ): Promise<void>;
-    publishTypingIndicator(
-        agentName: string,
-        isTyping: boolean,
-        context: EventContext,
-        signer: NDKSigner,
-        options?: {
-            message?: string;
-            systemPrompt?: string;
-            userPrompt?: string;
-        }
-    ): Promise<void>;
+  publishResponse(
+    response: AgentResponse,
+    context: EventContext,
+    agentSigner: NDKSigner,
+    agentName?: string,
+    extraTags?: string[][]
+  ): Promise<void>;
+  publishTypingIndicator(
+    agentName: string,
+    isTyping: boolean,
+    context: EventContext,
+    signer: NDKSigner,
+    options?: {
+      message?: string;
+      systemPrompt?: string;
+      userPrompt?: string;
+    }
+  ): Promise<void>;
 }
 
 // ============================================================================
@@ -220,18 +220,18 @@ export interface NostrPublisher {
 // ============================================================================
 
 export interface ConversationStore {
-    saveTeam(rootEventId: string, team: Team): Promise<void>;
-    getTeam(rootEventId: string): Promise<Team | null>;
-    appendMessage(rootEventId: string, message: ConversationMessage): Promise<void>;
-    getMessages(rootEventId: string): Promise<ConversationMessage[]>;
+  saveTeam(rootEventId: string, team: Team): Promise<void>;
+  getTeam(rootEventId: string): Promise<Team | null>;
+  appendMessage(rootEventId: string, message: ConversationMessage): Promise<void>;
+  getMessages(rootEventId: string): Promise<ConversationMessage[]>;
 }
 
 export interface ConversationMessage {
-    id: string;
-    agentName: string;
-    content: string;
-    timestamp: number;
-    signal?: ConversationSignal;
+  id: string;
+  agentName: string;
+  content: string;
+  timestamp: number;
+  signal?: ConversationSignal;
 }
 
 // ============================================================================
@@ -239,27 +239,27 @@ export interface ConversationMessage {
 // ============================================================================
 
 export class AgentError extends Error {
-    public details?: unknown;
-    
-    constructor(
-        message: string,
-        public code: string
-    ) {
-        super(message);
-        this.name = "AgentError";
-    }
+  public details?: unknown;
+
+  constructor(
+    message: string,
+    public code: string
+  ) {
+    super(message);
+    this.name = "AgentError";
+  }
 }
 
 export class TeamFormationError extends AgentError {
-    constructor(message: string, details?: unknown) {
-        super(message, "TEAM_FORMATION_ERROR");
-        this.details = details;
-    }
+  constructor(message: string, details?: unknown) {
+    super(message, "TEAM_FORMATION_ERROR");
+    this.details = details;
+  }
 }
 
 export class LLMError extends AgentError {
-    constructor(message: string, details?: unknown) {
-        super(message, "LLM_ERROR");
-        this.details = details;
-    }
+  constructor(message: string, details?: unknown) {
+    super(message, "LLM_ERROR");
+    this.details = details;
+  }
 }
