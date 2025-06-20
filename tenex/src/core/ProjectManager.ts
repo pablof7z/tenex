@@ -39,6 +39,11 @@ export interface IProjectManager {
 }
 
 export class ProjectManager implements IProjectManager {
+  private projectsPath: string;
+
+  constructor(projectsPath?: string) {
+    this.projectsPath = projectsPath || path.join(process.cwd(), "projects");
+  }
   async initializeProject(
     projectPath: string,
     naddr: string,
@@ -113,7 +118,7 @@ export class ProjectManager implements IProjectManager {
     ndk: NDK,
     llmConfigs?: LLMConfig[]
   ): Promise<string> {
-    const projectPath = path.join(process.cwd(), "projects", identifier);
+    const projectPath = path.join(this.projectsPath, identifier);
 
     // Check if project already exists
     if (await this.projectExists(projectPath)) {

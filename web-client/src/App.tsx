@@ -4,10 +4,7 @@ import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 const DEFAULT_RELAYS = [
-    "wss://relay.damus.io",
     "wss://relay.primal.net",
-    "wss://relay.nostr.band",
-    "wss://nos.lol",
 ];
 import { Toaster } from "sonner";
 import { LoginScreen } from "./components/auth/LoginScreen";
@@ -52,6 +49,8 @@ function AppContent() {
                 ndk={{
                     explicitRelayUrls: [...DEFAULT_RELAYS, "wss://purplepag.es"],
                     cacheAdapter: cache.current || undefined,
+                    enableOutboxModel: false,
+                    autoConnectUserRelays: false
                 }}
                 session={{
                     storage: sessionStorage.current,

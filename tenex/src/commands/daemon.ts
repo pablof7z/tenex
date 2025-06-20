@@ -13,6 +13,7 @@ export const daemonCommand = new Command("daemon")
   .description("Start the TENEX daemon to monitor Nostr events")
   .option("-w, --whitelist <pubkeys>", "Comma-separated list of whitelisted pubkeys")
   .option("-c, --config <path>", "Path to config file")
+  .option("-p, --projects-path <path>", "Path to projects directory")
   .action(async (options) => {
     logger.info("Starting TENEX daemon");
 
@@ -39,7 +40,7 @@ export const daemonCommand = new Command("daemon")
     await initNDK();
 
     // Initialize core components
-    const projectManager = new ProjectManager();
+    const projectManager = new ProjectManager(options.projectsPath);
     const processManager = new ProcessManager();
     const eventMonitor = new EventMonitor(projectManager, processManager);
 
