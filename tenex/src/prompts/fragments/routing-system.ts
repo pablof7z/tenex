@@ -20,10 +20,18 @@ Your role is to analyze conversations and make intelligent ${role} decisions bas
 - Available agent capabilities and expertise
 - User intent and requirements
 - Project context and goals
+- Technology stack and architecture patterns
+- File types and project structure
 
-${projectContext ? `\n## Project Context\n\n${projectContext}\n` : ""}
+${projectContext ? `${projectContext}\n` : ""}
 
-You must ensure smooth transitions between phases and appropriate agent assignments. Use the project structure and file information above to make more informed routing decisions about which agents would be most suitable for specific tasks.`;
+Use the detailed project information to make informed routing decisions:
+- When users mention specific files or directories, route to agents familiar with those areas
+- Consider the project's technology stack when selecting agents with relevant expertise
+- Use file type distribution to understand the project's nature (e.g., heavy on .ts files = TypeScript project)
+- Pay attention to notable files with specific tags (service, component, test, etc.) to understand architecture
+
+You must ensure smooth transitions between phases and appropriate agent assignments.`;
   },
 };
 
@@ -60,6 +68,11 @@ Consider:
 - Current phase requirements
 - Task complexity and domain
 - Previous agent performance in similar contexts
+- Project structure and technology stack
+- File types and patterns in the codebase
+
+When the project uses specific technologies (e.g., React, TypeScript, Python), prefer agents with expertise in those areas.
+When tasks involve specific file types or directories, select agents familiar with those patterns.
 
 Select agents based on the best match between task requirements and agent capabilities.`;
   },

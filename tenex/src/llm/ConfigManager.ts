@@ -23,14 +23,14 @@ export class LLMConfigManager {
       const projectConfig = await configurationService.loadLLMConfig(
         path.join(this.projectPath, ".tenex")
       );
-      this.configuration = this.convertToLLMConfiguration(projectConfig);
+      this.configuration = projectConfig;
       logger.info(`Loaded project LLM configurations from ${this.configPath}`);
 
       // Load global configuration
       try {
         const globalPath = path.join(process.env.HOME || "~", ".tenex");
         const globalConfig = await configurationService.loadLLMConfig(globalPath);
-        this.globalConfiguration = this.convertToLLMConfiguration(globalConfig);
+        this.globalConfiguration = globalConfig;
         logger.info(`Loaded global LLM configurations from ${globalPath}/llms.json`);
       } catch (error) {
         logger.debug("No global LLM configuration found, using project configuration only");
@@ -44,10 +44,6 @@ export class LLMConfigManager {
     }
   }
 
-  private convertToLLMConfiguration(fileConfig: LLMSettings): LLMConfiguration {
-    // No conversion needed, LLMConfiguration is an alias for LLMSettings
-    return fileConfig;
-  }
 
   private mergeConfigurations(): LLMConfiguration {
     if (!this.globalConfiguration) {

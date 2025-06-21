@@ -3,11 +3,13 @@ import type { Phase } from "@/types/conversation";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
+import { createTracingContext, createTracingLogger, createPhaseExecutionContext, type TracingContext } from "@/tracing";
 import { FileSystemAdapter } from "./persistence";
 import type { ConversationMetadata, ConversationState } from "./types";
 
 export class ConversationManager {
   private conversations: Map<string, ConversationState> = new Map();
+  private conversationContexts: Map<string, TracingContext> = new Map();
   private conversationsDir: string;
   private persistence: FileSystemAdapter;
 
@@ -31,6 +33,13 @@ export class ConversationManager {
     }
     const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Conversation";
 
+    // Create tracing context for this conversation
+    const tracingContext = createTracingContext(id);
+    this.conversationContexts.set(id, tracingContext);
+    
+    const tracingLogger = createTracingLogger(tracingContext, "conversation");
+    tracingLogger.startOperation("createConversation");
+
     const conversation: ConversationState = {
       id,
       title,
@@ -44,10 +53,16 @@ export class ConversationManager {
     };
 
     this.conversations.set(id, conversation);
-    logger.info(`Created new conversation: ${title}`, { id });
+    tracingLogger.info(`Created new conversation: ${title}`, {
+      title,
+      phase: "chat",
+      event: "conversation_created",
+    });
 
     // Save immediately after creation
     await this.persistence.save(conversation);
+    
+    tracingLogger.completeOperation("createConversation");
 
     return conversation;
   }
@@ -62,6 +77,17 @@ export class ConversationManager {
       throw new Error(`Conversation ${id} not found`);
     }
 
+    // Get or create tracing context
+    let tracingContext = this.conversationContexts.get(id);
+    if (!tracingContext) {
+      tracingContext = createTracingContext(id);
+      this.conversationContexts.set(id, tracingContext);
+    }
+
+    // Create phase execution context
+    const phaseContext = createPhaseExecutionContext(tracingContext, phase);
+    const tracingLogger = createTracingLogger(phaseContext, "conversation");
+
     const previousPhase = conversation.phase;
     conversation.phase = phase;
     conversation.phaseStartedAt = Date.now();
@@ -71,7 +97,10 @@ export class ConversationManager {
       conversation.metadata[`${previousPhase}_summary`] = context;
     }
 
-    logger.info(`Conversation ${id} transitioned from ${previousPhase} to ${phase}`);
+    tracingLogger.logTransition(previousPhase, phase, {
+      context,
+      conversationTitle: conversation.title,
+    });
 
     // Save after phase update
     await this.persistence.save(conversation);
@@ -82,6 +111,15 @@ export class ConversationManager {
     if (!conversation) {
       throw new Error(`Conversation ${conversationId} not found`);
     }
+
+    // Get or create tracing context
+    let tracingContext = this.conversationContexts.get(conversationId);
+    if (!tracingContext) {
+      tracingContext = createTracingContext(conversationId);
+      this.conversationContexts.set(conversationId, tracingContext);
+    }
+
+    const tracingLogger = createTracingLogger(tracingContext, "conversation");
 
     conversation.history.push(event);
 
@@ -94,6 +132,11 @@ export class ConversationManager {
         conversation.metadata.summary = event.content;
         conversation.metadata.last_user_message = event.content;
       }
+
+      tracingLogger.logEventReceived(event.id || "unknown", isUser ? "user_message" : "agent_response", {
+        phase: conversation.phase,
+        historyLength: conversation.history.length,
+      });
     }
 
     // Save after adding event
@@ -240,5 +283,12 @@ export class ConversationManager {
   async cleanup(): Promise<void> {
     // Save all conversations before cleanup
     await this.saveAllConversations();
+  }
+
+  /**
+   * Get the tracing context for a conversation
+   */
+  getTracingContext(conversationId: string): TracingContext | undefined {
+    return this.conversationContexts.get(conversationId);
   }
 }

@@ -44,69 +44,44 @@ export class AgentExecutor {
       // 1. Build the agent's prompt
       const promptContext = await this.buildPromptContext(context);
 
-      // 2. Generate response via LLM
-      const { response: llmResponse, userPrompt } = await this.generateResponse(
+      // 2. Generate initial response via LLM
+      const { response: initialResponse, userPrompt } = await this.generateResponse(
         promptContext,
         context.agent.llmConfig || "default"
       );
 
-      // 3. Process response for tool execution
-      const toolContext = {
-        projectPath: getProjectContext().projectPath,
-        conversationId: context.conversation.id,
-        agentName: context.agent.name,
-        phase: context.phase,
-      };
-
-      const { enhancedResponse, toolResults, invocations } = await this.toolManager.processResponse(
-        llmResponse.content,
-        toolContext
-      );
-
-      // Map tool results to include toolName from invocations
-      const mappedToolResults: ToolExecutionResult[] = toolResults.map((result, index) => {
-        const invocation = invocations[index];
-        return {
-          ...result,
-          toolName: invocation?.toolName || "unknown",
-        };
-      });
-
-      // 4. Build metadata
-      const llmMetadata = this.llmService.buildMetadata(
-        llmResponse,
+      // 3. Execute the Reason-Act loop
+      const reasonActResult = await this.executeReasonActLoop(
+        initialResponse,
+        context,
         promptContext.systemPrompt,
         userPrompt
       );
 
-      // Log enhanced response if it differs from original
-      if (enhancedResponse !== llmResponse.content) {
-        logger.debug("Agent response enhanced with tool results", {
-          agentName: context.agent.name,
-          originalLength: llmResponse.content.length,
-          enhancedLength: enhancedResponse.length,
-          toolCount: toolResults.length,
-          enhancedResponse,
-        });
-      }
+      // 4. Build metadata with final response
+      const llmMetadata = this.llmService.buildMetadata(
+        reasonActResult.finalResponse,
+        promptContext.systemPrompt,
+        userPrompt
+      );
 
       // 5. Determine next responder
-      const nextResponder = this.determineNextResponder(context, enhancedResponse);
+      const nextResponder = this.determineNextResponder(context, reasonActResult.finalContent);
 
-      // 6. Publish response to Nostr (with enhanced response)
+      // 6. Publish response to Nostr
       const publishedEvent = await this.publishResponse(
         context,
         triggeringEvent,
-        enhancedResponse,
+        reasonActResult.finalContent,
         nextResponder,
         llmMetadata
       );
 
       return {
         success: true,
-        response: enhancedResponse,
+        response: reasonActResult.finalContent,
         llmMetadata,
-        toolExecutions: mappedToolResults,
+        toolExecutions: reasonActResult.allToolResults,
         nextAgent: nextResponder,
         publishedEvent,
       };
@@ -245,6 +220,134 @@ export class AgentExecutor {
     });
 
     return publishedEvent;
+  }
+
+  /**
+   * Execute the Reason-Act loop for tool-augmented responses
+   */
+  private async executeReasonActLoop(
+    initialResponse: any,
+    context: AgentExecutionContext,
+    systemPrompt: string,
+    originalUserPrompt: string
+  ): Promise<{
+    finalResponse: any;
+    finalContent: string;
+    allToolResults: ToolExecutionResult[];
+  }> {
+    const maxIterations = 3; // Prevent infinite loops
+    let currentResponse = initialResponse;
+    let allToolResults: ToolExecutionResult[] = [];
+    let iteration = 0;
+
+    const toolContext = {
+      projectPath: getProjectContext().projectPath,
+      conversationId: context.conversation.id,
+      agentName: context.agent.name,
+      phase: context.phase,
+    };
+
+    while (iteration < maxIterations) {
+      // Process response for tool invocations
+      const { enhancedResponse, toolResults, invocations } = await this.toolManager.processResponse(
+        currentResponse.content,
+        toolContext
+      );
+
+      // Map tool results
+      const mappedResults: ToolExecutionResult[] = toolResults.map((result, index) => {
+        const invocation = invocations[index];
+        return {
+          ...result,
+          toolName: invocation?.toolName || "unknown",
+        };
+      });
+
+      allToolResults.push(...mappedResults);
+
+      // If no tools were invoked, we're done
+      if (invocations.length === 0) {
+        logger.debug("No tool invocations found, completing Reason-Act loop", {
+          agent: context.agent.name,
+          iteration,
+        });
+        return {
+          finalResponse: currentResponse,
+          finalContent: currentResponse.content,
+          allToolResults,
+        };
+      }
+
+      // If tools were invoked, send results back to LLM for reasoning
+      logger.info("Tool invocations completed, continuing Reason-Act loop", {
+        agent: context.agent.name,
+        iteration,
+        toolCount: invocations.length,
+      });
+
+      // Build continuation prompt with tool results
+      const continuationPrompt = this.buildContinuationPrompt(
+        originalUserPrompt,
+        enhancedResponse,
+        mappedResults
+      );
+
+      // Generate next response
+      const messages: Message[] = [
+        new Message("system", systemPrompt),
+        new Message("user", originalUserPrompt),
+        new Message("assistant", currentResponse.content),
+        new Message("user", continuationPrompt),
+      ];
+
+      currentResponse = await this.llmService.complete(
+        context.agent.llmConfig || "default",
+        messages
+      );
+
+      iteration++;
+    }
+
+    // Max iterations reached
+    logger.warn("Reason-Act loop reached maximum iterations", {
+      agent: context.agent.name,
+      iterations: maxIterations,
+    });
+
+    return {
+      finalResponse: currentResponse,
+      finalContent: currentResponse.content,
+      allToolResults,
+    };
+  }
+
+  /**
+   * Build continuation prompt with tool results
+   */
+  private buildContinuationPrompt(
+    originalPrompt: string,
+    enhancedResponse: string,
+    toolResults: ToolExecutionResult[]
+  ): string {
+    let prompt = "Based on the tool execution results:\n\n";
+
+    for (const result of toolResults) {
+      prompt += `**${result.toolName}**: `;
+      if (result.success) {
+        prompt += typeof result.output === "string" 
+          ? result.output 
+          : JSON.stringify(result.output, null, 2);
+      } else {
+        prompt += `Error: ${result.error}`;
+      }
+      prompt += "\n\n";
+    }
+
+    prompt += "\nPlease continue with your analysis or provide a final response. ";
+    prompt += "If you need to use more tools, you can do so. ";
+    prompt += "If you have all the information needed, provide your complete response.";
+
+    return prompt;
   }
 
   /**

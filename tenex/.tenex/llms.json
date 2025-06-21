@@ -1,5 +1,5 @@
 {
-  "configurations": {
+  "presets": {
     "gemini": {
       "provider": "openrouter",
       "model": "google/gemini-2.5-flash-preview",
@@ -11,11 +11,11 @@
       "enableCaching": false
     }
   },
-  "defaults": {
+  "selection": {
     "default": "deepseek",
     "teamBuilding": "gemini"
   },
-  "credentials": {
+  "auth": {
     "openrouter": {
       "apiKey": "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",
       "baseUrl": "https://openrouter.ai/api/v1"

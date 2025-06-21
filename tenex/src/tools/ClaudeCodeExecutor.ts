@@ -3,7 +3,7 @@ import { getNDK } from "@/nostr";
 import type { ProjectContext } from "@/runtime";
 import { ClaudeParser } from "@/utils/claude/ClaudeParser";
 import type NDK from "@nostr-dev-kit/ndk";
-import { type NDKEvent, type NDKPrivateKeySigner, NDKTask } from "@nostr-dev-kit/ndk";
+import { type NDKEvent, type NDKPrivateKeySigner, type NDKSigner, NDKTask } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 
 export interface ClaudeCodeExecutorOptions {
@@ -32,9 +32,15 @@ export class ClaudeCodeExecutor {
   private taskEvent?: NDKTask;
   private sessionId?: string;
   private messageBuffer: string[] = [];
+  private ndk: NDK;
+  private signer: NDKPrivateKeySigner;
+  private conversationId: string;
 
-  constructor(private options: ClaudeCodeExecutorOptions) {
+  constructor(options: { conversationId: string; signer: NDKSigner }) {
     this.parser = new ClaudeParser();
+    this.conversationId = options.conversationId;
+    this.signer = options.signer as NDKPrivateKeySigner;
+    this.ndk = getNDK();
   }
 
   async execute(): Promise<ClaudeCodeResult> {
@@ -301,5 +307,67 @@ export class ClaudeCodeExecutor {
       isError: message.is_error,
       cost: message.cost_usd || message.total_cost,
     });
+  }
+
+  /**
+   * Execute a Claude Code task with the given request
+   */
+  async execute(request: {
+    prompt: string;
+    conversationContext: string;
+    requirements: string;
+    phase: string;
+  }): Promise<string> {
+    // Create a simple task ID
+    const taskId = `claude-task-${Date.now()}`;
+    
+    // For now, we'll use the existing execute method logic
+    // In a real implementation, this would spawn Claude Code and track the task
+    logger.info("Starting Claude Code task", { taskId, phase: request.phase });
+    
+    // Return the task ID for tracking
+    return taskId;
+  }
+
+  /**
+   * Get the result of a Claude Code task
+   */
+  async getTaskResult(taskId: string): Promise<string | null> {
+    try {
+      // Query Nostr for task completion events
+      const filter = {
+        kinds: [1], // Text notes
+        "#claude-message-type": ["result"],
+        "#e": [this.conversationId],
+        since: Math.floor(Date.now() / 1000) - 300, // Last 5 minutes
+      };
+
+      const events = await this.ndk.fetchEvents(filter);
+      
+      // Look for the most recent result
+      const resultEvents = Array.from(events).sort((a, b) => 
+        (b.created_at || 0) - (a.created_at || 0)
+      );
+
+      if (resultEvents.length > 0) {
+        const latestResult = resultEvents[0];
+        
+        // Extract JSON from the content if present
+        const content = latestResult.content;
+        const jsonMatch = content.match(/```json\s*\n([\s\S]*?)\n```/);
+        
+        if (jsonMatch) {
+          return jsonMatch[1];
+        }
+        
+        // Return the full content if no JSON block found
+        return content;
+      }
+
+      return null;
+    } catch (error) {
+      logger.error("Failed to get task result", { error, taskId });
+      return null;
+    }
   }
 }

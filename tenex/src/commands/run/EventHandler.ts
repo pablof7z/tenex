@@ -1,5 +1,5 @@
 import path from "node:path";
-import { AgentRegistry, createAgentSystem } from "@/agents";
+import { AgentRegistry } from "@/agents";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { ConversationManager } from "@/conversations";
@@ -36,7 +36,7 @@ export class EventHandler {
   }
 
   async initialize(): Promise<void> {
-    // Convert ProjectLoader agents to our Agent type
+    // Get agents from project loader
     const convertedAgents = new Map<string, Agent>();
     for (const [name, projectAgent] of this.projectInfo.agents) {
       const agent: Agent = {
@@ -44,7 +44,7 @@ export class EventHandler {
         pubkey: projectAgent.pubkey,
         signer: projectAgent.signer,
         role: projectAgent.role,
-        expertise: projectAgent.role, // Use role as expertise
+        expertise: projectAgent.expertise,
         instructions: projectAgent.instructions,
         llmConfig: "default",
         tools: [],
@@ -71,17 +71,11 @@ export class EventHandler {
     await this.conversationManager.initialize();
 
     // Initialize routing system
-    // Check if there's a specific agent routing configuration
     let routingConfig = "default";
     try {
-      // Try to get agentRouting config, fall back to teamBuilding for backward compatibility
       routingConfig = this.llmConfigManager.getDefaultConfig("agentRouting");
     } catch {
-      try {
-        routingConfig = this.llmConfigManager.getDefaultConfig("teamBuilding");
-      } catch {
-        routingConfig = this.llmConfigManager.getDefaultConfig("default");
-      }
+      routingConfig = this.llmConfigManager.getDefaultConfig("default");
     }
     this.routingLLM = new RoutingLLM(this.llmService, routingConfig, this.projectInfo.projectPath);
     logInfo(`Initialized RoutingLLM with configuration: ${routingConfig}`);

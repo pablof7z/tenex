@@ -2,7 +2,7 @@ import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STATUS_INTERVAL_MS, STATUS_KIND } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 import { formatError } from "@/utils/errors";
-import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logWarning } from "@tenex/shared/logger";
 import { configurationService } from "@tenex/shared/services";
 

@@ -12,7 +12,7 @@ import { generateSecretKey } from "nostr-tools";
 
 export interface Agent {
   name: string;
-  description: string;
+  expertise: string;
   role: string;
   instructions: string;
   eventId: string;
@@ -109,8 +109,6 @@ export class ProjectLoader {
     // Get agent event IDs from project tags
     const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
 
-    // TODO: This needs to be refactored to work with the new agent system
-    const legacyAgentsConfig: Record<string, { nsec: string; file: string }> = {};
 
     for (const tag of agentTags) {
       const eventId = tag[1];
@@ -124,14 +122,14 @@ export class ProjectLoader {
         }
 
         const agentName = agentEvent.tagValue("title") || "unnamed";
-        const description = agentEvent.tagValue("description") || "";
+        const expertise = agentEvent.tagValue("description") || "";
         const role = agentEvent.tagValue("role") || "";
 
         // Cache agent definition
         const agentDefinition = {
           eventId: eventId,
           name: agentName,
-          description: description,
+          expertise: expertise,
           role: role,
           instructions: agentEvent.content || "",
           version: agentEvent.tagValue("ver") || "1",
@@ -146,13 +144,9 @@ export class ProjectLoader {
         const nsec = nip19.nsecEncode(privateKey);
         const signer = new NDKPrivateKeySigner(nsec);
 
-        legacyAgentsConfig[agentName] = {
-          nsec,
-          file: `${eventId}.json`,
-        };
         agents.set(agentName, {
           name: agentName,
-          description,
+          expertise,
           role,
           instructions: agentEvent.content || "",
           eventId,

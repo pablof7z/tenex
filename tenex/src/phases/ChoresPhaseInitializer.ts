@@ -1,6 +1,6 @@
 import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
-import { AnalyzeTask } from "@/tasks/analyzeTask";
+import { InventoryService } from "@/services/InventoryService";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { getNDK } from "@/nostr/ndkClient";
@@ -48,40 +48,30 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
         };
       }
 
-      // Create and execute the analyze task
-      const analyzeTask = new AnalyzeTask({
-        projectPath: projectContext.projectPath,
-        conversationId: conversation.id,
-        signer,
-        targetFiles: changedFiles,
-        skipClaudeCode: false, // Use Claude Code for better descriptions
-      });
+      // Create inventory service and update inventory
+      const inventoryService = new InventoryService(projectContext.projectPath);
 
-      this.log("Running analyze task to update inventory", {
+      this.log("Running inventory update with Claude Code", {
         changedFilesCount: changedFiles.length,
         files: changedFiles.slice(0, 10), // Log first 10 files
       });
 
       try {
-        const updatedInventory = await analyzeTask.execute();
+        await inventoryService.updateInventory(changedFiles, signer, conversation.id);
 
-        this.log("Inventory updated successfully", {
-          totalFiles: updatedInventory.stats.totalFiles,
-          technologies: updatedInventory.technologies,
-        });
+        this.log("Inventory update started with Claude Code");
 
         return {
           success: true,
-          message: `Chores phase complete. Updated inventory for ${changedFiles.length} changed files.`,
+          message: `Chores phase complete. Started inventory update for ${changedFiles.length} changed files.`,
           metadata: {
             phase: "chores",
-            inventoryUpdated: true,
+            inventoryUpdateStarted: true,
             filesUpdated: changedFiles.length,
-            inventoryStats: updatedInventory.stats,
           },
         };
       } catch (error) {
-        this.logError("Failed to update inventory", error);
+        this.logError("Failed to start inventory update", error);
         
         // Don't fail the phase if inventory update fails
         return {
@@ -89,7 +79,7 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
           message: "Chores phase complete. Inventory update failed but continuing.",
           metadata: {
             phase: "chores",
-            inventoryUpdated: false,
+            inventoryUpdateStarted: false,
             error: error instanceof Error ? error.message : "Unknown error",
           },
         };

@@ -3,109 +3,45 @@ import type { Agent, AgentConfig } from "@/types/agent";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
-import { configurationService } from "@tenex/shared/services";
+import type { AgentReference, AgentDefinition, AgentsJson } from "@tenex/types/agents";
 import { nip19 } from "nostr-tools";
 import { generateSecretKey } from "nostr-tools";
-
-interface AgentRegistryEntry {
-  nsec: string;
-  file: string;
-  pubkey?: string;
-  llmConfig?: string;
-}
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
   private agentsByPubkey: Map<string, Agent> = new Map();
   private registryPath: string;
-  private registry: Record<string, AgentRegistryEntry> = {};
+  private agentsDir: string;
+  private registry: AgentsJson = {};
 
   constructor(private projectPath: string) {
     this.registryPath = path.join(projectPath, ".tenex", "agents.json");
+    this.agentsDir = path.join(projectPath, ".tenex", "agents");
   }
 
   async loadFromProject(): Promise<void> {
     // Ensure .tenex directory exists
     await ensureDirectory(path.join(this.projectPath, ".tenex"));
+    await ensureDirectory(this.agentsDir);
 
-    // Try to load agents from both global and project locations using ConfigurationService
-    try {
-      // Load project agents
-      const projectAgents = await this.loadAgentsFromPath(path.join(this.projectPath, ".tenex"));
-
-      // Load global agents
-      const globalAgents = await this.loadAgentsFromPath(
-        path.join(process.env.HOME || "~", ".tenex")
-      );
-
-      // Merge agents (project overrides global)
-      this.registry = { ...globalAgents, ...projectAgents };
-
-      const globalCount = Object.keys(globalAgents).length;
-      const projectCount = Object.keys(projectAgents).length;
-
-      logger.info(
-        `Loaded agent registry with ${Object.keys(this.registry).length} agents (${globalCount} global, ${projectCount} project)`
-      );
-    } catch (error) {
-      logger.warn(
-        "Failed to load agents through ConfigurationService, falling back to legacy loading",
-        { error }
-      );
-      await this.loadLegacyRegistry();
-    }
-
-    // Load agent configurations from .tenex/agents directory
-    const agentsDir = path.join(this.projectPath, ".tenex", "agents");
-    if (await fileExists(agentsDir)) {
-      // This would load agent configurations from individual files
-      // For now, we'll rely on agents being created through ensureAgent
-    }
-  }
-
-  private async loadAgentsFromPath(basePath: string): Promise<Record<string, AgentRegistryEntry>> {
-    try {
-      const agentsConfig = await configurationService.loadAgentsConfig(basePath);
-      const registry: Record<string, AgentRegistryEntry> = {};
-
-      // Handle new AgentsJson format
-      if ("agents" in agentsConfig) {
-        for (const [name, config] of Object.entries(agentsConfig.agents)) {
-          // For now, generate nsec for agents that don't have one
-          // This is temporary until we have a proper nsec management system
-          const privateKey = generateSecretKey();
-          const nsec = nip19.nsecEncode(privateKey);
-
-          registry[name] = {
-            nsec,
-            file: `${name}.json`,
-            llmConfig: config.llmConfig,
-          };
-        }
-      }
-
-      return registry;
-    } catch (error) {
-      // Return empty registry if file doesn't exist
-      return {};
-    }
-  }
-
-  private async loadLegacyRegistry(): Promise<void> {
-    // Legacy loading from project's agents.json only
+    // Load agents from agents.json file
     if (await fileExists(this.registryPath)) {
       try {
         const content = await readFile(this.registryPath, "utf-8");
         this.registry = JSON.parse(content);
         logger.info(
-          `Loaded legacy agent registry with ${Object.keys(this.registry).length} agents (project only)`
+          `Loaded agent registry with ${Object.keys(this.registry).length} agents from ${this.registryPath}`
         );
       } catch (error) {
-        logger.error("Failed to load legacy agent registry", { error });
+        logger.error("Failed to load agent registry", { error });
         this.registry = {};
       }
+    } else {
+      logger.info("No existing agent registry found, starting with empty registry");
+      this.registry = {};
     }
   }
+
 
   async ensureAgent(name: string, config: AgentConfig): Promise<Agent> {
     // Check if agent already exists
@@ -116,22 +52,56 @@ export class AgentRegistry {
 
     // Check if we have it in registry
     let registryEntry = this.registry[name];
+    let agentDefinition: AgentDefinition;
 
     if (!registryEntry) {
       // Generate new nsec for agent
       const privateKey = generateSecretKey();
       const nsec = nip19.nsecEncode(privateKey);
 
+      // Create new registry entry
+      const fileName = `${config.eventId || name}.json`;
       registryEntry = {
         nsec,
-        file: `${config.eventId || name}.json`,
-        llmConfig: config.llmConfig || "default",
+        file: fileName,
+        eventId: config.eventId,
       };
+
+      // Save agent definition to file
+      agentDefinition = {
+        name: config.name,
+        role: config.role,
+        expertise: config.expertise || config.role,
+        instructions: config.instructions || "",
+        llmConfig: config.llmConfig,
+        tools: config.tools,
+      };
+
+      const definitionPath = path.join(this.agentsDir, fileName);
+      await writeJsonFile(definitionPath, agentDefinition);
 
       this.registry[name] = registryEntry;
       await this.saveRegistry();
 
       logger.info(`Created new agent "${name}" with nsec`);
+    } else {
+      // Load agent definition from file
+      const definitionPath = path.join(this.agentsDir, registryEntry.file);
+      if (await fileExists(definitionPath)) {
+        const content = await readFile(definitionPath, "utf-8");
+        agentDefinition = JSON.parse(content);
+      } else {
+        // Fallback: create definition from config if file doesn't exist
+        agentDefinition = {
+          name: config.name,
+          role: config.role,
+          expertise: config.expertise || config.role,
+          instructions: config.instructions || "",
+          llmConfig: config.llmConfig,
+          tools: config.tools,
+        };
+        await writeJsonFile(definitionPath, agentDefinition);
+      }
     }
 
     // Create NDKPrivateKeySigner
@@ -143,23 +113,17 @@ export class AgentRegistry {
     const signer = new NDKPrivateKeySigner(decoded.data);
     const pubkey = await signer.user().then((user) => user.pubkey);
 
-    // Update registry with pubkey if not present
-    if (!registryEntry.pubkey) {
-      registryEntry.pubkey = pubkey;
-      await this.saveRegistry();
-    }
-
     // Create Agent instance
     const agent: Agent = {
-      name: config.name,
+      name: agentDefinition.name,
       pubkey,
       signer,
-      role: config.role,
-      expertise: config.expertise || config.role,
-      instructions: config.instructions,
-      llmConfig: registryEntry.llmConfig || config.llmConfig || "default",
-      tools: config.tools || [],
-      eventId: config.eventId,
+      role: agentDefinition.role,
+      expertise: agentDefinition.expertise || agentDefinition.role,
+      instructions: agentDefinition.instructions,
+      llmConfig: agentDefinition.llmConfig || "default",
+      tools: agentDefinition.tools || [],
+      eventId: registryEntry.eventId,
     };
 
     // Store in both maps
@@ -183,5 +147,36 @@ export class AgentRegistry {
 
   private async saveRegistry(): Promise<void> {
     await writeJsonFile(this.registryPath, this.registry);
+  }
+
+  async loadAgentBySlug(slug: string): Promise<Agent | null> {
+    const registryEntry = this.registry[slug];
+    if (!registryEntry) {
+      return null;
+    }
+
+    // Load agent definition from file
+    const definitionPath = path.join(this.agentsDir, registryEntry.file);
+    if (!(await fileExists(definitionPath))) {
+      logger.error(`Agent definition file not found: ${definitionPath}`);
+      return null;
+    }
+
+    const content = await readFile(definitionPath, "utf-8");
+    const agentDefinition: AgentDefinition = JSON.parse(content);
+
+    // Create AgentConfig from definition
+    const config: AgentConfig = {
+      name: agentDefinition.name,
+      role: agentDefinition.role,
+      expertise: agentDefinition.expertise || agentDefinition.role,
+      instructions: agentDefinition.instructions || "",
+      nsec: registryEntry.nsec,
+      eventId: registryEntry.eventId,
+      tools: agentDefinition.tools || [],
+      llmConfig: agentDefinition.llmConfig,
+    };
+
+    return this.ensureAgent(slug, config);
   }
 }

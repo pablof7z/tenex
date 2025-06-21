@@ -8,10 +8,6 @@ import type { AgentProfile } from "../types";
 import { createMessage } from "./utils";
 
 type LLMMessage = Message;
-type ToolCallResult = {
-  toolCallId: string;
-  result: unknown;
-};
 
 export interface DebugAgentConfig {
   name: string;
@@ -62,46 +58,6 @@ export class DebugAgent {
       // Send to LLM using default configuration
       const response = await this.llmService.complete("default", messages);
 
-      // Handle tool calls if present
-      // TODO: Enable when multi-llm-ts supports tool calls
-      const toolCallsEnabled = false;
-      if (toolCallsEnabled) {
-        const toolResults = await this.executeTools(response.toolCalls);
-
-        // Add assistant response with tool calls to history
-        this.conversationHistory.push(
-          createMessage("assistant", response.content || "", { toolCalls: response.toolCalls })
-        );
-
-        // Add tool results to history
-        for (const result of toolResults) {
-          this.conversationHistory.push(
-            createMessage(
-              "tool",
-              typeof result.result === "string"
-                ? result.result
-                : JSON.stringify(result.result, null, 2),
-              { toolCallId: result.toolCallId }
-            )
-          );
-        }
-
-        // Get final response after tool execution
-        const finalMessages: LLMMessage[] = [
-          createMessage("system", systemPrompt),
-          ...this.conversationHistory,
-        ];
-
-        const finalResponse = await this.llmService.complete("default", finalMessages);
-
-        // Add final response to history
-        this.conversationHistory.push(createMessage("assistant", finalResponse.content || ""));
-
-        return {
-          ...finalResponse,
-          message: finalResponse.content,
-        };
-      }
 
       // Add assistant response to history
       this.conversationHistory.push(createMessage("assistant", response.content || ""));
@@ -136,41 +92,6 @@ export class DebugAgent {
     return prompt;
   }
 
-  private async executeTools(toolCalls: unknown[]): Promise<ToolCallResult[]> {
-    const results: ToolCallResult[] = [];
-
-    for (const toolCall of toolCalls) {
-      try {
-        const toolName = toolCall.function?.name || toolCall.name;
-        const toolArgs = toolCall.function?.arguments || toolCall.arguments || {};
-
-        logDebug("debug", `Executing tool: ${toolName}`, { args: toolArgs });
-
-        const tool = this.tools.get(toolName);
-        if (!tool) {
-          results.push({
-            toolCallId: toolCall.id,
-            result: { error: `Tool ${toolName} not found` },
-          });
-          continue;
-        }
-
-        const result = await tool(toolArgs);
-        results.push({
-          toolCallId: toolCall.id,
-          result,
-        });
-      } catch (error) {
-        logError(`Error executing tool ${toolCall.function?.name || toolCall.name}:`, error);
-        results.push({
-          toolCallId: toolCall.id,
-          result: { error: error.message || "Tool execution failed" },
-        });
-      }
-    }
-
-    return results;
-  }
 
   getSystemPrompt(): string {
     return this.promptBuilder

@@ -8,6 +8,7 @@ export interface RoutingPromptArgs {
   agents?: AgentSummary[];
   conversationSummary?: string;
   projectContext?: string;
+  projectInventory?: string;
 }
 
 export function buildNewConversationRoutingPrompt(args: RoutingPromptArgs): string {
@@ -22,9 +23,10 @@ export function buildNewConversationRoutingPrompt(args: RoutingPromptArgs): stri
         "Analyze this user message and determine the appropriate phase and initial approach.",
     });
 
-  if (args.projectContext) {
+  if (args.projectContext || args.projectInventory) {
+    const enrichedContext = formatEnrichedProjectContext(args.projectContext, args.projectInventory);
     promptBuilder = promptBuilder.add("base-context", {
-      content: `Project Context:\n${args.projectContext}`,
+      content: enrichedContext,
     });
   }
 
@@ -88,9 +90,10 @@ export function buildSelectAgentRoutingPrompt(args: RoutingPromptArgs): string {
     content: "Select the most appropriate agent for the current task.",
   });
 
-  if (args.projectContext) {
+  if (args.projectContext || args.projectInventory) {
+    const enrichedContext = formatEnrichedProjectContext(args.projectContext, args.projectInventory);
     promptBuilder = promptBuilder.add("base-context", {
-      content: `Project Context:\n${args.projectContext}`,
+      content: enrichedContext,
     });
   }
 
@@ -143,6 +146,83 @@ Current phase: ${args.currentPhase || "unknown"}`,
 }`,
     })
     .build();
+}
+
+function formatEnrichedProjectContext(
+  basicContext?: string,
+  inventory?: ProjectInventory
+): string {
+  const sections: string[] = [];
+
+  sections.push("## Project Context\n");
+
+  if (inventory) {
+    // Add rich project overview from inventory
+    sections.push(`**Project Description:** ${inventory.projectDescription}`);
+    sections.push(`**Technologies:** ${inventory.technologies.join(", ")}`);
+    sections.push(`**Total Files:** ${inventory.stats.totalFiles}`);
+    sections.push(`**Total Directories:** ${inventory.stats.totalDirectories}\n`);
+
+    // Add top file types for better agent selection
+    sections.push("### Primary File Types:");
+    const topFileTypes = Object.entries(inventory.stats.fileTypes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    for (const [type, count] of topFileTypes) {
+      sections.push(`- ${type}: ${count} files`);
+    }
+    sections.push("");
+
+    // Add key directories that might influence routing
+    const keyDirs = inventory.directories
+      .filter(dir => {
+        const dirName = dir.path.toLowerCase();
+        return dirName.includes("src") || dirName.includes("lib") || 
+               dirName.includes("components") || dirName.includes("services") ||
+               dirName.includes("api") || dirName.includes("test");
+      })
+      .slice(0, 10);
+    
+    if (keyDirs.length > 0) {
+      sections.push("### Key Directories:");
+      for (const dir of keyDirs) {
+        sections.push(`- **${dir.path}/** - ${dir.fileCount} files`);
+      }
+      sections.push("");
+    }
+
+    // Add files with specific tags that might be relevant
+    const taggedFiles = inventory.files
+      .filter(file => file.tags && file.tags.length > 0)
+      .slice(0, 20);
+    
+    if (taggedFiles.length > 0) {
+      sections.push("### Notable Files:");
+      const filesByTag: Record<string, string[]> = {};
+      
+      for (const file of taggedFiles) {
+        for (const tag of file.tags || []) {
+          if (!filesByTag[tag]) filesByTag[tag] = [];
+          filesByTag[tag].push(file.path);
+        }
+      }
+      
+      for (const [tag, files] of Object.entries(filesByTag)) {
+        sections.push(`\n**${tag}:**`);
+        for (const file of files.slice(0, 5)) {
+          sections.push(`  - ${file}`);
+        }
+      }
+      sections.push("");
+    }
+  }
+
+  // Add basic context if no inventory
+  if (!inventory && basicContext) {
+    sections.push(basicContext);
+  }
+
+  return sections.join("\n");
 }
 
 export const RoutingPromptBuilder = {
