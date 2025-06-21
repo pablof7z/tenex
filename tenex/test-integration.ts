@@ -142,7 +142,7 @@ and automatic conflict resolution. I want to use modern web technologies.`;
   conversationEvent.created_at = Math.floor(Date.now() / 1000);
   conversationEvent.id = conversationEvent.getEventHash();
 
-  console.log("📝 User message:", conversationEvent.content.substring(0, 100) + "...");
+  console.log("📝 User message:", `${conversationEvent.content.substring(0, 100)}...`);
 
   // Route the new conversation
   await conversationRouter.routeNewConversation(conversationEvent, agents);
@@ -155,7 +155,7 @@ and automatic conflict resolution. I want to use modern web technologies.`;
   if (conversations.length > 0) {
     const conv = conversations[0];
     console.log("\n📊 Conversation State:");
-    console.log("  ID:", conv.id.substring(0, 8) + "...");
+    console.log("  ID:", `${conv.id.substring(0, 8)}...`);
     console.log("  Title:", conv.title);
     console.log("  Phase:", conv.phase);
     console.log(

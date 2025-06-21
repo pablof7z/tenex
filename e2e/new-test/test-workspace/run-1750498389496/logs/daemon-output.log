@@ -1,0 +1,196 @@
+ℹ️ Starting TENEX daemon
+ℹ️ Whitelisted pubkeys {
+  count: 1,
+}
+ℹ️ TENEX daemon is running. Press Ctrl+C to stop.
+ℹ️ Received event kind 24111
+ℹ️ Created project profile {
+  projectName: "E2E Test Project 1750498389496",
+  pubkey: "8d0457630818c2fa28e13fab419f47264c515e1dce012cbf7eba0cda922ed161",
+}
+ℹ️ Created project structure with config {
+  projectPath: "/Users/pablofernandez/projects/TENEX-15czp8/e2e/new-test/test-workspace/run-1750498389496/projects/e2e-test-project-1750498389496-1750498391466",
+}
+ℹ️ No agents found in project, creating default agent
+ℹ️ Started project process {
+  projectIdentifier: "e2e-test-project-1750498389496-1750498391466",
+  projectPath: "/Users/pablofernandez/projects/TENEX-15czp8/e2e/new-test/test-workspace/run-1750498389496/projects/e2e-test-project-1750498389496-1750498391466",
+}
+ℹ️ 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ️ 📦 Project Information
+ℹ️ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ️ Title:      E2E Test Project 1750498389496
+ℹ️ Repository: No repository
+ℹ️ Path:       /Users/pablofernandez/projects/TENEX-15czp8/e2e/new-test/test-workspace/run-1750498389496/projects/e2e-test-project-1750498389496-1750498391466
+ℹ️ Event ID:   3f09a6b46e6132b9...
+ℹ️ No agent configurations found for this project.
+ℹ️ 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ️ Starting listener for project: E2E Test Project 1750498389496 (e2e-test-project-1750498389496-1750498391466)
+ℹ️ Loaded project LLM configurations from /Users/pablofernandez/projects/TENEX-15czp8/e2e/new-test/test-workspace/run-1750498389496/projects/e2e-test-project-1750498389496-1750498391466/.tenex/llms.json
+ℹ️ Loaded global LLM configurations from /Users/pablofernandez/projects/TENEX-15czp8/e2e/new-test/test-workspace/run-1750498389496/.tenex/llms.json
+ℹ️ Loaded agent registry with 1 agents
+ℹ️ Loaded 0 conversations from disk
+ℹ️ EventHandler initialized with conversation routing support
+ℹ️ 📡 Setting up project subscriptions...
+ℹ️ No processed events file found, starting fresh
+ℹ️   • Setting up project update subscription...
+ℹ️     ✓ Project update subscription active
+ℹ️   • Setting up project event subscription...
+ℹ️     ✓ Project event subscription active
+ℹ️ ✅ All subscriptions active
+ℹ️ Monitoring events from the last 5 minutes
+ℹ️ 
+📥 Received project update: 24111
+✅ Project listener active. Monitoring events from the last 5 minutes.
+ℹ️ 
+✅ Ready to process events!
+ℹ️ Received event kind 11
+ℹ️ 
+📥 Received project update: 11
+ℹ️ 
+📥 Event received: e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3
+ℹ️ 
+[10:33:24 AM] Chat Message received
+ℹ️ From:    npub1k8zdy4xfv0r4fl808ym5pun8kkdykytk0l2vknq8hyktm5kfe20qe2slva
+ℹ️ Event:   nevent1qgstr3xj2nyk8365lnhnjd6q7fnmtxjtz9m8l4xtfsrmjt9a6tyu48spzamhxue69uhhyetvv9ujuurjd9kkzmpwdejhgtcqyr35kcskdzc3da8a6n40wktnsv3wx9ywlvu4wfggufqwgjp0kxhmx567rmp
+ℹ️ 
+🗣️  New conversation started: Hello World Test Thread
+ℹ️ Content: @agent Please create a simple hello world test file in JavaScript that prints 'Hello from E2E test!' and uses console.assert to verify it works
+ℹ️ Routing new conversation {
+  eventId: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  content: "@agent Please create a simple hello world test file in JavaScript that prints 'Hello from E2E test!'",
+}
+ℹ️ Created new conversation: Hello World Test Thread {
+  id: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+}
+ℹ️ Conversation saved {
+  id: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  title: "Hello World Test Thread",
+}
+ℹ️ RoutingLLM.routeNewConversation - Sending to LLM {
+  systemPrompt: "You are a routing system that determines conversation phases and assigns appropriate agents.\n\nYour role is to analyze conversations and make intelligent conversation routing decisions based on:\n- The current conversation state and phase\n- Available agent capabilities and expertise\n- User intent and requirements\n- Project context and goals\n\nYou must ensure smooth transitions between phases and appropriate agent assignments.",
+  userPrompt: "You are a routing system for a development assistant platform.\n\nUser message: \"@agent Please create a simple hello world test file in JavaScript that prints 'Hello from E2E test!' and uses console.assert to verify it works\"\n\nAnalyze this user message and determine the appropriate phase and initial approach.\n\nPhases:\n- chat: User needs clarification, discussion, or requirements gathering\n- plan: User has clear requirements ready for architectural planning\n- execute: User has specific implementation task or approved plan to implement\n- review: User needs validation, testing, or review of existing work\n\nNo agents available.\n\nRespond with JSON only:\n{\n  \"phase\": \"chat|plan|execute|review\",\n  \"reasoning\": \"brief explanation of why this phase\",\n  \"confidence\": 0.0-1.0\n}",
+  configName: "default",
+  messageContent: "@agent Please create a simple hello world test file in JavaScript that prints 'Hello from E2E test!' and uses console.assert to verify it works",
+  availableAgentsCount: 0,
+}
+[openrouter] prompting model deepseek/deepseek-chat-v3-0324
+ℹ️ LLM completion successful {
+  configName: "default",
+  model: "deepseek/deepseek-chat-v3-0324",
+  duration: 5775,
+  promptTokens: undefined,
+  completionTokens: undefined,
+}
+ℹ️ RoutingLLM.routeNewConversation - Received from LLM {
+  rawResponse: "```json\n{\n  \"phase\": \"execute\",\n  \"reasoning\": \"The user's message provides a clear and specific implementation task with all necessary details (language, method, assertion, and expected output). No additional clarification or planning appears needed.\",\n  \"confidence\": 0.95\n}\n```",
+  model: "deepseek/deepseek-chat-v3-0324",
+  usage: {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+  },
+}
+ℹ️ RoutingLLM.routeNewConversation - Parsed decision {
+  decision: {
+    phase: "execute",
+    reasoning: "The user's message provides a clear and specific implementation task with all necessary details (language, method, assertion, and expected output). No additional clarification or planning appears needed.",
+    confidence: 0.95,
+  },
+  phase: "execute",
+  confidence: 0.95,
+}
+ℹ️ Routing decision {
+  conversationId: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  phase: "chat",
+  confidence: undefined,
+  enhanced: true,
+}
+ℹ️ Conversation e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3 transitioned from chat to chat
+ℹ️ Conversation saved {
+  id: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  title: "Hello World Test Thread",
+}
+ℹ️ [CHAT Phase] Initializing chat phase {
+  conversationId: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  title: "Hello World Test Thread",
+}
+ℹ️ Phase initialized {
+  conversationId: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  phase: "chat",
+  success: true,
+  nextAgent: undefined,
+}
+ℹ️ Agent Project executing for chat phase {
+  conversationId: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  agentPubkey: "8d0457630818c2fa28e13fab419f47264c515e1dce012cbf7eba0cda922ed161",
+}
+[openrouter] prompting model deepseek/deepseek-chat-v3-0324
+ℹ️ LLM completion successful {
+  configName: "default",
+  model: "deepseek/deepseek-chat-v3-0324",
+  duration: 1865,
+  promptTokens: undefined,
+  completionTokens: undefined,
+}
+ℹ️ Agent response generated {
+  model: "deepseek/deepseek-chat-v3-0324",
+  tokens: 0,
+  cost: undefined,
+}
+Replying to event {
+  eventPubkey: "b1c4d254c963c754fcef393740f267b59a4b11767fd4cb4c07b92cbdd2c9ca9e",
+  myPubkey: "8d0457630818c2fa28e13fab419f47264c515e1dce012cbf7eba0cda922ed161",
+  nextAgent: "b1c4d254c963c754fcef393740f267b59a4b11767fd4cb4c07b92cbdd2c9ca9e",
+}
+ℹ️ 
+📥 Received project update: 1111
+ℹ️ 
+📥 Event received: d9a23c02e748abe8aa4f3dac0d4d675379a828346d129e2855711197875abb87
+ℹ️ 
+[10:33:32 AM] Reply received
+ℹ️ From:    npub135z9wccgrrp0528p8745r868yex9zhsaecqje0m7hgxd4y3w69ssr07txf
+ℹ️ Event:   note1mx3rcqh8fz4732j08kkq6nt82du6s2p5d5ffu2z4wyge0p66hwrsgx6dav
+ℹ️ Message: Got it! Since the request is clear, I won't ask clarifying questions. I'll proceed directly to creat...
+ℹ️ P-tags:  1 pubkeys mentioned: b1c4d254c963c754fcef393740f267b59a4b11767fd4cb4c07b92cbdd2c9ca9e
+ℹ️ Message is not directed to system (p-tags point to external users), skipping routing
+ℹ️ Published agent response {
+  id: "d9a23c02e748abe8aa4f3dac0d4d675379a828346d129e2855711197875abb87",
+  nextAgent: "b1c4d254c963c754fcef393740f267b59a4b11767fd4cb4c07b92cbdd2c9ca9e",
+  hasLLMMetadata: true,
+  author: "8d0457630818c2fa28e13fab419f47264c515e1dce012cbf7eba0cda922ed161",
+}
+ℹ️ Agent response published {
+  agent: "Project",
+  eventId: "d9a23c02e748abe8aa4f3dac0d4d675379a828346d129e2855711197875abb87",
+  nextResponder: "b1c4d254c963c754fcef393740f267b59a4b11767fd4cb4c07b92cbdd2c9ca9e",
+}
+ℹ️ ✅ Conversation routed successfully
+ℹ️ Received SIGTERM, shutting down gracefully...
+ℹ️ Stopping all projects {
+  count: 1,
+}
+ℹ️ Stopping project {
+  projectId: "e2e-test-project-1750498389496-1750498391466",
+}
+ℹ️ Received SIGTERM, shutting down gracefully...
+ℹ️ Stopping subscriptions...
+ℹ️ All subscriptions stopped
+ℹ️ Conversation saved {
+  id: "e34b621668b116f4fdd4eaf759738322e3148efb39572508e240e4482fb1afb3",
+  title: "Hello World Test Thread",
+}
+ℹ️ EventHandler cleanup completed
+ℹ️ Project shutdown complete
+ℹ️ Project process exited {
+  projectId: "e2e-test-project-1750498389496-1750498391466",
+  code: 0,
+  signal: null,
+}
+ℹ️ Project stopped {
+  projectId: "e2e-test-project-1750498389496-1750498391466",
+}
+ℹ️ All projects stopped
+ℹ️ Daemon shutdown complete

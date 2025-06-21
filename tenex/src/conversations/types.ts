@@ -16,7 +16,7 @@ export interface ConversationMetadata {
   summary?: string; // Current understanding/summary
   requirements?: string; // Captured requirements
   plan?: string; // Approved plan
-  [key: string]: any; // Extensible for phase-specific data
+  [key: string]: unknown; // Extensible for phase-specific data
 }
 
 export interface PhaseContext {

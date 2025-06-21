@@ -1,3 +1,4 @@
+import { logDebug, logError } from "@tenex/shared/logger";
 import type { Message } from "multi-llm-ts";
 import { v4 as uuidv4 } from "uuid";
 import type { LLMService } from "../llm/LLMService";
@@ -5,28 +6,26 @@ import type { LLMResponse } from "../llm/types";
 import type { PromptBuilder } from "../prompts/core/PromptBuilder";
 import type { AgentProfile } from "../types";
 import { createMessage } from "./utils";
-import { logDebug, logError } from "@tenex/shared/logger";
 
 type LLMMessage = Message;
 type ToolCallResult = {
   toolCallId: string;
-  result: any;
+  result: unknown;
 };
-import { logDebug, logError } from "@tenex/shared/logger";
 
 export interface DebugAgentConfig {
   name: string;
   model?: string;
   provider?: string;
   profile?: AgentProfile;
-  tools?: Map<string, (args: any) => Promise<any>>;
+  tools?: Map<string, (args: unknown) => Promise<unknown>>;
 }
 
 export class DebugAgent {
   private id: string;
   private name: string;
   private conversationHistory: LLMMessage[] = [];
-  private tools: Map<string, (args: any) => Promise<any>>;
+  private tools: Map<string, (args: unknown) => Promise<unknown>>;
   private llmService: LLMService;
   private promptBuilder: PromptBuilder;
   private profile: AgentProfile;
@@ -64,8 +63,9 @@ export class DebugAgent {
       const response = await this.llmService.complete("default", messages);
 
       // Handle tool calls if present
-      // Note: multi-llm-ts doesn't support tool calls yet, so we'll skip this for now
-      if (false) {
+      // TODO: Enable when multi-llm-ts supports tool calls
+      const toolCallsEnabled = false;
+      if (toolCallsEnabled) {
         const toolResults = await this.executeTools(response.toolCalls);
 
         // Add assistant response with tool calls to history
@@ -95,9 +95,7 @@ export class DebugAgent {
         const finalResponse = await this.llmService.complete("default", finalMessages);
 
         // Add final response to history
-        this.conversationHistory.push(
-          createMessage("assistant", finalResponse.content || "")
-        );
+        this.conversationHistory.push(createMessage("assistant", finalResponse.content || ""));
 
         return {
           ...finalResponse,
@@ -106,9 +104,7 @@ export class DebugAgent {
       }
 
       // Add assistant response to history
-      this.conversationHistory.push(
-        createMessage("assistant", response.content || "")
-      );
+      this.conversationHistory.push(createMessage("assistant", response.content || ""));
 
       return {
         ...response,
@@ -140,7 +136,7 @@ export class DebugAgent {
     return prompt;
   }
 
-  private async executeTools(toolCalls: any[]): Promise<ToolCallResult[]> {
+  private async executeTools(toolCalls: unknown[]): Promise<ToolCallResult[]> {
     const results: ToolCallResult[] = [];
 
     for (const toolCall of toolCalls) {

@@ -59,3 +59,10 @@ export interface AgentConfig {
   tools: string[];
   llmConfig?: string;
 }
+
+export interface AgentProfile {
+  name: string;
+  role: string;
+  description: string;
+  capabilities: string[];
+}

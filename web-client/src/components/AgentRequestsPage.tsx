@@ -364,7 +364,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="h-[60vh] pr-4">
-                        <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs font-mono">
+                        <pre className="bg-muted p-4 rounded-md text-xs font-mono whitespace-pre-wrap">
                             {selectedEvent && JSON.stringify(selectedEvent.rawEvent(), null, 2)}
                         </pre>
                     </ScrollArea>

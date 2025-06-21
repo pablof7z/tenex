@@ -1,5 +1,5 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -9,7 +9,7 @@ export interface AgentExecutionContext {
   conversation: ConversationState;
   phase: Phase;
   lastUserMessage?: string;
-  projectContext?: Record<string, any>;
+  projectContext?: Record<string, unknown>;
 }
 
 export interface AgentExecutionResult {
@@ -25,7 +25,7 @@ export interface AgentExecutionResult {
 export interface ToolExecutionResult {
   toolName: string;
   success: boolean;
-  output?: any;
+  output?: unknown;
   error?: string;
   duration?: number;
 }

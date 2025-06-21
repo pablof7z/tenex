@@ -9,8 +9,8 @@ import "../fragments/tools";
 import "../fragments/routing";
 
 // Export all template builders
-export { RoutingPromptBuilder } from "./routing";
-export { PhasePromptBuilder } from "./phases";
+export * from "./routing";
+export * from "./phases";
 export { AgentPromptBuilder } from "./agent";
 
 // Re-export core utilities
@@ -23,7 +23,7 @@ export function extractJSON<T>(response: string): T | null {
     // Try to find JSON in the response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as T;
+      return JSON.parse(jsonMatch[0]);
     }
     return null;
   } catch (error) {

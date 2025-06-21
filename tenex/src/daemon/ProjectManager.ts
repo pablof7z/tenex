@@ -2,6 +2,7 @@ import { exec } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { LLMConfigEditor } from "@/commands/setup/llm";
 import { toKebabCase } from "@/utils/agents";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
@@ -12,6 +13,7 @@ import { configurationService } from "@tenex/shared/services";
 import type { AgentProfile } from "@tenex/types/agents";
 import type { GlobalConfig, ProjectConfig, TenexConfiguration } from "@tenex/types/config";
 import type { Agent, ProjectData } from "@tenex/types/projects";
+import chalk from "chalk";
 
 const execAsync = promisify(exec);
 
@@ -50,6 +52,9 @@ export class ProjectManager implements IProjectManager {
 
       // Initialize agents.json with default agent
       await this.initializeAgents(projectPath, projectData);
+
+      // Check if LLM configuration is needed
+      await this.checkAndRunLLMConfigWizard(projectPath);
 
       return projectData;
     } catch (error) {
@@ -114,6 +119,7 @@ export class ProjectManager implements IProjectManager {
 
   private projectToProjectData(project: NDKProject): ProjectData {
     const repoTag = project.tagValue("repo");
+    const titleTag = project.tagValue("title");
     const hashtagTags = project.tags
       .filter((t) => t[0] === "t")
       .map((t) => t[1])
@@ -128,7 +134,7 @@ export class ProjectManager implements IProjectManager {
       identifier: project.dTag || "",
       pubkey: project.pubkey,
       naddr: project.encode(),
-      title: project.title || "Untitled Project",
+      title: titleTag || "Untitled Project",
       description: project.description,
       repoUrl: repoTag,
       hashtags: hashtagTags,
@@ -174,10 +180,11 @@ export class ProjectManager implements IProjectManager {
 
     const config: TenexConfiguration = {
       config: projectConfig,
-      agents: {},
+      agents: { agents: {} },
       llms: {
-        configurations: {},
-        defaults: {},
+        presets: {},
+        selection: {},
+        auth: {},
       },
     };
 
@@ -238,15 +245,24 @@ export class ProjectManager implements IProjectManager {
 
     // Reload configuration to get updated agents
     const updatedConfiguration = await configurationService.loadConfiguration(projectPath);
-    const updatedAgents = updatedConfiguration.agents || {};
+    const updatedAgents = updatedConfiguration.agents || { agents: {} };
 
     // If no agents were created from events, create a default agent
-    if (Object.keys(updatedAgents).length === 0) {
+    if (!("agents" in updatedAgents) || Object.keys(updatedAgents.agents).length === 0) {
       logger.info("No agents found in project, creating default agent");
-      updatedAgents.default = {
-        nsec: await this.generateNsec(),
+
+      // For now, we don't support nsec in the new agent format
+      // This needs to be handled by the agent registry
+      updatedConfiguration.agents = {
+        agents: {
+          default: {
+            name: "Default",
+            role: "Assistant",
+            expertise: "General assistance",
+            instructions: "Help the user with their requests",
+          },
+        },
       };
-      updatedConfiguration.agents = updatedAgents;
       await configurationService.saveConfiguration(projectPath, updatedConfiguration);
     }
   }
@@ -273,14 +289,9 @@ export class ProjectManager implements IProjectManager {
   private buildProjectProfile(projectName: string, description?: string): AgentProfile {
     return {
       name: toKebabCase(projectName),
-      display_name: `${projectName} Project`,
-      about: description || `TENEX project: ${projectName}`,
-      picture: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}`,
-      banner: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}-banner`,
-      created_at: Math.floor(Date.now() / 1000),
-      nip05: `${toKebabCase(projectName)}@tenex.bot`,
-      lud16: `${toKebabCase(projectName)}@tenex.bot`,
-      website: "https://tenex.bot",
+      role: "Project Manager",
+      description: description || `TENEX project: ${projectName}`,
+      capabilities: ["project management", "coordination", "planning"],
     };
   }
 
@@ -357,6 +368,31 @@ export class ProjectManager implements IProjectManager {
     } catch (error) {
       logger.error("Failed to fetch agent event", { error, eventId });
       return null;
+    }
+  }
+
+  private async checkAndRunLLMConfigWizard(projectPath: string): Promise<void> {
+    try {
+      const configuration = await configurationService.loadConfiguration(projectPath);
+      const llmsConfig = configuration.llms;
+
+      // Check if there are any LLM configurations
+      const hasLLMConfig = 
+        llmsConfig && 
+        llmsConfig.presets && 
+        Object.keys(llmsConfig.presets).length > 0;
+
+      if (!hasLLMConfig) {
+        logger.info(
+          chalk.yellow("\n⚠️  No LLM configurations found. Let's set up your LLMs for this project.\n")
+        );
+
+        const llmEditor = new LLMConfigEditor(projectPath, false);
+        await llmEditor.runOnboardingFlow();
+      }
+    } catch (error) {
+      logger.warn("Failed to check LLM configuration", { error });
+      // Don't throw - LLM configuration is not critical for project initialization
     }
   }
 }

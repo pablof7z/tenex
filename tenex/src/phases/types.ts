@@ -1,5 +1,5 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 
 export interface PhaseInitializationResult {

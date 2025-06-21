@@ -22,10 +22,7 @@ export interface ToolExecutionResult {
 
 export interface ToolExecutor {
   name: string;
-  execute(
-    invocation: ToolInvocation,
-    context: ToolExecutionContext
-  ): Promise<ToolExecutionResult>;
+  execute(invocation: ToolInvocation, context: ToolExecutionContext): Promise<ToolExecutionResult>;
   canExecute(toolName: string): boolean;
 }
 

@@ -50,13 +50,13 @@ export class StatusPublisher {
   private async addAgentPubkeys(event: NDKEvent, projectPath: string): Promise<void> {
     try {
       const configuration = await configurationService.loadConfiguration(projectPath);
-      const agents = configuration.agents || {};
+      const agents = configuration.agents;
 
-      for (const [agentName, agentConfig] of Object.entries(agents)) {
-        if (agentConfig.nsec) {
-          const agentSigner = new NDKPrivateKeySigner(agentConfig.nsec);
-          const agentPubkey = agentSigner.pubkey;
-          event.tags.push(["p", agentPubkey, agentName]);
+      if (agents && "agents" in agents) {
+        for (const [agentName, agentConfig] of Object.entries(agents.agents)) {
+          // For now, we don't have nsec in the agent config
+          // This needs to be handled differently
+          logWarning(`Agent ${agentName} does not have nsec in new format`);
         }
       }
     } catch (_err) {
@@ -69,20 +69,22 @@ export class StatusPublisher {
       const configuration = await configurationService.loadConfiguration(projectPath);
       const llms = configuration.llms;
 
-      // Add model tags for each LLM configuration
-      for (const [configName, config] of Object.entries(llms.configurations)) {
-        if (!config || !config.model) continue;
+      if (!llms) return;
 
-        event.tags.push(["model", config.model, configName]);
+      // Add model tags for each LLM preset
+      for (const [presetName, preset] of Object.entries(llms.presets)) {
+        if (!preset || !preset.model) continue;
+
+        event.tags.push(["model", preset.model, presetName]);
       }
 
-      // Also check if there are agent-specific defaults
-      for (const [agentName, configRef] of Object.entries(llms.defaults)) {
+      // Also check if there are agent-specific selections
+      for (const [agentName, presetRef] of Object.entries(llms.selection)) {
         if (agentName === "default") continue;
 
-        const config = configRef ? llms.configurations[configRef] : undefined;
-        if (config?.model) {
-          event.tags.push(["model", config.model, `${agentName}-default`]);
+        const preset = presetRef ? llms.presets[presetRef] : undefined;
+        if (preset?.model) {
+          event.tags.push(["model", preset.model, `${agentName}-default`]);
         }
       }
     } catch (_err) {

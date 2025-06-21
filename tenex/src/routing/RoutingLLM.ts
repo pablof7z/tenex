@@ -1,8 +1,16 @@
-import type { Agent } from "@/types/agent";
 import type { LLMService } from "@/llm";
-import { RoutingPromptBuilder, extractJSON } from "@/prompts";
+import {
+  RoutingPromptBuilder,
+  extractJSON,
+  getAgentSelectionSystemPrompt,
+  getFallbackRoutingSystemPrompt,
+  getPhaseTransitionSystemPrompt,
+  getRoutingSystemPrompt,
+} from "@/prompts";
+import type { Agent } from "@/types/agent";
 import type { Conversation } from "@/types/conversation";
 import type { AgentSummary } from "@/types/routing";
+import { formatProjectContextForPrompt, getProjectContext } from "@/utils/project";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { Message } from "multi-llm-ts";
@@ -17,8 +25,26 @@ import type {
 export class RoutingLLM {
   constructor(
     private llmService: LLMService,
-    private configName = "default"
+    private configName = "default",
+    private projectPath?: string
   ) {}
+
+  private async getProjectContextString(): Promise<string | undefined> {
+    if (!this.projectPath) {
+      return undefined;
+    }
+
+    try {
+      const projectContext = await getProjectContext(this.projectPath);
+      return formatProjectContextForPrompt(projectContext);
+    } catch (error) {
+      logger.warn("Failed to get project context for routing", {
+        error,
+        projectPath: this.projectPath,
+      });
+      return undefined;
+    }
+  }
 
   async routeNewConversation(event: NDKEvent, availableAgents: Agent[]): Promise<RoutingDecision> {
     try {
@@ -29,16 +55,16 @@ export class RoutingLLM {
         expertise: agent.expertise,
       }));
 
+      const projectContext = await this.getProjectContextString();
+
       const prompt = RoutingPromptBuilder.newConversation({
         message: event.content,
         agents: agentSummaries,
+        projectContext,
       });
 
-      const systemPrompt = "You are a routing system that determines conversation phases.";
-      const messages = [
-        new Message("system", systemPrompt),
-        new Message("user", prompt),
-      ];
+      const systemPrompt = getRoutingSystemPrompt(projectContext);
+      const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
       // Log the full request
       logger.info("RoutingLLM.routeNewConversation - Sending to LLM", {
@@ -50,7 +76,7 @@ export class RoutingLLM {
       });
 
       const response = await this.llmService.complete(this.configName, messages);
-      
+
       // Log the raw response
       logger.info("RoutingLLM.routeNewConversation - Received from LLM", {
         rawResponse: response.content,
@@ -125,7 +151,7 @@ export class RoutingLLM {
 
       logger.info("RoutingLLM.routeNextAction - Agent selection decided", {
         phase: conversation.phase,
-        selectedAgent: availableAgents.find(a => a.pubkey === agentDecision.agentPubkey)?.name,
+        selectedAgent: availableAgents.find((a) => a.pubkey === agentDecision.agentPubkey)?.name,
         reasoning: agentDecision.reasoning,
       });
 
@@ -149,11 +175,8 @@ export class RoutingLLM {
       phaseHistory: lastMessage, // Simplified for now
     });
 
-    const systemPrompt = "You evaluate phase transitions in conversations.";
-    const messages = [
-      new Message("system", systemPrompt),
-      new Message("user", prompt),
-    ];
+    const systemPrompt = getPhaseTransitionSystemPrompt();
+    const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
     // Log the full request
     logger.info("RoutingLLM.checkPhaseTransition - Sending to LLM", {
@@ -165,7 +188,7 @@ export class RoutingLLM {
     });
 
     const response = await this.llmService.complete(this.configName, messages);
-    
+
     // Log the raw response
     logger.info("RoutingLLM.checkPhaseTransition - Received from LLM", {
       rawResponse: response.content,
@@ -199,17 +222,17 @@ export class RoutingLLM {
     taskContext: string,
     agents: AgentSummary[]
   ): Promise<AgentSelectionDecision> {
+    const projectContext = await this.getProjectContextString();
+
     const prompt = RoutingPromptBuilder.selectAgent({
       currentPhase,
       message: taskContext,
       agents,
+      projectContext,
     });
 
-    const systemPrompt = "You select the most appropriate agent for tasks.";
-    const messages = [
-      new Message("system", systemPrompt),
-      new Message("user", prompt),
-    ];
+    const systemPrompt = getAgentSelectionSystemPrompt();
+    const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
     // Log the full request
     logger.info("RoutingLLM.selectAgent - Sending to LLM", {
@@ -218,11 +241,11 @@ export class RoutingLLM {
       configName: this.configName,
       currentPhase,
       agentCount: agents.length,
-      agentNames: agents.map(a => a.name),
+      agentNames: agents.map((a) => a.name),
     });
 
     const response = await this.llmService.complete(this.configName, messages);
-    
+
     // Log the raw response
     logger.info("RoutingLLM.selectAgent - Received from LLM", {
       rawResponse: response.content,
@@ -246,7 +269,7 @@ export class RoutingLLM {
 
     logger.info("RoutingLLM.selectAgent - Parsed decision", {
       decision,
-      selectedAgent: agents.find(a => a.pubkey === decision.agentPubkey)?.name,
+      selectedAgent: agents.find((a) => a.pubkey === decision.agentPubkey)?.name,
     });
 
     return decision;
@@ -267,11 +290,8 @@ export class RoutingLLM {
         agents: agentSummaries,
       });
 
-      const systemPrompt = "You are a fallback routing system.";
-      const messages = [
-        new Message("system", systemPrompt),
-        new Message("user", prompt),
-      ];
+      const systemPrompt = getFallbackRoutingSystemPrompt();
+      const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
       // Log the full request
       logger.info("RoutingLLM.handleRoutingFailure - Sending to LLM", {
@@ -283,7 +303,7 @@ export class RoutingLLM {
       });
 
       const response = await this.llmService.complete(this.configName, messages);
-      
+
       // Log the raw response
       logger.info("RoutingLLM.handleRoutingFailure - Received from LLM", {
         rawResponse: response.content,

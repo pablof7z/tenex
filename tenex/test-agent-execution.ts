@@ -1,16 +1,16 @@
 #!/usr/bin/env bun
 
+import path from "node:path";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { fileExists } from "@tenex/shared/fs";
 import { AgentRegistry } from "./src/agents";
 import { AgentExecutor } from "./src/agents/execution";
 import { ConversationManager } from "./src/conversations";
+import type { ConversationState } from "./src/conversations/types";
 import { LLMConfigManager, LLMService } from "./src/llm";
 import { ConversationPublisher } from "./src/nostr";
 import { getNDK, initNDK } from "./src/nostr/ndkClient";
 import { initializeProjectContext } from "./src/runtime";
-import type { ConversationState } from "./src/conversations/types";
-import path from "node:path";
-import { fileExists } from "@tenex/shared/fs";
 
 // Set debug logging
 process.env.LOG_LEVEL = "debug";
@@ -57,7 +57,8 @@ async function testAgentExecution() {
       name: "Chat Agent",
       role: "Requirements Analyst",
       expertise: "Understanding user needs and gathering requirements",
-      instructions: "You excel at asking clarifying questions and understanding what users really need. Be friendly and thorough.",
+      instructions:
+        "You excel at asking clarifying questions and understanding what users really need. Be friendly and thorough.",
       nsec: "",
       tools: [],
       llmConfig: "default",
@@ -66,7 +67,8 @@ async function testAgentExecution() {
       name: "System Architect",
       role: "Software Architect",
       expertise: "System design and architecture planning",
-      instructions: "You design scalable, maintainable systems. Focus on best practices and clean architecture.",
+      instructions:
+        "You design scalable, maintainable systems. Focus on best practices and clean architecture.",
       nsec: "",
       tools: ["claude_code"],
       llmConfig: "default",
@@ -75,7 +77,8 @@ async function testAgentExecution() {
       name: "Developer",
       role: "Full Stack Developer",
       expertise: "Implementation and coding",
-      instructions: "You write clean, efficient code. Focus on implementation details and best practices.",
+      instructions:
+        "You write clean, efficient code. Focus on implementation details and best practices.",
       nsec: "",
       tools: ["claude_code"],
       llmConfig: "default",
@@ -112,7 +115,8 @@ async function testAgentExecution() {
   const userSigner = NDKPrivateKeySigner.generate();
   const conversationEvent = new NDKEvent(getNDK());
   conversationEvent.kind = 11;
-  conversationEvent.content = "I need help building a real-time chat application with React and WebSockets.";
+  conversationEvent.content =
+    "I need help building a real-time chat application with React and WebSockets.";
   conversationEvent.tags = [
     ["title", "Real-time Chat App"],
     ["a", `35523:${testProjectEvent.pubkey}:agent-execution-test`],
@@ -131,7 +135,7 @@ async function testAgentExecution() {
 
   const chatAgent = agents[0]; // Chat Agent
   console.log(`🤖 Agent: ${chatAgent.name}`);
-  console.log(`📋 Phase: chat`);
+  console.log("📋 Phase: chat");
   console.log(`💬 User message: "${conversationEvent.content}"`);
 
   const chatResult = await agentExecutor.execute(
@@ -147,7 +151,7 @@ async function testAgentExecution() {
   if (chatResult.success) {
     console.log("\n✅ Agent execution successful!");
     console.log(`📝 Response: ${chatResult.response?.substring(0, 200)}...`);
-    console.log(`📊 LLM Stats:`, {
+    console.log("📊 LLM Stats:", {
       model: chatResult.llmMetadata?.model,
       tokens: chatResult.llmMetadata?.totalTokens,
       cost: chatResult.llmMetadata?.cost,
@@ -164,12 +168,13 @@ async function testAgentExecution() {
   // Update conversation phase and metadata
   await conversationManager.updatePhase(conversation.id, "plan");
   await conversationManager.updateMetadata(conversation.id, {
-    chat_summary: "User wants to build a real-time chat application using React for the frontend and WebSockets for real-time communication. Key requirements include user authentication, message persistence, and typing indicators.",
+    chat_summary:
+      "User wants to build a real-time chat application using React for the frontend and WebSockets for real-time communication. Key requirements include user authentication, message persistence, and typing indicators.",
   });
 
   const planAgent = agents[1]; // Architect
   console.log(`🤖 Agent: ${planAgent.name}`);
-  console.log(`📋 Phase: plan`);
+  console.log("📋 Phase: plan");
 
   const planResult = await agentExecutor.execute(
     {
@@ -183,7 +188,7 @@ async function testAgentExecution() {
   if (planResult.success) {
     console.log("\n✅ Agent execution successful!");
     console.log(`📝 Response: ${planResult.response?.substring(0, 200)}...`);
-    console.log(`📊 LLM Stats:`, {
+    console.log("📊 LLM Stats:", {
       model: planResult.llmMetadata?.model,
       tokens: planResult.llmMetadata?.totalTokens,
       cost: planResult.llmMetadata?.cost,
@@ -199,12 +204,13 @@ async function testAgentExecution() {
   // Update conversation phase
   await conversationManager.updatePhase(conversation.id, "execute");
   await conversationManager.updateMetadata(conversation.id, {
-    plan_summary: "Implementation plan: 1) Setup React app with TypeScript, 2) Create WebSocket server with Socket.io, 3) Implement authentication with JWT, 4) Build chat UI components, 5) Add message persistence with PostgreSQL",
+    plan_summary:
+      "Implementation plan: 1) Setup React app with TypeScript, 2) Create WebSocket server with Socket.io, 3) Implement authentication with JWT, 4) Build chat UI components, 5) Add message persistence with PostgreSQL",
   });
 
   const executeAgent = agents[2]; // Developer
   console.log(`🤖 Agent: ${executeAgent.name}`);
-  console.log(`📋 Phase: execute`);
+  console.log("📋 Phase: execute");
 
   const executeResult = await agentExecutor.execute(
     {
@@ -218,7 +224,7 @@ async function testAgentExecution() {
   if (executeResult.success) {
     console.log("\n✅ Agent execution successful!");
     console.log(`📝 Response: ${executeResult.response?.substring(0, 200)}...`);
-    console.log(`📊 LLM Stats:`, {
+    console.log("📊 LLM Stats:", {
       model: executeResult.llmMetadata?.model,
       tokens: executeResult.llmMetadata?.totalTokens,
       cost: executeResult.llmMetadata?.cost,

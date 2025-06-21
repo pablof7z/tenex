@@ -3,6 +3,7 @@ import { logger } from "@tenex/shared/logger";
 import { Command } from "commander";
 import { daemonCommand } from "./commands/daemon";
 import { runDebugSystemPrompt } from "./commands/debug/index";
+import { inventoryCommand } from "./commands/inventory/index";
 import { projectCommand } from "./commands/project/index";
 import { setupCommand } from "./commands/setup/index";
 import { createTestCommand } from "./commands/test/index";
@@ -17,6 +18,7 @@ program.addCommand(daemonCommand);
 program.addCommand(projectCommand);
 program.addCommand(setupCommand);
 program.addCommand(createTestCommand());
+program.addCommand(inventoryCommand);
 
 // Add debug command
 const debug = program.command("debug").description("Debug commands");

@@ -7,6 +7,8 @@ import { logError, logInfo } from "@tenex/shared/node";
 import { configurationService } from "@tenex/shared/services";
 import type { ProjectConfig, TenexConfiguration } from "@tenex/types/config";
 import { EVENT_KINDS } from "@tenex/types/events";
+import { nip19 } from "nostr-tools";
+import { generateSecretKey } from "nostr-tools";
 
 export interface Agent {
   name: string;
@@ -107,8 +109,8 @@ export class ProjectLoader {
     // Get agent event IDs from project tags
     const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
 
-    // Get agents configuration
-    const agentsConfig = configuration.agents || {};
+    // TODO: This needs to be refactored to work with the new agent system
+    const legacyAgentsConfig: Record<string, { nsec: string; file: string }> = {};
 
     for (const tag of agentTags) {
       const eventId = tag[1];
@@ -139,27 +141,24 @@ export class ProjectLoader {
         const agentFile = path.join(agentsDir, `${eventId}.json`);
         await fileSystem.writeJsonFile(agentFile, agentDefinition);
 
-        // Find matching agent in agents.json by eventId
-        const agentKey = Object.keys(agentsConfig).find((key) => {
-          const config = agentsConfig[key];
-          // Match either eventId directly or eventId.json
-          return config?.file === eventId || config?.file === `${eventId}.json`;
+        // For now, create a temporary agent entry with generated nsec
+        const privateKey = generateSecretKey();
+        const nsec = nip19.nsecEncode(privateKey);
+        const signer = new NDKPrivateKeySigner(nsec);
+
+        legacyAgentsConfig[agentName] = {
+          nsec,
+          file: `${eventId}.json`,
+        };
+        agents.set(agentName, {
+          name: agentName,
+          description,
+          role,
+          instructions: agentEvent.content || "",
+          eventId,
+          pubkey: signer.pubkey,
+          signer,
         });
-
-        if (agentKey && agentsConfig[agentKey]) {
-          const agentConfig = agentsConfig[agentKey];
-          const signer = new NDKPrivateKeySigner(agentConfig.nsec);
-
-          agents.set(agentKey, {
-            name: agentName,
-            description,
-            role,
-            instructions: agentEvent.content || "",
-            eventId,
-            pubkey: signer.pubkey,
-            signer,
-          });
-        }
       } catch (error) {
         logError(`Failed to load agent signer for event ${eventId}:`, error);
       }

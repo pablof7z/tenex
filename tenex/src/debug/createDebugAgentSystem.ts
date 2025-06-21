@@ -1,11 +1,12 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { logDebug, logError } from "@tenex/shared/logger";
 import { AgentRegistry } from "../agents/AgentRegistry";
 import { LLMConfigManager } from "../llm/ConfigManager";
 import { LLMService } from "../llm/LLMService";
 import { FragmentRegistry } from "../prompts/core/FragmentRegistry";
 import { PromptBuilder } from "../prompts/core/PromptBuilder";
+import type { AgentProfile } from "../types";
 import { DebugAgent, type DebugAgentConfig } from "./DebugAgent";
 
 export interface DebugAgentSystemConfig {
@@ -43,7 +44,7 @@ export async function createDebugAgentSystem(
     const agentRegistry = new AgentRegistry(config.projectPath);
 
     // Get agent profile
-    let agentProfile;
+    let agentProfile: AgentProfile | undefined;
     if (config.agentName) {
       agentProfile = agentRegistry.getAgent(config.agentName);
 
@@ -81,7 +82,7 @@ export async function createDebugAgentSystem(
 
     const agent = new DebugAgent(debugAgentConfig, llmService, promptBuilder);
 
-    logDebug("Debug agent system created", {
+    logDebug("Debug agent system created", "general", "debug", {
       agent: agent.getName(),
       toolCount: tools.size,
     });
@@ -98,13 +99,16 @@ export async function createDebugAgentSystem(
   }
 }
 
-function createDebugTools(projectPath: string): Map<string, (args: any) => Promise<any>> {
-  const tools = new Map<string, (args: any) => Promise<any>>();
+function createDebugTools(projectPath: string): Map<string, (args: unknown) => Promise<unknown>> {
+  const tools = new Map<string, (args: unknown) => Promise<unknown>>();
 
   // List files tool
-  tools.set("listFiles", async (args: { directory?: string }) => {
+  tools.set("listFiles", async (args: unknown) => {
+    const typedArgs = args as { directory?: string };
     try {
-      const dir = args.directory ? path.resolve(projectPath, args.directory) : projectPath;
+      const dir = typedArgs.directory
+        ? path.resolve(projectPath, typedArgs.directory)
+        : projectPath;
 
       const files = await fs.promises.readdir(dir);
       return { files, directory: dir };
@@ -114,9 +118,10 @@ function createDebugTools(projectPath: string): Map<string, (args: any) => Promi
   });
 
   // Read file tool
-  tools.set("readFile", async (args: { path: string }) => {
+  tools.set("readFile", async (args: unknown) => {
+    const typedArgs = args as { path: string };
     try {
-      const filePath = path.resolve(projectPath, args.path);
+      const filePath = path.resolve(projectPath, typedArgs.path);
       const content = await fs.promises.readFile(filePath, "utf-8");
       return { content, path: filePath };
     } catch (error) {

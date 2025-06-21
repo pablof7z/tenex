@@ -6,6 +6,7 @@
  */
 
 import type { AgentsJson, TrackedAgentsJson } from "../agents";
+import type { LLMSettings } from "./llm";
 
 
 /**
@@ -56,6 +57,16 @@ export interface ProjectConfig {
      * Whitelisted pubkeys for this project
      */
     whitelistedPubkeys?: string[];
+
+    /**
+     * Path configurations
+     */
+    paths?: {
+        /**
+         * Path to inventory file (relative to project root)
+         */
+        inventory?: string;
+    };
 }
 
 /**
@@ -76,6 +87,11 @@ export interface TenexConfiguration {
      * Core configuration (project or global)
      */
     config: ProjectConfig | GlobalConfig;
+
+    /**
+     * LLM settings (presets, selection, auth)
+     */
+    llms?: LLMSettings;
 
     /**
      * Agent configurations (with source tracking when loaded)

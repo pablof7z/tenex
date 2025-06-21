@@ -1,4 +1,4 @@
-import type { ConversationState } from '../types';
+import type { ConversationState } from "../types";
 
 export interface ConversationMetadata {
   id: string;

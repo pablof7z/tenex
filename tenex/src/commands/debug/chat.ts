@@ -1,4 +1,4 @@
-import * as readline from "readline";
+import * as readline from "node:readline";
 import { formatError } from "@/utils/errors";
 import { logDebug, logError, logInfo } from "@tenex/shared/logger";
 import chalk from "chalk";
@@ -49,7 +49,7 @@ export async function runDebugChat(
 
     // Handle single message mode
     if (options.message) {
-      logDebug("debug", "Processing single message:", options.message);
+      logDebug("Processing single message:", "general", "debug", options.message);
       const response = await agent.sendMessage(options.message);
       console.log(chalk.green("\nAgent:"), response.message);
       return;
@@ -120,21 +120,13 @@ export async function runDebugChat(
         const response = await agent.sendMessage(input);
 
         // Clear thinking indicator
-        process.stdout.write("\r" + " ".repeat(20) + "\r");
+        process.stdout.write(`\r${" ".repeat(20)}\r`);
 
         // Display response
         console.log(chalk.green("Agent:"), response.message);
 
-        // Show tool usage if any
-        if (response.toolCalls && response.toolCalls.length > 0) {
-          console.log(
-            chalk.gray(
-              `  [Used tools: ${response.toolCalls
-                .map((tc) => tc.function?.name || tc.name)
-                .join(", ")}]`
-            )
-          );
-        }
+        // Tool calls are not yet supported in the debug chat
+        // TODO: Show tool usage when multi-llm-ts supports tool calls
 
         console.log(); // Empty line for readability
       } catch (error) {

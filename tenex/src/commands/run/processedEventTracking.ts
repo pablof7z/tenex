@@ -30,7 +30,9 @@ export async function loadProcessedEvents(projectPath: string): Promise<void> {
 
       if (Array.isArray(parsed.eventIds)) {
         processedEventIds.clear();
-        parsed.eventIds.forEach((id: string) => processedEventIds.add(id));
+        for (const id of parsed.eventIds) {
+          processedEventIds.add(id);
+        }
         logger.info(`Loaded ${processedEventIds.size} processed event IDs from disk`);
       } else {
         logger.warn("Invalid processed events file format, starting fresh");
@@ -86,7 +88,9 @@ async function saveProcessedEvents(projectPath: string): Promise<void> {
       // we'll just keep the last added ones (Set maintains insertion order)
       eventIds = eventIds.slice(-MAX_EVENTS_TO_KEEP);
       processedEventIds.clear();
-      eventIds.forEach((id) => processedEventIds.add(id));
+      for (const id of eventIds) {
+        processedEventIds.add(id);
+      }
       logger.info(`Cleaned up processed events list, kept ${eventIds.length} most recent`);
     }
 

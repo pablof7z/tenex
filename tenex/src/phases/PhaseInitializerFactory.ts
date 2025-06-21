@@ -1,7 +1,8 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { ChatPhaseInitializer } from "./ChatPhaseInitializer";
+import { ChoresPhaseInitializer } from "./ChoresPhaseInitializer";
 import { ExecutePhaseInitializer } from "./ExecutePhaseInitializer";
 import { PlanPhaseInitializer } from "./PlanPhaseInitializer";
 import { ReviewPhaseInitializer } from "./ReviewPhaseInitializer";
@@ -12,6 +13,7 @@ const initializers: Map<Phase, PhaseInitializer> = new Map([
   ["plan", new PlanPhaseInitializer()],
   ["execute", new ExecutePhaseInitializer()],
   ["review", new ReviewPhaseInitializer()],
+  ["chores", new ChoresPhaseInitializer()],
 ]);
 
 export function getInitializer(phase: Phase): PhaseInitializer {

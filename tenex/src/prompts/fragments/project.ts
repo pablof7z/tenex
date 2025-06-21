@@ -1,15 +1,30 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
+import { createValidator, hasProperty, isObject, validators } from "../core/validation";
 
 interface ProjectFragmentArgs {
   project: {
     name: string;
     description?: string;
     tags?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   };
   detailed?: boolean;
 }
+
+const validateProjectArgs = createValidator<ProjectFragmentArgs>(
+  [
+    (args): args is ProjectFragmentArgs =>
+      isObject(args) &&
+      hasProperty(args, "project") &&
+      isObject(args.project) &&
+      validators.hasRequiredString("name")(args.project) &&
+      validators.hasOptionalString("description")(args.project) &&
+      validators.hasOptionalStringArray("tags")(args.project) &&
+      validators.hasOptionalBoolean("detailed")(args),
+  ],
+  (args) => `Received: ${JSON.stringify(args, null, 2)}`
+);
 
 export const projectFragment: PromptFragment<ProjectFragmentArgs> = {
   id: "project-context",
@@ -31,6 +46,9 @@ export const projectFragment: PromptFragment<ProjectFragmentArgs> = {
 
     return prompt;
   },
+  validateArgs: validateProjectArgs,
+  expectedArgs:
+    "{ project: { name: string, description?: string, tags?: string[], metadata?: Record<string, any> }, detailed?: boolean }",
 };
 
 // Auto-register

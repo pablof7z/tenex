@@ -31,14 +31,11 @@ export class SubscriptionManager {
     // Load previously processed event IDs from disk
     await loadProcessedEvents(this.projectInfo.projectPath);
 
-    // Calculate the "since" timestamp for startup (5 seconds ago)
-    const startupSince = Math.floor(Date.now() / 1000) - 5;
-
     // 1. Subscribe to project updates (NDKProject events)
     await this.subscribeToProjectUpdates();
 
     // 3. Subscribe to all project-related events
-    await this.subscribeToProjectEvents(startupSince);
+    await this.subscribeToProjectEvents();
 
     logger.info(chalk.green("✅ All subscriptions active"));
     logger.info(chalk.gray(`Monitoring events from the last ${STARTUP_FILTER_MINUTES} minutes`));
@@ -64,26 +61,29 @@ export class SubscriptionManager {
     logger.info(chalk.green("    ✓ Project update subscription active"));
   }
 
-  private async subscribeToProjectEvents(since: number): Promise<void> {
+  private async subscribeToProjectEvents(): Promise<void> {
     // Filter for all events that tag this project
     const projectTagFilter: NDKFilter = {
       ...this.projectInfo.projectEvent.filter(),
-      since,
-      limit: 5,
+      limit: 1,
     };
 
     logger.info(chalk.blue("  • Setting up project event subscription..."));
     logger.debug("Project event filter:", projectTagFilter);
 
     const ndk = getNDK();
-    const projectEventSubscription = ndk.subscribe(projectTagFilter, {
-      closeOnEose: false,
-      groupable: false,
-    });
-
-    projectEventSubscription.on("event", (event: NDKEvent) => {
-      this.handleIncomingEvent(event, "project event");
-    });
+    const projectEventSubscription = ndk.subscribe(
+      projectTagFilter,
+      {
+        closeOnEose: false,
+        groupable: false,
+      },
+      {
+        onEvent: (event: NDKEvent) => {
+          this.handleIncomingEvent(event, "project event");
+        },
+      }
+    );
 
     this.subscriptions.push(projectEventSubscription);
     logger.info(chalk.green("    ✓ Project event subscription active"));

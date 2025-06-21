@@ -11,9 +11,10 @@ import type {
     GlobalConfig,
     ProjectConfig,
     TenexConfiguration,
-    UnifiedLLMConfig,
+    LLMSettings,
+    LLMPreset,
+    ProviderAuth,
 } from "@tenex/types/config";
-import type { LLMConfig } from "@tenex/types/llm";
 import { z } from "zod";
 
 /**
@@ -119,20 +120,26 @@ const LLMCredentialsSchema = z.object({
     headers: z.record(z.string()).optional(),
 });
 
-// Unified LLM config schema
-const UnifiedLLMConfigSchema = z.object({
-    configurations: z.record(LLMConfigSchema),
-    defaults: z.record(z.string()),
-    credentials: z.record(LLMCredentialsSchema).optional(),
+// Unified LLM settings schema
+const LLMSettingsSchema = z.object({
+    presets: z.record(LLMConfigSchema),
+    selection: z.record(z.string()),
+    auth: z.record(LLMCredentialsSchema),
 });
 
 // Agent config schema
-const AgentConfigEntrySchema = z.object({
-    nsec: z.string(),
-    file: z.string().optional(),
+const AgentConfigSchema = z.object({
+    name: z.string(),
+    role: z.string(),
+    expertise: z.string(),
+    instructions: z.string(),
+    llmConfig: z.string().optional(),
+    tools: z.array(z.string()).optional(),
 });
 
-const AgentsJsonSchema = z.record(AgentConfigEntrySchema);
+const AgentsJsonSchema = z.object({
+    agents: z.record(AgentConfigSchema),
+});
 
 // Project config schema
 const ProjectConfigSchema = z.object({
@@ -217,7 +224,7 @@ export class ConfigurationService {
                 // Merge with source tracking
                 agents = await this.mergeAgentsWithTracking(
                     globalAgents,
-                    agents || {},
+                    agents || { agents: {} },
                     this.getGlobalPath(),
                     basePath
                 );
@@ -255,7 +262,9 @@ export class ConfigurationService {
         }
 
         // Save llms.json
-        await this.saveLLMConfig(basePath, configuration.llms);
+        if (configuration.llms) {
+            await this.saveLLMConfig(basePath, configuration.llms);
+        }
 
         // Save agents.json (if provided)
         if (configuration.agents) {
@@ -298,20 +307,21 @@ export class ConfigurationService {
     /**
      * Load llms.json configuration
      */
-    async loadLLMConfig(basePath: string): Promise<UnifiedLLMConfig> {
+    async loadLLMConfig(basePath: string): Promise<LLMSettings> {
         const filePath = path.join(basePath, "llms.json");
-        return this.loadConfig(filePath, UnifiedLLMConfigSchema, {
-            configurations: {},
-            defaults: {},
+        return this.loadConfig(filePath, LLMSettingsSchema, {
+            presets: {},
+            selection: {},
+            auth: {},
         });
     }
 
     /**
      * Save llms.json configuration
      */
-    async saveLLMConfig(basePath: string, config: UnifiedLLMConfig): Promise<void> {
+    async saveLLMConfig(basePath: string, config: LLMSettings): Promise<void> {
         const filePath = path.join(basePath, "llms.json");
-        await this.saveConfig(filePath, config, UnifiedLLMConfigSchema);
+        await this.saveConfig(filePath, config, LLMSettingsSchema);
     }
 
     /**
@@ -319,7 +329,7 @@ export class ConfigurationService {
      */
     async loadAgentsConfig(basePath: string): Promise<AgentsJson> {
         const filePath = path.join(basePath, "agents.json");
-        return this.loadConfig(filePath, AgentsJsonSchema, {});
+        return this.loadConfig(filePath, AgentsJsonSchema, { agents: {} });
     }
 
     /**
@@ -337,7 +347,7 @@ export class ConfigurationService {
         contextPath: string,
         agentNameOrConfigName?: string,
         isGlobal = false
-    ): Promise<LLMConfig | undefined> {
+    ): Promise<LLMPreset | undefined> {
         const basePath = isGlobal ? this.getGlobalPath() : this.getProjectPath(contextPath);
         const llmConfig = await this.loadLLMConfig(basePath);
         return this.resolveConfigReference(llmConfig, agentNameOrConfigName);
@@ -347,45 +357,25 @@ export class ConfigurationService {
      * Resolve LLM configuration reference
      */
     resolveConfigReference(
-        llmConfig: UnifiedLLMConfig,
+        llmSettings: LLMSettings,
         agentNameOrConfigName?: string
-    ): LLMConfig | undefined {
+    ): LLMPreset | undefined {
         // If no name provided, use default
-        const targetName = agentNameOrConfigName || llmConfig.defaults.default;
+        const targetName = agentNameOrConfigName || llmSettings.selection.default;
 
         if (!targetName) {
             return undefined;
         }
 
-        // Check if it's a direct configuration reference
-        if (llmConfig.configurations[targetName]) {
-            const config = llmConfig.configurations[targetName];
-            // Apply credentials if available
-            if (config && llmConfig.credentials?.[config.provider]) {
-                const creds = llmConfig.credentials[config.provider];
-                return {
-                    ...config,
-                    apiKey: config.apiKey || creds?.apiKey,
-                    baseURL: config.baseURL || creds?.baseUrl,
-                };
-            }
-            return config;
+        // Check if it's a direct preset reference
+        if (llmSettings.presets[targetName]) {
+            return llmSettings.presets[targetName];
         }
 
-        // Check if it's an agent with a default configuration
-        const agentDefault = llmConfig.defaults[targetName];
-        if (agentDefault && llmConfig.configurations[agentDefault]) {
-            const config = llmConfig.configurations[agentDefault];
-            // Apply credentials if available
-            if (config && llmConfig.credentials?.[config.provider]) {
-                const creds = llmConfig.credentials[config.provider];
-                return {
-                    ...config,
-                    apiKey: config.apiKey || creds?.apiKey,
-                    baseURL: config.baseURL || creds?.baseUrl,
-                };
-            }
-            return config;
+        // Check if it's an agent with a selected preset
+        const agentSelection = llmSettings.selection[targetName];
+        if (agentSelection && llmSettings.presets[agentSelection]) {
+            return llmSettings.presets[agentSelection];
         }
 
         return undefined;
@@ -541,13 +531,12 @@ export class ConfigurationService {
         basePath: string,
         source: "global" | "project"
     ): TrackedAgentsJson {
-        const tracked: TrackedAgentsJson = {};
+        const tracked: TrackedAgentsJson = { agents: {} };
 
-        for (const [key, agent] of Object.entries(agents)) {
-            tracked[key] = {
+        for (const [key, agent] of Object.entries(agents.agents)) {
+            tracked.agents[key] = {
                 ...agent,
-                _source: source,
-                _basePath: basePath,
+                source: source,
             };
         }
 
@@ -563,30 +552,28 @@ export class ConfigurationService {
         globalPath: string,
         projectPath: string
     ): Promise<TrackedAgentsJson> {
-        const merged: TrackedAgentsJson = {};
+        const merged: TrackedAgentsJson = { agents: {} };
 
         // Add global agents with tracking
-        for (const [key, agent] of Object.entries(globalAgents)) {
-            merged[key] = {
+        for (const [key, agent] of Object.entries(globalAgents.agents)) {
+            merged.agents[key] = {
                 ...agent,
-                _source: "global",
-                _basePath: globalPath,
+                source: "global",
             };
         }
 
         // Add/override with project agents
-        for (const [key, agent] of Object.entries(projectAgents)) {
-            if (merged[key]) {
+        for (const [key, agent] of Object.entries(projectAgents.agents)) {
+            if (merged.agents[key]) {
                 // Warn about override
                 logger.warn(
                     `Agent '${key}' from global configuration is being overridden by project configuration`
                 );
             }
 
-            merged[key] = {
+            merged.agents[key] = {
                 ...agent,
-                _source: "project",
-                _basePath: projectPath,
+                source: "project",
             };
         }
 

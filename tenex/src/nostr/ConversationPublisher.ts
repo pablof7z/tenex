@@ -1,9 +1,8 @@
-import crypto from "node:crypto";
 import type { ProjectContext } from "@/runtime";
 import type { Conversation, Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKEvent, type NDKPrivateKeySigner, type NDKTag } from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKPrivateKeySigner, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 
 export class ConversationPublisher {
@@ -65,6 +64,13 @@ export class ConversationPublisher {
       author: reply.pubkey,
     });
 
+    // Log the actual content being published
+    logger.debug("Published agent response content", {
+      eventId: reply.id,
+      contentLength: content.length,
+      content,
+    });
+
     return reply;
   }
 
@@ -74,7 +80,7 @@ export class ConversationPublisher {
     context: string,
     signer: NDKPrivateKeySigner,
     triggeringEvent: NDKEvent,
-    nextResponder?: string,
+    nextResponder?: string
   ): Promise<NDKEvent> {
     const event = triggeringEvent.reply();
 
@@ -110,7 +116,7 @@ export class ConversationPublisher {
   async publishProjectResponse(
     eventToReply: NDKEvent,
     content: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
@@ -122,9 +128,9 @@ export class ConversationPublisher {
 
     // Add any custom metadata tags
     if (metadata) {
-      Object.entries(metadata).forEach(([key, value]) => {
+      for (const [key, value] of Object.entries(metadata)) {
         reply.tag([key, String(value)]);
-      });
+      }
     }
 
     reply.content = content;
@@ -140,9 +146,5 @@ export class ConversationPublisher {
     });
 
     return reply;
-  }
-
-  private hashPrompt(prompt: string): string {
-    return crypto.createHash("sha256").update(prompt).digest("hex").substring(0, 16);
   }
 }

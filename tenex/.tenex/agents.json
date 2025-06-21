@@ -1,32 +1,33 @@
 {
+  "global-agent-1": {
+    "nsec": "nsec1uhwsqnpjhua425t5qu4rgzhefc02qnn7msp8645l97nzfhuesdaq7zvu5m",
+    "file": "global-agent-1.json"
+  },
+  "global-agent-2": {
+    "nsec": "nsec1gjhmptwvqkyvx4gxhaawz4qvepq57yx6y9ldmmmynwa33pl7t3ps5dwwd3",
+    "file": "global-agent-2.json"
+  },
   "test": {
     "nsec": "nsec1u8wl9anazrjs9c5cs679s2ztds5t595q5hywwznv55vlk6scys6q0sdt6v",
-    "file": "test.json",
-    "llmConfig": "default",
-    "pubkey": "908470dd735991a61d0df9123054f435469ad06ebc23d7c38929057b21c6c6d0"
+    "file": "test.json"
   },
   "test-assistant": {
     "nsec": "nsec1txnw8dvfsdqyndercxcug9yu3sxerqnax46jdzgttes0hhflnd5s248j72",
-    "file": "test-assistant.json",
-    "llmConfig": "default",
-    "pubkey": "391d3c03228ab57ba9fb9d580fc89bbd1490ff83288c38bcb7385cf37c1bbfe8"
+    "file": "test-assistant.json"
   },
   "chat-agent": {
     "nsec": "nsec1fha2xvyv5dvca7hm49gqp3x08vs6kr43xgahcr2mdqy4yzga7lqsehlgjl",
     "file": "chat-agent.json",
-    "llmConfig": "default",
     "pubkey": "7937ace4d054e3fdfcd1d4b0da1da31619950327013cecb61d4308b2555d547e"
   },
   "architect": {
     "nsec": "nsec1s42rk5w2nlpz7axrdh5wmhqsdh3e32ztf84yvhxa4047rn5e0ensx2uw27",
     "file": "architect.json",
-    "llmConfig": "default",
     "pubkey": "b418aabe8b33f317dd7ef303ac8436a3241f168009a5f38ebb9a716678169ede"
   },
   "developer": {
     "nsec": "nsec1fa3kzaz8xkr6jsnmd3khgeljf435h7qasw2pjam6huhe7vem7cqspzu4z4",
     "file": "developer.json",
-    "llmConfig": "default",
     "pubkey": "344d44a46efb86b5efc498b20a3ca7c81c909b08e190aa84a2c1ad5b6cd6ff6f"
   }
 }

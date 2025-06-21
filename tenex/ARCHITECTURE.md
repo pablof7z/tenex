@@ -128,12 +128,12 @@ All LLM-generated events include:
 
 #### Conversation State
 - **History**: Full event chain per conversation
-- **Phase Context**: Compacted history when transitioning
+- **Phase Context**: Prepared context when transitioning
 - **Metadata**: Current phase, assigned agents, completion status
 
-#### Context Compaction
+#### Context Preparation
 - **Trigger**: Phase transitions
-- **Process**: Summarize relevant information
+- **Process**: Extract relevant information for next phase
 - **Output**: Nostr event with phase transition tag
 
 ### 8. Execution Control
@@ -168,7 +168,7 @@ P-tagged Event → Agent → LLM/Tools → Response Event → Next Agent P-tag
 
 ### 4. Phase Transition
 ```
-Completion Criteria Met → Context Compaction → Phase Update → New Agent Assignment
+Completion Criteria Met → Context Preparation → Phase Update → New Agent Assignment
 ```
 
 ### 5. Feedback Loop
@@ -257,7 +257,7 @@ Each phase has a dedicated initializer that executes when entering the phase:
 - **Routing Logic**: Phase determination
 - **Agent Registry**: CRUD operations
 - **Tool Execution**: Parser and executor
-- **Context Compaction**: Summarization quality
+- **Context Preparation**: Relevance and completeness
 
 ### Integration Tests
 - **Event Flow**: End-to-end conversation

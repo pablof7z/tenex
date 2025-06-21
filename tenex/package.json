@@ -14,7 +14,15 @@
     "build:simple": "bun scripts/build-simple.js",
     "prepublishOnly": "bun run build",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:unit": "bun test src/**/__tests__/*.test.ts",
+    "test:integration": "bun test src/**/__tests__/*.integration.test.ts",
+    "test:e2e": "bun test tests/e2e/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "clean": "rm -rf dist node_modules bun.lockb coverage"
   },
   "engines": {
     "node": ">=18.0.0"

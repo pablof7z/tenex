@@ -10,7 +10,6 @@ export class ConversationManager {
   private conversations: Map<string, ConversationState> = new Map();
   private conversationsDir: string;
   private persistence: FileSystemAdapter;
-  private autosaveInterval: NodeJS.Timeout | null = null;
 
   constructor(private projectPath: string) {
     this.conversationsDir = path.join(projectPath, ".tenex", "conversations");
@@ -23,15 +22,13 @@ export class ConversationManager {
 
     // Load existing conversations
     await this.loadConversations();
-
-    // Setup autosave every 30 seconds
-    this.autosaveInterval = setInterval(() => {
-      this.saveAllConversations().catch((error) => logger.error("Autosave failed", { error }));
-    }, 30000);
   }
 
   async createConversation(event: NDKEvent): Promise<ConversationState> {
-    const id = event.id!;
+    const id = event.id;
+    if (!id) {
+      throw new Error("Event must have an ID to create a conversation");
+    }
     const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Conversation";
 
     const conversation: ConversationState = {
@@ -75,6 +72,9 @@ export class ConversationManager {
     }
 
     logger.info(`Conversation ${id} transitioned from ${previousPhase} to ${phase}`);
+
+    // Save after phase update
+    await this.persistence.save(conversation);
   }
 
   async addEvent(conversationId: string, event: NDKEvent): Promise<void> {
@@ -84,6 +84,20 @@ export class ConversationManager {
     }
 
     conversation.history.push(event);
+
+    // Update the conversation summary to include the latest message
+    // This ensures other parts of the system have access to updated context
+    if (event.content) {
+      const isUser = !event.tags.some((tag) => tag[0] === "llm-model");
+      if (isUser) {
+        // For user messages, update the summary to be more descriptive
+        conversation.metadata.summary = event.content;
+        conversation.metadata.last_user_message = event.content;
+      }
+    }
+
+    // Save after adding event
+    await this.persistence.save(conversation);
   }
 
   async updateCurrentAgent(conversationId: string, agentPubkey: string | undefined): Promise<void> {
@@ -93,6 +107,9 @@ export class ConversationManager {
     }
 
     conversation.currentAgent = agentPubkey;
+
+    // Save after updating agent
+    await this.persistence.save(conversation);
   }
 
   async updateMetadata(
@@ -128,12 +145,24 @@ export class ConversationManager {
       throw new Error(`Conversation ${id} not found`);
     }
 
-    // For now, return a simple summary
-    // This will be enhanced with LLM-based summarization
-    const summary = `Conversation "${conversation.title}" moving from ${conversation.phase} to ${targetPhase}.
-Current understanding: ${conversation.metadata.summary || "No summary available"}`;
+    // Extract user requirements from conversation history
+    const userMessages = conversation.history
+      .filter((event) => !event.tags.some((tag) => tag[0] === "llm-model"))
+      .map((event) => event.content)
+      .join("\n");
 
-    return summary;
+    // Create a clear context based on target phase
+    let context = "";
+
+    if (targetPhase === "plan") {
+      context = `User Request:\n${userMessages}\n\nThe user needs assistance with the above request. Create a detailed implementation plan.`;
+    } else if (targetPhase === "execute") {
+      context = `Previous Phase Summary:\n${conversation.metadata[`${conversation.phase}_summary`] || userMessages}\n\nProceed with implementation.`;
+    } else {
+      context = `Conversation History:\n${userMessages}\n\nMoving to ${targetPhase} phase.`;
+    }
+
+    return context;
   }
 
   getAllConversations(): ConversationState[] {
@@ -211,11 +240,5 @@ Current understanding: ${conversation.metadata.summary || "No summary available"
   async cleanup(): Promise<void> {
     // Save all conversations before cleanup
     await this.saveAllConversations();
-
-    // Clear autosave interval
-    if (this.autosaveInterval) {
-      clearInterval(this.autosaveInterval);
-      this.autosaveInterval = null;
-    }
   }
 }

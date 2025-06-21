@@ -1,14 +1,21 @@
-import type { Agent } from "@/types/agent";
+import { AgentExecutor, createMinimalProjectAgent, createProjectAgent } from "@/agents";
 import type { ConversationManager } from "@/conversations";
+import type { LLMService } from "@/llm";
 import type { ConversationPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
 import { getProjectContext } from "@/runtime";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import type { RoutingLLM } from "./RoutingLLM";
-import { AgentExecutor } from "@/agents/execution";
-import type { LLMService } from "@/llm";
+import {
+  applyBusinessRules,
+  canTransitionPhase,
+  getDefaultAgentForPhase,
+  meetsPhaseTransitionCriteria,
+  validateRoutingDecision,
+} from "./routingDomainFunctions";
 
 export class ConversationRouter {
   private agentExecutor: AgentExecutor;
@@ -36,12 +43,31 @@ export class ConversationRouter {
       const conversation = await this.conversationManager.createConversation(event);
 
       // Get routing decision
-      const routingDecision = await this.routingLLM.routeNewConversation(event, availableAgents);
+      let routingDecision = await this.routingLLM.routeNewConversation(event, availableAgents);
+
+      // Apply business rules to enhance the decision
+      routingDecision = applyBusinessRules(routingDecision, conversation, availableAgents);
+
+      // Validate the routing decision
+      const validation = validateRoutingDecision(routingDecision, conversation, availableAgents);
+
+      if (!validation.valid) {
+        logger.warn("Invalid routing decision", {
+          reason: validation.reason,
+          decision: routingDecision,
+        });
+        // Fallback to chat phase
+        routingDecision = {
+          phase: "chat",
+          reasoning: validation.reason || "Invalid routing decision, defaulting to chat",
+        };
+      }
 
       logger.info("Routing decision", {
         conversationId: conversation.id,
         phase: routingDecision.phase,
         confidence: routingDecision.confidence,
+        enhanced: true,
       });
 
       // Initialize the determined phase
@@ -76,51 +102,91 @@ export class ConversationRouter {
       const phaseTag = event.tags.find((tag) => tag[0] === "phase");
       if (phaseTag) {
         const newPhase = phaseTag[1] as Phase;
-        await this.transitionPhase(conversation.id, newPhase, availableAgents, event);
+
+        // Validate the requested phase transition
+        if (canTransitionPhase(conversation.phase, newPhase)) {
+          const transitionCheck = meetsPhaseTransitionCriteria(conversation, newPhase);
+
+          if (transitionCheck.canTransition) {
+            await this.transitionPhase(conversation.id, newPhase, availableAgents, event);
+          } else {
+            logger.warn("Phase transition criteria not met", {
+              from: conversation.phase,
+              to: newPhase,
+              reason: transitionCheck.reason,
+            });
+            // Publish feedback to user
+            await this.publisher.publishProjectResponse(
+              event,
+              `Cannot transition to ${newPhase} phase: ${transitionCheck.reason}`,
+              { phase: conversation.phase, error: true }
+            );
+          }
+        } else {
+          logger.warn("Invalid phase transition requested", {
+            from: conversation.phase,
+            to: newPhase,
+          });
+          // Publish feedback to user
+          await this.publisher.publishProjectResponse(
+            event,
+            `Cannot transition from ${conversation.phase} to ${newPhase} phase directly.`,
+            { phase: conversation.phase, error: true }
+          );
+        }
         return;
       }
 
       // Route within current phase
-      const routingDecision = await this.routingLLM.routeNextAction(
+      let routingDecision = await this.routingLLM.routeNextAction(
         conversation,
         event.content || "",
         availableAgents
       );
 
+      // Apply business rules
+      routingDecision = applyBusinessRules(routingDecision, conversation, availableAgents);
+
       // Check if phase should change based on routing decision
       if (routingDecision.phase !== conversation.phase) {
-        await this.transitionPhase(
-          conversation.id,
-          routingDecision.phase,
-          availableAgents,
-          event
-        );
+        // Validate phase transition
+        const transitionCheck = meetsPhaseTransitionCriteria(conversation, routingDecision.phase);
+
+        if (!transitionCheck.canTransition) {
+          logger.warn("Phase transition blocked", {
+            from: conversation.phase,
+            to: routingDecision.phase,
+            reason: transitionCheck.reason,
+          });
+          // Stay in current phase
+          routingDecision.phase = conversation.phase;
+        } else {
+          await this.transitionPhase(
+            conversation.id,
+            routingDecision.phase,
+            availableAgents,
+            event
+          );
+        }
       } else if (conversation.phase === "chat") {
         // In chat phase, the project responds directly to the user
         const projectContext = getProjectContext();
-        
+
         // Execute project response logic
+        const projectAgent = createProjectAgent(projectContext);
         const executionResult = await this.agentExecutor.execute(
           {
-            agent: {
-              name: "Project",
-              role: "Requirements analyst",
-              expertise: "Understanding user needs and clarifying requirements",
-              pubkey: projectContext.projectSigner.pubkey,
-              signer: projectContext.projectSigner,
-              llmConfig: "default",
-              tools: [] // Project doesn't need tools in chat phase
-            },
+            agent: projectAgent,
             conversation,
             phase: "chat",
-            lastUserMessage: event.content
+            lastUserMessage: event.content,
           },
           event
         );
 
         if (!executionResult.success) {
-          logger.error('Project execution failed during chat phase', {
-            error: executionResult.error
+          logger.error("Project execution failed during chat phase", {
+            error: executionResult.error,
           });
         }
       } else if (routingDecision.nextAgent) {
@@ -131,7 +197,20 @@ export class ConversationRouter {
         );
 
         // Find the assigned agent
-        const agent = availableAgents.find(a => a.pubkey === routingDecision.nextAgent);
+        let agent = availableAgents.find((a) => a.pubkey === routingDecision.nextAgent);
+
+        // If agent not found, try to assign a default one
+        if (!agent && conversation.phase !== "chat") {
+          agent = getDefaultAgentForPhase(conversation.phase, availableAgents);
+          if (agent) {
+            logger.info("Assigned default agent for phase", {
+              phase: conversation.phase,
+              agent: agent.name,
+            });
+            await this.conversationManager.updateCurrentAgent(conversation.id, agent.pubkey);
+          }
+        }
+
         if (agent) {
           // Execute the agent to generate response
           const executionResult = await this.agentExecutor.execute(
@@ -139,15 +218,15 @@ export class ConversationRouter {
               agent,
               conversation,
               phase: conversation.phase,
-              lastUserMessage: event.content
+              lastUserMessage: event.content,
             },
             event
           );
 
           if (!executionResult.success) {
-            logger.error('Agent execution failed during reply routing', {
+            logger.error("Agent execution failed during reply routing", {
               agent: agent.name,
-              error: executionResult.error
+              error: executionResult.error,
             });
           }
         }
@@ -194,12 +273,31 @@ export class ConversationRouter {
     const projectContext = getProjectContext();
 
     if (phase === "chat") {
-      // In chat phase, project responds
-      await this.publisher.publishProjectResponse(
-        triggeringEvent,
-        result.message || `Entering ${phase} phase. Let me understand your requirements.`,
-        { phase, initialized: true }
+      // In chat phase, project responds using LLM
+      const projectAgent = createProjectAgent(projectContext);
+
+      // Execute using the agent executor to generate an actual response
+      const executionResult = await this.agentExecutor.execute(
+        {
+          agent: projectAgent,
+          conversation,
+          phase,
+          lastUserMessage: triggeringEvent.content,
+        },
+        triggeringEvent
       );
+
+      if (!executionResult.success) {
+        logger.error("Project chat execution failed", {
+          error: executionResult.error,
+        });
+        // Fallback to a generic message if execution fails
+        await this.publisher.publishProjectResponse(
+          triggeringEvent,
+          "I'm having trouble processing your request. Could you please rephrase it?",
+          { phase, error: true }
+        );
+      }
     } else if (result.nextAgent) {
       // In other phases, assigned agent responds
       const agent = availableAgents.find((a) => a.pubkey === result.nextAgent);
@@ -212,19 +310,26 @@ export class ConversationRouter {
             agent,
             conversation,
             phase,
-            projectContext: result.metadata
+            projectContext: result.metadata,
           },
           triggeringEvent
         );
 
         if (!executionResult.success) {
-          logger.error('Agent execution failed during phase initialization', {
+          logger.error("Agent execution failed during phase initialization", {
             agent: agent.name,
             phase,
-            error: executionResult.error
+            error: executionResult.error,
           });
         }
       }
+    } else if (phase === "plan" && result.metadata?.claudeCodeTriggered) {
+      // Plan phase with Claude Code - just publish a status message
+      await this.publisher.publishProjectResponse(
+        triggeringEvent,
+        result.message || "Claude Code is working on the implementation plan.",
+        { phase, claudeCodeActive: true }
+      );
     }
   }
 

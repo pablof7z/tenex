@@ -1,3 +1,5 @@
+import type { LLMFileConfiguration } from "@tenex/types/config";
+
 export type LLMProvider =
     | "openai"
     | "openrouter"
@@ -30,23 +32,16 @@ export interface SpeechConfig {
     language?: string;
 }
 
-export interface UnifiedLLMConfig {
-    configurations: {
-        [name: string]: LLMConfig;
-    };
-    defaults: {
-        default?: string;
-        titleGeneration?: string;
-        [agentName: string]: string | undefined;
-    };
-    credentials: {
-        [provider: string]: LLMCredentials;
-    };
+// The web client extends the base configuration with speech support
+export interface WebLLMConfiguration extends LLMFileConfiguration {
     speech?: {
         configuration: SpeechConfig;
         credentials: LLMCredentials;
     };
 }
+
+// For backward compatibility
+export type UnifiedLLMConfig = WebLLMConfiguration;
 
 export interface OpenRouterModel {
     id: string;

@@ -44,7 +44,9 @@ async function main() {
   if (!model) {
     console.error(`❌ Model ${modelId} not found!`);
     console.log("\nAvailable models:");
-    models.chat.slice(0, 10).forEach((m) => console.log(`  - ${m.id}`));
+    for (const m of models.chat.slice(0, 10)) {
+      console.log(`  - ${m.id}`);
+    }
     console.log("  ... and more");
     process.exit(1);
   }
@@ -97,8 +99,8 @@ When asked about time, respond by calling this function. You can call it using a
     } else {
       console.log("ℹ️  No function calls detected in the response.");
     }
-  } catch (error: any) {
-    console.error(`❌ Error: ${error.message}`);
+  } catch (error) {
+    console.error(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

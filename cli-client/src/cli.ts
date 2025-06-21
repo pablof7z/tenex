@@ -98,7 +98,7 @@ export class TenexCLI {
         const spinner = ora("Fetching project details...").start();
 
         try {
-            const projectEvent = await this.ndk!.ndk.fetchEvent(projectNaddr);
+            const projectEvent = await this.ndk!.fetchEvent(projectNaddr);
 
             if (!projectEvent) {
                 throw new Error("Project not found");

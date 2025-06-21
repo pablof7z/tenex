@@ -1,6 +1,6 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { BasePhaseInitializer } from "./PhaseInitializer";
 import type { PhaseInitializationResult } from "./types";
@@ -31,7 +31,7 @@ export class ChatPhaseInitializer extends BasePhaseInitializer {
       // No specific agent is needed yet
       return {
         success: true,
-        message: "Chat phase initialized. Project will respond to gather requirements.",
+        // Don't return a message - let the ConversationRouter handle the actual response
         metadata: {
           projectPubkey: projectContext.projectSigner.pubkey,
           availableAgents: availableAgents.length,

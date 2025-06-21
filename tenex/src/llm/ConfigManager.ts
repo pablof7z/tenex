@@ -1,73 +1,125 @@
 import path from "node:path";
 import { logger } from "@tenex/shared";
 import { readFile } from "@tenex/shared/fs";
+import { configurationService } from "@tenex/shared/services";
+import type { LLMSettings } from "@tenex/types/config";
 import type { LLMConfig, LLMConfiguration, ProviderCredentials } from "./types";
 
 export class LLMConfigManager {
   private configuration?: LLMConfiguration;
+  private globalConfiguration?: LLMConfiguration;
+  private mergedConfiguration?: LLMConfiguration;
   private configPath: string;
+  private projectPath: string;
 
   constructor(projectPath: string) {
+    this.projectPath = projectPath;
     this.configPath = path.join(projectPath, ".tenex", "llms.json");
   }
 
   async loadConfigurations(): Promise<void> {
     try {
-      const content = await readFile(this.configPath, "utf-8");
-      this.configuration = JSON.parse(content) as LLMConfiguration;
-      logger.info(`Loaded LLM configurations from ${this.configPath}`);
+      // Load project configuration
+      const projectConfig = await configurationService.loadLLMConfig(
+        path.join(this.projectPath, ".tenex")
+      );
+      this.configuration = this.convertToLLMConfiguration(projectConfig);
+      logger.info(`Loaded project LLM configurations from ${this.configPath}`);
+
+      // Load global configuration
+      try {
+        const globalPath = path.join(process.env.HOME || "~", ".tenex");
+        const globalConfig = await configurationService.loadLLMConfig(globalPath);
+        this.globalConfiguration = this.convertToLLMConfiguration(globalConfig);
+        logger.info(`Loaded global LLM configurations from ${globalPath}/llms.json`);
+      } catch (error) {
+        logger.debug("No global LLM configuration found, using project configuration only");
+      }
+
+      // Merge configurations (project takes precedence)
+      this.mergedConfiguration = this.mergeConfigurations();
     } catch (error) {
-      logger.error(`Failed to load LLM configurations from ${this.configPath}`, { error });
+      logger.error(`Failed to load LLM configurations`, { error });
       throw new Error(`Failed to load LLM configurations: ${error}`);
     }
   }
 
-  getConfig(name: string): LLMConfig {
+  private convertToLLMConfiguration(fileConfig: LLMSettings): LLMConfiguration {
+    // No conversion needed, LLMConfiguration is an alias for LLMSettings
+    return fileConfig;
+  }
+
+  private mergeConfigurations(): LLMConfiguration {
+    if (!this.globalConfiguration) {
+      return this.configuration || { presets: {}, selection: {}, auth: {} };
+    }
+
     if (!this.configuration) {
+      return this.globalConfiguration;
+    }
+
+    // Merge configurations: project overrides global
+    return {
+      presets: {
+        ...this.globalConfiguration.presets,
+        ...this.configuration.presets,
+      },
+      selection: {
+        ...this.globalConfiguration.selection,
+        ...this.configuration.selection,
+      },
+      auth: {
+        ...this.globalConfiguration.auth,
+        ...this.configuration.auth,
+      },
+    };
+  }
+
+  getConfig(name: string): LLMConfig {
+    if (!this.mergedConfiguration) {
       throw new Error("LLM configurations not loaded. Call loadConfigurations() first.");
     }
 
-    const config = this.configuration.configurations[name];
-    if (!config) {
-      throw new Error(`LLM configuration "${name}" not found`);
+    const preset = this.mergedConfiguration.presets[name];
+    if (!preset) {
+      throw new Error(`LLM preset "${name}" not found`);
     }
 
-    return config;
+    return preset;
   }
 
   getCredentials(provider: string): ProviderCredentials {
-    if (!this.configuration) {
+    if (!this.mergedConfiguration) {
       throw new Error("LLM configurations not loaded. Call loadConfigurations() first.");
     }
 
-    const credentials = this.configuration.credentials[provider];
-    if (!credentials) {
-      throw new Error(`Credentials for provider "${provider}" not found`);
+    const auth = this.mergedConfiguration.auth[provider];
+    if (!auth) {
+      throw new Error(`Auth for provider "${provider}" not found`);
     }
 
-    return credentials;
+    return auth;
   }
 
   getDefaultConfig(purpose = "default"): string {
-    if (!this.configuration) {
+    if (!this.mergedConfiguration) {
       throw new Error("LLM configurations not loaded. Call loadConfigurations() first.");
     }
 
-    const config = (
-      this.configuration.defaults[purpose] || this.configuration.defaults.default
-    );
+    const selection =
+      this.mergedConfiguration.selection[purpose] || this.mergedConfiguration.selection.default;
 
-    if (!config) {
-      throw new Error(`Default LLM configuration for purpose "${purpose}" not found`);
+    if (!selection) {
+      throw new Error(`LLM selection for purpose "${purpose}" not found`);
     }
 
-    return config;
+    return selection;
   }
 
   getAllConfigNames(): string[] {
-    if (!this.configuration) {
+    if (!this.mergedConfiguration) {
       return [];
     }
-    return Object.keys(this.configuration.configurations);
+    return Object.keys(this.mergedConfiguration.presets);
   }
 }

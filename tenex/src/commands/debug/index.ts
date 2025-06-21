@@ -26,9 +26,9 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
     if (agentProfile) {
       console.log(chalk.white("Name:"), agentProfile.name);
       console.log(chalk.white("Role:"), agentProfile.role);
-      console.log(chalk.white("Description:"), agentProfile.description);
-      if (agentProfile.capabilities && agentProfile.capabilities.length > 0) {
-        console.log(chalk.white("Capabilities:"), agentProfile.capabilities.join(", "));
+      console.log(chalk.white("Expertise:"), agentProfile.expertise);
+      if (agentProfile.tools && agentProfile.tools.length > 0) {
+        console.log(chalk.white("Tools:"), agentProfile.tools.join(", "));
       }
     } else {
       console.log(

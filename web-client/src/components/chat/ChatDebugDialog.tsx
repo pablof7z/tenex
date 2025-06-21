@@ -28,7 +28,7 @@ export function ChatDebugDialog({ indicator, onClose }: ChatDebugDialogProps) {
                     {systemPromptTag && (
                         <div>
                             <h4 className="font-semibold mb-2">System Prompt</h4>
-                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
+                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-auto max-h-64">
                                 {systemPromptTag[1]}
                             </pre>
                         </div>
@@ -38,7 +38,7 @@ export function ChatDebugDialog({ indicator, onClose }: ChatDebugDialogProps) {
                     {promptTag && (
                         <div>
                             <h4 className="font-semibold mb-2">User Prompt</h4>
-                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
+                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-auto max-h-64">
                                 {promptTag[1]}
                             </pre>
                         </div>
@@ -48,7 +48,7 @@ export function ChatDebugDialog({ indicator, onClose }: ChatDebugDialogProps) {
                     {rawResponseTag && (
                         <div>
                             <h4 className="font-semibold mb-2">Raw LLM Response</h4>
-                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-x-auto">
+                            <pre className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap overflow-auto max-h-64">
                                 {rawResponseTag[1]}
                             </pre>
                         </div>

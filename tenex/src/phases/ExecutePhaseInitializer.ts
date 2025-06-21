@@ -1,9 +1,9 @@
-import { execSync } from "child_process";
-import path from "path";
-import type { Agent } from "@/types/agent";
+import { execSync } from "node:child_process";
+import path from "node:path";
 import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
 import { ClaudeCodeExecutor } from "@/tools";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -54,7 +54,7 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
       // Trigger Claude Code CLI for implementation
       const claudeCodeTriggered = await this.triggerClaudeCode(
         conversation,
-        plan,
+        plan || "Implement the features as discussed",
         "Implement the plan. Make all necessary code changes."
       );
 
@@ -129,14 +129,15 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
     try {
       const projectContext = getProjectContext();
 
-      // Get NDK and signer from project context
-      const ndk = projectContext.ndk;
+      // Get signer from project context and NDK from global
+      const { getNDK } = await import("@/nostr/ndkClient");
+      const ndk = getNDK();
       const signer = projectContext.projectSigner;
 
       // Get the root event from the conversation
       const rootEvent = conversation.history[0];
       if (!rootEvent) {
-        this.logError("No root event found in conversation");
+        this.logError("No root event found in conversation", new Error("Missing root event"));
         return false;
       }
 
@@ -151,7 +152,7 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
       // Create and execute Claude Code with monitoring
       const executor = new ClaudeCodeExecutor({
         prompt,
-        projectPath: projectContext.projectDir,
+        projectPath: projectContext.projectPath,
         ndk,
         projectContext,
         conversationRootEvent: rootEvent,

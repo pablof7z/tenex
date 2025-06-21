@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
+import { getNDK } from "@/nostr";
 import type { ProjectContext } from "@/runtime";
 import { ClaudeParser } from "@/utils/claude/ClaudeParser";
 import type NDK from "@nostr-dev-kit/ndk";
 import { type NDKEvent, type NDKPrivateKeySigner, NDKTask } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
-import { getNDK } from "@/nostr";
 
 export interface ClaudeCodeExecutorOptions {
   prompt: string;
@@ -92,15 +92,19 @@ export class ClaudeCodeExecutor {
     return new Promise((resolve, reject) => {
       const args = ["code", "--output-format", "stream-json", "--verbose", this.options.prompt];
 
-      logger.debug("Spawning Claude Code", {
+      logger.info("Spawning Claude Code", {
         command: "claude",
         args,
-        cwd: this.options.projectPath,
+        cwd: this.options.projectPath || process.cwd(),
+        projectPath: this.options.projectPath,
+        hasTaskEvent: !!this.taskEvent,
+        taskId: this.taskEvent?.id,
       });
 
       const claudeProcess = spawn("claude", args, {
         cwd: this.options.projectPath || process.cwd(),
         stdio: ["pipe", "pipe", "pipe"],
+        shell: true, // Use shell to handle aliases
       });
 
       let finalResult = "";
@@ -169,7 +173,13 @@ export class ClaudeCodeExecutor {
 
       // Handle spawn errors
       claudeProcess.on("error", (error) => {
-        logger.error("Failed to spawn Claude Code", { error });
+        logger.error("Failed to spawn Claude Code", {
+          error: error.message,
+          command: "claude",
+          args,
+          cwd: this.options.projectPath || process.cwd(),
+          PATH: process.env.PATH,
+        });
         reject(new Error(`Failed to spawn Claude Code: ${error.message}`));
       });
     });

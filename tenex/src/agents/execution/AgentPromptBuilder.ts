@@ -1,14 +1,16 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
+import { getProjectContext } from "@/runtime";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type { AgentPromptContext } from "./types";
-import { getProjectContext } from "@/runtime";
+import { InventoryService } from "@/services/InventoryService";
+import { logger } from "@tenex/shared";
 
-export class AgentPromptBuilder {
-  static buildSystemPrompt(agent: Agent, phase: Phase): string {
-    const projectContext = getProjectContext();
-    
-    return `You are ${agent.name}, a ${agent.role} working on the ${projectContext.title} project.
+export async function buildSystemPrompt(agent: Agent, phase: Phase): Promise<string> {
+  const projectContext = getProjectContext();
+  
+  // Build base prompt
+  let prompt = `You are ${agent.name}, a ${agent.role} working on the ${projectContext.title} project.
 
 ## Your Role
 ${agent.instructions}
@@ -17,162 +19,210 @@ ${agent.instructions}
 ${agent.expertise}
 
 ## Current Phase: ${phase.toUpperCase()}
-${this.getPhaseInstructions(phase)}
+${getPhaseInstructions(phase)}
 
 ## Project Context
 - Project: ${projectContext.title}
-${projectContext.repository ? `- Repository: ${projectContext.repository}` : ''}
+${projectContext.repository ? `- Repository: ${projectContext.repository}` : ""}`;
 
-## Communication Style
+  // Add inventory information for chat phase
+  if (phase === "chat") {
+    const inventoryPrompt = await getInventoryPrompt(projectContext.projectPath);
+    if (inventoryPrompt) {
+      prompt += `\n\n${inventoryPrompt}`;
+    }
+  }
+
+  prompt += `\n\n## Communication Style
 - Be concise and focused on the task at hand
 - Provide actionable insights and clear next steps
 - When suggesting code changes, be specific about what to change
 - Ask clarifying questions when requirements are unclear
 
 ## Available Tools
-${agent.tools.length > 0 ? agent.tools.join(', ') : 'No tools assigned'}
+${agent.tools.length > 0 ? agent.tools.join(", ") : "No tools assigned"}
 
-${agent.tools.length > 0 ? this.getToolInstructions() : ''}
+${agent.tools.length > 0 ? getToolInstructions() : ""}
 
 Remember: You are currently in the ${phase} phase. Focus your responses accordingly.`;
-  }
 
-  static buildConversationContext(
-    conversation: ConversationState,
-    maxMessages: number = 10
-  ): string {
-    const recentHistory = conversation.history.slice(-maxMessages);
-    
-    const context = recentHistory.map(event => {
-      const author = event.tags.find(tag => tag[0] === 'p')?.[1] || 'User';
-      const timestamp = new Date(event.created_at! * 1000).toISOString();
+  return prompt;
+}
+
+export function buildConversationContext(
+  conversation: ConversationState,
+  maxMessages = 10
+): string {
+  const recentHistory = conversation.history.slice(-maxMessages);
+
+  const context = recentHistory
+    .map((event) => {
+      const author = event.tags.find((tag) => tag[0] === "p")?.[1] || "User";
+      const timestamp = new Date((event.created_at || 0) * 1000).toISOString();
       return `[${timestamp}] ${author}: ${event.content}`;
-    }).join('\n\n');
+    })
+    .join("\n\n");
 
-    return `## Conversation History
+  return `## Conversation History (Last ${recentHistory.length} messages)
+${context || "No previous messages"}`;
+}
 
-Title: ${conversation.title}
-Current Phase: ${conversation.phase}
+export function buildPhaseContext(conversation: ConversationState, phase: Phase): string {
+  let context = "";
 
-${context}`;
-  }
+  switch (phase) {
+    case "chat":
+      context = `You are in the initial phase. Focus on:
+- Quickly understanding the user's request
+- Taking immediate action if the request is clear
+- Only clarifying when genuinely necessary (request is ambiguous)
+- Transitioning to the appropriate phase as soon as possible`;
+      break;
 
-  static buildPhaseContext(conversation: ConversationState, phase: Phase): string {
-    const metadata = conversation.metadata;
-    
-    switch (phase) {
-      case 'chat':
-        return `## Phase Context
-You are in the requirements gathering phase. Focus on:
-- Understanding the user's needs
-- Asking clarifying questions
-- Identifying technical requirements
-- Defining project scope`;
+    case "plan":
+      context = `You are in the planning phase. Focus on:
+- Creating a detailed technical plan
+- Breaking down the work into milestones
+- Identifying dependencies and risks
+- Estimating effort and timelines`;
+      break;
 
-      case 'plan':
-        const chatSummary = metadata.chat_summary || metadata.summary || '';
-        return `## Phase Context
-You are creating an implementation plan based on these requirements:
-${chatSummary}
-
-Focus on:
-- Breaking down the work into clear tasks
-- Identifying technical dependencies
-- Suggesting architecture and design patterns
-- Creating a realistic timeline`;
-
-      case 'execute':
-        const plan = metadata.plan_summary || '';
-        return `## Phase Context
-You are implementing based on this plan:
-${plan}
-
-Focus on:
+    case "execute":
+      context = `You are in the execution phase. Focus on:
+- Implementing the planned features
 - Writing clean, maintainable code
 - Following best practices
-- Implementing features incrementally
-- Testing as you go`;
+- Communicating progress and blockers`;
+      break;
 
-      case 'review':
-        const executionSummary = metadata.execute_summary || '';
-        const gitBranch = metadata.gitBranch || 'main';
-        return `## Phase Context
-You are reviewing the implementation:
-${executionSummary}
-
-Git Branch: ${gitBranch}
-
-Focus on:
-- Code quality and best practices
-- Security vulnerabilities
-- Performance considerations
-- Test coverage
-- Documentation completeness`;
-
-      default:
-        return '## Phase Context\nNo specific phase context available.';
-    }
+    case "review":
+      context = `You are in the review phase. Focus on:
+- Evaluating the implementation quality
+- Identifying bugs or issues
+- Suggesting improvements
+- Ensuring requirements are met`;
+      break;
   }
 
-  static buildFullPrompt(context: AgentPromptContext): string {
-    return `${context.systemPrompt}
+  // Add conversation-specific context from metadata
+  const phaseKey = `${phase}Context`;
+  if (conversation.metadata?.[phaseKey]) {
+    context += `\n\n## Additional Context for ${phase} phase:\n${conversation.metadata[phaseKey]}`;
+  }
 
-${context.conversationHistory}
+  return context;
+}
+
+export function buildToolContext(agent: Agent): string {
+  if (agent.tools.length === 0) {
+    return "";
+  }
+
+  return `## Tool Usage
+You have access to the following tools: ${agent.tools.join(", ")}
+
+When you need to use a tool, format your request clearly:
+- For file operations: Specify the exact file path and operation
+- For shell commands: Provide the complete command with all arguments
+- For web searches: Use specific, relevant search terms
+
+Tool results will be automatically executed and included in your response.`;
+}
+
+export function buildFullPrompt(context: AgentPromptContext): string {
+  return `${context.conversationHistory}
 
 ${context.phaseContext}
 
-${context.constraints.length > 0 ? `## Constraints\n${context.constraints.join('\n')}` : ''}
+${context.constraints.length > 0 ? `## Constraints\n${context.constraints.join("\n")}` : ""}
 
-Based on the above context, provide your response as the ${context.phaseContext.includes('Phase:') ? 'assigned expert' : 'project assistant'}.`;
+Based on the above context, provide your response as the ${
+    context.phaseContext.includes("Phase:") ? "assigned expert" : "project assistant"
+  }.`;
+}
+
+function getPhaseInstructions(phase: Phase): string {
+  switch (phase) {
+    case "chat":
+      return "Gather requirements and understand the user's needs. Ask clarifying questions to ensure you have all necessary information.";
+
+    case "plan":
+      return "Create a detailed implementation plan based on the gathered requirements. Break down the work into manageable tasks.";
+
+    case "execute":
+      return "Implement the features according to the plan. Write clean, well-tested code following best practices.";
+
+    case "review":
+      return "Review the implementation for quality, security, and completeness. Provide constructive feedback and suggestions.";
+
+    default:
+      return "Assist with the current task to the best of your ability.";
   }
+}
 
-  private static getPhaseInstructions(phase: Phase): string {
-    switch (phase) {
-      case 'chat':
-        return 'Gather requirements and understand the user\'s needs. Ask clarifying questions to ensure you have all necessary information.';
-      
-      case 'plan':
-        return 'Create a detailed implementation plan based on the gathered requirements. Break down the work into manageable tasks.';
-      
-      case 'execute':
-        return 'Implement the features according to the plan. Write clean, well-tested code following best practices.';
-      
-      case 'review':
-        return 'Review the implementation for quality, security, and completeness. Provide constructive feedback and suggestions.';
-      
-      default:
-        return 'Assist with the current task to the best of your ability.';
-    }
-  }
+function getToolInstructions(): string {
+  return `## Tool Instructions
+When you need to perform actions like:
+- Creating or modifying files
+- Running shell commands
+- Searching the web
+- Reading project specifications
 
-  private static getToolInstructions(): string {
-    return `## Tool Usage Instructions
-You can use the following tool patterns in your response:
-
-1. **Execute shell commands:**
-   <execute>command here</execute>
-   Example: <execute>npm install express</execute>
-
-2. **Read files:**
-   <read>path/to/file</read>
-   Example: <read>src/index.js</read>
-
-3. **Write files:**
-   <write file="path/to/file">content here</write>
-   Example: <write file="src/config.json">{"port": 3000}</write>
-
-4. **Edit files:**
-   <edit file="path/to/file" from="old content" to="new content"/>
-   Example: <edit file="src/app.js" from="const port = 3000" to="const port = process.env.PORT || 3000"/>
-
-5. **Search the web:**
-   <search>query</search>
-   Example: <search>React hooks best practices</search>
-
-6. **Make API calls:**
-   <api method="GET" url="https://api.example.com/data">optional body</api>
-   Example: <api method="POST" url="https://api.github.com/repos">{"name": "my-repo"}</api>
+Format your tool usage clearly within your response. For example:
+- "Let me create a new file..." followed by the file content
+- "I'll run this command..." followed by the command
+- "Let me search for..." followed by search terms
 
 Tools will be executed automatically and results will be included in your response.`;
+}
+
+async function getInventoryPrompt(projectPath: string): Promise<string | null> {
+  try {
+    const inventoryService = new InventoryService(projectPath);
+    const inventory = await inventoryService.loadInventory();
+    
+    if (!inventory) {
+      logger.debug("No inventory found for project", { projectPath });
+      return null;
+    }
+
+    // Format a concise inventory summary for the prompt
+    const lines: string[] = [
+      "## Project Inventory",
+      "",
+      `**Technologies:** ${inventory.technologies.join(", ") || "Not specified"}`,
+      `**Total Files:** ${inventory.stats.totalFiles}`,
+      `**Total Directories:** ${inventory.stats.totalDirectories}`,
+      "",
+    ];
+
+    // Add file type summary
+    lines.push("**File Types:**");
+    const topFileTypes = Object.entries(inventory.stats.fileTypes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    
+    for (const [type, count] of topFileTypes) {
+      lines.push(`- ${type}: ${count} files`);
+    }
+    
+    // Add key directories
+    if (inventory.directories.length > 0) {
+      lines.push("", "**Key Directories:**");
+      const topLevelDirs = inventory.directories
+        .filter(d => !d.path.includes("/"))
+        .slice(0, 10);
+      
+      for (const dir of topLevelDirs) {
+        lines.push(`- ${dir.path}/ - ${dir.description}`);
+      }
+    }
+
+    lines.push("", "*Use this project structure information to better understand the codebase and locate relevant files.*");
+    
+    return lines.join("\n");
+  } catch (error) {
+    logger.warn("Failed to load inventory for agent prompt", { error, projectPath });
+    return null;
   }
 }

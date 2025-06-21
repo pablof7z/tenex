@@ -1,6 +1,18 @@
-import type { ClaudeCodeMessage } from "@/utils/agents/tools/claudeCode/types";
 import { logDebug, logError } from "@tenex/shared/logger";
 import chalk from "chalk";
+
+// Claude Code message types
+export interface ClaudeCodeMessage {
+  type: string;
+  content?: string;
+  conversationId?: string;
+  sessionId?: string;
+  cost?: number;
+  messageId?: string;
+  role?: string;
+  model?: string;
+  [key: string]: unknown;
+}
 
 export type MessageHandler = (message: ClaudeCodeMessage) => void | Promise<void>;
 

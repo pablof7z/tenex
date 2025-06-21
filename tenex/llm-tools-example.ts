@@ -1,4 +1,5 @@
 import { Message, igniteEngine, loadOpenRouterModels } from "multi-llm-ts";
+import type { FunctionCall, TimeToolArguments } from "./llm-tools-types";
 
 // Tool definition
 const GET_TIME_TOOL = {
@@ -26,7 +27,7 @@ const GET_TIME_TOOL = {
 };
 
 // Tool implementation
-function get_current_time(args: { timezone?: string; format?: string } = {}) {
+function get_current_time(args: TimeToolArguments = {}) {
   const now = new Date();
   const format = args.format || "24h";
 
@@ -62,16 +63,17 @@ export class FunctionCallParser {
     /(?:I need to|Let me|I'll)\s+(?:call|use|invoke)\s+the\s+([a-zA-Z_]\w*)\s+(?:function|tool)/gi,
   ];
 
-  parseFunctionCalls(text: string): Array<{ name: string; arguments: any }> {
-    const calls: Array<{ name: string; arguments: any }> = [];
+  parseFunctionCalls(text: string): FunctionCall[] {
+    const calls: FunctionCall[] = [];
 
     for (const pattern of this.patterns) {
-      let match;
+      let match: RegExpExecArray | null;
       pattern.lastIndex = 0; // Reset regex state
 
-      while ((match = pattern.exec(text)) !== null) {
+      match = pattern.exec(text);
+      while (match !== null) {
         const functionName = match[1];
-        let args = {};
+        let args: Record<string, unknown> = {};
 
         if (match[2]) {
           try {
@@ -92,6 +94,7 @@ export class FunctionCallParser {
         }
 
         calls.push({ name: functionName, arguments: args });
+        match = pattern.exec(text);
       }
     }
 
@@ -106,20 +109,22 @@ export class FunctionCallParser {
     return calls;
   }
 
-  private parseXMLParameters(xml: string): any {
-    const params: any = {};
+  private parseXMLParameters(xml: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
     const paramPattern = /<parameter[^>]*name="([^"]+)"[^>]*>([^<]*)<\/parameter>/g;
-    let match;
+    let match: RegExpExecArray | null;
 
-    while ((match = paramPattern.exec(xml)) !== null) {
+    match = paramPattern.exec(xml);
+    while (match !== null) {
       params[match[1]] = match[2];
+      match = paramPattern.exec(xml);
     }
 
     return params;
   }
 
-  private parseFunctionArguments(argsString: string): any {
-    const params: any = {};
+  private parseFunctionArguments(argsString: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
     const args = argsString.split(",").map((arg) => arg.trim());
 
     for (const arg of args) {
@@ -132,19 +137,21 @@ export class FunctionCallParser {
     return params;
   }
 
-  private parseKeyValuePairs(text: string): any {
-    const params: any = {};
+  private parseKeyValuePairs(text: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
     const kvPattern = /(\w+)[:=]\s*["']?([^"',\s}]+)["']?/g;
-    let match;
+    let match: RegExpExecArray | null;
 
-    while ((match = kvPattern.exec(text)) !== null) {
+    match = kvPattern.exec(text);
+    while (match !== null) {
       params[match[1]] = match[2];
+      match = kvPattern.exec(text);
     }
 
     return params;
   }
 
-  private parseIntentBasedCall(text: string): { name: string; arguments: any } | null {
+  private parseIntentBasedCall(text: string): FunctionCall | null {
     const timePatterns = [
       /what(?:'s| is) the (?:current )?time\s*(?:in\s+([^?]+))?/i,
       /tell me the time\s*(?:in\s+([^?]+))?/i,
@@ -256,8 +263,10 @@ You can call functions using any of these formats:
           console.log(`\nFinal response: ${finalResponse.content}`);
         }
       }
-    } catch (error: any) {
-      console.error(`Error with ${model.name}: ${error.message}`);
+    } catch (error) {
+      console.error(
+        `Error with ${model.name}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     console.log(`\n${"=".repeat(50)}`);

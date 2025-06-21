@@ -1,6 +1,5 @@
 import path from "node:path";
 import { AgentRegistry, createAgentSystem } from "@/agents";
-import type { Agent, AgentConfig } from "@/types/agent";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { ConversationManager } from "@/conversations";
@@ -9,6 +8,7 @@ import { ConversationPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
 import { initializeProjectContext } from "@/runtime";
+import type { Agent, AgentConfig } from "@/types/agent";
 import { formatError } from "@/utils/errors";
 import { NDKArticle, type NDKEvent } from "@nostr-dev-kit/ndk";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
@@ -22,10 +22,10 @@ export class EventHandler {
   private agentRegistry: AgentRegistry;
   private conversationManager: ConversationManager;
   private llmConfigManager: LLMConfigManager;
-  private llmService: LLMService;
-  private routingLLM: RoutingLLM;
-  private conversationRouter: ConversationRouter;
-  private conversationPublisher: ConversationPublisher;
+  private llmService!: LLMService;
+  private routingLLM!: RoutingLLM;
+  private conversationRouter!: ConversationRouter;
+  private conversationPublisher!: ConversationPublisher;
 
   constructor(private projectInfo: ProjectRuntimeInfo) {
     this.agentConfigs = new Map();
@@ -33,10 +33,6 @@ export class EventHandler {
     this.conversationManager = new ConversationManager(projectInfo.projectPath);
     this.llmConfigManager = new LLMConfigManager(projectInfo.projectPath);
     // Services will be initialized in initialize()
-    this.llmService = null as any;
-    this.routingLLM = null as any;
-    this.conversationRouter = null as any;
-    this.conversationPublisher = null as any;
   }
 
   async initialize(): Promise<void> {
@@ -75,7 +71,20 @@ export class EventHandler {
     await this.conversationManager.initialize();
 
     // Initialize routing system
-    this.routingLLM = new RoutingLLM(this.llmService);
+    // Check if there's a specific agent routing configuration
+    let routingConfig = "default";
+    try {
+      // Try to get agentRouting config, fall back to teamBuilding for backward compatibility
+      routingConfig = this.llmConfigManager.getDefaultConfig("agentRouting");
+    } catch {
+      try {
+        routingConfig = this.llmConfigManager.getDefaultConfig("teamBuilding");
+      } catch {
+        routingConfig = this.llmConfigManager.getDefaultConfig("default");
+      }
+    }
+    this.routingLLM = new RoutingLLM(this.llmService, routingConfig, this.projectInfo.projectPath);
+    logInfo(`Initialized RoutingLLM with configuration: ${routingConfig}`);
 
     // Get the initialized project context
     const projectContext = {
@@ -137,7 +146,6 @@ export class EventHandler {
       return;
     }
 
-
     logInfo(chalk.gray("\n📥 Event received:", event.id));
 
     const timestamp = new Date().toLocaleTimeString();
@@ -181,10 +189,15 @@ export class EventHandler {
 
     // Extract p-tags to identify mentioned agents
     const pTags = event.tags.filter((tag) => tag[0] === "p");
-    const mentionedPubkeys = pTags.map((tag) => tag[1]).filter((pubkey): pubkey is string => !!pubkey);
+    const mentionedPubkeys = pTags
+      .map((tag) => tag[1])
+      .filter((pubkey): pubkey is string => !!pubkey);
 
     if (mentionedPubkeys.length > 0) {
-      logInfo(chalk.gray("P-tags:  ") + chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned: ${mentionedPubkeys.join(", ")}`));
+      logInfo(
+        chalk.gray("P-tags:  ") +
+          chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned: ${mentionedPubkeys.join(", ")}`)
+      );
     }
 
     // Check if this message is directed to the system (project or agents)
@@ -192,20 +205,24 @@ export class EventHandler {
     if (pTags.length > 0) {
       const systemPubkeys = new Set([
         this.projectInfo.projectSigner.pubkey,
-        ...Array.from(this.projectInfo.agents.values()).map(a => a.pubkey)
+        ...Array.from(this.projectInfo.agents.values()).map((a) => a.pubkey),
       ]);
-      
-      const isDirectedToSystem = mentionedPubkeys.some(pubkey => systemPubkeys.has(pubkey));
-      
+
+      const isDirectedToSystem = mentionedPubkeys.some((pubkey) => systemPubkeys.has(pubkey));
+
       if (!isDirectedToSystem) {
-        logInfo(chalk.gray("Message is not directed to system (p-tags point to external users), skipping routing"));
+        logInfo(
+          chalk.gray(
+            "Message is not directed to system (p-tags point to external users), skipping routing"
+          )
+        );
         return;
       }
     }
 
     // Check if this event has any "e" tags (event references)
     const hasEventTag = event.tags.some((tag) => tag[0] === "E");
-    
+
     if (!hasEventTag) {
       // This is a new conversation - route through the routing LLM
       try {
@@ -247,7 +264,6 @@ export class EventHandler {
       logInfo(chalk.gray("P-tags:  ") + chalk.cyan(`${mentionedPubkeys.length} pubkeys mentioned`));
     }
 
-    // TODO: Implement direct chat message handling
     logInfo(chalk.yellow("Chat message handling not yet implemented"));
   }
 
@@ -310,7 +326,7 @@ export class EventHandler {
         await writeJsonFile(configPath, config);
         logInfo(chalk.green("✅ Updated project configuration"));
 
-        // TODO: Implement project context update
+        // Project context update would happen here if needed
       }
     } catch (error) {
       logInfo(chalk.yellow(`⚠️  Could not update config.json: ${formatError(error)}`));

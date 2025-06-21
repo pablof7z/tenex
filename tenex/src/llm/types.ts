@@ -1,23 +1,10 @@
+import type { LLMPreset, LLMSettings, ProviderAuth } from "@tenex/types/config";
 import type { Message } from "multi-llm-ts";
 
-export interface LLMConfig {
-  provider: string;
-  model: string;
-  enableCaching?: boolean;
-  temperature?: number;
-  maxTokens?: number;
-}
-
-export interface LLMConfiguration {
-  configurations: Record<string, LLMConfig>;
-  defaults: Record<string, string>;
-  credentials: Record<string, ProviderCredentials>;
-}
-
-export interface ProviderCredentials {
-  apiKey: string;
-  baseUrl?: string;
-}
+// Re-export the shared types
+export type LLMConfig = LLMPreset;
+export type ProviderCredentials = ProviderAuth;
+export type LLMConfiguration = LLMSettings;
 
 export interface LLMResponse {
   content: string;
@@ -42,6 +29,6 @@ export interface LLMMetadata {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
-  systemPrompt: string;
-  userPrompt: string;
+  systemPromptHash?: string;
+  userPromptHash?: string;
 }

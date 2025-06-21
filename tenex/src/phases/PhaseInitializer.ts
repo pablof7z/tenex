@@ -1,5 +1,5 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { logger } from "@tenex/shared";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
@@ -12,11 +12,11 @@ export abstract class BasePhaseInitializer implements PhaseInitializer {
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult>;
 
-  protected log(message: string, data?: any) {
+  protected log(message: string, data?: unknown) {
     logger.info(`[${this.phase.toUpperCase()} Phase] ${message}`, data);
   }
 
-  protected logError(message: string, error: any) {
+  protected logError(message: string, error: unknown) {
     logger.error(`[${this.phase.toUpperCase()} Phase] ${message}`, { error });
   }
 

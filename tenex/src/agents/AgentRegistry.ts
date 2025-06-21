@@ -1,10 +1,11 @@
 import path from "node:path";
+import type { Agent, AgentConfig } from "@/types/agent";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
+import { configurationService } from "@tenex/shared/services";
 import { nip19 } from "nostr-tools";
 import { generateSecretKey } from "nostr-tools";
-import type { Agent, AgentConfig } from "@/types/agent";
 
 interface AgentRegistryEntry {
   nsec: string;
@@ -27,16 +28,31 @@ export class AgentRegistry {
     // Ensure .tenex directory exists
     await ensureDirectory(path.join(this.projectPath, ".tenex"));
 
-    // Load existing registry if it exists
-    if (await fileExists(this.registryPath)) {
-      try {
-        const content = await readFile(this.registryPath, "utf-8");
-        this.registry = JSON.parse(content);
-        logger.info(`Loaded agent registry with ${Object.keys(this.registry).length} agents`);
-      } catch (error) {
-        logger.error("Failed to load agent registry", { error });
-        this.registry = {};
-      }
+    // Try to load agents from both global and project locations using ConfigurationService
+    try {
+      // Load project agents
+      const projectAgents = await this.loadAgentsFromPath(path.join(this.projectPath, ".tenex"));
+
+      // Load global agents
+      const globalAgents = await this.loadAgentsFromPath(
+        path.join(process.env.HOME || "~", ".tenex")
+      );
+
+      // Merge agents (project overrides global)
+      this.registry = { ...globalAgents, ...projectAgents };
+
+      const globalCount = Object.keys(globalAgents).length;
+      const projectCount = Object.keys(projectAgents).length;
+
+      logger.info(
+        `Loaded agent registry with ${Object.keys(this.registry).length} agents (${globalCount} global, ${projectCount} project)`
+      );
+    } catch (error) {
+      logger.warn(
+        "Failed to load agents through ConfigurationService, falling back to legacy loading",
+        { error }
+      );
+      await this.loadLegacyRegistry();
     }
 
     // Load agent configurations from .tenex/agents directory
@@ -44,6 +60,50 @@ export class AgentRegistry {
     if (await fileExists(agentsDir)) {
       // This would load agent configurations from individual files
       // For now, we'll rely on agents being created through ensureAgent
+    }
+  }
+
+  private async loadAgentsFromPath(basePath: string): Promise<Record<string, AgentRegistryEntry>> {
+    try {
+      const agentsConfig = await configurationService.loadAgentsConfig(basePath);
+      const registry: Record<string, AgentRegistryEntry> = {};
+
+      // Handle new AgentsJson format
+      if ("agents" in agentsConfig) {
+        for (const [name, config] of Object.entries(agentsConfig.agents)) {
+          // For now, generate nsec for agents that don't have one
+          // This is temporary until we have a proper nsec management system
+          const privateKey = generateSecretKey();
+          const nsec = nip19.nsecEncode(privateKey);
+
+          registry[name] = {
+            nsec,
+            file: `${name}.json`,
+            llmConfig: config.llmConfig,
+          };
+        }
+      }
+
+      return registry;
+    } catch (error) {
+      // Return empty registry if file doesn't exist
+      return {};
+    }
+  }
+
+  private async loadLegacyRegistry(): Promise<void> {
+    // Legacy loading from project's agents.json only
+    if (await fileExists(this.registryPath)) {
+      try {
+        const content = await readFile(this.registryPath, "utf-8");
+        this.registry = JSON.parse(content);
+        logger.info(
+          `Loaded legacy agent registry with ${Object.keys(this.registry).length} agents (project only)`
+        );
+      } catch (error) {
+        logger.error("Failed to load legacy agent registry", { error });
+        this.registry = {};
+      }
     }
   }
 

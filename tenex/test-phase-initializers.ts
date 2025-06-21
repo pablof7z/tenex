@@ -128,7 +128,10 @@ async function testPhaseInitializers() {
       }
 
       // Get updated conversation
-      const updatedConversation = conversationManager.getConversation(conversation.id)!;
+      const updatedConversation = conversationManager.getConversation(conversation.id);
+      if (!updatedConversation) {
+        throw new Error(`Failed to get conversation ${conversation.id}`);
+      }
 
       // Initialize the phase
       const result = await initializePhase(phase, updatedConversation, agents);
@@ -144,15 +147,23 @@ async function testPhaseInitializers() {
 
       if (result.metadata) {
         console.log("   Metadata:");
-        Object.entries(result.metadata).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(result.metadata)) {
           if (key === "assignedReviewers" && Array.isArray(value)) {
-            console.log(`     ${key}:`, value.map((r: any) => r.name).join(", "));
+            console.log(
+              `     ${key}:`,
+              value
+                .map((r: unknown) => {
+                  const reviewer = r as { name: string };
+                  return reviewer.name;
+                })
+                .join(", ")
+            );
           } else if (typeof value === "object") {
             console.log(`     ${key}:`, JSON.stringify(value, null, 2).split("\n").join("\n     "));
           } else {
             console.log(`     ${key}:`, value);
           }
-        });
+        }
       }
     } catch (error) {
       console.error("❌ Phase initialization failed:", error);

@@ -33,12 +33,12 @@ export const agentFragment: PromptFragment<AgentFragmentArgs> = {
   },
 };
 
-// Agent core fragment - basic agent identity  
-export const agentCoreFragment: PromptFragment<{}> = {
+// Agent core fragment - basic agent identity
+export const agentCoreFragment: PromptFragment<Record<string, never>> = {
   id: "agentCore",
   priority: 5,
   template: () => `You are an AI agent that helps users with tasks.
-You should be helpful, accurate, and follow instructions carefully.`
+You should be helpful, accurate, and follow instructions carefully.`,
 };
 
 // Agent profile fragment
@@ -52,20 +52,20 @@ interface AgentProfileArgs {
 }
 
 export const agentProfileFragment: PromptFragment<AgentProfileArgs> = {
-  id: "agentProfile", 
+  id: "agentProfile",
   priority: 15,
   template: ({ profile }) => {
     let prompt = `Your identity:
 - Name: ${profile.name}
 - Role: ${profile.role}
 - Description: ${profile.description}`;
-    
+
     if (profile.capabilities && profile.capabilities.length > 0) {
-      prompt += `\n- Capabilities: ${profile.capabilities.join(', ')}`;
+      prompt += `\n- Capabilities: ${profile.capabilities.join(", ")}`;
     }
-    
+
     return prompt;
-  }
+  },
 };
 
 // Auto-register

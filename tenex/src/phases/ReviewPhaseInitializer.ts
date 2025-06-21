@@ -1,6 +1,6 @@
-import type { Agent } from "@/types/agent";
 import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { BasePhaseInitializer } from "./PhaseInitializer";
 import type { PhaseInitializationResult } from "./types";
@@ -37,6 +37,12 @@ export class ReviewPhaseInitializer extends BasePhaseInitializer {
 
       // Select the primary reviewer
       const primaryReviewer = reviewAgents[0];
+      if (!primaryReviewer) {
+        return {
+          success: false,
+          message: "No primary reviewer could be selected",
+        };
+      }
 
       // Get execution summary
       const executionSummary =
