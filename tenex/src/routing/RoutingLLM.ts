@@ -129,7 +129,7 @@ export class RoutingLLM {
         configName: this.configName,
       });
 
-      const decision = this.parseRoutingDecision(response, availableAgents);
+      const decision = this.parseRoutingDecision(response.content, availableAgents);
 
       // Log the parsed decision
       logger.info("RoutingLLM.routeNewConversation - Parsed decision", {
@@ -159,7 +159,7 @@ export class RoutingLLM {
       const projectContext = await this.getProjectContextString();
       const projectInventory = await this.getProjectInventory();
 
-      const prompt = RoutingPromptBuilder.agentSelection({
+      const prompt = RoutingPromptBuilder.selectAgent({
         message: context.lastMessage,
         currentPhase: context.currentPhase,
         phaseHistory: context.phaseHistory,
@@ -169,7 +169,7 @@ export class RoutingLLM {
         projectInventory: projectInventory || undefined,
       });
 
-      const systemPrompt = getAgentSelectionSystemPrompt(projectContext);
+      const systemPrompt = getAgentSelectionSystemPrompt();
       const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
       logger.info("RoutingLLM.selectAgent - Sending to LLM", {
@@ -188,7 +188,7 @@ export class RoutingLLM {
         configName: this.configName,
       });
 
-      return this.parseAgentSelection(response, availableAgents);
+      return this.parseAgentSelection(response.content, availableAgents);
     } catch (error) {
       logger.error("Failed to select agent", { error });
       throw error;
@@ -211,7 +211,7 @@ export class RoutingLLM {
         projectInventory: projectInventory || undefined,
       });
 
-      const systemPrompt = getPhaseTransitionSystemPrompt(projectContext);
+      const systemPrompt = getPhaseTransitionSystemPrompt();
       const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
       logger.info("RoutingLLM.determinePhaseTransition - Sending to LLM", {
@@ -230,7 +230,7 @@ export class RoutingLLM {
         configName: this.configName,
       });
 
-      return this.parsePhaseTransition(response);
+      return this.parsePhaseTransition(response.content);
     } catch (error) {
       logger.error("Failed to determine phase transition", { error });
       throw error;
@@ -259,7 +259,7 @@ export class RoutingLLM {
         projectInventory: projectInventory || undefined,
       });
 
-      const systemPrompt = getFallbackRoutingSystemPrompt(projectContext);
+      const systemPrompt = getFallbackRoutingSystemPrompt();
       const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
 
       logger.info("RoutingLLM.fallbackRoute - Sending to LLM", {
@@ -278,7 +278,7 @@ export class RoutingLLM {
         configName: this.configName,
       });
 
-      return this.parseFallbackDecision(response, availableAgents);
+      return this.parseFallbackDecision(response.content, availableAgents);
     } catch (error) {
       logger.error("Failed to perform fallback routing", { error });
       throw error;

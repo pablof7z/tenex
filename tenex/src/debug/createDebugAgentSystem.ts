@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { logDebug, logError } from "@tenex/shared/logger";
 import { AgentRegistry } from "../agents/AgentRegistry";
-import { LLMConfigManager } from "../llm/ConfigManager";
+import { LLMConfigurationAdapter } from "../llm/LLMConfigurationAdapter";
 import { LLMService } from "../llm/LLMService";
 import { FragmentRegistry } from "../prompts/core/FragmentRegistry";
 import { PromptBuilder } from "../prompts/core/PromptBuilder";
@@ -28,7 +28,7 @@ export async function createDebugAgentSystem(
 ): Promise<DebugAgentSystem> {
   try {
     // Initialize LLM service
-    const configManager = new LLMConfigManager(config.projectPath);
+    const configManager = new LLMConfigurationAdapter(config.projectPath);
     await configManager.loadConfigurations();
     const llmService = new LLMService(configManager);
 

@@ -13,15 +13,15 @@ interface Engine {
   ) => Promise<{ stream: AsyncIterable<unknown> }>;
 }
 import { logger } from "@tenex/shared";
-import type { LLMConfigManager } from "./ConfigManager";
+import type { LLMConfigurationAdapter } from "./LLMConfigurationAdapter";
 import type { LLMConfig, LLMMetadata, LLMResponse, LLMStreamChunk } from "./types";
 
 export class LLMService {
   private engines: Map<string, Engine> = new Map();
   private models: Map<string, Model> = new Map();
-  private configManager: LLMConfigManager;
+  private configManager: LLMConfigurationAdapter;
 
-  constructor(configManager: LLMConfigManager) {
+  constructor(configManager: LLMConfigurationAdapter) {
     this.configManager = configManager;
   }
 

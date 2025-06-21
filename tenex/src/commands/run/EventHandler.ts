@@ -3,7 +3,8 @@ import { AgentRegistry } from "@/agents";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { ConversationManager } from "@/conversations";
-import { LLMConfigManager, LLMService } from "@/llm";
+import { LLMConfigurationAdapter } from "@/llm/LLMConfigurationAdapter";
+import { LLMService } from "@/llm";
 import { ConversationPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
@@ -21,7 +22,7 @@ export class EventHandler {
   private agentConfigs: Map<string, AgentConfig>;
   private agentRegistry: AgentRegistry;
   private conversationManager: ConversationManager;
-  private llmConfigManager: LLMConfigManager;
+  private llmConfigManager: LLMConfigurationAdapter;
   private llmService!: LLMService;
   private routingLLM!: RoutingLLM;
   private conversationRouter!: ConversationRouter;
@@ -31,7 +32,7 @@ export class EventHandler {
     this.agentConfigs = new Map();
     this.agentRegistry = new AgentRegistry(projectInfo.projectPath);
     this.conversationManager = new ConversationManager(projectInfo.projectPath);
-    this.llmConfigManager = new LLMConfigManager(projectInfo.projectPath);
+    this.llmConfigManager = new LLMConfigurationAdapter(projectInfo.projectPath);
     // Services will be initialized in initialize()
   }
 

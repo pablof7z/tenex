@@ -1,4 +1,4 @@
-import type { LLMConfigManager } from "@/llm/ConfigManager";
+import type { LLMConfigurationAdapter } from "@/llm/LLMConfigurationAdapter";
 import type { LLMService as ILLMService } from "@/llm/LLMService";
 import type { LLMConfig, LLMResponse } from "@/llm/types";
 import type { Message } from "multi-llm-ts";
@@ -63,13 +63,13 @@ export class MockLLMService implements Partial<ILLMService> {
   }
 }
 
-export class MockLLMConfigManager implements Partial<LLMConfigManager> {
+export class MockLLMConfigManager implements Partial<LLMConfigurationAdapter> {
   private configs: Map<string, LLMConfig> = new Map();
 
   constructor() {
     // Add default config
     this.configs.set("default", {
-      provider: "mock",
+      provider: "openai",
       model: "mock-model",
       temperature: 0.7,
     });
@@ -80,16 +80,36 @@ export class MockLLMConfigManager implements Partial<LLMConfigManager> {
     return Promise.resolve();
   }
 
-  async getConfig(name: string): Promise<LLMConfig | undefined> {
-    return this.configs.get(name);
+  getConfig(name: string): LLMConfig {
+    const config = this.configs.get(name);
+    if (!config) {
+      throw new Error(`Config ${name} not found`);
+    }
+    return config;
   }
 
-  getDefaultConfig(): LLMConfig | undefined {
-    return this.configs.get("default");
+  getDefaultConfig(purpose = "default"): string {
+    return purpose === "default" ? "default" : "default";
   }
 
   addConfig(name: string, config: LLMConfig): void {
     this.configs.set(name, config);
+  }
+
+  getCredentials(provider: string): any {
+    return { apiKey: "mock-key" };
+  }
+
+  getAllConfigNames(): string[] {
+    return Array.from(this.configs.keys());
+  }
+
+  hasConfig(name: string): boolean {
+    return this.configs.has(name);
+  }
+
+  getAvailableProviders(): string[] {
+    return ["openai"];
   }
 }
 

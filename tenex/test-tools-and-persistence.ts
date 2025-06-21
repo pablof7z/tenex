@@ -6,7 +6,7 @@ import { fileExists } from "@tenex/shared/fs";
 import { AgentRegistry } from "./src/agents";
 import { AgentExecutor } from "./src/agents/execution";
 import { ConversationManager } from "./src/conversations";
-import { LLMConfigManager, LLMService } from "./src/llm";
+import { LLMConfigurationAdapter, LLMService } from "./src/llm";
 import { ConversationPublisher } from "./src/nostr";
 import { getNDK, initNDK } from "./src/nostr/ndkClient";
 import { initializeProjectContext } from "./src/runtime";
@@ -44,7 +44,7 @@ async function testToolsAndPersistence() {
   // Initialize services
   console.log("\n📦 Initializing services...");
 
-  const llmConfigManager = new LLMConfigManager(projectPath);
+  const llmConfigManager = new LLMConfigurationAdapter(projectPath);
   await llmConfigManager.loadConfigurations();
   const llmService = new LLMService(llmConfigManager);
 

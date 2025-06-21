@@ -4,6 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { LLMConfigEditor } from "@/commands/setup/llm";
 import { toKebabCase } from "@/utils/agents";
+import { ProjectConfigurationService } from "@/utils/projectUtils";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -65,7 +66,7 @@ export class ProjectManager implements IProjectManager {
 
   async loadProject(projectPath: string): Promise<ProjectData> {
     try {
-      const configuration = await configurationService.loadConfiguration(projectPath);
+      const configuration = await ProjectConfigurationService.loadConfiguration(projectPath);
       const config = configuration.config as ProjectConfig;
 
       if (!config.projectNaddr) {
@@ -107,14 +108,7 @@ export class ProjectManager implements IProjectManager {
   }
 
   private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
-    // Fetch the project event directly using NDK
-    const event = await ndk.fetchEvent(naddr);
-
-    if (!event) {
-      throw new Error("Project not found on Nostr");
-    }
-
-    return event as NDKProject;
+    return ProjectConfigurationService.fetchProjectEvent(naddr);
   }
 
   private projectToProjectData(project: NDKProject): ProjectData {

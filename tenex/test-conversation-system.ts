@@ -6,7 +6,7 @@ import { logDebug, logError, logInfo, logger } from "@tenex/shared";
 import { fileExists } from "@tenex/shared/fs";
 import { AgentRegistry } from "./src/agents";
 import { ConversationManager } from "./src/conversations";
-import { LLMConfigManager, LLMService } from "./src/llm";
+import { LLMConfigurationAdapter, LLMService } from "./src/llm";
 import { ConversationPublisher } from "./src/nostr";
 import { getNDK, initNDK } from "./src/nostr/ndkClient";
 import { RoutingLLM } from "./src/routing";
@@ -69,7 +69,7 @@ async function testConversationSystem() {
   // 2. Initialize services
   console.log("\n📦 Initializing services...");
 
-  const llmConfigManager = new LLMConfigManager(projectPath);
+  const llmConfigManager = new LLMConfigurationAdapter(projectPath);
   await llmConfigManager.loadConfigurations();
   console.log("✅ LLM configurations loaded");
 

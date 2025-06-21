@@ -7,7 +7,7 @@ import { AgentRegistry } from "./src/agents";
 import { AgentExecutor } from "./src/agents/execution";
 import { ConversationManager } from "./src/conversations";
 import type { ConversationState } from "./src/conversations/types";
-import { LLMConfigManager, LLMService } from "./src/llm";
+import { LLMConfigurationAdapter, LLMService } from "./src/llm";
 import { ConversationPublisher } from "./src/nostr";
 import { getNDK, initNDK } from "./src/nostr/ndkClient";
 import { initializeProjectContext } from "./src/runtime";
@@ -43,7 +43,7 @@ async function testAgentExecution() {
   // Initialize services
   console.log("\n📦 Initializing services...");
 
-  const llmConfigManager = new LLMConfigManager(projectPath);
+  const llmConfigManager = new LLMConfigurationAdapter(projectPath);
   await llmConfigManager.loadConfigurations();
   const llmService = new LLMService(llmConfigManager);
   console.log("✅ LLM service ready");

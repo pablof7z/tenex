@@ -1,30 +1,31 @@
-import path from "node:path";
-import { logger } from "@tenex/shared";
-import { readFile } from "@tenex/shared/fs";
 import { configurationService } from "@tenex/shared/services";
-import type { LLMSettings } from "@tenex/types/config";
-import type { LLMConfig, LLMConfiguration, ProviderCredentials } from "./types";
+import type { LLMSettings, LLMPreset, ProviderAuth } from "@tenex/types/config";
+import { logger } from "@tenex/shared";
+import type { LLMConfig, ProviderCredentials } from "./types";
+import path from "node:path";
 
-export class LLMConfigManager {
-  private configuration?: LLMConfiguration;
-  private globalConfiguration?: LLMConfiguration;
-  private mergedConfiguration?: LLMConfiguration;
-  private configPath: string;
+/**
+ * Adapter that provides LLMConfigManager interface using ConfigurationService
+ * This replaces the duplicate LLMConfigManager class
+ */
+export class LLMConfigurationAdapter {
   private projectPath: string;
+  private mergedConfiguration: LLMSettings | null = null;
+  private globalConfiguration: LLMSettings | null = null;
+  private configuration: LLMSettings | null = null;
 
   constructor(projectPath: string) {
     this.projectPath = projectPath;
-    this.configPath = path.join(projectPath, ".tenex", "llms.json");
   }
 
   async loadConfigurations(): Promise<void> {
     try {
-      // Load project configuration
+      // Load project configuration using ConfigurationService
       const projectConfig = await configurationService.loadLLMConfig(
         path.join(this.projectPath, ".tenex")
       );
       this.configuration = projectConfig;
-      logger.info(`Loaded project LLM configurations from ${this.configPath}`);
+      logger.info(`Loaded project LLM configurations from ${this.projectPath}/.tenex/llms.json`);
 
       // Load global configuration
       try {
@@ -44,8 +45,7 @@ export class LLMConfigManager {
     }
   }
 
-
-  private mergeConfigurations(): LLMConfiguration {
+  private mergeConfigurations(): LLMSettings {
     if (!this.globalConfiguration) {
       return this.configuration || { presets: {}, selection: {}, auth: {} };
     }
@@ -54,7 +54,6 @@ export class LLMConfigManager {
       return this.globalConfiguration;
     }
 
-    // Merge configurations: project overrides global
     return {
       presets: {
         ...this.globalConfiguration.presets,
@@ -81,7 +80,7 @@ export class LLMConfigManager {
       throw new Error(`LLM preset "${name}" not found`);
     }
 
-    return preset;
+    return preset as LLMConfig;
   }
 
   getCredentials(provider: string): ProviderCredentials {
@@ -94,7 +93,7 @@ export class LLMConfigManager {
       throw new Error(`Auth for provider "${provider}" not found`);
     }
 
-    return auth;
+    return auth as ProviderCredentials;
   }
 
   getDefaultConfig(purpose = "default"): string {
@@ -117,5 +116,19 @@ export class LLMConfigManager {
       return [];
     }
     return Object.keys(this.mergedConfiguration.presets);
+  }
+
+  hasConfig(name: string): boolean {
+    if (!this.mergedConfiguration) {
+      return false;
+    }
+    return name in this.mergedConfiguration.presets;
+  }
+
+  getAvailableProviders(): string[] {
+    if (!this.mergedConfiguration) {
+      return [];
+    }
+    return Object.keys(this.mergedConfiguration.auth);
   }
 }

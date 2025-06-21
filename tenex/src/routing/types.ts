@@ -1,36 +1,41 @@
+import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type { AgentSummary } from "@/types/routing";
 
 export interface RoutingContext {
   conversationId: string;
-  currentPhase?: Phase;
-  messageContent: string;
-  availableAgents: AgentSummary[];
-  conversationHistory?: string;
+  currentPhase: Phase;
+  lastMessage: string;
+  phaseHistory: string;
+  conversationSummary: string;
 }
 
 export interface RoutingDecision {
   phase: Phase;
-  nextAgent?: string; // pubkey of the agent to handle the conversation
-  reasoning?: string;
-  confidence?: number;
+  reasoning: string;
+  confidence: number;
+  metadata?: Record<string, any>;
 }
 
 export interface PhaseTransitionDecision {
   shouldTransition: boolean;
   targetPhase?: Phase;
   reasoning: string;
+  confidence: number;
+  conditions: string[];
 }
 
 export interface AgentSelectionDecision {
-  agentPubkey: string;
+  selectedAgent: Agent;
   reasoning: string;
+  confidence: number;
+  alternativeAgents?: Agent[];
 }
 
 export interface FallbackRoutingDecision {
-  action: "set_phase" | "ask_user" | "handoff";
-  phase?: Phase;
-  message?: string;
-  agentPubkey?: string;
+  selectedAgent: Agent;
+  phase: Phase;
   reasoning: string;
+  confidence: number;
+  isUncertain: boolean;
 }

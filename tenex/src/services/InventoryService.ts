@@ -105,9 +105,8 @@ The inventory should be saved to: ${inventoryPath}
 Please analyze the entire project structure and create a detailed inventory in markdown format that includes:
 
 1. Project overview with description and detected technologies
-2. Statistics (total files, directories, sizes)
 3. Directory structure with descriptions
-4. File listings with meaningful descriptions
+4. File listings with meaningful descriptions (one-liner value prop)
 5. Any important patterns or architectural insights
 
 Focus on providing value to developers who need to quickly understand the codebase.`;

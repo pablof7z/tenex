@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { NDKEvent, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import { getNDK } from '@/nostr/ndkClient';
 import { ConversationManager } from '@/conversations';
-import { LLMService, LLMConfigManager } from '@/llm';
+import { LLMService, LLMConfigurationAdapter } from '@/llm';
 import { AgentRegistry } from '@/agents';
 import { RoutingLLM } from '@/routing';
 import { logInfo, logDebug, logError } from '@tenex/shared/logger';
@@ -24,7 +24,7 @@ export function createTestConversationCommand(): Command {
       try {
         // Initialize services
         const projectPath = process.cwd();
-        const llmConfigManager = new LLMConfigManager(projectPath);
+        const llmConfigManager = new LLMConfigurationAdapter(projectPath);
         await llmConfigManager.loadConfigurations();
         const llmService = new LLMService(llmConfigManager);
         

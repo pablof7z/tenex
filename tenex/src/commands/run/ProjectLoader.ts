@@ -1,5 +1,6 @@
 import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
+import { ProjectConfigurationService } from "@/utils/projectUtils";
 import { RulesManager } from "@/utils/RulesManager";
 import { NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
@@ -68,7 +69,7 @@ export class ProjectLoader {
 
   private async loadConfiguration(projectPath: string): Promise<TenexConfiguration> {
     try {
-      const configuration = await configurationService.loadConfiguration(projectPath);
+      const configuration = await ProjectConfigurationService.loadConfiguration(projectPath);
       const config = configuration.config as ProjectConfig;
 
       if (!config.projectNaddr) {
@@ -86,13 +87,7 @@ export class ProjectLoader {
   }
 
   private async fetchProjectEvent(naddr: string): Promise<NDKProject> {
-    const projectEvent = await getNDK().fetchEvent(naddr);
-
-    if (!projectEvent) {
-      throw new Error("Failed to fetch project event from Nostr");
-    }
-
-    return NDKProject.from(projectEvent);
+    return ProjectConfigurationService.fetchProjectEvent(naddr);
   }
 
   private async loadAgents(

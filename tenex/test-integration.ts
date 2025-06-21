@@ -5,7 +5,7 @@ import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { fileExists } from "@tenex/shared/fs";
 import { AgentRegistry } from "./src/agents";
 import { ConversationManager } from "./src/conversations";
-import { LLMConfigManager, LLMService } from "./src/llm";
+import { LLMConfigurationAdapter, LLMService } from "./src/llm";
 import { ConversationPublisher } from "./src/nostr";
 import { getNDK, initNDK } from "./src/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "./src/routing";
@@ -42,7 +42,7 @@ async function testIntegration() {
   // Initialize all services
   console.log("\n📦 Initializing services...");
 
-  const llmConfigManager = new LLMConfigManager(projectPath);
+  const llmConfigManager = new LLMConfigurationAdapter(projectPath);
   await llmConfigManager.loadConfigurations();
   const llmService = new LLMService(llmConfigManager);
   console.log("✅ LLM service ready");

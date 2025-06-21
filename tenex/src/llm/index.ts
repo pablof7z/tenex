@@ -1,3 +1,3 @@
 export { LLMService } from "./LLMService";
-export { LLMConfigManager } from "./ConfigManager";
+export { LLMConfigurationAdapter } from "./LLMConfigurationAdapter";
 export * from "./types";

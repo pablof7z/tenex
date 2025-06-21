@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { LLMService } from "../LLMService";
-import { LLMConfigManager } from "../LLMConfigManager";
+import { LLMConfigurationAdapter } from "../LLMConfigurationAdapter";
 import { MockLLMProvider } from "../providers/MockProvider";
 import type { LLMMessage, LLMResponse, LLMConfig } from "@/types/llm";
 import { createMockLLMConfigManager } from "@/test-utils/mocks";
 
 describe("LLMService", () => {
   let service: LLMService;
-  let configManager: LLMConfigManager;
+  let configManager: LLMConfigurationAdapter;
   let mockProvider: MockLLMProvider;
 
   beforeEach(() => {
