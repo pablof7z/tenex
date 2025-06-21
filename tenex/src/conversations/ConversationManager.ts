@@ -3,8 +3,8 @@ import type { Phase } from "@/types/conversation";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
-import type { ConversationMetadata, ConversationState } from "./types";
 import { FileSystemAdapter } from "./persistence";
+import type { ConversationMetadata, ConversationState } from "./types";
 
 export class ConversationManager {
   private conversations: Map<string, ConversationState> = new Map();
@@ -26,9 +26,7 @@ export class ConversationManager {
 
     // Setup autosave every 30 seconds
     this.autosaveInterval = setInterval(() => {
-      this.saveAllConversations().catch(error => 
-        logger.error('Autosave failed', { error })
-      );
+      this.saveAllConversations().catch((error) => logger.error("Autosave failed", { error }));
     }, 30000);
   }
 
@@ -50,6 +48,9 @@ export class ConversationManager {
 
     this.conversations.set(id, conversation);
     logger.info(`Created new conversation: ${title}`, { id });
+
+    // Save immediately after creation
+    await this.persistence.save(conversation);
 
     return conversation;
   }
@@ -167,13 +168,13 @@ Current understanding: ${conversation.metadata.summary || "No summary available"
 
       logger.info(`Loaded ${loadedCount} conversations from disk`);
     } catch (error) {
-      logger.error('Failed to load conversations', { error });
+      logger.error("Failed to load conversations", { error });
     }
   }
 
   private async saveAllConversations(): Promise<void> {
     const promises: Promise<void>[] = [];
-    
+
     for (const conversation of this.conversations.values()) {
       promises.push(this.persistence.save(conversation));
     }
@@ -210,7 +211,7 @@ Current understanding: ${conversation.metadata.summary || "No summary available"
   async cleanup(): Promise<void> {
     // Save all conversations before cleanup
     await this.saveAllConversations();
-    
+
     // Clear autosave interval
     if (this.autosaveInterval) {
       clearInterval(this.autosaveInterval);
