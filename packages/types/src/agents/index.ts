@@ -2,7 +2,17 @@
  * Agent configuration types
  */
 
-export interface AgentConfig {
+export interface AgentReference {
+    nsec: string;
+    file: string;
+    eventId?: string;
+}
+
+export interface AgentsJson {
+    [agentSlug: string]: AgentReference;
+}
+
+export interface AgentDefinition {
     name: string;
     role: string;
     expertise: string;
@@ -11,16 +21,12 @@ export interface AgentConfig {
     tools?: string[];
 }
 
-export interface AgentsJson {
-    agents: Record<string, AgentConfig>;
-}
-
-export interface TrackedAgentConfig extends AgentConfig {
+export interface TrackedAgentReference extends AgentReference {
     source: "global" | "project";
 }
 
 export interface TrackedAgentsJson {
-    agents: Record<string, TrackedAgentConfig>;
+    [agentSlug: string]: TrackedAgentReference;
 }
 
 export type AgentProfile = "junior" | "senior" | "architect" | "specialist";

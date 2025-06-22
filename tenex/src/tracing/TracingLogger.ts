@@ -1,4 +1,4 @@
-import { logger as baseLogger, type LogModule } from "@tenex/shared";
+import { type LogModule, logger as baseLogger } from "@tenex/shared";
 import type { TracingContext } from "./TracingContext";
 import { formatTracingContext } from "./TracingContext";
 
@@ -34,7 +34,7 @@ export class TracingLogger {
       ...tracingData,
       ...additionalContext,
     };
-    
+
     return [contextData];
   }
 
@@ -60,7 +60,7 @@ export class TracingLogger {
   error(message: string, error?: unknown, additionalContext?: Record<string, unknown>): void {
     const logger = this.module ? baseLogger.forModule(this.module) : baseLogger;
     const contextData = this.formatMessage(message, additionalContext);
-    
+
     // Log error with full context
     logger.error(message, { error, ...contextData[0] });
   }
@@ -97,7 +97,11 @@ export class TracingLogger {
   /**
    * Log a failed operation
    */
-  failOperation(operation: string, error: unknown, additionalContext?: Record<string, unknown>): void {
+  failOperation(
+    operation: string,
+    error: unknown,
+    additionalContext?: Record<string, unknown>
+  ): void {
     const duration = Date.now() - this.context.startTime;
     this.error(`Failed ${operation}`, error, {
       operation,
@@ -122,7 +126,11 @@ export class TracingLogger {
   /**
    * Log an event publication
    */
-  logEventPublished(eventId: string, eventType: string, additionalContext?: Record<string, unknown>): void {
+  logEventPublished(
+    eventId: string,
+    eventType: string,
+    additionalContext?: Record<string, unknown>
+  ): void {
     this.info(`Published ${eventType} event`, {
       event: "event_published",
       eventId,
@@ -134,7 +142,11 @@ export class TracingLogger {
   /**
    * Log an event receipt
    */
-  logEventReceived(eventId: string, eventType: string, additionalContext?: Record<string, unknown>): void {
+  logEventReceived(
+    eventId: string,
+    eventType: string,
+    additionalContext?: Record<string, unknown>
+  ): void {
     this.info(`Received ${eventType} event`, {
       event: "event_received",
       eventId,
@@ -146,7 +158,11 @@ export class TracingLogger {
   /**
    * Log LLM interaction
    */
-  logLLMRequest(model: string, promptTokens?: number, additionalContext?: Record<string, unknown>): void {
+  logLLMRequest(
+    model: string,
+    promptTokens?: number,
+    additionalContext?: Record<string, unknown>
+  ): void {
     this.debug(`LLM request to ${model}`, {
       event: "llm_request",
       model,

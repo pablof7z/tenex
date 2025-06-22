@@ -1,12 +1,11 @@
 import type { ConversationState } from "@/conversations/types";
+import { getNDK } from "@/nostr/ndkClient";
 import { getProjectContext } from "@/runtime";
-import { InventoryService } from "@/services/InventoryService";
+import { updateInventory } from "@/utils/inventory";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import { getNDK } from "@/nostr/ndkClient";
 import { logger } from "@tenex/shared";
-import { BasePhaseInitializer } from "./PhaseInitializer";
-import type { PhaseInitializationResult } from "./types";
+import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**
  * Chores Phase Initializer
@@ -15,14 +14,14 @@ import type { PhaseInitializationResult } from "./types";
  * including updating the project inventory with changes made during
  * the conversation.
  */
-export class ChoresPhaseInitializer extends BasePhaseInitializer {
+export class ChoresPhaseInitializer implements PhaseInitializer {
   phase: Phase = "chores";
 
   async initialize(
     conversation: ConversationState,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
-    this.log("Initializing chores phase", {
+    logger.info("[CHORES Phase] Initializing chores phase", {
       conversationId: conversation.id,
       title: conversation.title,
     });
@@ -36,7 +35,7 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
       const changedFiles = this.extractChangedFiles(conversation);
 
       if (changedFiles.length === 0) {
-        this.log("No file changes detected, skipping inventory update");
+        logger.info("[CHORES Phase] No file changes detected, skipping inventory update");
         return {
           success: true,
           message: "Chores phase complete. No inventory update needed.",
@@ -48,18 +47,15 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
         };
       }
 
-      // Create inventory service and update inventory
-      const inventoryService = new InventoryService(projectContext.projectPath);
-
-      this.log("Running inventory update with Claude Code", {
+      logger.info("[CHORES Phase] Running inventory update with Claude Code", {
         changedFilesCount: changedFiles.length,
         files: changedFiles.slice(0, 10), // Log first 10 files
       });
 
       try {
-        await inventoryService.updateInventory(changedFiles, signer, conversation.id);
+        await updateInventory(projectContext.projectPath, changedFiles, signer, conversation.id);
 
-        this.log("Inventory update started with Claude Code");
+        logger.info("[CHORES Phase] Inventory update started with Claude Code");
 
         return {
           success: true,
@@ -71,8 +67,8 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
           },
         };
       } catch (error) {
-        this.logError("Failed to start inventory update", error);
-        
+        logger.error("[CHORES Phase] Failed to start inventory update", { error });
+
         // Don't fail the phase if inventory update fails
         return {
           success: true,
@@ -85,7 +81,7 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
         };
       }
     } catch (error) {
-      this.logError("Failed to initialize chores phase", error);
+      logger.error("[CHORES Phase] Failed to initialize chores phase", { error });
       return {
         success: false,
         message: `Chores phase initialization failed: ${error}`,
@@ -103,7 +99,7 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
     if (conversation.metadata.execute_files) {
       const executeFiles = conversation.metadata.execute_files;
       if (Array.isArray(executeFiles)) {
-        executeFiles.forEach(file => changedFiles.add(file));
+        executeFiles.forEach((file) => changedFiles.add(file));
       }
     }
 
@@ -112,7 +108,7 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
     for (const event of conversation.history) {
       if (event.content) {
         const fileMatches = this.extractFilePathsFromContent(event.content);
-        fileMatches.forEach(file => changedFiles.add(file));
+        fileMatches.forEach((file) => changedFiles.add(file));
       }
     }
 
@@ -130,7 +126,7 @@ export class ChoresPhaseInitializer extends BasePhaseInitializer {
    */
   private extractFilePathsFromContent(content: string): string[] {
     const files: string[] = [];
-    
+
     // Common patterns for file mentions
     const patterns = [
       /(?:created|modified|updated|wrote|edited)\s+(?:file\s+)?[`"]?([^\s`"]+\.[a-zA-Z]+)[`"]?/gi,

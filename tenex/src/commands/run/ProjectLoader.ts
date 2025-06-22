@@ -1,8 +1,6 @@
 import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
-import { ProjectConfigurationService } from "@/utils/projectUtils";
-import { RulesManager } from "@/utils/RulesManager";
-import { NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner, type NDKProject } from "@nostr-dev-kit/ndk";
 import * as fileSystem from "@tenex/shared/fs";
 import { logError, logInfo } from "@tenex/shared/node";
 import { configurationService } from "@tenex/shared/services";
@@ -30,7 +28,6 @@ export interface ProjectRuntimeInfo {
   projectId: string;
   projectSigner: NDKPrivateKeySigner;
   agents: Map<string, Agent>;
-  rulesManager: RulesManager;
 }
 
 export class ProjectLoader {
@@ -42,15 +39,7 @@ export class ProjectLoader {
     // Load agents
     const agents = await this.loadAgents(projectEvent, configuration, projectPath);
 
-    // Initialize rules manager
-    const rulesManager = new RulesManager(projectPath);
-    await rulesManager.initialize();
-
-    // Parse rule mappings from project event
-    const ruleMappings = rulesManager.parseRuleTags(projectEvent);
-
-    // Fetch and cache rules
-    await rulesManager.fetchAndCacheRules(ruleMappings);
+    // Rules management removed - was unused functionality
 
     // Create project signer
     const projectSigner = config.nsec
@@ -62,14 +51,13 @@ export class ProjectLoader {
       config,
       projectPath,
       projectSigner,
-      agents,
-      rulesManager
+      agents
     );
   }
 
   private async loadConfiguration(projectPath: string): Promise<TenexConfiguration> {
     try {
-      const configuration = await ProjectConfigurationService.loadConfiguration(projectPath);
+      const configuration = await configurationService.loadProjectConfig(projectPath);
       const config = configuration.config as ProjectConfig;
 
       if (!config.projectNaddr) {
@@ -87,7 +75,12 @@ export class ProjectLoader {
   }
 
   private async fetchProjectEvent(naddr: string): Promise<NDKProject> {
-    return ProjectConfigurationService.fetchProjectEvent(naddr);
+    const ndk = getNDK();
+    const event = await ndk.fetchEvent(naddr);
+    if (!event) {
+      throw new Error(`Project event not found: ${naddr}`);
+    }
+    return event as NDKProject;
   }
 
   private async loadAgents(
@@ -103,7 +96,6 @@ export class ProjectLoader {
 
     // Get agent event IDs from project tags
     const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
-
 
     for (const tag of agentTags) {
       const eventId = tag[1];
@@ -161,8 +153,7 @@ export class ProjectLoader {
     config: ProjectConfig,
     projectPath: string,
     projectSigner: NDKPrivateKeySigner,
-    agents: Map<string, Agent>,
-    rulesManager: RulesManager
+    agents: Map<string, Agent>
   ): ProjectRuntimeInfo {
     const titleTag = projectEvent.tags.find((tag) => tag[0] === "title");
     const repoTag = projectEvent.tags.find((tag) => tag[0] === "repo");
@@ -177,7 +168,6 @@ export class ProjectLoader {
       projectId: dTag?.[1] || "",
       projectSigner,
       agents,
-      rulesManager,
     };
   }
 }

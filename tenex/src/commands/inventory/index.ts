@@ -1,10 +1,10 @@
-import { Command } from "commander";
-import { logger } from "@tenex/shared";
-import { InventoryService } from "@/services/InventoryService";
-import { initializeProjectContext, getProjectContext } from "@/runtime";
+import * as path from "node:path";
 import { ProjectLoader } from "@/commands/run/ProjectLoader";
 import { getNDK } from "@/nostr/ndkClient";
-import * as path from "node:path";
+import { getProjectContext, initializeProjectContext } from "@/runtime";
+import { generateInventory, updateInventory } from "@/utils/inventory";
+import { logger } from "@tenex/shared";
+import { Command } from "commander";
 
 export const inventoryCommand = new Command("inventory")
   .description("Manage project inventory")
@@ -19,7 +19,7 @@ inventoryCommand
   .action(async (options) => {
     try {
       const projectPath = options.path || process.cwd();
-      
+
       // Initialize runtime
       const projectLoader = new ProjectLoader();
       const projectInfo = await projectLoader.loadProject(projectPath);
@@ -35,8 +35,8 @@ inventoryCommand
 
       logger.info("Generating project inventory", { projectPath });
 
-      const inventoryService = new InventoryService(projectPath);
-      await inventoryService.generateInventory(
+      await generateInventory(
+        projectPath,
         projectContext.projectSigner,
         "manual-inventory-generation"
       );
@@ -57,7 +57,7 @@ inventoryCommand
   .action(async (files, options) => {
     try {
       const projectPath = options.path || process.cwd();
-      
+
       // Initialize runtime
       const projectLoader = new ProjectLoader();
       const projectInfo = await projectLoader.loadProject(projectPath);
@@ -71,11 +71,10 @@ inventoryCommand
       });
       const projectContext = getProjectContext();
 
-      const inventoryService = new InventoryService(projectPath);
-      
       logger.info("Updating inventory for files", { files });
 
-      await inventoryService.updateInventory(
+      await updateInventory(
+        projectPath,
         files,
         projectContext.projectSigner,
         "manual-inventory-update"

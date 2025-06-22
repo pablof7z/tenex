@@ -1,7 +1,2 @@
-export * from "./PhaseInitializer";
-export * from "./ChatPhaseInitializer";
-export * from "./ChoresPhaseInitializer";
-export * from "./PlanPhaseInitializer";
-export * from "./ExecutePhaseInitializer";
-export * from "./ReviewPhaseInitializer";
-export * from "./PhaseInitializerFactory";
+export * from "./types";
+export { initializePhase } from "./phaseInitializers";

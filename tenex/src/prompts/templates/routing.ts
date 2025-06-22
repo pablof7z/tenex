@@ -24,7 +24,10 @@ export function buildNewConversationRoutingPrompt(args: RoutingPromptArgs): stri
     });
 
   if (args.projectContext || args.projectInventory) {
-    const enrichedContext = formatEnrichedProjectContext(args.projectContext, args.projectInventory);
+    const enrichedContext = formatEnrichedProjectContext(
+      args.projectContext,
+      args.projectInventory
+    );
     promptBuilder = promptBuilder.add("base-context", {
       content: enrichedContext,
     });
@@ -85,11 +88,15 @@ export function buildSelectAgentRoutingPrompt(args: RoutingPromptArgs): string {
       content: "You are selecting the best agent for the current task.",
     })
     .add("task-description", {
-      content: "Choose the most appropriate agent based on the conversation context and requirements.",
+      content:
+        "Choose the most appropriate agent based on the conversation context and requirements.",
     });
 
   if (args.projectContext || args.projectInventory) {
-    const enrichedContext = formatEnrichedProjectContext(args.projectContext, args.projectInventory);
+    const enrichedContext = formatEnrichedProjectContext(
+      args.projectContext,
+      args.projectInventory
+    );
     promptBuilder = promptBuilder.add("base-context", {
       content: enrichedContext,
     });
@@ -121,14 +128,18 @@ export function buildFallbackRoutingPrompt(args: RoutingPromptArgs): string {
 
   let promptBuilder = builder
     .add("base-context", {
-      content: "You are performing fallback routing when the primary system couldn't make a decision.",
+      content:
+        "You are performing fallback routing when the primary system couldn't make a decision.",
     })
     .add("task-description", {
       content: "Make the best possible routing decision with limited information.",
     });
 
   if (args.projectContext || args.projectInventory) {
-    const enrichedContext = formatEnrichedProjectContext(args.projectContext, args.projectInventory);
+    const enrichedContext = formatEnrichedProjectContext(
+      args.projectContext,
+      args.projectInventory
+    );
     promptBuilder = promptBuilder.add("base-context", {
       content: enrichedContext,
     });
@@ -155,10 +166,7 @@ export function buildFallbackRoutingPrompt(args: RoutingPromptArgs): string {
     .build();
 }
 
-function formatEnrichedProjectContext(
-  basicContext?: string,
-  inventory?: string
-): string {
+function formatEnrichedProjectContext(basicContext?: string, inventory?: string): string {
   const sections: string[] = [];
 
   sections.push("## Project Context\n");

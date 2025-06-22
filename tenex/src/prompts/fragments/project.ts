@@ -1,6 +1,5 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
-import { createValidator, hasProperty, isObject, validators } from "../core/validation";
 
 interface ProjectFragmentArgs {
   project: {
@@ -12,19 +11,13 @@ interface ProjectFragmentArgs {
   detailed?: boolean;
 }
 
-const validateProjectArgs = createValidator<ProjectFragmentArgs>(
-  [
-    (args): args is ProjectFragmentArgs =>
-      isObject(args) &&
-      hasProperty(args, "project") &&
-      isObject(args.project) &&
-      validators.hasRequiredString("name")(args.project) &&
-      validators.hasOptionalString("description")(args.project) &&
-      validators.hasOptionalStringArray("tags")(args.project) &&
-      validators.hasOptionalBoolean("detailed")(args),
-  ],
-  (args) => `Received: ${JSON.stringify(args, null, 2)}`
-);
+const validateProjectArgs = (args: unknown): args is ProjectFragmentArgs => {
+  if (!args || typeof args !== "object" || !("project" in args)) {
+    return false;
+  }
+  const obj = args as any;
+  return obj.project && typeof obj.project.name === "string";
+};
 
 export const projectFragment: PromptFragment<ProjectFragmentArgs> = {
   id: "project-context",

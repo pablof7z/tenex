@@ -1,4 +1,6 @@
-import type { LLMService } from "@/llm";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import type { LLMService, Message } from "@/core/llm/types";
 import {
   RoutingPromptBuilder,
   extractJSON,
@@ -13,9 +15,6 @@ import type { AgentSummary } from "@/types/routing";
 import { formatProjectContextForPrompt, getProjectContext } from "@/utils/project";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
-import { Message } from "multi-llm-ts";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { configurationService } from "@tenex/shared/services";
 import type { ProjectConfig } from "@tenex/types/config";
 import type {
@@ -71,14 +70,14 @@ export class RoutingLLM {
       const projectConfig = config.config as ProjectConfig;
       const inventoryPath = projectConfig?.paths?.inventory || "context/INVENTORY.md";
       const fullPath = path.join(this.projectPath, inventoryPath);
-      
+
       // Try to read inventory file
       const inventory = await fs.readFile(fullPath, "utf-8");
-      
+
       this.cachedInventory = inventory;
       this.inventoryCacheTime = now;
       logger.debug("Loaded project inventory for routing");
-      
+
       return inventory;
     } catch (error) {
       logger.debug("No project inventory found", {
@@ -109,7 +108,10 @@ export class RoutingLLM {
       });
 
       const systemPrompt = getRoutingSystemPrompt(projectContext);
-      const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ];
 
       // Log the full request
       logger.info("RoutingLLM.routeNewConversation - Sending to LLM", {
@@ -121,7 +123,7 @@ export class RoutingLLM {
         hasInventory: !!projectInventory,
       });
 
-      const response = await this.llmService.complete(this.configName, messages);
+      const response = await this.llmService.complete({ messages });
 
       // Log the raw response
       logger.info("RoutingLLM.routeNewConversation - Received response", {
@@ -170,7 +172,10 @@ export class RoutingLLM {
       });
 
       const systemPrompt = getAgentSelectionSystemPrompt();
-      const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ];
 
       logger.info("RoutingLLM.selectAgent - Sending to LLM", {
         systemPrompt,
@@ -181,7 +186,7 @@ export class RoutingLLM {
         hasInventory: !!projectInventory,
       });
 
-      const response = await this.llmService.complete(this.configName, messages);
+      const response = await this.llmService.complete({ messages });
 
       logger.info("RoutingLLM.selectAgent - Received response", {
         response,
@@ -192,6 +197,70 @@ export class RoutingLLM {
     } catch (error) {
       logger.error("Failed to select agent", { error });
       throw error;
+    }
+  }
+
+  async routeNextAction(
+    conversation: Conversation,
+    lastMessage: string,
+    availableAgents: Agent[]
+  ): Promise<RoutingDecision> {
+    try {
+      logger.info("RoutingLLM.routeNextAction - Starting", {
+        conversationId: conversation.id,
+        currentPhase: conversation.phase,
+        availableAgentsCount: availableAgents.length,
+      });
+
+      // Build routing context
+      const context: RoutingContext = {
+        conversationId: conversation.id,
+        currentPhase: conversation.phase,
+        lastMessage,
+        phaseHistory: conversation.metadata.phaseHistory || "",
+        conversationSummary: conversation.metadata.summary || "",
+      };
+
+      // First check if we should transition phases
+      const transitionDecision = await this.determinePhaseTransition(conversation, context);
+
+      if (transitionDecision.shouldTransition && transitionDecision.targetPhase) {
+        logger.info("RoutingLLM.routeNextAction - Phase transition decided", {
+          fromPhase: conversation.phase,
+          toPhase: transitionDecision.targetPhase,
+          reasoning: transitionDecision.reasoning,
+        });
+        return {
+          phase: transitionDecision.targetPhase,
+          reasoning: transitionDecision.reasoning,
+          confidence: transitionDecision.confidence,
+        };
+      }
+
+      // If no transition, select the next agent for current phase
+      const agentDecision = await this.selectAgent(context, availableAgents);
+
+      const result: RoutingDecision = {
+        phase: conversation.phase,
+        nextAgent: agentDecision.selectedAgent.pubkey,
+        reasoning: agentDecision.reasoning,
+        confidence: agentDecision.confidence,
+      };
+
+      logger.info("RoutingLLM.routeNextAction - Agent selection decided", {
+        phase: conversation.phase,
+        selectedAgent: agentDecision.selectedAgent.name,
+        reasoning: agentDecision.reasoning,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error("Error in routeNextAction", { error });
+      return {
+        phase: conversation.phase,
+        reasoning: "Error occurred, maintaining current phase",
+        confidence: 0.5,
+      };
     }
   }
 
@@ -212,7 +281,10 @@ export class RoutingLLM {
       });
 
       const systemPrompt = getPhaseTransitionSystemPrompt();
-      const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ];
 
       logger.info("RoutingLLM.determinePhaseTransition - Sending to LLM", {
         systemPrompt,
@@ -223,7 +295,7 @@ export class RoutingLLM {
         hasInventory: !!projectInventory,
       });
 
-      const response = await this.llmService.complete(this.configName, messages);
+      const response = await this.llmService.complete({ messages });
 
       logger.info("RoutingLLM.determinePhaseTransition - Received response", {
         response,
@@ -237,10 +309,7 @@ export class RoutingLLM {
     }
   }
 
-  async fallbackRoute(
-    event: NDKEvent,
-    availableAgents: Agent[]
-  ): Promise<FallbackRoutingDecision> {
+  async fallbackRoute(event: NDKEvent, availableAgents: Agent[]): Promise<FallbackRoutingDecision> {
     try {
       const agentSummaries: AgentSummary[] = availableAgents.map((agent) => ({
         name: agent.name,
@@ -260,7 +329,10 @@ export class RoutingLLM {
       });
 
       const systemPrompt = getFallbackRoutingSystemPrompt();
-      const messages = [new Message("system", systemPrompt), new Message("user", prompt)];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ];
 
       logger.info("RoutingLLM.fallbackRoute - Sending to LLM", {
         systemPrompt,
@@ -271,7 +343,7 @@ export class RoutingLLM {
         hasInventory: !!projectInventory,
       });
 
-      const response = await this.llmService.complete(this.configName, messages);
+      const response = await this.llmService.complete({ messages });
 
       logger.info("RoutingLLM.fallbackRoute - Received response", {
         response,
@@ -287,8 +359,10 @@ export class RoutingLLM {
 
   private parseRoutingDecision(response: string, availableAgents: Agent[]): RoutingDecision {
     try {
-      const json = extractJSON(response);
-      const parsed = JSON.parse(json);
+      const parsed = extractJSON<{ phase: string; reasoning?: string; confidence?: number; metadata?: any }>(response);
+      if (!parsed) {
+        throw new Error("Failed to extract JSON from response");
+      }
 
       const phase = this.validatePhase(parsed.phase);
       const confidence = this.validateConfidence(parsed.confidence);
@@ -313,8 +387,15 @@ export class RoutingLLM {
 
   private parseAgentSelection(response: string, availableAgents: Agent[]): AgentSelectionDecision {
     try {
-      const json = extractJSON(response);
-      const parsed = JSON.parse(json);
+      const parsed = extractJSON<{
+        agent: string;
+        reasoning?: string;
+        confidence?: number;
+        alternatives?: string[];
+      }>(response);
+      if (!parsed) {
+        throw new Error("Failed to extract JSON from response");
+      }
 
       // Find the selected agent
       const selectedAgent = availableAgents.find(
@@ -334,8 +415,12 @@ export class RoutingLLM {
     } catch (error) {
       logger.error("Failed to parse agent selection", { response, error });
       // Fallback to first available agent
+      const firstAgent = availableAgents[0];
+      if (!firstAgent) {
+        throw new Error("No available agents to select from");
+      }
       return {
-        selectedAgent: availableAgents[0],
+        selectedAgent: firstAgent,
         reasoning: "Failed to parse agent selection, using first available agent",
         confidence: 0.3,
         alternativeAgents: availableAgents.slice(1, 3),
@@ -345,8 +430,16 @@ export class RoutingLLM {
 
   private parsePhaseTransition(response: string): PhaseTransitionDecision {
     try {
-      const json = extractJSON(response);
-      const parsed = JSON.parse(json);
+      const parsed = extractJSON<{
+        shouldTransition: boolean;
+        targetPhase?: string;
+        reasoning?: string;
+        confidence?: number;
+        conditions?: string[];
+      }>(response);
+      if (!parsed) {
+        throw new Error("Failed to extract JSON from response");
+      }
 
       return {
         shouldTransition: Boolean(parsed.shouldTransition),
@@ -372,8 +465,16 @@ export class RoutingLLM {
     availableAgents: Agent[]
   ): FallbackRoutingDecision {
     try {
-      const json = extractJSON(response);
-      const parsed = JSON.parse(json);
+      const parsed = extractJSON<{
+        agent: string;
+        phase: string;
+        reasoning?: string;
+        confidence?: number;
+        isUncertain?: boolean;
+      }>(response);
+      if (!parsed) {
+        throw new Error("Failed to extract JSON from response");
+      }
 
       const selectedAgent = availableAgents.find(
         (agent) => agent.name === parsed.agent || agent.pubkey === parsed.agent
@@ -393,8 +494,12 @@ export class RoutingLLM {
     } catch (error) {
       logger.error("Failed to parse fallback decision", { response, error });
       // Ultimate fallback
+      const firstAgent = availableAgents[0];
+      if (!firstAgent) {
+        throw new Error("No available agents for fallback decision");
+      }
       return {
-        selectedAgent: availableAgents[0],
+        selectedAgent: firstAgent,
         phase: "chat",
         reasoning: "Failed to parse fallback decision, using defaults",
         confidence: 0.2,
@@ -422,7 +527,9 @@ export class RoutingLLM {
     if (!Array.isArray(alternatives)) return [];
 
     return alternatives
-      .map((alt: string) => availableAgents.find((agent) => agent.name === alt || agent.pubkey === alt))
+      .map((alt: string) =>
+        availableAgents.find((agent) => agent.name === alt || agent.pubkey === alt)
+      )
       .filter((agent): agent is Agent => agent !== undefined)
       .slice(0, 3); // Maximum 3 alternatives
   }

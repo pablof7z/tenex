@@ -53,6 +53,20 @@ export class ToolDetector {
         rawMatch: match[0],
       }),
     },
+
+    // Claude Code pattern: <claude_code mode="run|plan">prompt</claude_code>
+    {
+      pattern: /<claude_code(?:\s+mode="(run|plan)")?>([^<]*)<\/claude_code>/gs,
+      parser: (match) => ({
+        toolName: "claude_code",
+        action: "execute",
+        parameters: {
+          mode: match[1] || "run",
+          prompt: match[2]?.trim() || "",
+        },
+        rawMatch: match[0],
+      }),
+    },
   ];
 
   /**

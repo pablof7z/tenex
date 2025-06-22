@@ -32,8 +32,9 @@ export interface ToolExecutionResult {
 
 export interface AgentPromptContext {
   systemPrompt: string;
-  conversationHistory: string;
+  conversationHistory?: string;
+  conversationContext?: string; // enhanced version uses this
   phaseContext: string;
-  availableTools: string[];
-  constraints: string[];
+  availableTools?: string[];
+  constraints?: string[];
 }

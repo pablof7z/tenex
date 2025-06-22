@@ -2,13 +2,13 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
-import { ClaudeCodeExecutor } from "@/tools";
+import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { BasePhaseInitializer } from "./PhaseInitializer";
-import type { PhaseInitializationResult } from "./types";
+import { logger } from "@tenex/shared";
+import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**
  * Execute Phase Initializer
@@ -16,14 +16,14 @@ import type { PhaseInitializationResult } from "./types";
  * In the execute phase, we create a new git branch and trigger
  * Claude Code CLI to implement the plan.
  */
-export class ExecutePhaseInitializer extends BasePhaseInitializer {
+export class ExecutePhaseInitializer implements PhaseInitializer {
   phase: Phase = "execute";
 
   async initialize(
     conversation: ConversationState,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
-    this.log("Initializing execute phase", {
+    logger.info("[EXECUTE Phase] Initializing execute phase", {
       conversationId: conversation.id,
       title: conversation.title,
       previousPhase: "plan",
@@ -34,8 +34,12 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
 
       // Find an agent suitable for execution
       const executionAgent =
-        this.findAgentByRole(availableAgents, "developer") ||
-        this.findAgentByExpertise(availableAgents, ["implementation", "coding", "development"]) ||
+        availableAgents.find((agent) => agent.role.toLowerCase().includes("developer")) ||
+        availableAgents.find((agent) =>
+          ["implementation", "coding", "development"].some((keyword) =>
+            agent.expertise.toLowerCase().includes(keyword.toLowerCase())
+          )
+        ) ||
         availableAgents[0]; // Fallback to first available agent
 
       if (!executionAgent) {
@@ -72,7 +76,7 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
         },
       };
     } catch (error) {
-      this.logError("Failed to initialize execute phase", error);
+      logger.error("[EXECUTE Phase] Failed to initialize execute phase", { error });
       return {
         success: false,
         message: `Execute phase initialization failed: ${error}`,
@@ -102,7 +106,7 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
           stdio: "ignore",
         });
       } catch {
-        this.log("Not a git repository, skipping branch creation");
+        logger.info("[EXECUTE Phase] Not a git repository, skipping branch creation");
         return "no-git";
       }
 
@@ -112,10 +116,10 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
         stdio: "pipe",
       });
 
-      this.log("Created execution branch", { branchName });
+      logger.info("[EXECUTE Phase] Created execution branch", { branchName });
       return branchName;
     } catch (error) {
-      this.logError("Failed to create git branch", error);
+      logger.error("[EXECUTE Phase] Failed to create git branch", { error });
       // Continue without branch if git operations fail
       return "main";
     }
@@ -129,59 +133,59 @@ export class ExecutePhaseInitializer extends BasePhaseInitializer {
     try {
       const projectContext = getProjectContext();
 
-      // Get signer from project context and NDK from global
-      const { getNDK } = await import("@/nostr/ndkClient");
-      const ndk = getNDK();
-      const signer = projectContext.projectSigner;
-
-      // Get the root event from the conversation
-      const rootEvent = conversation.history[0];
-      if (!rootEvent) {
-        this.logError("No root event found in conversation", new Error("Missing root event"));
-        return false;
-      }
-
       // Prepare the prompt for Claude Code
       const prompt = `Current Plan:\n${plan}\n\nInstruction: ${instruction}`;
 
-      this.log("Triggering Claude Code CLI for execution with monitoring", {
+      logger.info("[EXECUTE Phase] Triggering Claude Code CLI for execution", {
         conversationId: conversation.id,
         promptLength: prompt.length,
       });
 
-      // Create and execute Claude Code with monitoring
+      // Create executor with proper separation of concerns
       const executor = new ClaudeCodeExecutor({
         prompt,
         projectPath: projectContext.projectPath,
-        ndk,
-        projectContext,
-        conversationRootEvent: rootEvent,
-        signer,
-        title: "Execute Implementation",
-        phase: "execute",
+        timeout: 300000, // 5 minutes
+        onMessage: async (message) => {
+          // Log important messages
+          if (message.type === "assistant") {
+            logger.debug("[EXECUTE Phase] Claude assistant message", {
+              messageId: message.message_id,
+              sessionId: message.session_id,
+            });
+          }
+          
+          // The phase initializer can decide to publish to Nostr if needed
+          // But for now, we just log the messages
+          if (message.type === "error") {
+            logger.error("[EXECUTE Phase] Claude error message", { message });
+          }
+        },
+        onError: (error) => {
+          logger.error("[EXECUTE Phase] Claude Code execution error", { error });
+        },
+        onComplete: (result) => {
+          logger.info("[EXECUTE Phase] Claude Code execution completed", {
+            sessionId: result.sessionId,
+            totalCost: result.totalCost,
+            messageCount: result.messageCount,
+            duration: result.duration,
+          });
+        },
       });
 
       const result = await executor.execute();
-
+      
       if (result.success) {
-        this.log("Claude Code execution completed successfully", {
-          sessionId: result.sessionId,
-          taskId: result.taskEvent?.id,
-          totalCost: result.totalCost,
-          messageCount: result.messageCount,
-        });
-
-        // Store task ID in conversation metadata for tracking
-        if (result.taskEvent) {
-          conversation.metadata.executeTaskId = result.taskEvent.id;
+        // Store session ID in conversation metadata for tracking
+        if (result.sessionId) {
+          conversation.metadata.executeSessionId = result.sessionId;
         }
-      } else {
-        this.logError("Claude Code execution failed", result.error);
       }
 
       return result.success;
     } catch (error) {
-      this.logError("Error triggering Claude Code", error);
+      logger.error("[EXECUTE Phase] Error triggering Claude Code", { error });
       return false;
     }
   }

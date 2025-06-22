@@ -8,27 +8,26 @@ import { PlanPhaseInitializer } from "./PlanPhaseInitializer";
 import { ReviewPhaseInitializer } from "./ReviewPhaseInitializer";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
-const initializers: Map<Phase, PhaseInitializer> = new Map([
-  ["chat", new ChatPhaseInitializer()],
-  ["plan", new PlanPhaseInitializer()],
-  ["execute", new ExecutePhaseInitializer()],
-  ["review", new ReviewPhaseInitializer()],
-  ["chores", new ChoresPhaseInitializer()],
-]);
+// Direct mapping of phase initializers
+const phaseInitializers: Record<Phase, PhaseInitializer> = {
+  chat: new ChatPhaseInitializer(),
+  plan: new PlanPhaseInitializer(),
+  execute: new ExecutePhaseInitializer(),
+  review: new ReviewPhaseInitializer(),
+  chores: new ChoresPhaseInitializer(),
+};
 
-export function getInitializer(phase: Phase): PhaseInitializer {
-  const initializer = initializers.get(phase);
-  if (!initializer) {
-    throw new Error(`No initializer found for phase: ${phase}`);
-  }
-  return initializer;
-}
-
+/**
+ * Initialize a phase with the appropriate initializer
+ */
 export async function initializePhase(
   phase: Phase,
   conversation: ConversationState,
   availableAgents: Agent[]
 ): Promise<PhaseInitializationResult> {
-  const initializer = getInitializer(phase);
+  const initializer = phaseInitializers[phase];
+  if (!initializer) {
+    throw new Error(`No initializer found for phase: ${phase}`);
+  }
   return initializer.initialize(conversation, availableAgents);
 }

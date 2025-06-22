@@ -1,8 +1,26 @@
 import * as readline from "node:readline";
+import { AgentRegistry } from "@/agents/AgentRegistry";
+import { AgentExecutor } from "@/agents/execution/AgentExecutor";
+import type { AgentExecutionContext } from "@/agents/execution/types";
+import { PromptBuilder } from "@/prompts";
+import { getProjectContext as getRuntimeContext } from "@/runtime";
+import { inventoryExists } from "@/utils/inventory";
+import { ConversationManager } from "@/conversations/ConversationManager";
+import type { ConversationState } from "@/conversations/types";
+import { ConversationPublisher } from "@/nostr/ConversationPublisher";
+import { getNDK, initNDK } from "@/nostr/ndkClient";
+import { MultiLLMService } from "@/core/llm/MultiLLMService";
+import type { LLMService } from "@/core/llm/types";
+import { getProjectContext } from "@/runtime";
+import { configurationService } from "@tenex/shared/services";
+import path from "path";
+import type { Agent } from "@/types/agent";
+import type { Phase } from "@/types/conversation";
 import { formatError } from "@/utils/errors";
 import { logDebug, logError, logInfo } from "@tenex/shared/logger";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
-import { createDebugAgentSystem } from "../../debug/createDebugAgentSystem";
+import { v4 as uuidv4 } from "uuid";
 
 interface DebugChatOptions {
   systemPrompt?: boolean;
@@ -17,46 +35,187 @@ export async function runDebugChat(
   try {
     const projectPath = process.cwd();
 
-    // Parse LLM options
-    let llmProvider: string | undefined;
-    let llmModel: string | undefined;
-
+    // Parse LLM options - --llm should specify a preset name from llms.json
+    let llmPresetOverride: string | undefined;
     if (typeof options.llm === "string") {
-      const parts = options.llm.split(":");
-      if (parts.length === 2) {
-        [llmProvider, llmModel] = parts;
-      } else {
-        llmModel = options.llm;
-      }
+      llmPresetOverride = options.llm;
     }
 
     logInfo("Starting debug chat mode...");
 
-    // Create debug agent system
-    const { agent, llmService } = await createDebugAgentSystem({
-      projectPath,
-      agentName: initialAgentName,
-      llmProvider,
-      llmModel,
-    });
+    // Load LLM configuration from llms.json
+    const tenexPath = path.join(projectPath, ".tenex");
+    const llmSettings = await configurationService.loadLLMConfig(tenexPath);
+    
+    if (!llmSettings) {
+      throw new Error("Failed to load LLM configuration from .tenex/llms.json");
+    }
+    
+    // Initialize LLM service instances based on configuration
+    const llmInstances = new Map<string, MultiLLMService>();
+    
+    // Create MultiLLMService instances for each preset
+    for (const [presetName, presetConfig] of Object.entries(llmSettings.presets)) {
+      const credentials = llmSettings.auth[presetConfig.provider];
+      if (!credentials?.apiKey) {
+        logError(`Missing API key for provider ${presetConfig.provider} in preset ${presetName}`);
+        continue;
+      }
+      
+      const llmInstance = new MultiLLMService({
+        provider: presetConfig.provider as any,
+        model: presetConfig.model,
+        apiKey: credentials.apiKey,
+        baseUrl: credentials.baseUrl,
+        defaultOptions: {
+          temperature: presetConfig.temperature,
+          maxTokens: presetConfig.maxTokens,
+        },
+      });
+      llmInstances.set(presetName, llmInstance);
+    }
+    
+    // Create LLM service that routes to the correct instance
+    const llmService: LLMService = {
+      async complete(request) {
+        // Determine which config to use
+        const configKey = typeof request === "string" ? request : 
+          (agent.llmConfig || llmSettings.selection?.default || "default");
+        
+        const llmInstance = llmInstances.get(configKey);
+        if (!llmInstance) {
+          throw new Error(`LLM configuration '${configKey}' not found`);
+        }
+        
+        return llmInstance.complete(request);
+      },
+      
+      async *stream(request) {
+        // Determine which config to use
+        const configKey = typeof request === "string" ? request : 
+          (agent.llmConfig || llmSettings.selection?.default || "default");
+        
+        const llmInstance = llmInstances.get(configKey);
+        if (!llmInstance) {
+          throw new Error(`LLM configuration '${configKey}' not found`);
+        }
+        
+        yield* llmInstance.stream(request);
+      },
+    };
+
+    // Get project context
+    const projectCtx = await getProjectContext();
+
+    // Load agent from registry or create default
+    const agentRegistry = new AgentRegistry(projectPath);
+    await agentRegistry.loadFromProject();
+
+    let agent: Agent;
+
+    if (initialAgentName) {
+      const existingAgent = agentRegistry.getAgent(initialAgentName);
+      if (!existingAgent) {
+        throw new Error(`Agent '${initialAgentName}' not found`);
+      }
+      // Use the existing agent but potentially override llmConfig if --llm specified
+      agent = llmPresetOverride ? { ...existingAgent, llmConfig: llmPresetOverride } : existingAgent;
+    } else {
+      // Create default debug agent
+      agent = {
+        name: "Debug Agent",
+        role: "debug-agent",
+        pubkey: projectCtx.projectSigner.pubkey,
+        signer: projectCtx.projectSigner,
+        llmConfig: llmPresetOverride || llmSettings.selection?.default || "default",
+        tools: [],
+        instructions: "You are a debug agent for testing purposes.",
+        expertise: "Testing and debugging agent functionality",
+      };
+    }
+
+    // Create conversation state for AgentExecutor
+    const conversationId = uuidv4();
+    const conversationManager = new ConversationManager(projectPath);
+    const conversation: ConversationState = {
+      id: conversationId,
+      title: "Debug Chat Session",
+      phase: "chat" as Phase,
+      history: [],
+      currentAgent: agent.pubkey,
+      phaseStartedAt: Date.now(),
+      metadata: {
+        projectPath,
+      },
+    };
+
+    // Initialize NDK and ConversationPublisher for AgentExecutor
+    await initNDK();
+    const ndk = getNDK();
+    const conversationPublisher = new ConversationPublisher(projectCtx, ndk);
+    
+    // Initialize AgentExecutor
+    const agentExecutor = new AgentExecutor(llmService, conversationPublisher);
+    
+    // Track messages separately for interactive mode
+    const messages: Array<{ role: string; content: string }> = [];
 
     // Show system prompt if requested
     if (options.systemPrompt) {
+      const systemPrompt = await buildSystemPrompt(agent, "chat");
       console.log(chalk.cyan("\n=== System Prompt ==="));
-      console.log(agent.getSystemPrompt());
+      console.log(systemPrompt);
       console.log(chalk.cyan("===================\n"));
     }
 
     // Handle single message mode
     if (options.message) {
       logDebug("Processing single message:", "general", "debug", options.message);
-      const response = await agent.sendMessage(options.message);
-      console.log(chalk.green("\nAgent:"), response.message);
+      
+      // Create execution context
+      const context: AgentExecutionContext = {
+        agent,
+        conversation,
+        phase: "chat" as Phase,
+        lastUserMessage: options.message,
+        projectContext: { projectPath },
+      };
+
+      // Create a mock NDKEvent for the debug session
+      const mockEvent = new NDKEvent();
+      mockEvent.kind = 9000; // Tenex conversation event kind
+      mockEvent.content = options.message;
+      mockEvent.pubkey = agent.pubkey;
+      mockEvent.created_at = Math.floor(Date.now() / 1000);
+      mockEvent.tags = [
+        ["conversation", conversationId],
+        ["phase", "chat"],
+      ];
+
+      // Execute using AgentExecutor without parent tracing context
+      const result = await agentExecutor.execute(context, mockEvent, undefined);
+
+      if (result.success && result.response) {
+        console.log(chalk.green("\nAgent:"), result.response);
+
+        if (result.toolExecutions && result.toolExecutions.length > 0) {
+          console.log(chalk.gray("\nTools executed:"));
+          result.toolExecutions.forEach((toolResult, idx) => {
+            console.log(
+              chalk.gray(
+                `  ${idx + 1}. ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`
+              )
+            );
+          });
+        }
+      } else if (result.error) {
+        console.error(chalk.red("\nError:"), result.error);
+      }
       return;
     }
 
     // Interactive REPL mode
-    console.log(chalk.cyan(`\nDebug Chat - Agent: ${agent.getName()}`));
+    console.log(chalk.cyan(`\nDebug Chat - Agent: ${agent.name}`));
     console.log(chalk.gray("Type 'exit' or 'quit' to end the conversation"));
     console.log(chalk.gray("Type 'clear' to clear conversation history"));
     console.log(chalk.gray("Type 'history' to view conversation history"));
@@ -81,16 +240,16 @@ export async function runDebugChat(
       }
 
       if (input.toLowerCase() === "clear") {
-        agent.clearHistory();
+        messages.length = 0;
+        conversation.history = [];
         console.log(chalk.yellow("Conversation history cleared.\n"));
         rl.prompt();
         return;
       }
 
       if (input.toLowerCase() === "history") {
-        const history = agent.getHistory();
         console.log(chalk.cyan("\n=== Conversation History ==="));
-        history.forEach((msg, idx) => {
+        messages.forEach((msg, idx) => {
           console.log(chalk.gray(`[${idx}] ${msg.role}:`), msg.content);
         });
         console.log(chalk.cyan("========================\n"));
@@ -99,8 +258,9 @@ export async function runDebugChat(
       }
 
       if (input.toLowerCase() === "prompt") {
+        const systemPrompt = await buildSystemPrompt(agent, "chat");
         console.log(chalk.cyan("\n=== System Prompt ==="));
-        console.log(agent.getSystemPrompt());
+        console.log(systemPrompt);
         console.log(chalk.cyan("===================\n"));
         rl.prompt();
         return;
@@ -116,17 +276,54 @@ export async function runDebugChat(
         // Show thinking indicator
         process.stdout.write(chalk.gray("Agent is thinking..."));
 
-        // Get response from agent
-        const response = await agent.sendMessage(input);
+        // Add user message to tracking
+        messages.push({ role: "user", content: input });
+
+        // Create execution context
+        const context: AgentExecutionContext = {
+          agent,
+          conversation,
+          phase: "chat" as Phase,
+          lastUserMessage: input,
+          projectContext: { projectPath },
+        };
+
+        // Create a mock NDKEvent for the user message
+        const mockEvent = new NDKEvent();
+        mockEvent.kind = 9000; // Tenex conversation event kind
+        mockEvent.content = input;
+        mockEvent.pubkey = agent.pubkey;
+        mockEvent.created_at = Math.floor(Date.now() / 1000);
+        mockEvent.tags = [
+          ["conversation", conversationId],
+          ["phase", "chat"],
+        ];
+
+        // Execute using AgentExecutor without parent tracing context
+        const result = await agentExecutor.execute(context, mockEvent, undefined);
 
         // Clear thinking indicator
         process.stdout.write(`\r${" ".repeat(20)}\r`);
 
-        // Display response
-        console.log(chalk.green("Agent:"), response.message);
+        if (result.success && result.response) {
+          // Add assistant response to tracking
+          messages.push({ role: "assistant", content: result.response });
 
-        // Tool calls are not yet supported in the debug chat
-        // TODO: Show tool usage when multi-llm-ts supports tool calls
+          // Display response
+          console.log(chalk.green("Agent:"), result.response);
+
+          // Show tool execution summary
+          if (result.toolExecutions && result.toolExecutions.length > 0) {
+            console.log(chalk.gray("\nTools executed:"));
+            result.toolExecutions.forEach((toolResult) => {
+              console.log(
+                chalk.gray(`  - ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`)
+              );
+            });
+          }
+        } else if (result.error) {
+          console.error(chalk.red("\nError:"), result.error);
+        }
 
         console.log(); // Empty line for readability
       } catch (error) {
@@ -146,3 +343,4 @@ export async function runDebugChat(
     process.exit(1);
   }
 }
+

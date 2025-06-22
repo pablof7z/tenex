@@ -1,16 +1,16 @@
 import { logger } from "@tenex/shared/logger";
-import { 
-  igniteEngine, 
-  Message as LlmMessage, 
+import {
+  type ChatModel,
+  type LlmChunk,
+  type LlmCompletionOpts,
+  type LlmEngine,
+  Message as LlmMessage,
+  type LlmResponse,
+  type LlmTool,
+  type ModelsList,
+  igniteEngine,
   loadModels,
   loadOpenRouterModels,
-  type LlmEngine, 
-  type LlmChunk, 
-  type LlmCompletionOpts, 
-  type LlmResponse, 
-  type LlmTool, 
-  type ChatModel,
-  type ModelsList 
 } from "multi-llm-ts";
 import type {
   CompletionRequest,
@@ -38,13 +38,15 @@ export class MultiLLMService implements LLMService {
     this.config = config;
     try {
       const providerName = this.mapProviderName(config.provider);
-      llmLogger.debug(`Initializing LLM engine for provider: ${providerName}, model: ${config.model}`);
-      
+      llmLogger.debug(
+        `Initializing LLM engine for provider: ${providerName}, model: ${config.model}`
+      );
+
       this.engine = igniteEngine(providerName, {
         apiKey: config.apiKey,
         baseURL: config.baseUrl,
       });
-      
+
       // Try to build the model - multi-llm-ts v4 requires ChatModel objects
       try {
         this.chatModel = this.engine.buildModel(config.model);
@@ -54,11 +56,13 @@ export class MultiLLMService implements LLMService {
         llmLogger.debug(`Initial model build skipped for ${config.model}, will load on demand`);
         // Will try to load models later if needed
       }
-      
+
       llmLogger.debug("LLM engine initialized successfully");
     } catch (error) {
       llmLogger.error(`Failed to initialize LLM engine: ${error}`);
-      throw new Error(`Failed to initialize LLM engine: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to initialize LLM engine: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -68,21 +72,27 @@ export class MultiLLMService implements LLMService {
       if (!this.chatModel) {
         await this.ensureChatModel();
       }
-      
+
       const options = this.buildCompletionOptions(request);
       const messages = this.convertMessages(request.messages);
-      
-      llmLogger.debug(`Sending completion request to ${this.config.provider}/${this.config.model} - ${messages.length} messages: ${JSON.stringify(messages)}`);
+
+      llmLogger.debug(
+        `Sending completion request to ${this.config.provider}/${this.config.model} - ${messages.length} messages: ${JSON.stringify(messages)}`
+      );
 
       // Use ChatModel object instead of string for v4 compatibility
       const response = await this.engine.complete(this.chatModel as ChatModel, messages, options);
 
-      llmLogger.debug(`Received completion response - content: ${response.content}, has tool calls: ${!!response.toolCalls}`);
+      llmLogger.debug(
+        `Received completion response - content: ${response.content}, has tool calls: ${!!response.toolCalls}`
+      );
       llmLogger.debug(`Raw Response: ${JSON.stringify(response)}`);
-      
+
       return this.mapResponse(response);
     } catch (error) {
-      llmLogger.error(`Completion failed - provider: ${this.config.provider}, model: ${this.config.model}, error: ${error instanceof Error ? error.message : error}`);
+      llmLogger.error(
+        `Completion failed - provider: ${this.config.provider}, model: ${this.config.model}, error: ${error instanceof Error ? error.message : error}`
+      );
       throw new Error(
         `LLM completion failed: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -94,7 +104,7 @@ export class MultiLLMService implements LLMService {
     if (!this.chatModel) {
       await this.ensureChatModel();
     }
-    
+
     const options = this.buildCompletionOptions(request);
     // stream is not part of LlmCompletionOpts, it's a separate parameter
 
@@ -115,19 +125,19 @@ export class MultiLLMService implements LLMService {
 
   private async ensureChatModel(): Promise<void> {
     if (this.chatModel) return;
-    
+
     try {
       // Try to load models from the provider
       const models = await this.loadModelsForProvider();
       if (models?.chat?.length && models.chat.length > 0) {
         // Find our model in the list
         const modelId = this.config.model.toLowerCase();
-        const foundModel = models.chat.find(m => 
-          m.id.toLowerCase() === modelId || 
-          m.name.toLowerCase() === modelId
-        ) || models.chat[0]; // Fallback to first available
+        const foundModel =
+          models.chat.find(
+            (m) => m.id.toLowerCase() === modelId || m.name.toLowerCase() === modelId
+          ) || models.chat[0]; // Fallback to first available
         this.chatModel = foundModel || null;
-        
+
         if (this.chatModel) {
           llmLogger.debug(`Using ChatModel: ${this.chatModel.id}`);
         }
@@ -145,14 +155,14 @@ export class MultiLLMService implements LLMService {
           vision: false,
           tools: true,
           reasoning: false,
-          caching: false
-        }
+          caching: false,
+        },
       };
     }
   }
 
   private convertMessages(messages: Message[]): LlmMessage[] {
-    return messages.map(msg => new LlmMessage(msg.role, msg.content));
+    return messages.map((msg) => new LlmMessage(msg.role, msg.content));
   }
 
   private buildCompletionOptions(request: CompletionRequest): LlmCompletionOpts {
@@ -211,9 +221,11 @@ export class MultiLLMService implements LLMService {
       result.usage = {
         promptTokens: usage.promptTokens || usage.prompt || 0,
         completionTokens: usage.completionTokens || usage.completion || 0,
-        totalTokens: usage.totalTokens || usage.total || 
-                    (usage.promptTokens || usage.prompt || 0) + 
-                    (usage.completionTokens || usage.completion || 0),
+        totalTokens:
+          usage.totalTokens ||
+          usage.total ||
+          (usage.promptTokens || usage.prompt || 0) +
+            (usage.completionTokens || usage.completion || 0),
       };
     }
 
@@ -233,8 +245,8 @@ export class MultiLLMService implements LLMService {
 
   private mapStreamChunk(chunk: LlmChunk): StreamChunk {
     return {
-      content: chunk.type === 'content' ? (chunk.text || "") : "",
-      isComplete: chunk.type === 'content' ? (chunk.done || false) : false,
+      content: chunk.type === "content" ? chunk.text || "" : "",
+      isComplete: chunk.type === "content" ? chunk.done || false : false,
     };
   }
 
@@ -256,14 +268,14 @@ export class MultiLLMService implements LLMService {
       apiKey: this.config.apiKey,
       baseURL: this.config.baseUrl,
     };
-    
+
     try {
       // Use specific loader for OpenRouter
       if (this.config.provider === "openrouter") {
         llmLogger.debug("Loading OpenRouter models");
         return await loadOpenRouterModels(engineConfig);
       }
-      
+
       // Generic loader for other providers
       const providerName = this.mapProviderName(this.config.provider);
       llmLogger.debug(`Loading models for provider: ${providerName}`);

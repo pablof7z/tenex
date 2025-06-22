@@ -1,6 +1,6 @@
 import { AgentExecutor, createMinimalProjectAgent, createProjectAgent } from "@/agents";
 import type { ConversationManager } from "@/conversations";
-import type { LLMService } from "@/llm";
+import type { LLMService } from "@/core/llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
 import { getProjectContext } from "@/runtime";
@@ -15,7 +15,7 @@ import {
   getDefaultAgentForPhase,
   meetsPhaseTransitionCriteria,
   validateRoutingDecision,
-} from "./routingDomainFunctions";
+} from "./routingDomain";
 
 export class ConversationRouter {
   private agentExecutor: AgentExecutor;

@@ -1,18 +1,21 @@
-import type { LLMService } from "@/llm";
+import type { CompletionResponse, LLMService, Message } from "@/core/llm/types";
 import type { ConversationPublisher } from "@/nostr";
+import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/runtime";
 import { ToolExecutionManager } from "@/tools/execution";
+import {
+  type TracingContext,
+  type TracingLogger,
+  createAgentExecutionContext,
+  createChildContext,
+  createToolExecutionContext,
+  createTracingLogger,
+} from "@/tracing";
 import type { Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
+import { inventoryExists } from "@/utils/inventory";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
-import { Message } from "multi-llm-ts";
-import {
-  buildConversationContext,
-  buildFullPrompt,
-  buildPhaseContext,
-  buildSystemPrompt,
-} from "./AgentPromptBuilder";
 import type {
   AgentExecutionContext,
   AgentExecutionResult,
@@ -33,11 +36,23 @@ export class AgentExecutor {
    */
   async execute(
     context: AgentExecutionContext,
-    triggeringEvent: NDKEvent
+    triggeringEvent: NDKEvent,
+    parentTracingContext?: TracingContext
   ): Promise<AgentExecutionResult> {
-    logger.info(`Agent ${context.agent.name} executing for ${context.phase} phase`, {
-      conversationId: context.conversation.id,
+    // Create agent execution tracing context
+    const tracingContext = parentTracingContext
+      ? createAgentExecutionContext(parentTracingContext, context.agent.name)
+      : createAgentExecutionContext(
+          { conversationId: context.conversation.id, executionId: "root", startTime: Date.now() },
+          context.agent.name
+        );
+
+    const tracingLogger = createTracingLogger(tracingContext, "agent");
+
+    tracingLogger.startOperation("agent_execution", {
+      agentName: context.agent.name,
       agentPubkey: context.agent.pubkey,
+      phase: context.phase,
     });
 
     try {
@@ -45,9 +60,20 @@ export class AgentExecutor {
       const promptContext = await this.buildPromptContext(context);
 
       // 2. Generate initial response via LLM
+      const llmStartTime = Date.now();
+      tracingLogger.logLLMRequest(context.agent.llmConfig || "default");
+
       const { response: initialResponse, userPrompt } = await this.generateResponse(
         promptContext,
         context.agent.llmConfig || "default"
+      );
+
+      const llmDuration = Date.now() - llmStartTime;
+      tracingLogger.logLLMResponse(
+        context.agent.llmConfig || "default",
+        llmDuration,
+        initialResponse.usage?.promptTokens,
+        initialResponse.usage?.completionTokens
       );
 
       // 3. Execute the Reason-Act loop
@@ -55,11 +81,12 @@ export class AgentExecutor {
         initialResponse,
         context,
         promptContext.systemPrompt,
-        userPrompt
+        userPrompt,
+        tracingContext
       );
 
       // 4. Build metadata with final response
-      const llmMetadata = this.llmService.buildMetadata(
+      const llmMetadata = this.buildLLMMetadata(
         reasonActResult.finalResponse,
         promptContext.systemPrompt,
         userPrompt
@@ -74,8 +101,16 @@ export class AgentExecutor {
         triggeringEvent,
         reasonActResult.finalContent,
         nextResponder,
-        llmMetadata
+        llmMetadata,
+        tracingContext
       );
+
+      tracingLogger.completeOperation("agent_execution", {
+        agentName: context.agent.name,
+        responseLength: reasonActResult.finalContent.length,
+        toolExecutions: reasonActResult.allToolResults.length,
+        nextAgent: nextResponder,
+      });
 
       return {
         success: true,
@@ -86,7 +121,10 @@ export class AgentExecutor {
         publishedEvent,
       };
     } catch (error) {
-      logger.error(`Agent execution failed for ${context.agent.name}`, { error });
+      tracingLogger.failOperation("agent_execution", error, {
+        agentName: context.agent.name,
+      });
+
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -98,11 +136,45 @@ export class AgentExecutor {
    * Build the complete prompt context for the agent
    */
   private async buildPromptContext(context: AgentExecutionContext): Promise<AgentPromptContext> {
-    const systemPrompt = await buildSystemPrompt(context.agent, context.phase);
+    const projectContext = getProjectContext();
+    const promptBuilder = new PromptBuilder();
 
-    const conversationHistory = buildConversationContext(context.conversation);
+    // Build inventory prompt if needed
+    let inventoryPrompt: string | undefined;
+    if (context.phase === "chat") {
+      const hasInventory = await inventoryExists(projectContext.projectPath);
+      if (hasInventory) {
+        inventoryPrompt = `## Project Inventory
 
-    const phaseContext = buildPhaseContext(context.conversation, context.phase);
+An inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.`;
+      }
+    }
+
+    // Build system prompt
+    const systemPrompt = promptBuilder
+      .add("agent-system-prompt", {
+        agent: context.agent,
+        phase: context.phase,
+        projectTitle: projectContext.title,
+        projectRepository: projectContext.repository,
+        inventoryPrompt,
+      })
+      .build();
+
+    // Build conversation history
+    const conversationHistory = new PromptBuilder()
+      .add("conversation-history", {
+        history: context.conversation.history,
+      })
+      .build();
+
+    // Build phase context
+    const phaseContext = new PromptBuilder()
+      .add("phase-context", {
+        phase: context.phase,
+        phaseMetadata: context.conversation.metadata,
+      })
+      .build();
 
     const constraints = this.getPhaseConstraints(context.phase);
 
@@ -111,40 +183,33 @@ export class AgentExecutor {
       conversationHistory,
       phaseContext,
       availableTools: context.agent.tools,
-      constraints,
+      constraints: constraints,
     };
   }
 
   /**
-   * Generate response using LLM
+   * Generate initial response from LLM
    */
-  private async generateResponse(promptContext: AgentPromptContext, llmConfig: string) {
-    const userPrompt = buildFullPrompt(promptContext);
+  private async generateResponse(
+    promptContext: AgentPromptContext,
+    llmConfig: string
+  ): Promise<{ response: CompletionResponse; userPrompt: string }> {
+    // Build full user prompt
+    const userPrompt = new PromptBuilder()
+      .add("full-prompt", {
+        conversationContent: promptContext.conversationHistory || "",
+        phaseContext: promptContext.phaseContext,
+        constraints: promptContext.constraints,
+        agentType: promptContext.phaseContext.includes("Phase:") ? "assigned expert" : "project assistant",
+      })
+      .build();
+
     const messages: Message[] = [
-      new Message("system", promptContext.systemPrompt),
-      new Message("user", userPrompt),
+      { role: "system", content: promptContext.systemPrompt },
+      { role: "user", content: userPrompt },
     ];
 
-    logger.debug("Generating agent response", {
-      llmConfig,
-      messageCount: messages.length,
-    });
-
-    const response = await this.llmService.complete(llmConfig, messages);
-
-    logger.info("Agent response generated", {
-      model: response.model,
-      tokens: response.usage.totalTokens,
-      cost: response.cost,
-    });
-
-    // Log the actual response content
-    logger.debug("Agent response content", {
-      agentName: promptContext.availableTools?.[0] || "unknown",
-      responseLength: response.content.length,
-      response: response.content,
-    });
-
+    const response = await this.llmService.complete({ messages });
     return { response, userPrompt };
   }
 
@@ -155,19 +220,18 @@ export class AgentExecutor {
     context: AgentExecutionContext,
     response: string
   ): string | undefined {
-    // In chat phase, typically the user responds
-    if (context.phase === "chat") {
-      // Get the user's pubkey from the conversation history
-      const firstEvent = context.conversation.history[0];
-      // Always return the conversation starter in chat phase
-      // This ensures we don't fall back to triggeringEvent.pubkey
-      return firstEvent?.pubkey || undefined;
+    // Check if response indicates phase transition
+    if (response.includes("PHASE_TRANSITION:")) {
+      return undefined; // Router will handle
     }
 
-    // In other phases, check if agent is handing off to another agent
-    // Agent handoff detection would be implemented here
-    
-    // Default: no specific next responder
+    // Check if response indicates specific agent handoff
+    const handoffMatch = response.match(/HANDOFF_TO:\s*(\S+)/);
+    if (handoffMatch) {
+      return handoffMatch[1];
+    }
+
+    // Default: continue with user
     return undefined;
   }
 
@@ -177,67 +241,52 @@ export class AgentExecutor {
   private async publishResponse(
     context: AgentExecutionContext,
     triggeringEvent: NDKEvent,
-    response: string,
-    nextResponder?: string,
-    llmMetadata?: LLMMetadata
+    content: string,
+    nextResponder: string | undefined,
+    llmMetadata?: LLMMetadata,
+    tracingContext?: TracingContext
   ): Promise<NDKEvent> {
-    // In chat phase, if no next responder is specified, use the conversation starter
-    let responder = nextResponder;
-
-    if (!responder && context.phase === "chat") {
-      // Get the original conversation starter (human)
-      const firstEvent = context.conversation.history[0];
-      responder = firstEvent?.pubkey;
-    }
-
-    // Only fall back to triggering event pubkey if we have no other option
-    // and we're not in chat phase
-    if (!responder && context.phase !== "chat") {
-      responder = triggeringEvent.pubkey;
-    }
-
-    // Ensure we never tag the agent itself (prevent loops)
-    if (responder === context.agent.pubkey) {
-      logger.warn("Preventing self-tagging in agent response", {
-        agent: context.agent.name,
-        phase: context.phase,
-      });
-      responder = undefined;
-    }
-
-    const publishedEvent = await this.conversationPublisher.publishAgentResponse(
+    const tracingLogger = tracingContext
+      ? createTracingLogger(tracingContext, "nostr")
+      : logger.forModule("nostr");
+    const event = await this.conversationPublisher.publishAgentResponse(
       triggeringEvent,
-      response,
-      responder || "", // Empty string means no specific next responder
+      content,
+      nextResponder || "",
       context.agent.signer,
       llmMetadata
     );
 
-    logger.info("Agent response published", {
-      agent: context.agent.name,
-      eventId: publishedEvent.id,
-      nextResponder: responder,
-    });
+    if (tracingContext && "logEventPublished" in tracingLogger) {
+      (tracingLogger as TracingLogger).logEventPublished(event.id || "unknown", "agent_response", {
+        agentName: context.agent.name,
+        nextResponder,
+        hasLLMMetadata: !!llmMetadata,
+      });
+    }
 
-    return publishedEvent;
+    return event;
   }
 
   /**
-   * Execute the Reason-Act loop for tool-augmented responses
+   * Execute the Reason-Act loop for tool usage
    */
   private async executeReasonActLoop(
-    initialResponse: any,
+    initialResponse: CompletionResponse,
     context: AgentExecutionContext,
     systemPrompt: string,
-    originalUserPrompt: string
+    userPrompt: string,
+    tracingContext: TracingContext
   ): Promise<{
-    finalResponse: any;
+    finalResponse: CompletionResponse;
     finalContent: string;
     allToolResults: ToolExecutionResult[];
   }> {
+    const tracingLogger = createTracingLogger(tracingContext, "agent");
     const maxIterations = 3; // Prevent infinite loops
     let currentResponse = initialResponse;
-    let allToolResults: ToolExecutionResult[] = [];
+    let finalContent = currentResponse.content;
+    const allToolResults: ToolExecutionResult[] = [];
     let iteration = 0;
 
     const toolContext = {
@@ -247,6 +296,7 @@ export class AgentExecutor {
       phase: context.phase,
     };
 
+    // Process tool invocations iteratively
     while (iteration < maxIterations) {
       // Process response for tool invocations
       const { enhancedResponse, toolResults, invocations } = await this.toolManager.processResponse(
@@ -254,7 +304,16 @@ export class AgentExecutor {
         toolContext
       );
 
-      // Map tool results
+      // If no tools were invoked, we're done
+      if (invocations.length === 0) {
+        tracingLogger.debug("No tool invocations found, completing Reason-Act loop", {
+          agent: context.agent.name,
+          iteration,
+        });
+        break;
+      }
+
+      // Map tool results with proper tool names
       const mappedResults: ToolExecutionResult[] = toolResults.map((result, index) => {
         const invocation = invocations[index];
         return {
@@ -263,60 +322,76 @@ export class AgentExecutor {
         };
       });
 
-      allToolResults.push(...mappedResults);
-
-      // If no tools were invoked, we're done
-      if (invocations.length === 0) {
-        logger.debug("No tool invocations found, completing Reason-Act loop", {
-          agent: context.agent.name,
-          iteration,
+      // Log tool execution with tracing
+      for (const invocation of invocations) {
+        const toolTracingContext = createToolExecutionContext(tracingContext, invocation.toolName);
+        const toolLogger = createTracingLogger(toolTracingContext, "tools");
+        
+        toolLogger.startOperation("tool_execution", {
+          tool: invocation.toolName,
+          action: invocation.action,
         });
-        return {
-          finalResponse: currentResponse,
-          finalContent: currentResponse.content,
-          allToolResults,
-        };
+        
+        const toolResult = mappedResults.find(r => r.toolName === invocation.toolName);
+        
+        toolLogger.completeOperation("tool_execution", {
+          tool: invocation.toolName,
+          success: toolResult?.success || false,
+        });
       }
 
+      allToolResults.push(...mappedResults);
+
       // If tools were invoked, send results back to LLM for reasoning
-      logger.info("Tool invocations completed, continuing Reason-Act loop", {
+      tracingLogger.info("Tool invocations completed, continuing Reason-Act loop", {
         agent: context.agent.name,
         iteration,
         toolCount: invocations.length,
+        tools: invocations.map(i => i.toolName),
       });
 
       // Build continuation prompt with tool results
       const continuationPrompt = this.buildContinuationPrompt(
-        originalUserPrompt,
+        userPrompt,
         enhancedResponse,
         mappedResults
       );
 
       // Generate next response
       const messages: Message[] = [
-        new Message("system", systemPrompt),
-        new Message("user", originalUserPrompt),
-        new Message("assistant", currentResponse.content),
-        new Message("user", continuationPrompt),
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+        { role: "assistant", content: currentResponse.content },
+        { role: "user", content: continuationPrompt },
       ];
 
-      currentResponse = await this.llmService.complete(
+      tracingLogger.logLLMRequest(context.agent.llmConfig || "default");
+      const llmStartTime = Date.now();
+
+      currentResponse = await this.llmService.complete({ messages });
+
+      const llmDuration = Date.now() - llmStartTime;
+      tracingLogger.logLLMResponse(
         context.agent.llmConfig || "default",
-        messages
+        llmDuration,
+        currentResponse.usage?.promptTokens,
+        currentResponse.usage?.completionTokens
       );
 
+      finalContent = currentResponse.content;
       iteration++;
     }
 
-    // Max iterations reached
-    logger.warn("Reason-Act loop reached maximum iterations", {
-      agent: context.agent.name,
-      iterations: maxIterations,
-    });
+    if (iteration >= maxIterations) {
+      tracingLogger.warning("Reason-Act loop reached maximum iterations", {
+        agent: context.agent.name,
+        iterations: maxIterations,
+      });
+    }
 
     return {
       finalResponse: currentResponse,
-      finalContent: currentResponse.content,
+      finalContent,
       allToolResults,
     };
   }
@@ -334,9 +409,10 @@ export class AgentExecutor {
     for (const result of toolResults) {
       prompt += `**${result.toolName}**: `;
       if (result.success) {
-        prompt += typeof result.output === "string" 
-          ? result.output 
-          : JSON.stringify(result.output, null, 2);
+        prompt +=
+          typeof result.output === "string"
+            ? result.output
+            : JSON.stringify(result.output, null, 2);
       } else {
         prompt += `Error: ${result.error}`;
       }
@@ -348,6 +424,27 @@ export class AgentExecutor {
     prompt += "If you have all the information needed, provide your complete response.";
 
     return prompt;
+  }
+
+  /**
+   * Build LLM metadata for response tracking
+   */
+  private buildLLMMetadata(
+    response: CompletionResponse,
+    systemPrompt: string,
+    userPrompt: string
+  ): LLMMetadata | undefined {
+    if (!response.usage) {
+      return undefined;
+    }
+
+    return {
+      model: response.model || "unknown",
+      cost: 0, // TODO: Calculate cost based on model and token usage
+      promptTokens: response.usage.promptTokens,
+      completionTokens: response.usage.completionTokens,
+      totalTokens: response.usage.totalTokens,
+    };
   }
 
   /**

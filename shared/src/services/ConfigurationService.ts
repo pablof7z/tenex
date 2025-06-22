@@ -127,19 +127,15 @@ const LLMSettingsSchema = z.object({
     auth: z.record(LLMCredentialsSchema),
 });
 
-// Agent config schema
-const AgentConfigSchema = z.object({
-    name: z.string(),
-    role: z.string(),
-    expertise: z.string(),
-    instructions: z.string(),
-    llmConfig: z.string().optional(),
-    tools: z.array(z.string()).optional(),
+// Agent reference schema
+const AgentReferenceSchema = z.object({
+    nsec: z.string(),
+    file: z.string(),
+    eventId: z.string().optional(),
 });
 
-const AgentsJsonSchema = z.object({
-    agents: z.record(AgentConfigSchema),
-});
+// Agents.json format - direct mapping of slug to reference
+const AgentsJsonSchema = z.record(AgentReferenceSchema);
 
 // Project config schema
 const ProjectConfigSchema = z.object({
@@ -224,7 +220,7 @@ export class ConfigurationService {
                 // Merge with source tracking
                 agents = await this.mergeAgentsWithTracking(
                     globalAgents,
-                    agents || { agents: {} },
+                    agents || {},
                     this.getGlobalPath(),
                     basePath
                 );
@@ -329,7 +325,7 @@ export class ConfigurationService {
      */
     async loadAgentsConfig(basePath: string): Promise<AgentsJson> {
         const filePath = path.join(basePath, "agents.json");
-        return this.loadConfig(filePath, AgentsJsonSchema, { agents: {} });
+        return this.loadConfig(filePath, AgentsJsonSchema, {});
     }
 
     /**
@@ -531,10 +527,10 @@ export class ConfigurationService {
         basePath: string,
         source: "global" | "project"
     ): TrackedAgentsJson {
-        const tracked: TrackedAgentsJson = { agents: {} };
+        const tracked: TrackedAgentsJson = {};
 
-        for (const [key, agent] of Object.entries(agents.agents)) {
-            tracked.agents[key] = {
+        for (const [key, agent] of Object.entries(agents)) {
+            tracked[key] = {
                 ...agent,
                 source: source,
             };
@@ -552,26 +548,26 @@ export class ConfigurationService {
         globalPath: string,
         projectPath: string
     ): Promise<TrackedAgentsJson> {
-        const merged: TrackedAgentsJson = { agents: {} };
+        const merged: TrackedAgentsJson = {};
 
         // Add global agents with tracking
-        for (const [key, agent] of Object.entries(globalAgents.agents)) {
-            merged.agents[key] = {
+        for (const [key, agent] of Object.entries(globalAgents)) {
+            merged[key] = {
                 ...agent,
                 source: "global",
             };
         }
 
         // Add/override with project agents
-        for (const [key, agent] of Object.entries(projectAgents.agents)) {
-            if (merged.agents[key]) {
+        for (const [key, agent] of Object.entries(projectAgents)) {
+            if (merged[key]) {
                 // Warn about override
                 logger.warn(
                     `Agent '${key}' from global configuration is being overridden by project configuration`
                 );
             }
 
-            merged.agents[key] = {
+            merged[key] = {
                 ...agent,
                 source: "project",
             };

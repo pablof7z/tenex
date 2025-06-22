@@ -3,8 +3,8 @@ import { AgentRegistry } from "@/agents";
 import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { ConversationManager } from "@/conversations";
-import { LLMConfigurationAdapter } from "@/llm/LLMConfigurationAdapter";
-import { LLMService } from "@/llm";
+import { MultiLLMService } from "@/core/llm/MultiLLMService";
+import type { LLMService } from "@/core/llm/types";
 import { ConversationPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
@@ -22,7 +22,7 @@ export class EventHandler {
   private agentConfigs: Map<string, AgentConfig>;
   private agentRegistry: AgentRegistry;
   private conversationManager: ConversationManager;
-  private llmConfigManager: LLMConfigurationAdapter;
+  private llmSettings: any; // Will be loaded from configurationService
   private llmService!: LLMService;
   private routingLLM!: RoutingLLM;
   private conversationRouter!: ConversationRouter;
@@ -32,7 +32,7 @@ export class EventHandler {
     this.agentConfigs = new Map();
     this.agentRegistry = new AgentRegistry(projectInfo.projectPath);
     this.conversationManager = new ConversationManager(projectInfo.projectPath);
-    this.llmConfigManager = new LLMConfigurationAdapter(projectInfo.projectPath);
+    // Will load LLM settings from configurationService
     // Services will be initialized in initialize()
   }
 
@@ -65,8 +65,34 @@ export class EventHandler {
     });
 
     // Initialize services
-    await this.llmConfigManager.loadConfigurations();
-    this.llmService = new LLMService(this.llmConfigManager);
+    // Load LLM configuration directly from configurationService
+    const llmSettings = await configurationService.loadLLMConfig(
+      path.join(this.projectInfo.projectPath, ".tenex")
+    );
+    this.llmSettings = llmSettings;
+
+    // Get default configuration
+    const defaultConfigName = llmSettings.selection?.default || Object.keys(llmSettings.presets)[0];
+    const llmConfig = llmSettings.presets[defaultConfigName];
+    if (!llmConfig) {
+      throw new Error("No LLM configuration found");
+    }
+
+    const credentials = llmSettings.auth[llmConfig.provider];
+    if (!credentials) {
+      throw new Error(`No credentials found for provider: ${llmConfig.provider}`);
+    }
+
+    this.llmService = new MultiLLMService({
+      provider: llmConfig.provider as any,
+      model: llmConfig.model,
+      apiKey: credentials.apiKey,
+      baseUrl: credentials.baseUrl,
+      defaultOptions: {
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+      },
+    });
 
     await this.agentRegistry.loadFromProject();
     await this.conversationManager.initialize();
@@ -74,9 +100,12 @@ export class EventHandler {
     // Initialize routing system
     let routingConfig = "default";
     try {
-      routingConfig = this.llmConfigManager.getDefaultConfig("agentRouting");
+      routingConfig =
+        this.llmSettings.selection?.agentRouting ||
+        this.llmSettings.selection?.default ||
+        "default";
     } catch {
-      routingConfig = this.llmConfigManager.getDefaultConfig("default");
+      routingConfig = "default";
     }
     this.routingLLM = new RoutingLLM(this.llmService, routingConfig, this.projectInfo.projectPath);
     logInfo(`Initialized RoutingLLM with configuration: ${routingConfig}`);

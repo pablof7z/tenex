@@ -1,5 +1,19 @@
 #!/usr/bin/env bun
 
+/**
+ * build-simple.js - Creates an unbundled build of TENEX CLI
+ * 
+ * This script creates a minimal build with all dependencies marked as external.
+ * Use this when you want to rely on npm to handle dependency resolution at runtime.
+ * 
+ * Key differences from build-bundled.js:
+ * - Marks ALL dependencies as external (no bundling)
+ * - Keeps all dependencies in package.json
+ * - Results in smaller package size but requires all deps at runtime
+ * 
+ * Usage: bun scripts/build-simple.js
+ */
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

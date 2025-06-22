@@ -2,8 +2,8 @@ import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import { BasePhaseInitializer } from "./PhaseInitializer";
-import type { PhaseInitializationResult } from "./types";
+import { logger } from "@tenex/shared";
+import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**
  * Chat Phase Initializer
@@ -12,14 +12,14 @@ import type { PhaseInitializationResult } from "./types";
  * requirements and understand the user's needs. No specific agent is
  * assigned yet.
  */
-export class ChatPhaseInitializer extends BasePhaseInitializer {
+export class ChatPhaseInitializer implements PhaseInitializer {
   phase: Phase = "chat";
 
   async initialize(
     conversation: ConversationState,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
-    this.log("Initializing chat phase", {
+    logger.info("[CHAT Phase] Initializing chat phase", {
       conversationId: conversation.id,
       title: conversation.title,
     });
@@ -39,7 +39,7 @@ export class ChatPhaseInitializer extends BasePhaseInitializer {
         },
       };
     } catch (error) {
-      this.logError("Failed to initialize chat phase", error);
+      logger.error("[CHAT Phase] Failed to initialize chat phase", { error });
       return {
         success: false,
         message: `Chat phase initialization failed: ${error}`,

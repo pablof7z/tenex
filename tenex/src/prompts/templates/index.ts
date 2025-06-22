@@ -18,12 +18,12 @@ export { PromptBuilder } from "../core/PromptBuilder";
 export { fragmentRegistry } from "../core/FragmentRegistry";
 
 // Utility to extract JSON from LLM responses
-export function extractJSON<T>(response: string): T | null {
+export function extractJSON<T = unknown>(response: string): T | null {
   try {
     // Try to find JSON in the response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      return JSON.parse(jsonMatch[0]) as T;
     }
     return null;
   } catch (error) {

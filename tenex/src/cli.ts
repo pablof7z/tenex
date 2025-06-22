@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import { logger } from "@tenex/shared/logger";
 // CLI entry point for TENEX
 import { Command } from "commander";
@@ -41,12 +43,15 @@ debug
   });
 
 // Initialize NDK before parsing commands
-async function main() {
+export async function main() {
   await initNDK();
   program.parse(process.argv);
 }
 
-main().catch((error) => {
-  logger.error("Fatal error in TENEX CLI", error);
-  process.exit(1);
-});
+// Only run if called directly (not imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    logger.error("Fatal error in TENEX CLI", error);
+    process.exit(1);
+  });
+}

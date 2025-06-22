@@ -1,9 +1,14 @@
 import path from "node:path";
+import {
+  type TracingContext,
+  createPhaseExecutionContext,
+  createTracingContext,
+  createTracingLogger,
+} from "@/tracing";
 import type { Phase } from "@/types/conversation";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
-import { createTracingContext, createTracingLogger, createPhaseExecutionContext, type TracingContext } from "@/tracing";
 import { FileSystemAdapter } from "./persistence";
 import type { ConversationMetadata, ConversationState } from "./types";
 
@@ -36,7 +41,7 @@ export class ConversationManager {
     // Create tracing context for this conversation
     const tracingContext = createTracingContext(id);
     this.conversationContexts.set(id, tracingContext);
-    
+
     const tracingLogger = createTracingLogger(tracingContext, "conversation");
     tracingLogger.startOperation("createConversation");
 
@@ -61,7 +66,7 @@ export class ConversationManager {
 
     // Save immediately after creation
     await this.persistence.save(conversation);
-    
+
     tracingLogger.completeOperation("createConversation");
 
     return conversation;
@@ -133,10 +138,14 @@ export class ConversationManager {
         conversation.metadata.last_user_message = event.content;
       }
 
-      tracingLogger.logEventReceived(event.id || "unknown", isUser ? "user_message" : "agent_response", {
-        phase: conversation.phase,
-        historyLength: conversation.history.length,
-      });
+      tracingLogger.logEventReceived(
+        event.id || "unknown",
+        isUser ? "user_message" : "agent_response",
+        {
+          phase: conversation.phase,
+          historyLength: conversation.history.length,
+        }
+      );
     }
 
     // Save after adding event

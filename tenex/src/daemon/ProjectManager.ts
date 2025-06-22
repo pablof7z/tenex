@@ -3,8 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { LLMConfigEditor } from "@/commands/setup/llm";
-import { toKebabCase } from "@/utils/agents";
-import { ProjectConfigurationService } from "@/utils/projectUtils";
+import { toKebabCase } from "@/utils/string";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -66,7 +65,8 @@ export class ProjectManager implements IProjectManager {
 
   async loadProject(projectPath: string): Promise<ProjectData> {
     try {
-      const configuration = await ProjectConfigurationService.loadConfiguration(projectPath);
+      const { configurationService } = await import("@tenex/shared/services");
+      const configuration = await configurationService.loadProjectConfig(projectPath);
       const config = configuration.config as ProjectConfig;
 
       if (!config.projectNaddr) {
@@ -108,7 +108,11 @@ export class ProjectManager implements IProjectManager {
   }
 
   private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
-    return ProjectConfigurationService.fetchProjectEvent(naddr);
+    const event = await ndk.fetchEvent(naddr);
+    if (!event) {
+      throw new Error(`Project event not found: ${naddr}`);
+    }
+    return event as NDKProject;
   }
 
   private projectToProjectData(project: NDKProject): ProjectData {
@@ -371,14 +375,14 @@ export class ProjectManager implements IProjectManager {
       const llmsConfig = configuration.llms;
 
       // Check if there are any LLM configurations
-      const hasLLMConfig = 
-        llmsConfig && 
-        llmsConfig.presets && 
-        Object.keys(llmsConfig.presets).length > 0;
+      const hasLLMConfig =
+        llmsConfig && llmsConfig.presets && Object.keys(llmsConfig.presets).length > 0;
 
       if (!hasLLMConfig) {
         logger.info(
-          chalk.yellow("\n⚠️  No LLM configurations found. Let's set up your LLMs for this project.\n")
+          chalk.yellow(
+            "\n⚠️  No LLM configurations found. Let's set up your LLMs for this project.\n"
+          )
         );
 
         const llmEditor = new LLMConfigEditor(projectPath, false);

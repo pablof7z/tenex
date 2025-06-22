@@ -9,21 +9,21 @@ export interface TracingContext {
   conversationId: string; // ID of the conversation (from Nostr event)
   executionId: string; // Unique ID for this specific execution/request
   agentExecutionId?: string; // ID for a specific agent's execution within the conversation
-  
+
   // Parent-child relationships for distributed tracing
   parentExecutionId?: string; // For nested operations
   rootExecutionId?: string; // The original execution that started the chain
-  
+
   // Timing and metadata
   startTime: number; // Unix timestamp when this execution started
   phaseContext?: {
     phase: string;
     phaseExecutionId: string; // Unique ID for this phase execution
   };
-  
+
   // Tool execution context
   toolExecutionId?: string; // ID for tracking tool executions
-  
+
   // Routing context
   routingDecisionId?: string; // ID for routing decisions
 }
@@ -31,7 +31,7 @@ export interface TracingContext {
 /**
  * Generate a unique execution ID
  */
-export function generateExecutionId(prefix: string = "exec"): string {
+export function generateExecutionId(prefix = "exec"): string {
   const timestamp = Date.now().toString(36);
   const random = randomBytes(8).toString("hex");
   return `${prefix}_${timestamp}_${random}`;
@@ -53,7 +53,7 @@ export function createTracingContext(conversationId: string): TracingContext {
 /**
  * Create a child tracing context for nested operations
  */
-export function createChildContext(parent: TracingContext, type: string = "child"): TracingContext {
+export function createChildContext(parent: TracingContext, type = "child"): TracingContext {
   return {
     ...parent,
     executionId: generateExecutionId(type),
@@ -97,10 +97,7 @@ export function createToolExecutionContext(
 /**
  * Create a phase execution context
  */
-export function createPhaseExecutionContext(
-  parent: TracingContext,
-  phase: string
-): TracingContext {
+export function createPhaseExecutionContext(parent: TracingContext, phase: string): TracingContext {
   const phaseExecutionId = generateExecutionId(`phase_${phase}`);
   return {
     ...parent,

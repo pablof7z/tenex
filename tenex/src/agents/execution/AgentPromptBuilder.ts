@@ -1,14 +1,14 @@
 import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
+import { inventoryExists } from "@/utils/inventory";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import type { AgentPromptContext } from "./types";
-import { InventoryService } from "@/services/InventoryService";
 import { logger } from "@tenex/shared";
+import type { AgentPromptContext } from "./types";
 
 export async function buildSystemPrompt(agent: Agent, phase: Phase): Promise<string> {
   const projectContext = getProjectContext();
-  
+
   // Build base prompt
   let prompt = `You are ${agent.name}, a ${agent.role} working on the ${projectContext.title} project.
 
@@ -130,11 +130,14 @@ Tool results will be automatically executed and included in your response.`;
 }
 
 export function buildFullPrompt(context: AgentPromptContext): string {
-  return `${context.conversationHistory}
+  const conversationContent = context.conversationHistory || context.conversationContext || "";
+  const constraints = context.constraints || [];
+
+  return `${conversationContent}
 
 ${context.phaseContext}
 
-${context.constraints.length > 0 ? `## Constraints\n${context.constraints.join("\n")}` : ""}
+${constraints.length > 0 ? `## Constraints\n${constraints.join("\n")}` : ""}
 
 Based on the above context, provide your response as the ${
     context.phaseContext.includes("Phase:") ? "assigned expert" : "project assistant"
@@ -162,26 +165,35 @@ function getPhaseInstructions(phase: Phase): string {
 
 function getToolInstructions(): string {
   return `## Tool Instructions
-When you need to perform actions like:
-- Creating or modifying files
-- Running shell commands
-- Searching the web
-- Reading project specifications
+When you need to perform actions, use the appropriate tool syntax:
 
-Format your tool usage clearly within your response. For example:
-- "Let me create a new file..." followed by the file content
-- "I'll run this command..." followed by the command
-- "Let me search for..." followed by search terms
+### File Operations (file tool)
+- Read: <read>path/to/file</read>
+- Write: <write file="path/to/file">content</write>
+- Edit: <edit file="path/to/file" from="old text" to="new text"/>
+
+### Shell Commands (shell tool)
+- Execute: <execute>command</execute>
+
+### Claude Code (claude_code tool)
+- Run mode: <claude_code>prompt describing the task</claude_code>
+- Plan mode: <claude_code mode="plan">prompt describing what to plan</claude_code>
+
+Use Claude Code for complex tasks that require:
+- Multi-file analysis or refactoring
+- Understanding complex code relationships
+- Searching for patterns across the codebase
+- Implementing features that span multiple files
+- Any task that would benefit from Claude's advanced capabilities
 
 Tools will be executed automatically and results will be included in your response.`;
 }
 
 async function getInventoryPrompt(projectPath: string): Promise<string | null> {
   try {
-    const inventoryService = new InventoryService(projectPath);
-    const inventoryExists = await inventoryService.inventoryExists();
-    
-    if (!inventoryExists) {
+    const hasInventory = await inventoryExists(projectPath);
+
+    if (!hasInventory) {
       logger.debug("No inventory found for project", { projectPath });
       return null;
     }

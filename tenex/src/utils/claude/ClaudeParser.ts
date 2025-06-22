@@ -1,20 +1,9 @@
+import type { ClaudeCodeMessage } from "@/tools/claude/types";
 import { logDebug, logError } from "@tenex/shared/logger";
 import chalk from "chalk";
 
-// Claude Code message types
-export interface ClaudeCodeMessage {
-  type: string;
-  content?: string;
-  conversationId?: string;
-  sessionId?: string;
-  cost?: number;
-  messageId?: string;
-  role?: string;
-  model?: string;
-  [key: string]: unknown;
-}
-
 export type MessageHandler = (message: ClaudeCodeMessage) => void | Promise<void>;
+export type { ClaudeCodeMessage } from "@/tools/claude/types";
 
 export class ClaudeParser {
   private buffer = "";
@@ -62,13 +51,13 @@ export class ClaudeParser {
   private trackMessage(message: ClaudeCodeMessage): void {
     // Capture session ID
     if (message.session_id && !this.sessionId) {
-      this.sessionId = message.session_id;
+      this.sessionId = String(message.session_id);
       logDebug(chalk.gray(`Captured Claude session ID: ${this.sessionId}`));
     }
 
     // Track costs
     if (message.cost_usd || message.total_cost) {
-      const cost = message.cost_usd || message.total_cost || 0;
+      const cost = Number(message.cost_usd || message.total_cost || 0);
       this.totalCost += cost;
     }
 

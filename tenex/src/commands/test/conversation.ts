@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { NDKEvent, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import { getNDK } from '@/nostr/ndkClient';
 import { ConversationManager } from '@/conversations';
-import { LLMService, LLMConfigurationAdapter } from '@/llm';
+import { MultiLLMService } from '@/core/llm/MultiLLMService';
+import type { LLMService } from '@/core/llm/types';
+import { configurationService } from '@tenex/shared/services';
 import { AgentRegistry } from '@/agents';
 import { RoutingLLM } from '@/routing';
 import { logInfo, logDebug, logError } from '@tenex/shared/logger';
@@ -42,11 +44,9 @@ export function createTestConversationCommand(): Command {
         event.kind = 11;
         event.content = options.message;
         event.tags = [['title', options.title]];
-        event.author = await userSigner.user();
-        event.created_at = Math.floor(Date.now() / 1000);
-        event.id = event.getEventHash();
+        await event.sign(userSigner);
         
-        logInfo(chalk.green('✅ Created test event:'), event.id?.substring(0, 8) + '...');
+        logInfo(chalk.green('✅ Created test event:'), event.id.substring(0, 8) + '...');
         
         // Test conversation creation
         const conversation = await conversationManager.createConversation(event);

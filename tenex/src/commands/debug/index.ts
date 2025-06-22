@@ -1,7 +1,9 @@
+import { AgentRegistry } from "@/agents/AgentRegistry";
+import { buildSystemPrompt } from "@/agents/execution/AgentPromptBuilder";
+import { getProjectContext } from "@/runtime";
 import { formatError } from "@/utils/errors";
 import { logError, logInfo } from "@tenex/shared/logger";
 import chalk from "chalk";
-import { createDebugAgentSystem } from "../../debug/createDebugAgentSystem";
 
 interface DebugSystemPromptOptions {
   agent: string;
@@ -13,31 +15,35 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
 
     logInfo(`🔍 Debug: Loading system prompt for agent '${options.agent}'`);
 
-    // Create debug agent system to get the prompt
-    const { agent, agentRegistry } = await createDebugAgentSystem({
-      projectPath,
-      agentName: options.agent,
-    });
+    // Get project context
+    const projectContext = await getProjectContext();
 
-    // Get agent info from registry
-    const agentProfile = agentRegistry.getAgent(options.agent);
+    // Load agent from registry
+    const agentRegistry = new AgentRegistry(projectPath);
+    await agentRegistry.loadFromProject();
+    const agent = agentRegistry.getAgent(options.agent);
 
     console.log(chalk.cyan("\n=== Agent Information ==="));
-    if (agentProfile) {
-      console.log(chalk.white("Name:"), agentProfile.name);
-      console.log(chalk.white("Role:"), agentProfile.role);
-      console.log(chalk.white("Expertise:"), agentProfile.expertise);
-      if (agentProfile.tools && agentProfile.tools.length > 0) {
-        console.log(chalk.white("Tools:"), agentProfile.tools.join(", "));
+    if (agent) {
+      console.log(chalk.white("Name:"), agent.name);
+      console.log(chalk.white("Role:"), agent.role);
+      console.log(chalk.white("Expertise:"), agent.expertise);
+      if (agent.tools && agent.tools.length > 0) {
+        console.log(chalk.white("Tools:"), agent.tools.join(", "));
       }
     } else {
-      console.log(
-        chalk.yellow(`Note: Agent '${options.agent}' not found in registry, using default profile`)
-      );
+      console.log(chalk.yellow(`Note: Agent '${options.agent}' not found in registry`));
     }
 
     console.log(chalk.cyan("\n=== System Prompt ==="));
-    console.log(agent.getSystemPrompt());
+
+    if (agent) {
+      const systemPrompt = await buildSystemPrompt(agent, "chat");
+      console.log(systemPrompt);
+    } else {
+      console.log(chalk.yellow(`Agent '${options.agent}' not found in registry`));
+    }
+
     console.log(chalk.cyan("===================\n"));
 
     logInfo("System prompt displayed successfully");

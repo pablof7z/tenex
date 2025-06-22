@@ -3,7 +3,7 @@ import type { Agent, AgentConfig } from "@/types/agent";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@tenex/shared";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
-import type { AgentReference, AgentDefinition, AgentsJson } from "@tenex/types/agents";
+import type { AgentDefinition, AgentReference, AgentsJson } from "@tenex/types/agents";
 import { nip19 } from "nostr-tools";
 import { generateSecretKey } from "nostr-tools";
 
@@ -41,7 +41,6 @@ export class AgentRegistry {
       this.registry = {};
     }
   }
-
 
   async ensureAgent(name: string, config: AgentConfig): Promise<Agent> {
     // Check if agent already exists

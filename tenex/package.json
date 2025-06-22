@@ -5,11 +5,11 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "tenex": "bin/tenex.js"
+    "tenex": "src/cli.ts"
   },
-  "files": ["dist", "bin"],
+  "files": ["dist", "src"],
   "scripts": {
-    "start": "bun run ./bin/tenex.ts",
+    "start": "bun run ./src/cli.ts",
     "build": "bun scripts/build-bundled.js",
     "build:simple": "bun scripts/build-simple.js",
     "prepublishOnly": "bun run build",

@@ -2,8 +2,8 @@ import type { ConversationState } from "@/conversations/types";
 import { getProjectContext } from "@/runtime";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import { BasePhaseInitializer } from "./PhaseInitializer";
-import type { PhaseInitializationResult } from "./types";
+import { logger } from "@tenex/shared";
+import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**
  * Review Phase Initializer
@@ -11,14 +11,14 @@ import type { PhaseInitializationResult } from "./types";
  * In the review phase, expert agents review the implementation
  * and provide feedback. No automated tools are triggered.
  */
-export class ReviewPhaseInitializer extends BasePhaseInitializer {
+export class ReviewPhaseInitializer implements PhaseInitializer {
   phase: Phase = "review";
 
   async initialize(
     conversation: ConversationState,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
-    this.log("Initializing review phase", {
+    logger.info("[REVIEW Phase] Initializing review phase", {
       conversationId: conversation.id,
       title: conversation.title,
       previousPhase: "execute",
@@ -70,7 +70,7 @@ export class ReviewPhaseInitializer extends BasePhaseInitializer {
         },
       };
     } catch (error) {
-      this.logError("Failed to initialize review phase", error);
+      logger.error("[REVIEW Phase] Failed to initialize review phase", { error });
       return {
         success: false,
         message: `Review phase initialization failed: ${error}`,
