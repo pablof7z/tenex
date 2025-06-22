@@ -1,9 +1,9 @@
 import path from "node:path";
-import type { Agent, AgentConfig } from "@/types/agent";
+import type { Agent, AgentConfig } from "@/agents/types";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
-import type { AgentDefinition } from "@/types/agent";
+import type { AgentDefinition } from "@/agents/types";
 import type { TenexAgents } from "@/types/config";
 import { configService } from "@/services";
 import { nip19 } from "nostr-tools";

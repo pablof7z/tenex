@@ -3,7 +3,7 @@ import { ToolExecutionManager } from "../ToolExecutionManager";
 import { ToolDetector } from "../ToolDetector";
 import { ShellExecutor } from "../executors/ShellExecutor";
 import { FileExecutor } from "../executors/FileExecutor";
-import type { ToolExecutionContext, ToolInvocation, ToolExecutionResult } from "@/types/tool";
+import type { ToolExecutionContext, ToolInvocation, ToolExecutionResult } from "@/tools/types";
 
 // Mock executors
 jest.mock("../executors/ShellExecutor");

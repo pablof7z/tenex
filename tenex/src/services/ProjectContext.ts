@@ -1,5 +1,5 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk";
-import type { Agent } from "@/types/agent";
+import type { Agent } from "@/agents/types";
 
 /**
  * Loaded agent with runtime information

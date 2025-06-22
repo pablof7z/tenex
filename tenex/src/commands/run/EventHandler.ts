@@ -1,81 +1,22 @@
 import { getEventKindName } from "@/commands/run/constants";
-import { ConversationManager } from "@/conversations";
-import { MultiLLMService } from "@/core/llm/MultiLLMService";
-import type { LLMService } from "@/core/llm/types";
-import { ConversationPublisher } from "@/nostr";
-import { getNDK } from "@/nostr/ndkClient";
-import { ConversationRouter, RoutingLLM } from "@/routing";
+import { SystemInitializer } from "@/commands/run/SystemInitializer";
+import type { SystemComponents } from "@/commands/run/SystemInitializer";
 import { formatError } from "@/utils/errors";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
-import { configService, projectContext } from "@/services";
+import { projectContext } from "@/services";
 import { EVENT_KINDS } from "@/types/llm";
-import type { TenexLLMs } from "@/types/config";
 import chalk from "chalk";
 
 export class EventHandler {
-  private conversationManager: ConversationManager;
-  private llmSettings!: TenexLLMs;
-  private llmService!: LLMService;
-  private routingLLM!: RoutingLLM;
-  private conversationRouter!: ConversationRouter;
-  private conversationPublisher!: ConversationPublisher;
+  private systemComponents!: SystemComponents;
 
-  constructor(private projectPath: string) {
-    this.conversationManager = new ConversationManager(projectPath);
-  }
+  constructor(private projectPath: string) {}
 
   async initialize(): Promise<void> {
-    // Initialize conversation manager
-    await this.conversationManager.initialize();
-
-    // Load LLM configuration from ConfigService
-    const { llms } = await configService.loadConfig(this.projectPath);
-    this.llmSettings = llms;
-
-    // Use MultiLLMService to create the LLM service with routing support
-    this.llmService = await MultiLLMService.createForProject(this.projectPath);
-
-    // Initialize routing system
-    let routingConfig = "default";
-    try {
-      routingConfig =
-        this.llmSettings.defaults?.routing || this.llmSettings.defaults?.agents || "default";
-    } catch {
-      routingConfig = "default";
-    }
-    this.routingLLM = new RoutingLLM(this.llmService, routingConfig, this.projectPath);
-    logInfo(`Initialized RoutingLLM with configuration: ${routingConfig}`);
-
-    // Get project and agents from ProjectContext
-    const project = projectContext.getCurrentProject();
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const agents = projectContext.getAllAgents();
-
-    // Create project context for ConversationPublisher
-    const projectInfo = {
-      projectEvent: project,
-      projectSigner: { pubkey: project.pubkey, nsec: projectNsec },
-      agents: agents,
-      projectPath: this.projectPath,
-      title: project.tagValue("title") || "Untitled Project",
-      repository: project.tagValue("repo") || "",
-    };
-
-    this.conversationPublisher = new ConversationPublisher(getNDK());
-    this.conversationRouter = new ConversationRouter(
-      this.conversationManager,
-      this.routingLLM,
-      this.conversationPublisher,
-      this.llmService
-    );
-
-    // Verify project event ID
-    if (!project.id) {
-      throw new Error("Project event ID is required but was not found");
-    }
-
+    const systemInitializer = new SystemInitializer(this.projectPath);
+    this.systemComponents = await systemInitializer.initialize();
     logInfo("EventHandler initialized with conversation routing support");
   }
 
@@ -175,7 +116,7 @@ export class EventHandler {
         const availableAgents = Array.from(projectContext.getAllAgents().values());
 
         // Route the new conversation through the routing LLM
-        await this.conversationRouter.routeNewConversation(event, availableAgents);
+        await this.systemComponents.conversationRouter.routeNewConversation(event, availableAgents);
 
         logInfo(chalk.green("✅ New conversation routed successfully"));
       } catch (error) {
@@ -185,7 +126,7 @@ export class EventHandler {
       // This is a reply within an existing conversation
       try {
         const availableAgents = Array.from(projectContext.getAllAgents().values());
-        await this.conversationRouter.routeReply(event, availableAgents);
+        await this.systemComponents.conversationRouter.routeReply(event, availableAgents);
         logInfo(chalk.green("✅ Reply routed successfully"));
       } catch (error) {
         logInfo(chalk.red(`❌ Failed to route reply: ${formatError(error)}`));
@@ -213,8 +154,7 @@ export class EventHandler {
   }
 
   private handleProjectStatus(event: NDKEvent): void {
-    const ndk = getNDK();
-    if (event.author.pubkey !== ndk.activeUser?.pubkey) {
+    if (event.author.pubkey !== projectContext.getCurrentProject().pubkey) {
       logInfo(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
     }
   }
@@ -256,7 +196,7 @@ export class EventHandler {
       const availableAgents = Array.from(projectContext.getAllAgents().values());
 
       // Route the new conversation through the routing system
-      await this.conversationRouter.routeNewConversation(event, availableAgents);
+      await this.systemComponents.conversationRouter.routeNewConversation(event, availableAgents);
 
       logInfo(chalk.green("✅ Conversation routed successfully"));
     } catch (error) {
@@ -266,7 +206,7 @@ export class EventHandler {
 
   async cleanup(): Promise<void> {
     // Save all conversations before shutting down
-    await this.conversationManager.cleanup();
+    await this.systemComponents.conversationManager.cleanup();
     logInfo("EventHandler cleanup completed");
   }
 }

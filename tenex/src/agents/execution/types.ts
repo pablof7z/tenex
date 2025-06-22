@@ -1,8 +1,8 @@
 import type { ConversationState } from "@/conversations/types";
-import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
+import type { Agent } from "@/agents/types";
+import type { Phase } from "@/conversations/types";
 import type { LLMMetadata } from "@/types/nostr";
-import type { ToolExecutionResult } from "@/types/tool";
+import type { ToolExecutionResult } from "@/tools/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 export interface AgentExecutionContext {

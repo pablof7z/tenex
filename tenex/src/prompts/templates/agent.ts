@@ -1,5 +1,5 @@
-import type { Agent, AgentContext } from "@/types/agent";
-import type { AgentSummary } from "@/types/routing";
+import type { Agent, AgentContext } from "@/agents/types";
+import type { AgentSummary } from "@/routing/types";
 import { PromptBuilder } from "../core/PromptBuilder";
 
 export function buildAgentPrompt(

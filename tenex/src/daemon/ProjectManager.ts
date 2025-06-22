@@ -10,7 +10,7 @@ import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { configService, ProjectContext } from "@/services";
-import type { AgentProfile } from "@/types/agent";
+import type { AgentProfile } from "@/agents/types";
 import type { TenexConfig } from "@/types/config";
 import type { Agent } from "@/types/llm";
 import chalk from "chalk";

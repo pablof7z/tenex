@@ -24,7 +24,7 @@ import type {
 } from "./types";
 import { configService } from "@/services";
 import type { TenexLLMs } from "@/types/config";
-import type { Agent } from "@/types/agent";
+import type { Agent } from "@/agents/types";
 
 const llmLogger = logger.forModule("llm");
 

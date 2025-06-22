@@ -2,8 +2,8 @@ import type { CompletionResponse, LLMService, Message } from "@/core/llm/types";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger, createToolExecutionContext } from "@/tracing";
 import { ToolExecutionManager } from "@/tools/execution";
-import type { ToolExecutionResult, ToolInvocation } from "@/types/tool";
-import type { Phase } from "@/types/conversation";
+import type { ToolExecutionResult, ToolInvocation } from "@/tools/types";
+import type { Phase } from "@/conversations/types";
 import { PromptBuilder } from "@/prompts";
 
 interface ReasonActContext {

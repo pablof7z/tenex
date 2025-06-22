@@ -7,7 +7,7 @@ import type {
   ToolExecutor,
   ToolInvocation,
   ShellToolParameters,
-} from "@/types/tool";
+} from "@/tools/types";
 
 const execAsync = promisify(exec);
 

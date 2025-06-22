@@ -1,4 +1,4 @@
-import type { AgentSummary } from "@/types/routing";
+import type { AgentSummary } from "@/routing/types";
 import { PromptBuilder } from "../core/PromptBuilder";
 
 export interface RoutingPromptArgs {

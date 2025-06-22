@@ -6,8 +6,8 @@ import { initNDK, shutdownNDK } from "@/nostr/ndkClient";
 import { runInteractiveSetup } from "@/utils/setup";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
-import type { TenexConfig } from "@/types/config";
 import { Command } from "commander";
+import { setupGracefulShutdown } from "@/utils/process";
 
 export const daemonCommand = new Command("daemon")
   .description("Start the TENEX daemon to monitor Nostr events")
@@ -18,10 +18,12 @@ export const daemonCommand = new Command("daemon")
     logger.info("Starting TENEX daemon");
 
     // Load configuration
-    let globalConfig = await loadDaemonConfig(options.config);
+    const { config: globalConfig } = await configService.loadConfig(
+      options.config ? path.dirname(options.config) : undefined
+    );
 
     // Get whitelisted pubkeys
-    let whitelistedPubkeys = getWhitelistedPubkeys(options.whitelist, globalConfig);
+    let whitelistedPubkeys = configService.getWhitelistedPubkeys(options.whitelist, globalConfig);
 
     if (whitelistedPubkeys.length === 0) {
       logger.info("No whitelisted pubkeys found. Starting interactive setup...");
@@ -29,9 +31,9 @@ export const daemonCommand = new Command("daemon")
       // Run interactive setup
       const setupConfig = await runInteractiveSetup();
 
-      // Use the setup configuration
-      globalConfig = setupConfig;
-      whitelistedPubkeys = setupConfig.whitelistedPubkeys;
+      // Save the setup configuration and reload
+      await configService.saveGlobalConfig(setupConfig);
+      whitelistedPubkeys = setupConfig.whitelistedPubkeys || [];
     }
 
     logger.info("Whitelisted pubkeys", { count: whitelistedPubkeys.length });
@@ -45,7 +47,18 @@ export const daemonCommand = new Command("daemon")
     const eventMonitor = new EventMonitor(projectManager, processManager);
 
     // Set up graceful shutdown
-    setupGracefulShutdown(eventMonitor, processManager);
+    setupGracefulShutdown(async () => {
+      // Stop monitoring new events
+      await eventMonitor.stop();
+
+      // Stop all running projects
+      await processManager.stopAll();
+
+      // Shutdown NDK singleton
+      await shutdownNDK();
+
+      logger.info("Daemon shutdown complete");
+    });
 
     try {
       // Start monitoring without passing LLM configs - let projects load from global config with proper default detection
@@ -63,85 +76,4 @@ export const daemonCommand = new Command("daemon")
     }
   });
 
-async function loadDaemonConfig(configPath?: string): Promise<TenexConfig> {
-  try {
-    // If config path is provided, load from that directory, otherwise load global config
-    if (configPath) {
-      const { config } = await configService.loadConfig(path.dirname(configPath));
-      return config;
-    }
-      const { config } = await configService.loadConfig(); // No project path = global only
-      return config;
-  } catch (_error) {
-    // Config doesn't exist yet
-    return {};
-  }
-}
 
-function getWhitelistedPubkeys(cliOption?: string, config?: TenexConfig): string[] {
-  const pubkeys: Set<string> = new Set();
-
-  // If CLI option is provided, ONLY use those pubkeys (don't merge with config)
-  if (cliOption) {
-    for (const pk of cliOption.split(",")) {
-      const trimmed = pk.trim();
-      if (trimmed) pubkeys.add(trimmed);
-    }
-    return Array.from(pubkeys);
-  }
-
-  // Otherwise, use config pubkeys
-  if (config?.whitelistedPubkeys) {
-    if (Array.isArray(config.whitelistedPubkeys)) {
-      for (const pk of config.whitelistedPubkeys) {
-        if (pk) pubkeys.add(pk);
-      }
-    }
-  }
-
-  return Array.from(pubkeys);
-}
-
-function setupGracefulShutdown(eventMonitor: EventMonitor, processManager: ProcessManager): void {
-  let isShuttingDown = false;
-
-  const shutdown = async (signal: string) => {
-    if (isShuttingDown) return;
-    isShuttingDown = true;
-
-    logger.info(`Received ${signal}, shutting down gracefully...`);
-
-    try {
-      // Stop monitoring new events
-      await eventMonitor.stop();
-
-      // Stop all running projects
-      await processManager.stopAll();
-
-      // Shutdown NDK singleton
-      await shutdownNDK();
-
-      logger.info("Daemon shutdown complete");
-      process.exit(0);
-    } catch (error) {
-      logger.error("Error during shutdown", { error });
-      process.exit(1);
-    }
-  };
-
-  // Handle various termination signals
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGHUP", () => shutdown("SIGHUP"));
-
-  // Handle uncaught errors
-  process.on("uncaughtException", (error) => {
-    logger.error("Uncaught exception", { error });
-    shutdown("uncaughtException");
-  });
-
-  process.on("unhandledRejection", (reason, promise) => {
-    logger.error("Unhandled rejection", { reason, promise });
-    shutdown("unhandledRejection");
-  });
-}

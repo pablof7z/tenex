@@ -1,5 +1,5 @@
 import { logger } from "@/utils/logger";
-import type { ToolInvocation, ToolPattern } from "@/types/tool";
+import type { ToolInvocation, ToolPattern } from "@/tools/types";
 
 export class ToolDetector {
   private patterns: ToolPattern[] = [

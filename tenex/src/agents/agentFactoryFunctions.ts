@@ -1,5 +1,5 @@
 import { projectContext } from "@/services";
-import type { Agent } from "@/types/agent";
+import type { Agent } from "@/agents/types";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 export interface ProjectAgentOptions {

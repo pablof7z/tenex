@@ -1,7 +1,7 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
-import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
+import type { Agent } from "@/agents/types";
+import type { Phase } from "@/conversations/types";
 import type { ConversationState } from "@/conversations/types";
 
 // Agent system prompt fragment
@@ -10,13 +10,12 @@ interface AgentSystemPromptArgs {
   phase: Phase;
   projectTitle: string;
   projectRepository?: string;
-  inventoryPrompt?: string;
 }
 
 export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = {
   id: "agent-system-prompt",
   priority: 10,
-  template: ({ agent, phase, projectTitle, projectRepository, inventoryPrompt }) => {
+  template: ({ agent, phase, projectTitle, projectRepository }) => {
     let prompt = `You are ${agent.name}, a ${agent.role} working on the ${projectTitle} project.
 
 ## Your Role
@@ -30,14 +29,9 @@ ${getPhaseInstructions(phase)}
 
 ## Project Context
 - Project: ${projectTitle}
-${projectRepository ? `- Repository: ${projectRepository}` : ""}`;
+${projectRepository ? `- Repository: ${projectRepository}` : ""}
 
-    // Add inventory information for chat phase
-    if (phase === "chat" && inventoryPrompt) {
-      prompt += `\n\n${inventoryPrompt}`;
-    }
-
-    prompt += `\n\n## Communication Style
+## Communication Style
 - Be concise and focused on the task at hand
 - Provide actionable insights and clear next steps
 - When suggesting code changes, be specific about what to change

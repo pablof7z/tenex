@@ -12,6 +12,7 @@ import { logger } from "@/utils/logger";
 import chalk from "chalk";
 import { Command } from "commander";
 import { projectContext } from "@/services";
+import { setupGracefulShutdown } from "@/utils/process";
 
 export const projectRunCommand = new Command("run")
   .description("Run the TENEX agent orchestration system for the current project")
@@ -62,28 +63,7 @@ async function runProjectListener(projectPath: string, _ndk: NDK) {
     logger.info(chalk.green("\n✅ Ready to process events!\n"));
 
     // Set up graceful shutdown
-    setupGracefulShutdown(eventHandler, statusPublisher, subscriptionManager);
-
-    // Keep the process running
-    await new Promise(() => {
-      // This promise never resolves, keeping the listener active
-    });
-  } catch (err) {
-    const errorMessage = formatError(err);
-    logger.error(`Failed to run project listener: ${errorMessage}`);
-    throw err;
-  }
-}
-
-function setupGracefulShutdown(
-  eventHandler: EventHandler,
-  statusPublisher: StatusPublisher,
-  subscriptionManager: SubscriptionManager
-) {
-  const shutdown = async (signal: string) => {
-    logger.info(`Received ${signal}, shutting down gracefully...`);
-
-    try {
+    setupGracefulShutdown(async () => {
       // Stop subscriptions first
       await subscriptionManager.stop();
 
@@ -97,14 +77,16 @@ function setupGracefulShutdown(
       await shutdownNDK();
 
       logger.info("Project shutdown complete");
-      process.exit(0);
-    } catch (error) {
-      logger.error("Error during shutdown", { error });
-      process.exit(1);
-    }
-  };
+    });
 
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGHUP", () => shutdown("SIGHUP"));
+    // Keep the process running
+    await new Promise(() => {
+      // This promise never resolves, keeping the listener active
+    });
+  } catch (err) {
+    const errorMessage = formatError(err);
+    logger.error(`Failed to run project listener: ${errorMessage}`);
+    throw err;
+  }
 }
+

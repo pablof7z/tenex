@@ -1,4 +1,4 @@
-import type { AgentSummary } from "@/types/routing";
+import type { AgentSummary } from "@/routing/types";
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 

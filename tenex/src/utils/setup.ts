@@ -1,27 +1,27 @@
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { logger } from "@/utils/logger";
+import { configService } from "@/services";
+import type { TenexConfig } from "@/types/config";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
-interface DaemonConfig {
-  whitelistedPubkeys: string[];
-}
-
-export async function runInteractiveSetup(): Promise<DaemonConfig> {
+export async function runInteractiveSetup(): Promise<TenexConfig> {
   logger.info(chalk.cyan("\n🚀 Welcome to TENEX Daemon Setup\n"));
   logger.info("Let's configure your daemon to get started.\n");
 
   // Step 1: Get whitelisted pubkeys
   const pubkeys = await promptForPubkeys();
 
-  const config: DaemonConfig = {
+  const config: TenexConfig = {
     whitelistedPubkeys: pubkeys,
   };
 
-  // Step 2: Save configuration
-  await saveConfiguration(config);
+  // Step 2: Save configuration using ConfigService
+  await configService.saveGlobalConfig(config);
+  
+  logger.info(chalk.green(`\n✓ Configuration saved to: ${configService.getGlobalPath()}/config.json`));
+  logger.info(
+    chalk.gray("\nYou can now run 'tenex daemon' to start the daemon with your configuration.")
+  );
 
   return config;
 }
@@ -71,33 +71,3 @@ async function promptForPubkeys(): Promise<string[]> {
   return pubkeys;
 }
 
-async function saveConfiguration(config: DaemonConfig): Promise<void> {
-  const savePath = path.join(os.homedir(), ".tenex", "config.json");
-
-  try {
-    const dir = path.dirname(savePath);
-    await fs.mkdir(dir, { recursive: true });
-
-    // Load existing config if it exists
-    let existingConfig: Record<string, unknown> = {};
-    try {
-      const existingContent = await fs.readFile(savePath, "utf-8");
-      existingConfig = JSON.parse(existingContent);
-    } catch {
-      // File doesn't exist, use empty config
-    }
-
-    // Update with daemon config
-    existingConfig.whitelistedPubkeys = config.whitelistedPubkeys;
-
-    await fs.writeFile(savePath, JSON.stringify(existingConfig, null, 2), "utf-8");
-
-    logger.info(chalk.green(`\n✓ Configuration saved to: ${savePath}`));
-    logger.info(
-      chalk.gray("\nYou can now run 'tenex daemon' to start the daemon with your configuration.")
-    );
-  } catch (error) {
-    logger.error("Failed to save configuration", { error });
-    throw error;
-  }
-}

@@ -1,5 +1,5 @@
 import { projectContext } from "@/services";
-import type { Conversation, Phase } from "@/types/conversation";
+import type { Conversation, Phase } from "@/conversations/types";
 import type { LLMMetadata } from "@/types/nostr";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";

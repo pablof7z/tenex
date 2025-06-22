@@ -9,7 +9,7 @@ import type {
   FileReadParameters,
   FileWriteParameters,
   FileEditParameters,
-} from "@/types/tool";
+} from "@/tools/types";
 
 export class FileExecutor implements ToolExecutor {
   name = "file";

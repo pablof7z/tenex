@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import { AgentRegistry } from "../AgentRegistry";
-import type { Agent, AgentConfig } from "@/types/agent";
+import type { Agent, AgentConfig } from "@/agents/types";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { fileExists, readFile, writeJsonFile, ensureDirectory } from "@/lib/fs";
 import path from "node:path";

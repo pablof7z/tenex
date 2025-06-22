@@ -141,6 +141,39 @@ export class ConfigService {
   }
 
   // =====================================================================================
+  // BUSINESS LOGIC METHODS
+  // =====================================================================================
+
+  /**
+   * Get whitelisted pubkeys with CLI override support
+   * If CLI option is provided, it ONLY uses those pubkeys (doesn't merge with config)
+   * Otherwise, returns pubkeys from the configuration
+   */
+  getWhitelistedPubkeys(cliOption?: string, config?: TenexConfig): string[] {
+    const pubkeys: Set<string> = new Set();
+
+    // If CLI option is provided, ONLY use those pubkeys (don't merge with config)
+    if (cliOption) {
+      for (const pk of cliOption.split(",")) {
+        const trimmed = pk.trim();
+        if (trimmed) pubkeys.add(trimmed);
+      }
+      return Array.from(pubkeys);
+    }
+
+    // Otherwise, use config pubkeys
+    if (config?.whitelistedPubkeys) {
+      if (Array.isArray(config.whitelistedPubkeys)) {
+        for (const pk of config.whitelistedPubkeys) {
+          if (pk) pubkeys.add(pk);
+        }
+      }
+    }
+
+    return Array.from(pubkeys);
+  }
+
+  // =====================================================================================
   // CONVENIENCE METHODS
   // =====================================================================================
 

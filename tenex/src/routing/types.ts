@@ -1,6 +1,12 @@
-import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
-import type { AgentSummary } from "@/types/routing";
+import type { Agent } from "@/agents/types";
+import type { Phase } from "@/conversations/types";
+
+export interface AgentSummary {
+  name: string;
+  pubkey: string;
+  role: string;
+  expertise: string;
+}
 
 export interface RoutingContext {
   conversationId: string;

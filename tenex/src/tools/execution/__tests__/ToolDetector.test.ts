@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { ToolDetector } from "../ToolDetector";
-import type { ToolInvocation } from "@/types/tool";
+import type { ToolInvocation } from "@/tools/types";
 
 describe("ToolDetector", () => {
   let detector: ToolDetector;

@@ -6,7 +6,7 @@ import type {
   ToolExecutionResult,
   ToolExecutor,
   ToolInvocation,
-} from "@/types/tool";
+} from "@/tools/types";
 
 export class ToolExecutionManager {
   private detector = new ToolDetector();

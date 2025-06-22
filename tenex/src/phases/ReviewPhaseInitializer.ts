@@ -1,7 +1,7 @@
 import type { ConversationState } from "@/conversations/types";
 import { projectContext } from "@/services";
-import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
+import type { Agent } from "@/agents/types";
+import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 import { handlePhaseError } from "./utils";

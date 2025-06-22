@@ -3,7 +3,7 @@ import path from "node:path";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@/lib/fs";
 import type { ConversationState, ConversationMetadata as ConvMetadata } from "../types";
-import type { Phase } from "@/types/conversation";
+import type { Phase } from "@/conversations/types";
 import type { ConversationPersistenceAdapter, ConversationSearchCriteria, ConversationMetadata } from "./types";
 
 export class FileSystemAdapter implements ConversationPersistenceAdapter {

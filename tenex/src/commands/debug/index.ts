@@ -3,7 +3,7 @@ import { PromptBuilder } from "@/prompts";
 import { projectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { inventoryExists } from "@/utils/inventory";
-import type { Phase } from "@/types/conversation";
+import type { Phase } from "@/conversations/types";
 import { formatError } from "@/utils/errors";
 import { logError, logInfo } from "@/utils/logger";
 import chalk from "chalk";

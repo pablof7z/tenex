@@ -1,8 +1,8 @@
 import type { ConversationState } from "@/conversations/types";
 import { projectContext } from "@/services";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
-import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
+import type { Agent } from "@/agents/types";
+import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";
 import { PromptBuilder } from "@/prompts";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";

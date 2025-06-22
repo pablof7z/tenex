@@ -9,9 +9,8 @@ import {
   getPhaseTransitionSystemPrompt,
   getRoutingSystemPrompt,
 } from "@/prompts";
-import type { Agent } from "@/types/agent";
-import type { Conversation } from "@/types/conversation";
-import type { AgentSummary } from "@/types/routing";
+import type { Agent } from "@/agents/types";
+import type { Conversation } from "@/conversations/types";
 import { formatProjectContextForPrompt, getProjectContext } from "@/utils/project";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
@@ -22,6 +21,7 @@ import type {
   PhaseTransitionDecision,
   RoutingContext,
   RoutingDecision,
+  AgentSummary,
 } from "./types";
 
 export class RoutingLLM {

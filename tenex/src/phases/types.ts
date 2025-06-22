@@ -1,6 +1,6 @@
 import type { ConversationState } from "@/conversations/types";
-import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
+import type { Agent } from "@/agents/types";
+import type { Phase } from "@/conversations/types";
 
 export interface PhaseInitializationResult {
   success: boolean;
