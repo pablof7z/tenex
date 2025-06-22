@@ -9,16 +9,6 @@ export interface Conversation {
   history: NDKEvent[];
   currentAgent?: string; // pubkey of current agent
   phaseStartedAt?: number;
-  metadata: Record<string, string | number | boolean | string[]>;
-}
-
-export interface ConversationState {
-  id: string;
-  title: string;
-  phase: Phase;
-  history: NDKEvent[];
-  currentAgent?: string; // pubkey of current agent
-  phaseStartedAt?: number;
   metadata: ConversationMetadata;
 }
 
@@ -44,3 +34,6 @@ export interface PhaseTransition {
   timestamp: number;
   reason?: string;
 }
+
+// ConversationState is the same as Conversation - used for internal state management
+export type ConversationState = Conversation;

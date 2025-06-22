@@ -441,6 +441,7 @@ export class MultiLLMService implements LLMService {
       mistral: "mistralai",
       groq: "groq",
       openrouter: "openrouter",
+      deepseek: "deepseek",
     };
     return providerMap[provider] || provider;
   }

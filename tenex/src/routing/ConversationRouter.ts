@@ -1,6 +1,5 @@
 import { AgentExecutor, createMinimalProjectAgent, createProjectAgent } from "@/agents";
 import type { ConversationManager } from "@/conversations";
-import type { ConversationState } from "@/conversations/types";
 import type { LLMService } from "../llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
@@ -18,14 +17,24 @@ import {
   meetsPhaseTransitionCriteria,
   validateRoutingDecision,
 } from "./routingDomain";
+import { 
+  RoutingPipeline,
+  PhaseTransitionHandler,
+  RoutingDecisionHandler,
+  ChatPhaseHandler,
+  AgentRoutingHandler,
+  PhaseTransitionExecutor,
+  type RoutingContext
+} from "./pipeline";
 
 export class ConversationRouter {
   private agentExecutor: AgentExecutor;
+  private replyPipeline: RoutingPipeline;
 
   /**
    * Convert ConversationState to Conversation for type compatibility
    */
-  private convertToConversation(state: ConversationState): Conversation {
+  private convertToConversation(state: Conversation): Conversation {
     const metadata: Record<string, string | number | boolean | string[]> = {};
     
     // Convert known fields
@@ -69,6 +78,15 @@ export class ConversationRouter {
     llmService: LLMService
   ) {
     this.agentExecutor = new AgentExecutor(llmService, publisher);
+    
+    // Initialize the routing pipeline
+    this.replyPipeline = new RoutingPipeline([
+      new PhaseTransitionHandler(),
+      new RoutingDecisionHandler(),
+      new ChatPhaseHandler(),
+      new AgentRoutingHandler(),
+      new PhaseTransitionExecutor()
+    ]);
   }
 
   /**
@@ -141,138 +159,34 @@ export class ConversationRouter {
       // Add event to conversation history
       await this.conversationManager.addEvent(conversation.id, event);
 
-      // Check if this is a phase transition request
-      const phaseTag = event.tags.find((tag) => tag[0] === "phase");
-      if (phaseTag) {
-        const newPhase = phaseTag[1] as Phase;
+      // Create routing context
+      const context: RoutingContext = {
+        event,
+        conversation,
+        availableAgents,
+        handled: false,
+        conversationManager: this.conversationManager,
+        routingLLM: this.routingLLM,
+        publisher: this.publisher,
+        agentExecutor: this.agentExecutor
+      };
 
-        // Validate the requested phase transition
-        if (canTransitionPhase(conversation.phase, newPhase)) {
-          const transitionCheck = meetsPhaseTransitionCriteria(conversation, newPhase);
+      // Execute the pipeline
+      const result = await this.replyPipeline.execute(context);
 
-          if (transitionCheck.canTransition) {
-            await this.transitionPhase(conversation.id, newPhase, availableAgents, event);
-          } else {
-            logger.warn("Phase transition criteria not met", {
-              from: conversation.phase,
-              to: newPhase,
-              reason: transitionCheck.reason,
-            });
-            // Publish feedback to user
-            await this.publisher.publishProjectResponse(
-              event,
-              `Cannot transition to ${newPhase} phase: ${transitionCheck.reason}`,
-              { phase: conversation.phase, error: true }
-            );
-          }
-        } else {
-          logger.warn("Invalid phase transition requested", {
-            from: conversation.phase,
-            to: newPhase,
-          });
-          // Publish feedback to user
-          await this.publisher.publishProjectResponse(
-            event,
-            `Cannot transition from ${conversation.phase} to ${newPhase} phase directly.`,
-            { phase: conversation.phase, error: true }
-          );
-        }
-        return;
+      if (result.error) {
+        logger.error("Routing pipeline failed", { 
+          error: result.error,
+          conversationId: conversation.id 
+        });
+        throw result.error;
       }
 
-      // Route within current phase
-      let routingDecision = await this.routingLLM.routeNextAction(
-        this.convertToConversation(conversation),
-        event.content || "",
-        availableAgents
-      );
-
-      // Apply business rules
-      routingDecision = applyBusinessRules(routingDecision, conversation, availableAgents);
-
-      // Check if phase should change based on routing decision
-      if (routingDecision.phase !== conversation.phase) {
-        // Validate phase transition
-        const transitionCheck = meetsPhaseTransitionCriteria(conversation, routingDecision.phase);
-
-        if (!transitionCheck.canTransition) {
-          logger.warn("Phase transition blocked", {
-            from: conversation.phase,
-            to: routingDecision.phase,
-            reason: transitionCheck.reason,
-          });
-          // Stay in current phase
-          routingDecision.phase = conversation.phase;
-        } else {
-          await this.transitionPhase(
-            conversation.id,
-            routingDecision.phase,
-            availableAgents,
-            event
-          );
-        }
-      } else if (conversation.phase === "chat") {
-        // In chat phase, the project responds directly to the user
-        const currentProject = projectContext.getCurrentProject();
-
-        // Execute project response logic
-        const projectAgent = createProjectAgent();
-        const executionResult = await this.agentExecutor.execute(
-          {
-            agent: projectAgent,
-            conversation,
-            phase: "chat",
-            lastUserMessage: event.content,
-          },
-          event
-        );
-
-        if (!executionResult.success) {
-          logger.error("Project execution failed during chat phase", {
-            error: executionResult.error,
-          });
-        }
-      } else if (routingDecision.nextAgent) {
-        // In non-chat phases, route to specific agents
-        await this.conversationManager.updateCurrentAgent(
-          conversation.id,
-          routingDecision.nextAgent
-        );
-
-        // Find the assigned agent
-        let agent = availableAgents.find((a) => a.pubkey === routingDecision.nextAgent);
-
-        // If agent not found, try to assign a default one
-        if (!agent) {
-          agent = getDefaultAgentForPhase(conversation.phase, availableAgents) || undefined;
-          if (agent) {
-            logger.info("Assigned default agent for phase", {
-              phase: conversation.phase,
-              agent: agent.name,
-            });
-            await this.conversationManager.updateCurrentAgent(conversation.id, agent.pubkey);
-          }
-        }
-
-        if (agent) {
-          // Execute the agent to generate response
-          const executionResult = await this.agentExecutor.execute(
-            {
-              agent,
-              conversation,
-              phase: conversation.phase,
-              lastUserMessage: event.content,
-            },
-            event
-          );
-
-          if (!executionResult.success) {
-            logger.error("Agent execution failed during reply routing", {
-              agent: agent.name,
-              error: executionResult.error,
-            });
-          }
-        }
+      if (!result.handled) {
+        logger.warn("No handler processed the reply", {
+          conversationId: conversation.id,
+          eventId: event.id
+        });
       }
     } catch (error) {
       logger.error("Failed to route reply", { error });

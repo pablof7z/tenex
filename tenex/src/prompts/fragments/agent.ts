@@ -1,5 +1,6 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
+import { buildAgentPrompt } from "./agent-common";
 
 interface AgentFragmentArgs {
   agent: {
@@ -17,19 +18,12 @@ export const agentFragment: PromptFragment<AgentFragmentArgs> = {
   id: "agent-base",
   priority: 10,
   template: ({ agent, project }) => {
-    let prompt = `You are ${agent.name}`;
-
-    if (agent.role) {
-      prompt += `, ${agent.role}`;
-    }
-
-    prompt += `\n\n${agent.instructions}`;
-
-    if (project) {
-      prompt += `\n\nWorking on project: ${project.name}`;
-    }
-
-    return prompt;
+    return buildAgentPrompt({
+      name: agent.name,
+      role: agent.role,
+      instructions: agent.instructions,
+      projectName: project?.name
+    });
   },
 };
 

@@ -12,25 +12,12 @@ import type { LLMProvider } from "@/llm/types";
 import type { TenexLLMs } from "@/services/config/types";
 import chalk from "chalk";
 import inquirer from "inquirer";
+import { loadModels } from "multi-llm-ts";
 
 type LLMConfigWithName = LLMConfig & {
   name: string;
 };
 
-interface ProviderModels {
-  [key: string]: string[];
-}
-
-interface OllamaModel {
-  name: string;
-  size: number;
-  digest: string;
-  modified_at: string;
-}
-
-interface OllamaModelsResponse {
-  models: OllamaModel[];
-}
 
 interface OpenRouterModel {
   id: string;
@@ -74,7 +61,20 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
-const PROVIDER_MODELS: ProviderModels = {
+// Map our provider names to multi-llm-ts provider IDs
+const PROVIDER_ID_MAP: Record<string, string> = {
+  anthropic: "anthropic",
+  openai: "openai",
+  google: "google",
+  groq: "groq",
+  deepseek: "deepseek",
+  ollama: "ollama",
+  openrouter: "openrouter",
+  mistral: "mistralai",
+};
+
+// Fallback models when API is not available
+const FALLBACK_MODELS: Record<string, string[]> = {
   anthropic: [
     "claude-3-5-sonnet-20241022",
     "claude-3-5-haiku-20241022",
@@ -83,66 +83,84 @@ const PROVIDER_MODELS: ProviderModels = {
     "claude-3-haiku-20240307",
   ],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
-  openrouter: [], // Will be populated dynamically
   google: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
   groq: ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
   deepseek: ["deepseek-chat", "deepseek-coder"],
-  ollama: [], // Will be populated dynamically
+  mistral: ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
+  ollama: ["llama3.2", "llama3.1", "codellama", "mistral", "gemma2", "qwen2.5"],
 };
 
-async function fetchOllamaModels(): Promise<string[]> {
+async function fetchModelsForProvider(
+  provider: string,
+  apiKey?: string
+): Promise<string[]> {
   try {
-    const response = await fetch("http://localhost:11434/api/tags");
-    if (!response.ok) {
-      throw new Error(`Ollama API returned ${response.status}`);
+    const providerId = PROVIDER_ID_MAP[provider] || provider;
+    const config = apiKey ? { apiKey } : {};
+    
+    logger.info(chalk.cyan(`🔍 Fetching ${provider} models...`));
+    const models = await loadModels(providerId, config);
+    
+    if (models && models.chat && models.chat.length > 0) {
+      // Extract model IDs from the chat models
+      const modelIds = models.chat.map((model: any) => 
+        typeof model === 'string' ? model : model.id || model.name || String(model)
+      );
+      logger.info(chalk.green(`✅ Found ${modelIds.length} models from API`));
+      return modelIds;
     }
-
-    const data = (await response.json()) as OllamaModelsResponse;
-    return data.models.map((model) => model.name);
+    
+    // Fall back to default models if none found
+    logger.info(chalk.yellow(`⚠️  No models found from API, using defaults`));
+    return FALLBACK_MODELS[provider] || [];
   } catch (error) {
-    logger.warn(`Could not fetch Ollama models: ${error}`);
-    logger.info("Make sure Ollama is running with: ollama serve");
-
-    // Return fallback models if Ollama is not available
-    return ["llama3.2", "llama3.1", "codellama", "mistral", "gemma2", "qwen2.5"];
+    logger.warn(`Could not fetch ${provider} models: ${error}`);
+    // Return fallback models on error
+    return FALLBACK_MODELS[provider] || [];
   }
 }
 
 async function fetchOpenRouterModelsWithMetadata(): Promise<OpenRouterModelWithMetadata[]> {
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/models", {
-      headers: {
-        "HTTP-Referer": "https://tenex.dev",
-        "X-Title": "TENEX CLI",
-      },
-    });
+    // First try using multi-llm-ts loadModels
+    const models = await loadModels("openrouter", {});
+    
+    if (models && models.chat && models.chat.length > 0) {
+      // For OpenRouter, we still need to fetch the full metadata for pricing info
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: {
+          "HTTP-Referer": "https://tenex.dev",
+          "X-Title": "TENEX CLI",
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`OpenRouter API returned ${response.status}`);
+      if (response.ok) {
+        const data = (await response.json()) as OpenRouterModelsResponse;
+        return data.data
+          .filter((model) => {
+            // Check if model supports text input and output
+            const hasTextInput = model.input_modalities?.includes("text") ?? true;
+            const hasTextOutput = model.output_modalities?.includes("text") ?? true;
+            return hasTextInput && hasTextOutput;
+          })
+          .map((model) => ({
+            id: model.id,
+            name: model.name,
+            supportsCaching: !!(model.pricing.input_cache_read && model.pricing.input_cache_write),
+            promptPrice: Number.parseFloat(model.pricing.prompt) * 1000000, // Convert to price per 1M tokens
+            completionPrice: Number.parseFloat(model.pricing.completion) * 1000000,
+            cacheReadPrice: model.pricing.input_cache_read
+              ? Number.parseFloat(model.pricing.input_cache_read) * 1000000
+              : undefined,
+            cacheWritePrice: model.pricing.input_cache_write
+              ? Number.parseFloat(model.pricing.input_cache_write) * 1000000
+              : undefined,
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id));
+      }
     }
-
-    const data = (await response.json()) as OpenRouterModelsResponse;
-    return data.data
-      .filter((model) => {
-        // Check if model supports text input and output
-        const hasTextInput = model.input_modalities?.includes("text") ?? true;
-        const hasTextOutput = model.output_modalities?.includes("text") ?? true;
-        return hasTextInput && hasTextOutput;
-      })
-      .map((model) => ({
-        id: model.id,
-        name: model.name,
-        supportsCaching: !!(model.pricing.input_cache_read && model.pricing.input_cache_write),
-        promptPrice: Number.parseFloat(model.pricing.prompt) * 1000000, // Convert to price per 1M tokens
-        completionPrice: Number.parseFloat(model.pricing.completion) * 1000000,
-        cacheReadPrice: model.pricing.input_cache_read
-          ? Number.parseFloat(model.pricing.input_cache_read) * 1000000
-          : undefined,
-        cacheWritePrice: model.pricing.input_cache_write
-          ? Number.parseFloat(model.pricing.input_cache_write) * 1000000
-          : undefined,
-      }))
-      .sort((a, b) => a.id.localeCompare(b.id));
+    
+    throw new Error("Could not fetch OpenRouter models");
   } catch (error) {
     logger.warn(`Could not fetch OpenRouter models: ${error}`);
     // Return common OpenRouter models as fallback
@@ -251,7 +269,7 @@ export class LLMConfigEditor {
     if (configs.length > 0) {
       logger.info(chalk.green("Current configurations:"));
       configs.forEach((config, index) => {
-        const isDefault = llmsConfig.defaults.agents === config.name;
+        const isDefault = llmsConfig.defaults?.agents === config.name;
         const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
         logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
         const llmConfig = llmsConfig.configurations[config.name];
@@ -262,8 +280,8 @@ export class LLMConfigEditor {
       logger.info("");
     }
 
-    const currentDefault = llmsConfig.defaults.agents || "none";
-    const currentAgentRouting = llmsConfig.defaults.agentRouting || "none";
+    const currentDefault = llmsConfig.defaults?.agents || "none";
+    const currentAgentRouting = llmsConfig.defaults?.agentRouting || "none";
 
     const { action } = await inquirer.prompt([
       {
@@ -329,7 +347,7 @@ export class LLMConfigEditor {
       if (configs.length > 0) {
         logger.info(chalk.green("Current configurations:"));
         configs.forEach((config, index) => {
-          const isDefault = llmsConfig.defaults.agents === config.name;
+          const isDefault = llmsConfig.defaults?.agents === config.name;
           const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
           logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
           const llmConfig = llmsConfig.configurations[config.name];
@@ -340,8 +358,8 @@ export class LLMConfigEditor {
         logger.info("");
       }
 
-      const currentDefault = llmsConfig.defaults.agents || "none";
-      const currentAgentRouting = llmsConfig.defaults.agentRouting || "none";
+      const currentDefault = llmsConfig.defaults?.agents || "none";
+      const currentAgentRouting = llmsConfig.defaults?.agentRouting || "none";
 
       const choices = [
         { name: "Add new LLM configuration", value: "add" },
@@ -397,11 +415,18 @@ export class LLMConfigEditor {
 
   private async loadConfig(): Promise<TenexLLMs> {
     try {
+      let llms: TenexLLMs;
       if (this.isGlobal) {
-        return await configService.loadTenexLLMs(path.join(os.homedir(), ".tenex"));
+        llms = await configService.loadTenexLLMs(path.join(os.homedir(), ".tenex"));
+      } else {
+        const config = await configService.loadConfig(this.configPath);
+        llms = config.llms;
       }
-        const { llms } = await configService.loadConfig(this.configPath);
-        return llms;
+      // Ensure defaults exists
+      if (!llms.defaults) {
+        llms.defaults = {};
+      }
+      return llms;
     } catch (error) {
       logger.error(`Failed to load LLM configuration: ${error}`);
       return {
@@ -427,7 +452,7 @@ export class LLMConfigEditor {
       configs.push({
         name: key,
         ...value,
-      });
+      } as LLMConfigWithName);
     }
 
     return configs;
@@ -455,34 +480,29 @@ export class LLMConfigEditor {
         type: "list",
         name: "provider",
         message: "Select LLM provider:",
-        choices: Object.keys(PROVIDER_MODELS).map((p) => ({
-          name: p.charAt(0).toUpperCase() + p.slice(1),
-          value: p as LLMProvider,
-        })),
+        choices: [
+          { name: "Anthropic", value: "anthropic" as LLMProvider },
+          { name: "OpenAI", value: "openai" as LLMProvider },
+          { name: "OpenRouter", value: "openrouter" as LLMProvider },
+          { name: "Google", value: "google" as LLMProvider },
+          { name: "Groq", value: "groq" as LLMProvider },
+          { name: "Deepseek", value: "deepseek" as LLMProvider },
+          { name: "Ollama", value: "ollama" as LLMProvider },
+          { name: "Mistral", value: "mistral" as LLMProvider },
+        ],
       },
     ]);
 
-    let availableModels = PROVIDER_MODELS[provider];
+    let availableModels: string[] = [];
     let model: string;
     let supportsCaching = false;
 
-    // Fetch models dynamically for providers that support it
-    if (provider === "ollama") {
-      logger.info(chalk.cyan("🔍 Fetching available Ollama models..."));
-      availableModels = await fetchOllamaModels();
+    // Get API key if available for fetching models
+    const existingApiKey = provider !== "ollama" ? 
+      this.getExistingApiKeys(llmsConfig, provider)[0] : undefined;
 
-      if (availableModels.length === 0) {
-        logger.info(
-          chalk.red(
-            "❌ No Ollama models found. Please install models first with 'ollama pull <model>'"
-          )
-        );
-        return;
-      }
-
-      logger.info(chalk.green(`✅ Found ${availableModels.length} Ollama models`));
-      model = await selectModelWithSearch(provider, availableModels || []);
-    } else if (provider === "openrouter") {
+    // Fetch models dynamically based on provider
+    if (provider === "openrouter") {
       logger.info(chalk.cyan("🔍 Fetching available OpenRouter models..."));
       const modelsWithMetadata = await fetchOpenRouterModelsWithMetadata();
       logger.info(chalk.green(`✅ Found ${modelsWithMetadata.length} OpenRouter models`));
@@ -491,7 +511,15 @@ export class LLMConfigEditor {
       model = selection.model;
       supportsCaching = selection.supportsCaching;
     } else {
-      model = await selectModelWithSearch(provider, availableModels || []);
+      // Use unified model fetching for all other providers
+      availableModels = await fetchModelsForProvider(provider, existingApiKey);
+      
+      if (availableModels.length === 0) {
+        logger.error(chalk.red(`❌ No models available for ${provider}`));
+        return;
+      }
+      
+      model = await selectModelWithSearch(provider, availableModels);
     }
 
     let apiKey = "";
@@ -633,6 +661,9 @@ export class LLMConfigEditor {
     llmsConfig.configurations[configName] = newConfig;
 
     if (setAsDefault) {
+      if (!llmsConfig.defaults) {
+        llmsConfig.defaults = {};
+      }
       llmsConfig.defaults.agents = configName;
     }
 
@@ -689,27 +720,16 @@ export class LLMConfigEditor {
 
     switch (field) {
       case "model": {
-        let availableModels = PROVIDER_MODELS[config.provider];
+        let availableModels: string[] = [];
         let newModel: string;
         let newSupportsCaching = false;
 
-        // Fetch models dynamically for editing
-        if (config.provider === "ollama") {
-          logger.info(chalk.cyan("🔍 Fetching available Ollama models..."));
-          availableModels = await fetchOllamaModels();
+        // Get API key if available for fetching models
+        const existingApiKey = config.provider !== "ollama" ? 
+          llmsConfig.credentials[config.provider]?.apiKey : undefined;
 
-          if (availableModels.length === 0) {
-            logger.info(
-              chalk.red(
-                "❌ No Ollama models found. Please install models first with 'ollama pull <model>'"
-              )
-            );
-            return;
-          }
-
-          logger.info(chalk.green(`✅ Found ${availableModels.length} Ollama models`));
-          newModel = await selectModelWithSearch(config.provider, availableModels || []);
-        } else if (config.provider === "openrouter") {
+        // Fetch models dynamically based on provider
+        if (config.provider === "openrouter") {
           logger.info(chalk.cyan("🔍 Fetching available OpenRouter models..."));
           const modelsWithMetadata = await fetchOpenRouterModelsWithMetadata();
           logger.info(chalk.green(`✅ Found ${modelsWithMetadata.length} OpenRouter models`));
@@ -718,7 +738,15 @@ export class LLMConfigEditor {
           newModel = selection.model;
           newSupportsCaching = selection.supportsCaching;
         } else {
-          newModel = await selectModelWithSearch(config.provider, availableModels || []);
+          // Use unified model fetching for all other providers
+          availableModels = await fetchModelsForProvider(config.provider, existingApiKey);
+          
+          if (availableModels.length === 0) {
+            logger.error(chalk.red(`❌ No models available for ${config.provider}`));
+            return;
+          }
+          
+          newModel = await selectModelWithSearch(config.provider, availableModels);
         }
 
         config.model = newModel;
@@ -774,9 +802,11 @@ export class LLMConfigEditor {
           delete llmsConfig.configurations[configName];
 
           // Update defaults if needed
-          for (const [key, value] of Object.entries(llmsConfig.defaults)) {
-            if (value === configName) {
-              llmsConfig.defaults[key] = newName;
+          if (llmsConfig.defaults) {
+            for (const [key, value] of Object.entries(llmsConfig.defaults)) {
+              if (value === configName) {
+                llmsConfig.defaults[key] = newName;
+              }
             }
           }
         }
@@ -813,9 +843,11 @@ export class LLMConfigEditor {
       delete llmsConfig.configurations[configName];
 
       // Update defaults if needed
-      for (const [key, value] of Object.entries(llmsConfig.defaults)) {
-        if (value === configName) {
-          delete llmsConfig.defaults[key];
+      if (llmsConfig.defaults) {
+        for (const [key, value] of Object.entries(llmsConfig.defaults)) {
+          if (value === configName) {
+            delete llmsConfig.defaults[key];
+          }
         }
       }
 
@@ -826,7 +858,7 @@ export class LLMConfigEditor {
 
   private async setDefaultConfiguration(llmsConfig: TenexLLMs): Promise<void> {
     const configs = this.getConfigList(llmsConfig);
-    const currentDefault = llmsConfig.defaults.agents || "none";
+    const currentDefault = llmsConfig.defaults?.agents || "none";
 
     logger.info(chalk.cyan("\n⚙️  Set Default Configuration"));
     logger.info(chalk.gray(`Current default: ${currentDefault}\n`));
@@ -843,6 +875,9 @@ export class LLMConfigEditor {
       },
     ]);
 
+    if (!llmsConfig.defaults) {
+      llmsConfig.defaults = {};
+    }
     llmsConfig.defaults.agents = configName;
     await this.saveConfig(llmsConfig);
     logger.info(chalk.green(`\n✅ Configuration "${configName}" set as default!`));
@@ -850,7 +885,7 @@ export class LLMConfigEditor {
 
   private async setAgentRoutingConfiguration(llmsConfig: TenexLLMs): Promise<void> {
     const configs = this.getConfigList(llmsConfig);
-    const currentAgentRouting = llmsConfig.defaults.agentRouting || "none";
+    const currentAgentRouting = llmsConfig.defaults?.agentRouting || "none";
 
     logger.info(chalk.cyan("\n🚦 Set Agent Routing Configuration"));
     logger.info(chalk.gray(`Current agent routing model: ${currentAgentRouting}\n`));
@@ -867,6 +902,9 @@ export class LLMConfigEditor {
       },
     ]);
 
+    if (!llmsConfig.defaults) {
+      llmsConfig.defaults = {};
+    }
     llmsConfig.defaults.agentRouting = configName;
     await this.saveConfig(llmsConfig);
     logger.info(chalk.green(`\n✅ Configuration "${configName}" set for agent routing!`));
@@ -889,7 +927,7 @@ export class LLMConfigEditor {
       logger.error(chalk.red(`Configuration ${configName} not found`));
       return;
     }
-    await this.testConfiguration(config, llmsConfig, configName);
+    await this.testConfiguration(config as LLMConfig, llmsConfig, configName);
   }
 
   private async testConfiguration(
@@ -923,7 +961,8 @@ export class LLMConfigEditor {
           | "ollama"
           | "mistral"
           | "groq"
-          | "openrouter",
+          | "openrouter"
+          | "deepseek",
         model: config.model,
         apiKey: llmsConfig.credentials[config.provider]?.apiKey,
         baseUrl: llmsConfig.credentials[config.provider]?.baseUrl,

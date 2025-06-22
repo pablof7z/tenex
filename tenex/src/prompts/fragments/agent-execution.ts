@@ -3,6 +3,7 @@ import type { PromptFragment } from "../core/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import type { ConversationState } from "@/conversations/types";
+import { buildAgentPrompt } from "./agent-common";
 
 // Agent system prompt fragment
 interface AgentSystemPromptArgs {
@@ -16,35 +17,48 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
   id: "agent-system-prompt",
   priority: 10,
   template: ({ agent, phase, projectTitle, projectRepository }) => {
-    let prompt = `You are ${agent.name}, a ${agent.role} working on the ${projectTitle} project.
-
-## Your Role
-${agent.instructions}
-
-## Your Expertise
-${agent.expertise}
-
-## Current Phase: ${phase.toUpperCase()}
-${getPhaseInstructions(phase)}
-
-## Project Context
-- Project: ${projectTitle}
-${projectRepository ? `- Repository: ${projectRepository}` : ""}
-
-## Communication Style
+    const parts: string[] = [];
+    
+    // Use shared agent prompt builder
+    parts.push(buildAgentPrompt({
+      name: agent.name,
+      role: agent.role,
+      instructions: agent.instructions || '',
+      projectName: projectTitle
+    }));
+    
+    // Add expertise if available
+    if (agent.expertise) {
+      parts.push(`## Your Expertise\n${agent.expertise}`);
+    }
+    
+    // Phase info
+    parts.push(`## Current Phase: ${phase.toUpperCase()}\n${getPhaseInstructions(phase)}`);
+    
+    // Repository if available
+    if (projectRepository) {
+      parts.push(`Repository: ${projectRepository}`);
+    }
+    
+    // Communication style
+    parts.push(`## Communication Style
 - Be concise and focused on the task at hand
 - Provide actionable insights and clear next steps
 - When suggesting code changes, be specific about what to change
-- Ask clarifying questions when requirements are unclear
-
-## Available Tools
-${agent.tools.length > 0 ? agent.tools.join(", ") : "No tools assigned"}
-
-${agent.tools.length > 0 ? getToolInstructions() : ""}
-
-Remember: You are currently in the ${phase} phase. Focus your responses accordingly.`;
-
-    return prompt;
+- Ask clarifying questions when requirements are unclear`);
+    
+    // Tools section
+    parts.push(`## Available Tools`);
+    if (agent.tools && agent.tools.length > 0) {
+      parts.push(agent.tools.join(", "));
+      parts.push(getToolInstructions());
+    } else {
+      parts.push("No tools assigned");
+    }
+    
+    parts.push(`Remember: You are currently in the ${phase} phase. Focus your responses accordingly.`);
+    
+    return parts.join("\n\n");
   },
 };
 
@@ -70,6 +84,19 @@ export const conversationHistoryFragment: PromptFragment<ConversationHistoryArgs
 
     return `## Conversation History (Last ${recentHistory.length} messages)
 ${context || "No previous messages"}`;
+  },
+};
+
+// Phase instructions fragment - extracted for reusability
+interface PhaseInstructionsArgs {
+  phase: Phase;
+}
+
+export const phaseInstructionsFragment: PromptFragment<PhaseInstructionsArgs> = {
+  id: "phase-instructions",
+  priority: 20,
+  template: ({ phase }) => {
+    return `## Phase Instructions\n${getPhaseInstructions(phase)}`;
   },
 };
 
@@ -230,6 +257,7 @@ Tools will be executed automatically and results will be included in your respon
 // Register all fragments
 fragmentRegistry.register(agentSystemPromptFragment);
 fragmentRegistry.register(conversationHistoryFragment);
+fragmentRegistry.register(phaseInstructionsFragment);
 fragmentRegistry.register(phaseContextFragment);
 fragmentRegistry.register(toolContextFragment);
 fragmentRegistry.register(fullPromptFragment);
