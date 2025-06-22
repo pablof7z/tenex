@@ -2,7 +2,7 @@ import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import { fragmentRegistry } from "@/prompts/core/FragmentRegistry";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 
 // Import fragments to register them
@@ -45,7 +45,7 @@ describe("Agent Execution Prompt Fragments", () => {
 
   describe("conversationHistoryFragment", () => {
     it("should format conversation history correctly", () => {
-      const mockHistory: ConversationState["history"] = [
+      const mockHistory: Conversation["history"] = [
         {
           id: "event1",
           content: "Hello from user",
@@ -110,7 +110,7 @@ describe("Agent Execution Prompt Fragments", () => {
         llmConfig: "test-config",
       };
 
-      const mockHistory: ConversationState["history"] = [
+      const mockHistory: Conversation["history"] = [
         {
           id: "event1",
           content: "Build a new feature",

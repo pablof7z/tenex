@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 
@@ -12,7 +12,7 @@ export interface PhaseInitializationResult {
 export interface PhaseInitializer {
   phase: Phase;
   initialize(
-    conversation: ConversationState,
+    conversation: Conversation,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult>;
 }

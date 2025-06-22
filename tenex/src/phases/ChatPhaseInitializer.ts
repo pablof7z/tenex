@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { projectContext } from "@/services";
 import type { Agent } from "@/agents/types";
@@ -18,7 +18,7 @@ export class ChatPhaseInitializer implements PhaseInitializer {
   phase: Phase = "chat";
 
   async initialize(
-    conversation: ConversationState,
+    conversation: Conversation,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
     logger.info("[CHAT Phase] Initializing chat phase", {

@@ -40,7 +40,7 @@ let globalConfig: LoggerConfig = {
   moduleVerbosity: parseModuleVerbosity(),
 };
 
-function parseModuleVerbosity(): ModuleVerbosityConfig {
+export function parseModuleVerbosity(): ModuleVerbosityConfig {
   const config: ModuleVerbosityConfig = {
     default: "normal" as VerbosityLevel,
     modules: {},

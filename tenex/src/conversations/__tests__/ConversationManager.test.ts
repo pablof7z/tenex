@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import { ConversationManager } from "../ConversationManager";
 import { FileSystemAdapter } from "../persistence";
-import type { ConversationState } from "../types";
+import type { Conversation } from "../types";
 import { createConversationEvent, createReplyEvent } from "@/test-utils/mocks/events";
 import { createMockFileSystemAdapter } from "@/test-utils/mocks/filesystem";
 import { logger } from "@/utils/logger";
@@ -40,7 +40,7 @@ describe("ConversationManager", () => {
 
   describe("initialize", () => {
     it("should initialize persistence and load conversations", async () => {
-      const existingConversation: ConversationState = {
+      const existingConversation: Conversation = {
         id: "conv-1",
         title: "Existing Conversation",
         phase: "plan",
@@ -133,7 +133,7 @@ describe("ConversationManager", () => {
   });
 
   describe("updatePhase", () => {
-    let conversation: ConversationState;
+    let conversation: Conversation;
 
     beforeEach(async () => {
       await manager.initialize();
@@ -302,7 +302,7 @@ describe("ConversationManager", () => {
     });
 
     it("should search conversations", async () => {
-      const searchResults: ConversationState[] = [
+      const searchResults: Conversation[] = [
         {
           id: "conv-1",
           title: "Express Setup",

@@ -34,6 +34,3 @@ export interface PhaseTransition {
   timestamp: number;
   reason?: string;
 }
-
-// ConversationState is the same as Conversation - used for internal state management
-export type ConversationState = Conversation;

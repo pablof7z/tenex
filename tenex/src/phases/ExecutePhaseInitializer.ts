@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { projectContext } from "@/services";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/agents/types";
@@ -22,7 +22,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
   phase: Phase = "execute";
 
   async initialize(
-    conversation: ConversationState,
+    conversation: Conversation,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
     logger.info("[EXECUTE Phase] Initializing execute phase", {
@@ -83,7 +83,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
     }
   }
 
-  private async createExecutionBranch(conversation: ConversationState): Promise<string> {
+  private async createExecutionBranch(conversation: Conversation): Promise<string> {
     try {
       const project = projectContext.getCurrentProject();
       const projectPath = process.cwd();
@@ -125,7 +125,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
   }
 
   private async triggerClaudeCode(
-    conversation: ConversationState,
+    conversation: Conversation,
     plan: string,
     instruction: string
   ): Promise<boolean> {

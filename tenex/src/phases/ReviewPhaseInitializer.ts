@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { projectContext } from "@/services";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
@@ -16,7 +16,7 @@ export class ReviewPhaseInitializer implements PhaseInitializer {
   phase: Phase = "review";
 
   async initialize(
-    conversation: ConversationState,
+    conversation: Conversation,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
     logger.info("[REVIEW Phase] Initializing review phase", {

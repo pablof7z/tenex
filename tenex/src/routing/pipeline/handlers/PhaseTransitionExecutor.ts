@@ -1,5 +1,5 @@
 import type { MessageHandler, RoutingContext } from "../types";
-import type { Phase, Conversation, ConversationState } from "@/conversations/types";
+import type { Phase, Conversation } from "@/conversations/types";
 import { initializePhase } from "@/phases";
 import { projectContext } from "@/services";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -40,7 +40,7 @@ export class PhaseTransitionExecutor implements MessageHandler {
     const projectSigner = new NDKPrivateKeySigner(projectNsec);
     
     await context.publisher.publishPhaseTransition(
-      this.convertToConversation(conversation),
+      conversation,
       newPhase,
       compactedContext,
       projectSigner,
@@ -144,41 +144,6 @@ export class PhaseTransitionExecutor implements MessageHandler {
     }
   }
 
-  private convertToConversation(state: ConversationState): Conversation {
-    const metadata: Record<string, string | number | boolean | string[]> = {};
-    
-    // Convert known fields
-    if (state.metadata.branch !== undefined) metadata.branch = state.metadata.branch;
-    if (state.metadata.summary !== undefined) metadata.summary = state.metadata.summary;
-    if (state.metadata.requirements !== undefined) metadata.requirements = state.metadata.requirements;
-    if (state.metadata.plan !== undefined) metadata.plan = state.metadata.plan;
-    
-    // Convert other fields with type checking
-    for (const [key, value] of Object.entries(state.metadata)) {
-      if (key === 'branch' || key === 'summary' || key === 'requirements' || key === 'plan') {
-        continue; // Already handled
-      }
-      
-      if (
-        typeof value === 'string' ||
-        typeof value === 'number' ||
-        typeof value === 'boolean' ||
-        (Array.isArray(value) && value.every(v => typeof v === 'string'))
-      ) {
-        metadata[key] = value;
-      }
-    }
-    
-    return {
-      id: state.id,
-      title: state.title,
-      phase: state.phase,
-      history: state.history,
-      currentAgent: state.currentAgent,
-      phaseStartedAt: state.phaseStartedAt,
-      metadata,
-    };
-  }
 }
 
 import { createProjectAgent } from "@/agents";

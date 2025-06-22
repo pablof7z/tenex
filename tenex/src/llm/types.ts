@@ -84,7 +84,8 @@ export type LLMProvider =
   | "google"
   | "groq"
   | "deepseek"
-  | "ollama";
+  | "ollama"
+  | "mistral";
 
 /**
  * Token usage tracking

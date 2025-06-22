@@ -5,6 +5,7 @@ import { projectContext } from "@/services";
 import {
   type TracingContext,
   type TracingLogger,
+  createTracingContext,
   createAgentExecutionContext,
   createTracingLogger,
 } from "@/tracing";
@@ -42,11 +43,7 @@ export class AgentExecutor {
     const tracingContext = parentTracingContext
       ? createAgentExecutionContext(parentTracingContext, context.agent.name)
       : createAgentExecutionContext(
-          {
-            conversationId: context.conversation.id,
-            executionId: "root",
-            startTime: Date.now(),
-          },
+          createTracingContext(context.conversation.id),
           context.agent.name,
         );
 
@@ -63,7 +60,6 @@ export class AgentExecutor {
       const promptContext = await this.buildPromptContext(context);
 
       // 2. Generate initial response via LLM
-      const llmStartTime = Date.now();
       tracingLogger.logLLMRequest(context.agent.llmConfig || "default");
 
       const { response: initialResponse, userPrompt } =
@@ -72,12 +68,8 @@ export class AgentExecutor {
           context.agent.llmConfig || "default",
         );
 
-      const llmDuration = Date.now() - llmStartTime;
       tracingLogger.logLLMResponse(
         context.agent.llmConfig || "default",
-        llmDuration,
-        initialResponse.usage?.promptTokens,
-        initialResponse.usage?.completionTokens,
       );
 
       // 3. Execute the Reason-Act loop

@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import { ChatPhaseInitializer } from "./ChatPhaseInitializer";
@@ -22,7 +22,7 @@ const phaseInitializers: Record<Phase, PhaseInitializer> = {
  */
 export async function initializePhase(
   phase: Phase,
-  conversation: ConversationState,
+  conversation: Conversation,
   availableAgents: Agent[]
 ): Promise<PhaseInitializationResult> {
   const initializer = phaseInitializers[phase];

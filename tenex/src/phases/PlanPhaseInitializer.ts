@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { projectContext } from "@/services";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/agents/types";
@@ -18,7 +18,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
   phase: Phase = "plan";
 
   async initialize(
-    conversation: ConversationState,
+    conversation: Conversation,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
     logger.info("[PLAN Phase] Initializing plan phase", {
@@ -88,7 +88,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
   }
 
   private async triggerClaudeCode(
-    conversation: ConversationState,
+    conversation: Conversation,
     context: string,
     instruction: string
   ): Promise<boolean> {
@@ -157,7 +157,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
   /**
    * Extract the actual task/requirement from the conversation
    */
-  private extractTaskFromConversation(conversation: ConversationState): string {
+  private extractTaskFromConversation(conversation: Conversation): string {
     // Get user messages to understand what they're asking for
     const userMessages = conversation.history
       .filter((event) => !event.tags.some((tag) => tag[0] === "llm-model"))
@@ -181,7 +181,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
   /**
    * Build conversation context from the actual message history
    */
-  private buildConversationContext(conversation: ConversationState): string {
+  private buildConversationContext(conversation: Conversation): string {
     // Get all messages from the conversation history
     const messages = conversation.history
       .map((event) => {

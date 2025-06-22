@@ -1,187 +1,18 @@
 import os from "node:os";
 import path from "node:path";
-import { MultiLLMService } from "./MultiLLMService";
-import type { CompletionRequest } from "./types";
 import search from "@inquirer/search";
-import * as fileSystem from "@/lib/fs";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
-import type { LLMPreset, ProviderAuth } from "@/llm/types";
-import type { LLMConfig } from "@/llm/types";
-import type { LLMProvider } from "@/llm/types";
+import type { LLMConfig, LLMProvider } from "@/llm/types";
 import type { TenexLLMs } from "@/services/config/types";
 import chalk from "chalk";
 import inquirer from "inquirer";
-import { loadModels } from "multi-llm-ts";
+import { llmModelService, type OpenRouterModelWithMetadata } from "./services/LLMModelService";
+import { llmTestService } from "./services/LLMTestService";
 
 type LLMConfigWithName = LLMConfig & {
   name: string;
 };
-
-
-interface OpenRouterModel {
-  id: string;
-  name: string;
-  description?: string;
-  pricing: {
-    prompt: string;
-    completion: string;
-    request?: string;
-    image?: string;
-    web_search?: string;
-    internal_reasoning?: string;
-    input_cache_read?: string;
-    input_cache_write?: string;
-  };
-  context_length: number;
-  architecture: {
-    modality: string;
-    tokenizer: string;
-    instruct_type?: string;
-  };
-  top_provider: {
-    context_length: number;
-    max_completion_tokens?: number;
-  };
-  input_modalities?: string[];
-  output_modalities?: string[];
-}
-
-interface OpenRouterModelWithMetadata {
-  id: string;
-  name: string;
-  supportsCaching: boolean;
-  promptPrice: number;
-  completionPrice: number;
-  cacheReadPrice?: number;
-  cacheWritePrice?: number;
-}
-
-interface OpenRouterModelsResponse {
-  data: OpenRouterModel[];
-}
-
-// Map our provider names to multi-llm-ts provider IDs
-const PROVIDER_ID_MAP: Record<string, string> = {
-  anthropic: "anthropic",
-  openai: "openai",
-  google: "google",
-  groq: "groq",
-  deepseek: "deepseek",
-  ollama: "ollama",
-  openrouter: "openrouter",
-  mistral: "mistralai",
-};
-
-// Fallback models when API is not available
-const FALLBACK_MODELS: Record<string, string[]> = {
-  anthropic: [
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
-    "claude-3-opus-20240229",
-    "claude-3-sonnet-20240229",
-    "claude-3-haiku-20240307",
-  ],
-  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
-  google: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
-  groq: ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
-  deepseek: ["deepseek-chat", "deepseek-coder"],
-  mistral: ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
-  ollama: ["llama3.2", "llama3.1", "codellama", "mistral", "gemma2", "qwen2.5"],
-};
-
-async function fetchModelsForProvider(
-  provider: string,
-  apiKey?: string
-): Promise<string[]> {
-  try {
-    const providerId = PROVIDER_ID_MAP[provider] || provider;
-    const config = apiKey ? { apiKey } : {};
-    
-    logger.info(chalk.cyan(`🔍 Fetching ${provider} models...`));
-    const models = await loadModels(providerId, config);
-    
-    if (models && models.chat && models.chat.length > 0) {
-      // Extract model IDs from the chat models
-      const modelIds = models.chat.map((model: any) => 
-        typeof model === 'string' ? model : model.id || model.name || String(model)
-      );
-      logger.info(chalk.green(`✅ Found ${modelIds.length} models from API`));
-      return modelIds;
-    }
-    
-    // Fall back to default models if none found
-    logger.info(chalk.yellow(`⚠️  No models found from API, using defaults`));
-    return FALLBACK_MODELS[provider] || [];
-  } catch (error) {
-    logger.warn(`Could not fetch ${provider} models: ${error}`);
-    // Return fallback models on error
-    return FALLBACK_MODELS[provider] || [];
-  }
-}
-
-async function fetchOpenRouterModelsWithMetadata(): Promise<OpenRouterModelWithMetadata[]> {
-  try {
-    // First try using multi-llm-ts loadModels
-    const models = await loadModels("openrouter", {});
-    
-    if (models && models.chat && models.chat.length > 0) {
-      // For OpenRouter, we still need to fetch the full metadata for pricing info
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
-        headers: {
-          "HTTP-Referer": "https://tenex.dev",
-          "X-Title": "TENEX CLI",
-        },
-      });
-
-      if (response.ok) {
-        const data = (await response.json()) as OpenRouterModelsResponse;
-        return data.data
-          .filter((model) => {
-            // Check if model supports text input and output
-            const hasTextInput = model.input_modalities?.includes("text") ?? true;
-            const hasTextOutput = model.output_modalities?.includes("text") ?? true;
-            return hasTextInput && hasTextOutput;
-          })
-          .map((model) => ({
-            id: model.id,
-            name: model.name,
-            supportsCaching: !!(model.pricing.input_cache_read && model.pricing.input_cache_write),
-            promptPrice: Number.parseFloat(model.pricing.prompt) * 1000000, // Convert to price per 1M tokens
-            completionPrice: Number.parseFloat(model.pricing.completion) * 1000000,
-            cacheReadPrice: model.pricing.input_cache_read
-              ? Number.parseFloat(model.pricing.input_cache_read) * 1000000
-              : undefined,
-            cacheWritePrice: model.pricing.input_cache_write
-              ? Number.parseFloat(model.pricing.input_cache_write) * 1000000
-              : undefined,
-          }))
-          .sort((a, b) => a.id.localeCompare(b.id));
-      }
-    }
-    
-    throw new Error("Could not fetch OpenRouter models");
-  } catch (error) {
-    logger.warn(`Could not fetch OpenRouter models: ${error}`);
-    // Return common OpenRouter models as fallback
-    return [
-      {
-        id: "anthropic/claude-3.5-sonnet",
-        name: "Claude 3.5 Sonnet",
-        supportsCaching: true,
-        promptPrice: 3,
-        completionPrice: 15,
-      },
-      {
-        id: "openai/gpt-4o",
-        name: "GPT-4o",
-        supportsCaching: false,
-        promptPrice: 5,
-        completionPrice: 15,
-      },
-    ];
-  }
-}
 
 async function selectModelWithSearch(provider: string, models: string[]): Promise<string> {
   const formattedModels = models.map((model) => ({
@@ -504,7 +335,7 @@ export class LLMConfigEditor {
     // Fetch models dynamically based on provider
     if (provider === "openrouter") {
       logger.info(chalk.cyan("🔍 Fetching available OpenRouter models..."));
-      const modelsWithMetadata = await fetchOpenRouterModelsWithMetadata();
+      const modelsWithMetadata = await llmModelService.fetchOpenRouterModelsWithMetadata();
       logger.info(chalk.green(`✅ Found ${modelsWithMetadata.length} OpenRouter models`));
 
       const selection = await selectOpenRouterModelWithPricing(modelsWithMetadata);
@@ -512,11 +343,19 @@ export class LLMConfigEditor {
       supportsCaching = selection.supportsCaching;
     } else {
       // Use unified model fetching for all other providers
-      availableModels = await fetchModelsForProvider(provider, existingApiKey);
+      availableModels = await llmModelService.fetchModels(provider, existingApiKey);
       
       if (availableModels.length === 0) {
         logger.error(chalk.red(`❌ No models available for ${provider}`));
+        if (provider === "ollama") {
+          logger.info(chalk.yellow("💡 Make sure Ollama is running with: ollama serve"));
+        }
         return;
+      }
+      
+      // Show a hint if we're using fallback models
+      if (llmModelService.isUsingFallback(provider, availableModels)) {
+        logger.info(chalk.yellow("ℹ️  Using default model list (API unavailable)"));
       }
       
       model = await selectModelWithSearch(provider, availableModels);
@@ -630,13 +469,7 @@ export class LLMConfigEditor {
     // Test the configuration BEFORE saving it
     logger.info(chalk.cyan("\n🧪 Testing configuration before saving..."));
 
-    // For testing, ensure the config has the API key even if it will be stored in credentials
-    const testConfig = { ...newConfig };
-    if (this.isGlobal && apiKey && provider !== "ollama") {
-      // API key is stored in auth, not on config
-    }
-
-    const testSuccessful = await this.testConfiguration(testConfig, llmsConfig, configName);
+    const testSuccessful = await llmTestService.testConfiguration(newConfig, llmsConfig, configName);
 
     if (!testSuccessful) {
       const { retry } = await inquirer.prompt([
@@ -731,7 +564,7 @@ export class LLMConfigEditor {
         // Fetch models dynamically based on provider
         if (config.provider === "openrouter") {
           logger.info(chalk.cyan("🔍 Fetching available OpenRouter models..."));
-          const modelsWithMetadata = await fetchOpenRouterModelsWithMetadata();
+          const modelsWithMetadata = await llmModelService.fetchOpenRouterModelsWithMetadata();
           logger.info(chalk.green(`✅ Found ${modelsWithMetadata.length} OpenRouter models`));
 
           const selection = await selectOpenRouterModelWithPricing(modelsWithMetadata);
@@ -739,11 +572,19 @@ export class LLMConfigEditor {
           newSupportsCaching = selection.supportsCaching;
         } else {
           // Use unified model fetching for all other providers
-          availableModels = await fetchModelsForProvider(config.provider, existingApiKey);
+          availableModels = await llmModelService.fetchModels(config.provider, existingApiKey);
           
           if (availableModels.length === 0) {
             logger.error(chalk.red(`❌ No models available for ${config.provider}`));
+            if (config.provider === "ollama") {
+              logger.info(chalk.yellow("💡 Make sure Ollama is running with: ollama serve"));
+            }
             return;
+          }
+          
+          // Show a hint if we're using fallback models
+          if (llmModelService.isUsingFallback(config.provider, availableModels)) {
+            logger.info(chalk.yellow("ℹ️  Using default model list (API unavailable)"));
           }
           
           newModel = await selectModelWithSearch(config.provider, availableModels);
@@ -927,84 +768,6 @@ export class LLMConfigEditor {
       logger.error(chalk.red(`Configuration ${configName} not found`));
       return;
     }
-    await this.testConfiguration(config as LLMConfig, llmsConfig, configName);
-  }
-
-  private async testConfiguration(
-    config: LLMConfig,
-    llmsConfig: TenexLLMs,
-    _configName?: string
-  ): Promise<boolean> {
-    try {
-      // Validate config before testing
-      if (!config.provider) {
-        logger.error(chalk.red("\n❌ Test failed: Provider is required"));
-        return false;
-      }
-
-      if (!config.model) {
-        logger.error(chalk.red("\n❌ Test failed: Model is required"));
-        return false;
-      }
-
-      // Check if API key is required for this provider
-      if (config.provider !== "ollama" && !llmsConfig.credentials[config.provider]?.apiKey) {
-        logger.error(chalk.red(`\n❌ Test failed: API key is required for ${config.provider}`));
-        return false;
-      }
-
-      const service = new MultiLLMService({
-        provider: config.provider as
-          | "anthropic"
-          | "openai"
-          | "google"
-          | "ollama"
-          | "mistral"
-          | "groq"
-          | "openrouter"
-          | "deepseek",
-        model: config.model,
-        apiKey: llmsConfig.credentials[config.provider]?.apiKey,
-        baseUrl: llmsConfig.credentials[config.provider]?.baseUrl,
-      });
-
-      const request: CompletionRequest = {
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful assistant. Respond with exactly: 'Configuration test successful!'",
-          },
-          {
-            role: "user",
-            content: "Please confirm this configuration works.",
-          },
-        ],
-      };
-
-      const response = await service.complete(request);
-
-      if (response?.content) {
-        logger.info(chalk.green(`\n✅ Test successful! Response: ${response.content}`));
-        return true;
-      }
-
-      logger.error(chalk.red("\n❌ Test failed: No response received"));
-      return false;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error(chalk.red(`\n❌ Test failed: ${errorMessage}`));
-
-      // Provide more specific guidance based on error
-      if (errorMessage.includes("apiKey") || errorMessage.includes("API key")) {
-        logger.info(chalk.yellow("💡 Make sure you've entered a valid API key"));
-      } else if (errorMessage.includes("model")) {
-        logger.info(chalk.yellow("💡 The selected model might not be available"));
-      } else if (errorMessage.includes("network") || errorMessage.includes("connect")) {
-        logger.info(chalk.yellow("💡 Check your internet connection"));
-      }
-
-      return false;
-    }
+    await llmTestService.testConfiguration(config as LLMConfig, llmsConfig, configName);
   }
 }

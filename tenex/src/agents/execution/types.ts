@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import type { LLMMetadata } from "@/nostr/types";
@@ -7,7 +7,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 export interface AgentExecutionContext {
   agent: Agent;
-  conversation: ConversationState;
+  conversation: Conversation;
   phase: Phase;
   lastUserMessage?: string;
   projectContext?: Record<string, unknown>;

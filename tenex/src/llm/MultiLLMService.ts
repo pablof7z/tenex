@@ -23,6 +23,7 @@ import type {
   ToolDefinition,
 } from "./types";
 import { configService } from "@/services";
+import { PROVIDER_ID_MAP } from "./services/LLMModelService";
 import type { TenexLLMs } from "@/services/config/types";
 import type { Agent } from "@/agents/types";
 
@@ -433,17 +434,7 @@ export class MultiLLMService implements LLMService {
   }
 
   private mapProviderName(provider: LLMConfig["provider"]): string {
-    const providerMap: Record<LLMConfig["provider"], string> = {
-      anthropic: "anthropic",
-      openai: "openai",
-      google: "google",
-      ollama: "ollama",
-      mistral: "mistralai",
-      groq: "groq",
-      openrouter: "openrouter",
-      deepseek: "deepseek",
-    };
-    return providerMap[provider] || provider;
+    return PROVIDER_ID_MAP[provider] || provider;
   }
 
   private async loadModelsForProvider(): Promise<ModelsList | null> {

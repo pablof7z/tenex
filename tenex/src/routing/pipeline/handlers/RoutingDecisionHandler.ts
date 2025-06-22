@@ -1,5 +1,5 @@
 import type { MessageHandler, RoutingContext } from "../types";
-import type { Conversation, ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { 
   applyBusinessRules, 
   meetsPhaseTransitionCriteria 
@@ -17,7 +17,7 @@ export class RoutingDecisionHandler implements MessageHandler {
   async handle(context: RoutingContext): Promise<RoutingContext> {
     // Get routing decision from LLM
     let routingDecision = await context.routingLLM.routeNextAction(
-      this.convertToConversation(context.conversation),
+      context.conversation,
       context.event.content || "",
       context.availableAgents
     );
@@ -51,40 +51,4 @@ export class RoutingDecisionHandler implements MessageHandler {
     return context;
   }
 
-  private convertToConversation(state: ConversationState): Conversation {
-    const metadata: Record<string, string | number | boolean | string[]> = {};
-    
-    // Convert known fields
-    if (state.metadata.branch !== undefined) metadata.branch = state.metadata.branch;
-    if (state.metadata.summary !== undefined) metadata.summary = state.metadata.summary;
-    if (state.metadata.requirements !== undefined) metadata.requirements = state.metadata.requirements;
-    if (state.metadata.plan !== undefined) metadata.plan = state.metadata.plan;
-    
-    // Convert other fields with type checking
-    for (const [key, value] of Object.entries(state.metadata)) {
-      if (key === 'branch' || key === 'summary' || key === 'requirements' || key === 'plan') {
-        continue; // Already handled
-      }
-      
-      // Only include values that match the Conversation metadata type
-      if (
-        typeof value === 'string' ||
-        typeof value === 'number' ||
-        typeof value === 'boolean' ||
-        (Array.isArray(value) && value.every(v => typeof v === 'string'))
-      ) {
-        metadata[key] = value;
-      }
-    }
-    
-    return {
-      id: state.id,
-      title: state.title,
-      phase: state.phase,
-      history: state.history,
-      currentAgent: state.currentAgent,
-      phaseStartedAt: state.phaseStartedAt,
-      metadata,
-    };
-  }
 }

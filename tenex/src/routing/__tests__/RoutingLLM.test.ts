@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { RoutingLLM } from "../RoutingLLM";
 import type { LLMService } from "@/llm/LLMService";
 import type { Agent } from "@/agents/types";
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { createMockLLMService, MockLLMResponse } from "@/test-utils/mocks";
 import { createTestAgent, createTestConversation } from "@/test-utils/helpers/fixtures";
 

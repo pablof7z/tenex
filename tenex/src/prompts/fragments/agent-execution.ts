@@ -2,7 +2,7 @@ import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { buildAgentPrompt } from "./agent-common";
 
 // Agent system prompt fragment
@@ -64,7 +64,7 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
 
 // Conversation history fragment
 interface ConversationHistoryArgs {
-  history: ConversationState["history"];
+  history: Conversation["history"];
   maxMessages?: number;
 }
 

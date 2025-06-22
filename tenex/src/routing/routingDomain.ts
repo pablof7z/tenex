@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";
@@ -24,7 +24,7 @@ export function canTransitionPhase(currentPhase: Phase, targetPhase: Phase): boo
  */
 export function validateRoutingDecision(
   decision: RoutingDecision,
-  conversation: ConversationState,
+  conversation: Conversation,
   availableAgents: Agent[]
 ): { valid: boolean; reason?: string } {
   // Validate phase transition if phase is changing
@@ -111,7 +111,7 @@ export function getDefaultAgentForPhase(phase: Phase, agents: Agent[]): Agent | 
  */
 export function applyBusinessRules(
   decision: RoutingDecision,
-  conversation: ConversationState,
+  conversation: Conversation,
   availableAgents: Agent[]
 ): RoutingDecision {
   const enhancedDecision = { ...decision };
@@ -159,7 +159,7 @@ export function applyBusinessRules(
  * Check if a conversation meets the criteria to transition to a specific phase
  */
 export function meetsPhaseTransitionCriteria(
-  conversation: ConversationState,
+  conversation: Conversation,
   targetPhase: Phase
 ): { canTransition: boolean; reason: string } {
   const currentPhase = conversation.phase;

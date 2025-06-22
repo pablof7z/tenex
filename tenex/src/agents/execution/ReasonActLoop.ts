@@ -154,17 +154,10 @@ export class ReasonActLoop {
     ];
 
     tracingLogger.logLLMRequest(context.llmConfig);
-    const llmStartTime = Date.now();
 
     const response = await this.llmService.complete({ messages });
 
-    const llmDuration = Date.now() - llmStartTime;
-    tracingLogger.logLLMResponse(
-      context.llmConfig,
-      llmDuration,
-      response.usage?.promptTokens,
-      response.usage?.completionTokens
-    );
+    tracingLogger.logLLMResponse(context.llmConfig);
 
     return response;
   }

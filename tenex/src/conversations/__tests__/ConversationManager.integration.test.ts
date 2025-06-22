@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { ConversationManager } from "../ConversationManager";
 import { FileSystemAdapter } from "../persistence";
-import type { ConversationState } from "../types";
+import type { Conversation } from "../types";
 import { createConversationEvent, createReplyEvent, createAgentMessageEvent } from "@/test-utils/mocks/events";
 import { ensureDirectory, removeDirectory, fileExists, readFile } from "@/lib/fs";
 import path from "node:path";

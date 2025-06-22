@@ -31,45 +31,6 @@ export class ConversationRouter {
   private agentExecutor: AgentExecutor;
   private replyPipeline: RoutingPipeline;
 
-  /**
-   * Convert ConversationState to Conversation for type compatibility
-   */
-  private convertToConversation(state: Conversation): Conversation {
-    const metadata: Record<string, string | number | boolean | string[]> = {};
-    
-    // Convert known fields
-    if (state.metadata.branch !== undefined) metadata.branch = state.metadata.branch;
-    if (state.metadata.summary !== undefined) metadata.summary = state.metadata.summary;
-    if (state.metadata.requirements !== undefined) metadata.requirements = state.metadata.requirements;
-    if (state.metadata.plan !== undefined) metadata.plan = state.metadata.plan;
-    
-    // Convert other fields with type checking
-    for (const [key, value] of Object.entries(state.metadata)) {
-      if (key === 'branch' || key === 'summary' || key === 'requirements' || key === 'plan') {
-        continue; // Already handled
-      }
-      
-      // Only include values that match the Conversation metadata type
-      if (
-        typeof value === 'string' ||
-        typeof value === 'number' ||
-        typeof value === 'boolean' ||
-        (Array.isArray(value) && value.every(v => typeof v === 'string'))
-      ) {
-        metadata[key] = value;
-      }
-    }
-    
-    return {
-      id: state.id,
-      title: state.title,
-      phase: state.phase,
-      history: state.history,
-      currentAgent: state.currentAgent,
-      phaseStartedAt: state.phaseStartedAt,
-      metadata,
-    };
-  }
 
   constructor(
     private conversationManager: ConversationManager,
@@ -313,7 +274,7 @@ export class ConversationRouter {
     const projectNsec = projectContext.getCurrentProjectNsec();
     const projectSigner = new NDKPrivateKeySigner(projectNsec);
     await this.publisher.publishPhaseTransition(
-      this.convertToConversation(conversation),
+      conversation,
       newPhase,
       context,
       projectSigner,

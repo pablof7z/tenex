@@ -5,7 +5,7 @@ import type { AgentExecutionContext } from "@/agents/execution/types";
 import { PromptBuilder } from "@/prompts";
 import { inventoryExists } from "@/utils/inventory";
 import { ConversationManager } from "@/conversations/ConversationManager";
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { ConversationPublisher } from "@/nostr/ConversationPublisher";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { MultiLLMService } from "@/llm/MultiLLMService";
@@ -87,7 +87,7 @@ export async function runDebugChat(
     // Create conversation state for AgentExecutor
     const conversationId = uuidv4();
     const conversationManager = new ConversationManager(projectPath);
-    const conversation: ConversationState = {
+    const conversation: Conversation = {
       id: conversationId,
       title: "Debug Chat Session",
       phase: "chat" as Phase,

@@ -1,4 +1,4 @@
-import type { ConversationState } from "../types";
+import type { Conversation } from "../types";
 
 export interface ConversationMetadata {
   id: string;
@@ -21,8 +21,8 @@ export interface ConversationSearchCriteria {
 }
 
 export interface ConversationPersistenceAdapter {
-  save(conversation: ConversationState): Promise<void>;
-  load(conversationId: string): Promise<ConversationState | null>;
+  save(conversation: Conversation): Promise<void>;
+  load(conversationId: string): Promise<Conversation | null>;
   delete(conversationId: string): Promise<void>;
   list(): Promise<ConversationMetadata[]>;
   search(criteria: ConversationSearchCriteria): Promise<ConversationMetadata[]>;

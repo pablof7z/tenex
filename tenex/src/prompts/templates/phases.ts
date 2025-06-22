@@ -1,8 +1,8 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import type { AgentSummary } from "@/routing/types";
 import { PromptBuilder } from "../core/PromptBuilder";
 
-export function buildChatPhasePrompt(conversation: ConversationState): string {
+export function buildChatPhasePrompt(conversation: Conversation): string {
   const builder = new PromptBuilder();
 
   return builder
@@ -31,7 +31,7 @@ Current understanding: ${conversation.metadata.summary || "Just started"}`,
 }
 
 export function buildPlanPhasePrompt(
-  conversation: ConversationState,
+  conversation: Conversation,
   requirements: string
 ): string {
   const builder = new PromptBuilder();
@@ -58,7 +58,7 @@ export function buildPlanPhasePrompt(
     .build();
 }
 
-export function buildExecutePhasePrompt(conversation: ConversationState, plan: string): string {
+export function buildExecutePhasePrompt(conversation: Conversation, plan: string): string {
   const builder = new PromptBuilder();
 
   return builder
@@ -84,7 +84,7 @@ Branch: ${conversation.metadata.branch || "feature-branch"}`,
 }
 
 export function buildReviewPhasePrompt(
-  conversation: ConversationState,
+  conversation: Conversation,
   agents: AgentSummary[]
 ): string {
   const builder = new PromptBuilder();

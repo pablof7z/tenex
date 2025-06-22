@@ -1,4 +1,4 @@
-import { logger as baseLogger, type LogModule } from "@/utils/logger";
+import { type LogModule, logger as baseLogger, parseModuleVerbosity } from "@/utils/logger";
 import type { TracingContext } from "./TracingContext";
 import { formatTracingContext } from "./TracingContext";
 
@@ -6,10 +6,21 @@ import { formatTracingContext } from "./TracingContext";
  * Enhanced logger that automatically includes tracing context in all log entries
  */
 export class TracingLogger {
+  private isTracingEnabled: boolean;
+
   constructor(
     private context: TracingContext,
     private module?: LogModule
-  ) {}
+  ) {
+    // Check if tracing is enabled based on module verbosity
+    const verbosityConfig = parseModuleVerbosity();
+    const moduleVerbosity = module
+      ? verbosityConfig.modules?.[module] || verbosityConfig.default
+      : verbosityConfig.default;
+
+    // Only enable tracing for verbose or debug levels
+    this.isTracingEnabled = moduleVerbosity === "verbose" || moduleVerbosity === "debug";
+  }
 
   /**
    * Create a scoped logger for a specific module
@@ -28,7 +39,14 @@ export class TracingLogger {
   /**
    * Format message with tracing context
    */
-  private formatMessage(message: string, additionalContext?: Record<string, unknown>): [Record<string, unknown>] {
+  private formatMessage(
+    message: string,
+    additionalContext?: Record<string, unknown>
+  ): [Record<string, unknown>] {
+    if (!this.isTracingEnabled) {
+      return [additionalContext || {}];
+    }
+
     const tracingData = formatTracingContext(this.context);
     const contextData = {
       ...tracingData,
@@ -85,11 +103,9 @@ export class TracingLogger {
    * Log the completion of an operation
    */
   completeOperation(operation: string, additionalContext?: Record<string, unknown>): void {
-    const duration = Date.now() - this.context.startTime;
     this.success(`Completed ${operation}`, {
       operation,
       event: "operation_complete",
-      duration,
       ...additionalContext,
     });
   }
@@ -102,11 +118,9 @@ export class TracingLogger {
     error: unknown,
     additionalContext?: Record<string, unknown>
   ): void {
-    const duration = Date.now() - this.context.startTime;
     this.error(`Failed ${operation}`, error, {
       operation,
       event: "operation_failed",
-      duration,
       ...additionalContext,
     });
   }
@@ -158,15 +172,10 @@ export class TracingLogger {
   /**
    * Log LLM interaction
    */
-  logLLMRequest(
-    model: string,
-    promptTokens?: number,
-    additionalContext?: Record<string, unknown>
-  ): void {
+  logLLMRequest(model: string, additionalContext?: Record<string, unknown>): void {
     this.debug(`LLM request to ${model}`, {
       event: "llm_request",
       model,
-      promptTokens,
       ...additionalContext,
     });
   }
@@ -174,20 +183,10 @@ export class TracingLogger {
   /**
    * Log LLM response
    */
-  logLLMResponse(
-    model: string,
-    duration: number,
-    promptTokens?: number,
-    completionTokens?: number,
-    additionalContext?: Record<string, unknown>
-  ): void {
+  logLLMResponse(model: string, additionalContext?: Record<string, unknown>): void {
     this.info(`LLM response from ${model}`, {
       event: "llm_response",
       model,
-      duration,
-      promptTokens,
-      completionTokens,
-      totalTokens: (promptTokens || 0) + (completionTokens || 0),
       ...additionalContext,
     });
   }

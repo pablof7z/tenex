@@ -1,4 +1,4 @@
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import { getNDK } from "@/nostr/ndkClient";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { projectContext } from "@/services";
@@ -20,7 +20,7 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
   phase: Phase = "chores";
 
   async initialize(
-    conversation: ConversationState,
+    conversation: Conversation,
     availableAgents: Agent[]
   ): Promise<PhaseInitializationResult> {
     logger.info("[CHORES Phase] Initializing chores phase", {
@@ -91,7 +91,7 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
   /**
    * Extract the list of changed files from the conversation
    */
-  private extractChangedFiles(conversation: ConversationState): string[] {
+  private extractChangedFiles(conversation: Conversation): string[] {
     const changedFiles = new Set<string>();
 
     // Check for files mentioned in execute phase metadata

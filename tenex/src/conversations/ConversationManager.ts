@@ -10,10 +10,10 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import { FileSystemAdapter } from "./persistence";
-import type { ConversationMetadata, ConversationState } from "./types";
+import type { ConversationMetadata, Conversation } from "./types";
 
 export class ConversationManager {
-  private conversations: Map<string, ConversationState> = new Map();
+  private conversations: Map<string, Conversation> = new Map();
   private conversationContexts: Map<string, TracingContext> = new Map();
   private conversationsDir: string;
   private persistence: FileSystemAdapter;
@@ -31,7 +31,7 @@ export class ConversationManager {
     await this.loadConversations();
   }
 
-  async createConversation(event: NDKEvent): Promise<ConversationState> {
+  async createConversation(event: NDKEvent): Promise<Conversation> {
     const id = event.id;
     if (!id) {
       throw new Error("Event must have an ID to create a conversation");
@@ -45,7 +45,7 @@ export class ConversationManager {
     const tracingLogger = createTracingLogger(tracingContext, "conversation");
     tracingLogger.startOperation("createConversation");
 
-    const conversation: ConversationState = {
+    const conversation: Conversation = {
       id,
       title,
       phase: "chat", // All conversations start in chat phase
@@ -72,7 +72,7 @@ export class ConversationManager {
     return conversation;
   }
 
-  getConversation(id: string): ConversationState | undefined {
+  getConversation(id: string): Conversation | undefined {
     return this.conversations.get(id);
   }
 
@@ -217,11 +217,11 @@ export class ConversationManager {
     return context;
   }
 
-  getAllConversations(): ConversationState[] {
+  getAllConversations(): Conversation[] {
     return Array.from(this.conversations.values());
   }
 
-  getConversationByEvent(eventId: string): ConversationState | undefined {
+  getConversationByEvent(eventId: string): Conversation | undefined {
     // Find conversation that contains this event
     for (const conversation of this.conversations.values()) {
       if (conversation.history.some((e) => e.id === eventId)) {
@@ -275,9 +275,9 @@ export class ConversationManager {
     this.conversations.delete(conversationId);
   }
 
-  async searchConversations(query: string): Promise<ConversationState[]> {
+  async searchConversations(query: string): Promise<Conversation[]> {
     const metadata = await this.persistence.search({ title: query });
-    const conversations: ConversationState[] = [];
+    const conversations: Conversation[] = [];
 
     for (const meta of metadata) {
       const conversation = await this.persistence.load(meta.id);

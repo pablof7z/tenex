@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@/lib/fs";
-import type { ConversationState, ConversationMetadata as ConvMetadata } from "../types";
+import type { Conversation, ConversationMetadata as ConvMetadata } from "../types";
 import type { Phase } from "@/conversations/types";
 import type { ConversationPersistenceAdapter, ConversationSearchCriteria, ConversationMetadata } from "./types";
 
@@ -28,7 +28,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
     }
   }
 
-  async save(conversation: ConversationState): Promise<void> {
+  async save(conversation: Conversation): Promise<void> {
     try {
       const filePath = this.getConversationPath(conversation.id);
 
@@ -61,7 +61,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
     }
   }
 
-  async load(conversationId: string): Promise<ConversationState | null> {
+  async load(conversationId: string): Promise<Conversation | null> {
     try {
       const filePath = this.getConversationPath(conversationId);
 
@@ -127,7 +127,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
       }
 
       // Reconstruct conversation with validated data
-      const conversation: ConversationState = {
+      const conversation: Conversation = {
         id: String(data.id),
         title: String(data.title),
         phase: data.phase,
@@ -325,7 +325,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
     await writeJsonFile(this.metadataPath, metadata);
   }
 
-  private async updateMetadata(conversation: ConversationState): Promise<void> {
+  private async updateMetadata(conversation: Conversation): Promise<void> {
     // Serialize metadata updates to prevent race conditions
     this.metadataLock = this.metadataLock.then(async () => {
       try {

@@ -1,5 +1,5 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { ConversationState } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
 import type { Agent } from "@/agents/types";
 import type { RoutingDecision } from "@/routing/types";
 import type { ConversationManager } from "@/conversations";
@@ -9,7 +9,7 @@ import type { AgentExecutor } from "@/agents";
 
 export interface RoutingContext {
   event: NDKEvent;
-  conversation: ConversationState;
+  conversation: Conversation;
   availableAgents: Agent[];
   routingDecision?: RoutingDecision;
   handled: boolean;
