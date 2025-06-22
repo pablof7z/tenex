@@ -9,7 +9,7 @@ export interface Conversation {
   history: NDKEvent[];
   currentAgent?: string; // pubkey of current agent
   phaseStartedAt?: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, string | number | boolean | string[]>;
 }
 
 export interface PhaseTransition {

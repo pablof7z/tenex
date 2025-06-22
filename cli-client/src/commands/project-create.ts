@@ -1,5 +1,5 @@
 import { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "../logger.js";
 import chalk from "chalk";
 import { getNDK } from "../ndk-setup.js";
 

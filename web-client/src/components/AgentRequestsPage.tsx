@@ -5,7 +5,7 @@ import {
     useNDKSessionSigners,
     useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/constants";
 import { ArrowLeft, Bot, CheckCircle2, Copy, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "./common/EmptyState";

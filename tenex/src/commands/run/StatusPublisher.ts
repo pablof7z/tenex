@@ -3,8 +3,8 @@ import { STATUS_INTERVAL_MS, STATUS_KIND } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 import { formatError } from "@/utils/errors";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logWarning } from "@tenex/shared/logger";
-import { configurationService } from "@tenex/shared/services";
+import { logWarning } from "@/utils/logger";
+import { projectContext, configService } from "@/services";
 
 export class StatusPublisher {
   private statusInterval?: NodeJS.Timeout;
@@ -49,15 +49,13 @@ export class StatusPublisher {
 
   private async addAgentPubkeys(event: NDKEvent, projectPath: string): Promise<void> {
     try {
-      const configuration = await configurationService.loadConfiguration(projectPath);
-      const agents = configuration.agents;
-
-      if (agents && "agents" in agents) {
-        for (const [agentName, agentConfig] of Object.entries(agents.agents)) {
-          // For now, we don't have nsec in the agent config
-          // This needs to be handled differently
-          logWarning(`Agent ${agentName} does not have nsec in new format`);
+      if (projectContext.isInitialized()) {
+        const agents = projectContext.getAllAgents();
+        for (const [agentSlug, agent] of agents) {
+          event.tags.push(["agent", agent.pubkey, agentSlug]);
         }
+      } else {
+        logWarning("ProjectContext not initialized for status event");
       }
     } catch (_err) {
       logWarning("Could not load agent information for status event");
@@ -66,16 +64,15 @@ export class StatusPublisher {
 
   private async addModelTags(event: NDKEvent, projectPath: string): Promise<void> {
     try {
-      const configuration = await configurationService.loadConfiguration(projectPath);
-      const llms = configuration.llms;
+      const { llms } = await configService.loadConfig(projectPath);
 
       if (!llms) return;
 
-      // Add model tags for each LLM preset
-      for (const [presetName, preset] of Object.entries(llms.presets)) {
-        if (!preset || !preset.model) continue;
+      // Add model tags for each LLM configuration
+      for (const [configName, config] of Object.entries(llms.configurations)) {
+        if (!config || !config.model) continue;
 
-        event.tags.push(["model", preset.model, presetName]);
+        event.tags.push(["model", config.model, configName]);
       }
 
       // Also check if there are agent-specific selections

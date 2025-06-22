@@ -1,5 +1,13 @@
 import type { NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
-import { StringUtils } from "@tenex/shared";
+// Simple string utility functions
+const StringUtils = {
+    truncateString: (str: string, maxLength: number) => 
+        str.length > maxLength ? str.substring(0, maxLength) + "..." : str,
+    truncate: (str: string, maxLength: number) => 
+        str.length > maxLength ? str.substring(0, maxLength) + "..." : str,
+    getInitials: (name: string) => 
+        name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2),
+};
 import { Clock, ExternalLink, GitBranch } from "lucide-react";
 import { memo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";

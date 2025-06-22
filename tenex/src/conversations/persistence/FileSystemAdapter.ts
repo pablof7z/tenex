@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { logger } from "@tenex/shared";
-import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@tenex/shared/fs";
+import { logger } from "@/utils/logger";
+import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@/lib/fs";
 import type { ConversationState } from "../types";
 import type {
   ConversationMetadata,

@@ -1,4 +1,4 @@
-import { logger } from "@tenex/shared/logger";
+import { logger } from "@/utils/logger";
 import {
   type ChatModel,
   type LlmChunk,

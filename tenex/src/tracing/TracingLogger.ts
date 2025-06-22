@@ -1,4 +1,4 @@
-import { type LogModule, logger as baseLogger } from "@tenex/shared";
+import { logger as baseLogger, type LogModule } from "@/utils/logger";
 import type { TracingContext } from "./TracingContext";
 import { formatTracingContext } from "./TracingContext";
 

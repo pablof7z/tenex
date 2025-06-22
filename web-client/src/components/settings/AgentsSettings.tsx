@@ -1,7 +1,7 @@
 import { type NDKProject, useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Plus, User, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { NDKAgent } from "../../events/agent";
+import { NDKAgent } from "@tenex/cli";
 import { AgentSelector } from "../agents/AgentSelector";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";

@@ -8,7 +8,7 @@ The TENEX Agentic Routing System is a sophisticated conversation management fram
 
 ### Core Components
 
-1. **LLM Service** (`src/llm/`)
+1. **LLM Service** (`src/core/llm/`)
    - Integrates with multiple LLM providers via multi-llm-ts
    - Manages configurations and credentials
    - Tracks token usage and costs

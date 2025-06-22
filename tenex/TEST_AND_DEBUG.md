@@ -86,12 +86,12 @@ echo 'export LOG_LEVEL=debug' >> ~/.bashrc
 #### Test LLM Service
 ```typescript
 // test-llm.ts
-import { LLMConfigManager, LLMService } from './src/llm';
+import { MultiLLMService } from './src/core/llm';
+import { ConfigurationService } from '@tenex/shared';
 import { Message } from 'multi-llm-ts';
 
-const manager = new LLMConfigManager('.');
-await manager.loadConfigurations();
-const service = new LLMService(manager);
+const configService = new ConfigurationService('.');
+const service = new MultiLLMService(configService);
 
 const response = await service.complete('default', [
   new Message('user', 'Say hello')

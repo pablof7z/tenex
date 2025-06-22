@@ -5,10 +5,11 @@ import { ProjectLoader, type ProjectRuntimeInfo } from "@/commands/run/ProjectLo
 import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
+import { ProjectManager } from "@/daemon/ProjectManager";
 import { getNDK, initNDK, shutdownNDK } from "@/nostr/ndkClient";
 import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import chalk from "chalk";
 import { Command } from "commander";
 
@@ -23,7 +24,11 @@ export const projectRunCommand = new Command("run")
       await initNDK();
       const ndk = getNDK();
 
-      // Load project using ProjectLoader (which includes fetching the project event)
+      // First, initialize ProjectContext using ProjectManager
+      const projectManager = new ProjectManager();
+      await projectManager.loadAndInitializeProjectContext(projectPath, ndk);
+      
+      // Then load project using ProjectLoader (which uses ProjectContext)
       const projectLoader = new ProjectLoader();
       const projectInfo = await projectLoader.loadProject(projectPath);
 

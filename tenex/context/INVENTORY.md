@@ -1,6 +1,6 @@
 # Project Inventory
 
-Generated: 2025-06-21T20:20:06.170Z
+Generated: 2025-06-22T12:00:00.000Z (Manually updated after cleanup)
 Version: 1.0.0
 
 ## Project Overview
@@ -10,13 +10,13 @@ Version: 1.0.0
 
 ## Statistics
 
-- Total Files: 191
+- Total Files: 177 (removed 14 files)
 - Total Directories: 53
 - Total Size: 1.60 MB
 
 ### File Types
 
-- .ts: 164 files
+- .ts: 151 files (removed 13 test files)
 - .md: 15 files
 - .json: 5 files
 - .sh: 4 files
@@ -43,8 +43,7 @@ Version: 1.0.0
     - **src/conversations/persistence/** - Directory containing 3 files
     - **src/core/llm/** - Directory containing 4 files
     - **src/core/types/** - Directory containing 1 files
-    - **src/llm/__tests__/** - Directory containing 2 files
-    - **src/llm/providers/** - Directory containing 1 files
+    - **src/core/llm/** - Directory containing 5 files (moved LLMConfigEditor.ts here)
     - **src/phases/__tests__/** - Directory containing 1 files
     - **src/prompts/__tests__/** - Directory containing 4 files
     - **src/prompts/core/** - Directory containing 5 files
@@ -52,7 +51,7 @@ Version: 1.0.0
     - **src/routing/__tests__/** - Directory containing 1 files
     - **src/services/__tests__/** - Directory containing 2 files
     - **src/tasks/__tests__/** - Directory containing 1 files
-    - **src/test-utils/helpers/** - Directory containing 4 files
+    - **src/test-utils/helpers/** - Directory containing 2 files (removed assertions.ts, async.ts)
     - **src/test-utils/mocks/** - Directory containing 6 files
     - **src/tools/execution/** - Directory containing 4 files
     - **src/utils/claude/** - Directory containing 1 files
@@ -65,7 +64,7 @@ Version: 1.0.0
   - **src/core/** - Directory containing 1 files
   - **src/daemon/** - Directory containing 3 files
   - **src/debug/** - Directory containing 4 files
-  - **src/llm/** - Directory containing 4 files
+  - **src/llm/** - Directory removed (contents moved to src/core/llm)
   - **src/nostr/** - Directory containing 3 files
   - **src/phases/** - Directory containing 9 files
   - **src/prompts/** - Directory containing 3 files
@@ -77,7 +76,7 @@ Version: 1.0.0
   - **src/tools/** - Directory containing 2 files
   - **src/tracing/** - Directory containing 3 files
   - **src/types/** - Directory containing 6 files
-  - **src/utils/** - Directory containing 6 files
+  - **src/utils/** - Directory containing 6 files (removed agents.ts, added string.ts)
   - **tests/e2e/** - Directory containing 1 files
 
 ## Files
@@ -96,37 +95,22 @@ Version: 1.0.0
 - **biome.json** - .json file
 - **bunfig.toml** - .toml file
 - **check_orphaned_files.sh** - .sh file
-- **DEBUG_CHAT_RESTORATION_PLAN.md** - .md file
 - **find_orphaned_files.sh** - .sh file
 - **IMPLEMENTATION_PLAN.md** - .md file
 - **INTEGRATION_COMPLETE.md** - .md file
-- **llm-tools-example.ts** - .ts file
-- **llm-tools-types.ts** - .ts file [types]
 - **llms.json** - .json file
 - **LOGGING_GUIDE.md** - .md file
 - **package.json** - .json file
-- **parser-test.ts** - .ts file [test]
 - **PROMPT_SYSTEM_EXAMPLE.md** - .md file
 - **SYSTEM_ARCHITECTURE_DIAGRAMS.md** - .md file
 - **SYSTEM_DATA_FLOWS.md** - .md file
 - **TEST_AND_DEBUG.md** - .md file [test]
-- **test-agent-execution.ts** - .ts file [test]
-- **test-conversation-system.ts** - .ts file [test]
 - **test-debug-chat.sh** - .sh file [test]
-- **test-debug-system.ts** - .ts file [test]
-- **test-event-handler-integration.ts** - .ts file [test]
-- **test-global-agents.ts** - .ts file [test]
-- **test-integration.ts** - .ts file [test]
-- **test-multi-llm.ts** - .ts file [test]
-- **test-phase-initializers.ts** - .ts file [test]
 - **test-routing-enhancement.ts** - .ts file [test]
-- **test-time-tool.ts** - .ts file [test]
-- **test-tools-and-persistence.ts** - .ts file [test]
 - **tsconfig.json** - .json file [configuration]
 
 ### bin
 
-- **tenex.ts** - .ts file
 
 ### docs
 
@@ -279,8 +263,7 @@ Version: 1.0.0
 - **ChoresPhaseInitializer.ts** - .ts file
 - **ExecutePhaseInitializer.ts** - .ts file
 - **index.ts** - .ts file
-- **PhaseInitializer.ts** - .ts file
-- **PhaseInitializerFactory.ts** - .ts file
+- **phaseInitializers.ts** - .ts file
 - **PlanPhaseInitializer.ts** - .ts file
 - **ReviewPhaseInitializer.ts** - .ts file
 - **types.ts** - .ts file [types]
@@ -320,6 +303,13 @@ Version: 1.0.0
 - **inventory.ts** - .ts file
 - **project.ts** - .ts file
 - **routing-system.ts** - .ts file
+
+### src/core/llm
+
+- **index.ts** - .ts file
+- **LLMConfigEditor.ts** - .ts file [configuration]
+- **MultiLLMService.ts** - .ts file [service]
+- **types.ts** - .ts file [types]
 - **routing.ts** - .ts file
 - **tools.ts** - .ts file
 
@@ -327,8 +317,7 @@ Version: 1.0.0
 
 - **ConversationRouter.ts** - .ts file [api]
 - **index.ts** - .ts file
-- **routingDomainFunctions.ts** - .ts file
-- **RoutingDomainService.ts** - .ts file [service]
+- **routingDomain.ts** - .ts file
 - **RoutingLLM.ts** - .ts file
 - **types.ts** - .ts file [types]
 
@@ -343,7 +332,6 @@ Version: 1.0.0
 
 ### src/services
 
-- **InventoryService.ts** - .ts file [service]
 
 ### src/services/__tests__
 
@@ -360,8 +348,6 @@ Version: 1.0.0
 
 ### src/test-utils/helpers
 
-- **assertions.ts** - .ts file [test, utility]
-- **async.ts** - .ts file [test, utility]
 - **fixtures.ts** - .ts file [test, utility]
 - **index.ts** - .ts file [test, utility]
 
@@ -376,8 +362,12 @@ Version: 1.0.0
 
 ### src/tools
 
-- **ClaudeCodeExecutor.ts** - .ts file
 - **index.ts** - .ts file
+
+### src/tools/claude
+
+- **ClaudeCodeExecutor.ts** - .ts file
+- **types.ts** - .ts file [types]
 
 ### src/tools/execution
 
@@ -414,11 +404,10 @@ Version: 1.0.0
 
 ### src/utils
 
-- **agents.ts** - .ts file [utility]
+- **string.ts** - .ts file [utility]
 - **errors.ts** - .ts file [utility]
-- **json.ts** - .ts file [utility]
+- **inventory.ts** - .ts file [utility]
 - **project.ts** - .ts file [utility]
-- **RulesManager.ts** - .ts file [utility]
 - **setup.ts** - .ts file [utility]
 
 ### src/utils/claude

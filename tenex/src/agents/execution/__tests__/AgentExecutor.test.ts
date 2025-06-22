@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { AgentExecutor } from "../AgentExecutor";
 import * as AgentPromptBuilder from "../AgentPromptBuilder";
 import type { AgentExecutionContext, AgentExecutionResult } from "../types";
-import type { LLMService } from "@/llm/LLMService";
+import type { LLMService } from "@/core/llm";
 import type { ConversationPublisher } from "@/nostr/ConversationPublisher";
 import { ToolExecutionManager } from "@/tools/execution";
 import { createMockLLMService, MockLLMResponse } from "@/test-utils/mocks";

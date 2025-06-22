@@ -7,8 +7,8 @@ import {
 } from "@/tracing";
 import type { Phase } from "@/types/conversation";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
-import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
+import { logger } from "@/utils/logger";
+import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import { FileSystemAdapter } from "./persistence";
 import type { ConversationMetadata, ConversationState } from "./types";
 

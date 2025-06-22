@@ -1,6 +1,6 @@
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "./logger.js";
 import {
     type ChatSession,
     EVENT_KINDS,

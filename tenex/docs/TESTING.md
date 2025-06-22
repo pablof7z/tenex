@@ -10,29 +10,30 @@ The TENEX project uses a comprehensive testing strategy with unit tests, integra
 src/
 ├── agents/
 │   └── __tests__/
-│       ├── AgentRegistry.test.ts         # Unit tests
+│       └── AgentRegistry.test.ts         # Unit tests
+├── agents/execution/
+│   └── __tests__/
+│       ├── AgentExecutor.test.ts
 │       └── AgentExecutor.integration.test.ts  # Integration tests
 ├── conversations/
 │   └── __tests__/
 │       ├── ConversationManager.test.ts
 │       └── ConversationManager.integration.test.ts
-├── llm/
-│   └── __tests__/
-│       ├── LLMConfigManager.test.ts
-│       └── LLMService.test.ts
 ├── routing/
 │   └── __tests__/
 │       └── RoutingLLM.test.ts
-└── tools/
-    └── execution/
-        └── __tests__/
-            ├── ToolDetector.test.ts
-            └── ToolExecutionManager.test.ts
+├── tools/execution/
+│   └── __tests__/
+│       ├── ToolDetector.test.ts
+│       └── ToolExecutionManager.test.ts
+└── services/
+    └── __tests__/
+        ├── InventoryService.test.ts
+        └── InventoryService.integration.test.ts
 
 tests/
 └── e2e/
-    ├── conversation-flow.test.ts
-    └── multi-agent.test.ts
+    └── conversation-flow.test.ts
 ```
 
 ## Running Tests

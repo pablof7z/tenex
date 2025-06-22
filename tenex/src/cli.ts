@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { logger } from "@tenex/shared/logger";
+import { logger } from "@/utils/logger";
 // CLI entry point for TENEX
 import { Command } from "commander";
 import { daemonCommand } from "./commands/daemon";

@@ -3,7 +3,7 @@ import { ConversationManager } from "../ConversationManager";
 import { FileSystemAdapter } from "../persistence";
 import type { ConversationState } from "../types";
 import { createConversationEvent, createReplyEvent, createAgentMessageEvent } from "@/test-utils/mocks/events";
-import { ensureDirectory, removeDirectory, fileExists, readFile } from "@tenex/shared/fs";
+import { ensureDirectory, removeDirectory, fileExists, readFile } from "@/lib/fs";
 import path from "node:path";
 import fs from "node:fs/promises";
 import os from "node:os";

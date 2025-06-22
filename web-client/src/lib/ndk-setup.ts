@@ -1,5 +1,5 @@
 import { registerEventClass } from "@nostr-dev-kit/ndk";
-import { NDKAgent } from "../events/agent";
+import { NDKAgent } from "@tenex/cli";
 
 // Register the NDKAgent custom event class with NDK
 registerEventClass(NDKAgent);

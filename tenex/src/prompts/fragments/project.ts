@@ -15,8 +15,9 @@ const validateProjectArgs = (args: unknown): args is ProjectFragmentArgs => {
   if (!args || typeof args !== "object" || !("project" in args)) {
     return false;
   }
-  const obj = args as any;
-  return obj.project && typeof obj.project.name === "string";
+  const obj = args as Record<string, unknown>;
+  return obj.project && typeof obj.project === "object" && obj.project !== null && 
+         "name" in obj.project && typeof (obj.project as Record<string, unknown>).name === "string";
 };
 
 export const projectFragment: PromptFragment<ProjectFragmentArgs> = {

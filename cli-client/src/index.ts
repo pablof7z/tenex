@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { logger } from "@tenex/shared";
+import { logger } from "./logger.js";
 import { Command } from "commander";
 import { TenexCLI } from "./cli.js";
 import { createProject } from "./commands/project-create.js";

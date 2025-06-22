@@ -2,17 +2,17 @@ import { exec } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { LLMConfigEditor } from "@/commands/setup/llm";
+import { LLMConfigEditor } from "@/core/llm/LLMConfigEditor";
 import { toKebabCase } from "@/utils/string";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
-import { configurationService } from "@tenex/shared/services";
-import type { AgentProfile } from "@tenex/types/agents";
-import type { GlobalConfig, ProjectConfig, TenexConfiguration } from "@tenex/types/config";
-import type { Agent, ProjectData } from "@tenex/types/projects";
+import { logger } from "@/utils/logger";
+import { configService, ProjectContext } from "@/services";
+import type { AgentProfile } from "@/types/agent";
+import type { TenexConfig } from "@/types/config";
+import type { Agent, ProjectData } from "@/types/llm";
 import chalk from "chalk";
 
 const execAsync = promisify(exec);
@@ -21,6 +21,7 @@ export interface IProjectManager {
   initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData>;
   loadProject(projectPath: string): Promise<ProjectData>;
   ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string>;
+  loadAndInitializeProjectContext(projectPath: string, ndk: NDK): Promise<void>;
 }
 
 export class ProjectManager implements IProjectManager {
@@ -65,9 +66,7 @@ export class ProjectManager implements IProjectManager {
 
   async loadProject(projectPath: string): Promise<ProjectData> {
     try {
-      const { configurationService } = await import("@tenex/shared/services");
-      const configuration = await configurationService.loadProjectConfig(projectPath);
-      const config = configuration.config as ProjectConfig;
+      const { config } = await configService.loadConfig(projectPath);
 
       if (!config.projectNaddr) {
         throw new Error("Project configuration missing projectNaddr");
@@ -105,6 +104,54 @@ export class ProjectManager implements IProjectManager {
     await this.initializeProject(projectPath, naddr, ndk);
 
     return projectPath;
+  }
+
+  async loadAndInitializeProjectContext(projectPath: string, ndk: NDK): Promise<void> {
+    try {
+      // Load project configuration
+      const { config } = await configService.loadConfig(projectPath);
+      
+      if (!config.projectNaddr) {
+        throw new Error("Project configuration missing projectNaddr");
+      }
+
+      // Fetch project from Nostr
+      const project = await this.fetchProject(config.projectNaddr, ndk);
+      
+      // Get project nsec
+      const projectNsec = config.nsec;
+      if (!projectNsec) {
+        throw new Error("Project nsec not found in configuration");
+      }
+
+      // Load agents using AgentRegistry
+      const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
+      const agentRegistry = new AgentRegistry(projectPath);
+      await agentRegistry.loadFromProject();
+
+      // Get all agents from registry
+      const agentMap = agentRegistry.getAllAgentsMap();
+      const loadedAgents = new Map();
+      
+      // Convert to LoadedAgent format with slugs
+      for (const [slug, agent] of agentMap.entries()) {
+        loadedAgents.set(slug, {
+          ...agent,
+          slug,
+        });
+      }
+
+      // Initialize ProjectContext
+      ProjectContext.initialize(project, projectNsec, loadedAgents);
+      
+      logger.info("ProjectContext initialized successfully", {
+        projectTitle: project.tagValue("title"),
+        agentCount: loadedAgents.size,
+      });
+    } catch (error) {
+      logger.error("Failed to initialize ProjectContext", { error, projectPath });
+      throw error;
+    }
   }
 
   private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
@@ -165,7 +212,7 @@ export class ProjectManager implements IProjectManager {
     await fs.mkdir(tenexPath, { recursive: true });
 
     // Create project config
-    const projectConfig: ProjectConfig = {
+    const projectConfig: TenexConfig = {
       title: projectData.title,
       description: projectData.description,
       repoUrl: projectData.repoUrl || undefined,
@@ -176,17 +223,7 @@ export class ProjectManager implements IProjectManager {
       updatedAt: projectData.updatedAt,
     };
 
-    const config: TenexConfiguration = {
-      config: projectConfig,
-      agents: { agents: {} },
-      llms: {
-        presets: {},
-        selection: {},
-        auth: {},
-      },
-    };
-
-    await configurationService.saveConfiguration(projectPath, config);
+    await configService.saveProjectConfig(projectPath, projectConfig);
 
     logger.info("Created project structure with config", { projectPath });
   }
@@ -224,8 +261,8 @@ export class ProjectManager implements IProjectManager {
   }
 
   private async initializeAgents(projectPath: string, project: ProjectData): Promise<void> {
-    const configuration = await configurationService.loadConfiguration(projectPath);
-    const _agents = configuration.agents || {};
+    const { agents } = await configService.loadConfig(projectPath);
+    const _agents = agents || {};
 
     // Create agents from agent event IDs
     for (const eventId of project.agentEventIds) {
@@ -242,8 +279,7 @@ export class ProjectManager implements IProjectManager {
     }
 
     // Reload configuration to get updated agents
-    const updatedConfiguration = await configurationService.loadConfiguration(projectPath);
-    const updatedAgents = updatedConfiguration.agents || { agents: {} };
+    const { agents: updatedAgents } = await configService.loadConfig(projectPath);
 
     // If no agents were created from events, create a default agent
     if (!("agents" in updatedAgents) || Object.keys(updatedAgents.agents).length === 0) {
@@ -251,17 +287,13 @@ export class ProjectManager implements IProjectManager {
 
       // For now, we don't support nsec in the new agent format
       // This needs to be handled by the agent registry
-      updatedConfiguration.agents = {
-        agents: {
-          default: {
-            name: "Default",
-            role: "Assistant",
-            expertise: "General assistance",
-            instructions: "Help the user with their requests",
-          },
+      const defaultAgents = {
+        default: {
+          nsec: "", // Will be generated by AgentRegistry
+          file: "default.json",
         },
       };
-      await configurationService.saveConfiguration(projectPath, updatedConfiguration);
+      await configService.saveProjectAgents(projectPath, defaultAgents);
     }
   }
 
@@ -371,12 +403,11 @@ export class ProjectManager implements IProjectManager {
 
   private async checkAndRunLLMConfigWizard(projectPath: string): Promise<void> {
     try {
-      const configuration = await configurationService.loadConfiguration(projectPath);
-      const llmsConfig = configuration.llms;
+      const { llms: llmsConfig } = await configService.loadConfig(projectPath);
 
       // Check if there are any LLM configurations
       const hasLLMConfig =
-        llmsConfig && llmsConfig.presets && Object.keys(llmsConfig.presets).length > 0;
+        llmsConfig?.configurations && Object.keys(llmsConfig.configurations).length > 0;
 
       if (!hasLLMConfig) {
         logger.info(

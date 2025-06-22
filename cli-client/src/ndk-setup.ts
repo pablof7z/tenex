@@ -1,5 +1,27 @@
 import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { getRelayUrls, logger } from "@tenex/shared";
+import { logger } from "./logger.js";
+
+// Default Nostr relay URLs for TENEX
+const DEFAULT_RELAY_URLS = [
+  "wss://relay.damus.io",
+  "wss://relay.primal.net", 
+  "wss://relay.nostr.band",
+  "wss://nos.lol",
+  "wss://relay.snort.social"
+];
+
+/**
+ * Get relay URLs for NDK connection
+ */
+function getRelayUrls(): string[] {
+  // Check environment variable first
+  const envRelays = process.env.TENEX_RELAYS;
+  if (envRelays) {
+    return envRelays.split(',').map(url => url.trim());
+  }
+  
+  return DEFAULT_RELAY_URLS;
+}
 
 let ndkInstance: NDK | null = null;
 

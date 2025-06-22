@@ -1,5 +1,5 @@
 import type { ClaudeCodeMessage } from "@/tools/claude/types";
-import { logDebug, logError } from "@tenex/shared/logger";
+import { logDebug, logError } from "@/utils/logger";
 import chalk from "chalk";
 
 export type MessageHandler = (message: ClaudeCodeMessage) => void | Promise<void>;

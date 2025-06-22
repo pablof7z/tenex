@@ -7,7 +7,7 @@ import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**

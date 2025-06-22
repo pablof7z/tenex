@@ -1,4 +1,4 @@
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import { ToolDetector } from "./ToolDetector";
 import { FileExecutor, ShellExecutor } from "./executors";
 import type {
@@ -6,7 +6,7 @@ import type {
   ToolExecutionResult,
   ToolExecutor,
   ToolInvocation,
-} from "./types";
+} from "@/types/tool";
 
 export class ToolExecutionManager {
   private detector = new ToolDetector();

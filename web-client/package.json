@@ -47,6 +47,7 @@
         "sonner": "^2.0.5",
         "tailwind-merge": "^3.3.0",
         "vaul": "^1.1.2",
+        "@tenex/cli": "file:../tenex",
         "@tenex/shared": "file:../shared",
         "@tenex/types": "file:../packages/types"
     },

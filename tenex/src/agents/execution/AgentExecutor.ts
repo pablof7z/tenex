@@ -15,13 +15,13 @@ import type { Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
 import { inventoryExists } from "@/utils/inventory";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type {
   AgentExecutionContext,
   AgentExecutionResult,
   AgentPromptContext,
-  ToolExecutionResult,
 } from "./types";
+import type { ToolExecutionResult } from "@/types/tool";
 
 export class AgentExecutor {
   private toolManager = new ToolExecutionManager();

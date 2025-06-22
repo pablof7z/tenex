@@ -70,7 +70,7 @@ process.env.LOG_LEVEL = 'debug';
 
 ## Component Logging
 
-### 1. **LLM Service** (`src/llm/LLMService.ts`)
+### 1. **LLM Service** (`src/core/llm/MultiLLMService.ts`)
 - Logs all LLM requests with model, duration, token counts
 - Logs errors with full context
 - Example:

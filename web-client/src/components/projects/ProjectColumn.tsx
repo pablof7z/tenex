@@ -3,7 +3,7 @@ import { NDKEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
 import { Circle, Plus } from "lucide-react";
 import { useMemo } from "react";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../../lib/constants";
 import { onlineProjectsAtom } from "../../lib/store";
 import { ThreadOverview } from "../tasks/ThreadOverview";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";

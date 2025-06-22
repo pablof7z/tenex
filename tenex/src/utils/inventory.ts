@@ -1,8 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { logger } from "@tenex/shared";
-import { configurationService } from "@tenex/shared/services";
-import type { ProjectConfig } from "@tenex/types/config";
+import { logger } from "@/utils/logger";
+import { projectContext, configService } from "@/services";
 import { ClaudeCodeExecutor } from "../tools/claude/ClaudeCodeExecutor";
 
 const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
@@ -115,13 +114,24 @@ async function getInventoryPath(projectPath: string): Promise<string> {
 /**
  * Load project configuration
  */
-async function loadProjectConfig(projectPath: string): Promise<ProjectConfig | null> {
+async function loadProjectConfig(projectPath: string) {
   try {
-    const config = await configurationService.loadConfiguration(projectPath);
-    return config.config as ProjectConfig;
+    if (projectContext.isInitialized()) {
+      // Get config from ProjectContext if available
+      const project = projectContext.getCurrentProject();
+      const titleTag = project.tags.find((tag) => tag[0] === "title");
+      return {
+        paths: { inventory: DEFAULT_INVENTORY_PATH },
+        title: titleTag?.[1] || "Untitled Project",
+      };
+    } else {
+      // Fallback: try to load config directly
+      const { config } = await configService.loadConfig(projectPath);
+      return config;
+    }
   } catch (error) {
     logger.debug("Failed to load project config", { error });
-    return null;
+    return { paths: { inventory: DEFAULT_INVENTORY_PATH } };
   }
 }
 

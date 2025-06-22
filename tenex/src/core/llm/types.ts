@@ -3,6 +3,8 @@
  * No agent or orchestration concerns
  */
 
+import type { TokenUsage } from "@/types/llm";
+
 export interface Message {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
@@ -42,12 +44,6 @@ export interface CompletionResponse {
   model?: string;
   toolCalls?: ToolCall[];
   usage?: TokenUsage;
-}
-
-export interface TokenUsage {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
 }
 
 export interface StreamChunk {

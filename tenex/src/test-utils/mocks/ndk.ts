@@ -55,7 +55,7 @@ export class MockNDK implements Partial<NDK> {
     return this.events.get(id) || null;
   }
 
-  async fetchEvents(filter: any): Promise<Set<NDKEvent>> {
+  async fetchEvents(filter: { kinds?: number[]; authors?: string[]; since?: number; until?: number; limit?: number }): Promise<Set<NDKEvent>> {
     const results = new Set<NDKEvent>();
     for (const event of this.events.values()) {
       if (this.matchesFilter(event, filter)) {
@@ -67,10 +67,11 @@ export class MockNDK implements Partial<NDK> {
 
   // Helper to add events for testing
   addEvent(event: NDKEvent): void {
-    this.events.set(event.id!, event);
+    const eventId = event.id || `mock-${Date.now()}-${Math.random()}`;
+    this.events.set(eventId, event);
   }
 
-  private matchesFilter(event: NDKEvent, filter: any): boolean {
+  private matchesFilter(event: NDKEvent, filter: { kinds?: number[]; authors?: string[]; since?: number; until?: number; limit?: number }): boolean {
     if (filter.kinds && !filter.kinds.includes(event.kind)) return false;
     if (filter.authors && !filter.authors.includes(event.pubkey)) return false;
     if (filter["#e"]) {

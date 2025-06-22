@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 
 // State management
 const processedEventIds = new Set<string>();

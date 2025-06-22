@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { ClaudeParser, type ClaudeCodeMessage } from "@/utils/claude/ClaudeParser";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 
 export interface ClaudeCodeExecutorOptions {
   prompt: string;

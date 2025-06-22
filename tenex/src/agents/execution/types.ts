@@ -2,6 +2,7 @@ import type { ConversationState } from "@/conversations/types";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
+import type { ToolExecutionResult } from "@/types/tool";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 export interface AgentExecutionContext {
@@ -22,13 +23,6 @@ export interface AgentExecutionResult {
   publishedEvent?: NDKEvent;
 }
 
-export interface ToolExecutionResult {
-  toolName: string;
-  success: boolean;
-  output?: unknown;
-  error?: string;
-  duration?: number;
-}
 
 export interface AgentPromptContext {
   systemPrompt: string;

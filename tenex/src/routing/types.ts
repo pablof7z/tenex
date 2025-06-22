@@ -15,7 +15,7 @@ export interface RoutingDecision {
   reasoning: string;
   confidence: number;
   nextAgent?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PhaseTransitionDecision {

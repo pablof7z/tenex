@@ -1,5 +1,10 @@
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS, logger } from "@tenex/shared";
+import { logger } from "../logger.js";
+
+// TENEX-specific event kinds
+const EVENT_KINDS = {
+  TYPING_INDICATOR: 24111 as const,
+} as const;
 import chalk from "chalk";
 import { getNDK } from "../ndk-setup.js";
 

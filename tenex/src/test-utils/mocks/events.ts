@@ -70,9 +70,9 @@ export function createProjectEvent(
     ["name", projectId],
   ];
 
-  agentEventIds.forEach((id) => {
+  for (const id of agentEventIds) {
     tags.push(["agent", id]);
-  });
+  }
 
   return new MockNDKEvent(undefined, {
     id: `project-${Date.now()}`,

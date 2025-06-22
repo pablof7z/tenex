@@ -2,7 +2,7 @@ import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ArrowLeft, Edit3, MoreVertical, Copy, Info } from "lucide-react";
 import { Button } from "../ui/button";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../../lib/constants";
 import { useState } from "react";
 
 interface ProjectTabsProps {

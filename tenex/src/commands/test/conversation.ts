@@ -4,10 +4,10 @@ import { getNDK } from '@/nostr/ndkClient';
 import { ConversationManager } from '@/conversations';
 import { MultiLLMService } from '@/core/llm/MultiLLMService';
 import type { LLMService } from '@/core/llm/types';
-import { configurationService } from '@tenex/shared/services';
+import { projectContext } from '@/services';
 import { AgentRegistry } from '@/agents';
 import { RoutingLLM } from '@/routing';
-import { logInfo, logDebug, logError } from '@tenex/shared/logger';
+import { logInfo, logDebug, logError } from '@/utils/logger';
 import chalk from 'chalk';
 
 export function createTestConversationCommand(): Command {

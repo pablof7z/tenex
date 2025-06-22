@@ -1,11 +1,8 @@
-import type { LLMConfigurationAdapter } from "@/llm/LLMConfigurationAdapter";
-import type { LLMService as ILLMService } from "@/llm/LLMService";
-import type { LLMConfig, LLMResponse } from "@/llm/types";
-import type { Message } from "multi-llm-ts";
+import type { LLMService as ILLMService, LLMConfig, CompletionResponse, Message } from "@/core/llm";
 
 type LLMMessage = Message;
 
-export class MockLLMResponse implements LLMResponse {
+export class MockLLMResponse implements CompletionResponse {
   content: string;
   model: string;
   usage: {
@@ -15,7 +12,7 @@ export class MockLLMResponse implements LLMResponse {
   };
   cost?: number;
 
-  constructor(content: string, options: Partial<LLMResponse> = {}) {
+  constructor(content: string, options: Partial<CompletionResponse> = {}) {
     this.content = content;
     this.model = options.model || "mock-model";
     this.usage = options.usage || {
@@ -28,15 +25,15 @@ export class MockLLMResponse implements LLMResponse {
 }
 
 export class MockLLMService implements Partial<ILLMService> {
-  private responses: Map<string, LLMResponse> = new Map();
-  private defaultResponse: LLMResponse;
+  private responses: Map<string, CompletionResponse> = new Map();
+  private defaultResponse: CompletionResponse;
   public callHistory: Array<{ messages: LLMMessage[]; config?: string }> = [];
 
   constructor(defaultResponse?: string) {
     this.defaultResponse = new MockLLMResponse(defaultResponse || "This is a mock response");
   }
 
-  async chat(messages: LLMMessage[], configName?: string): Promise<LLMResponse> {
+  async chat(messages: LLMMessage[], configName?: string): Promise<CompletionResponse> {
     this.callHistory.push({ messages, config: configName });
 
     // Check if we have a specific response for this message pattern
@@ -46,11 +43,11 @@ export class MockLLMService implements Partial<ILLMService> {
     return this.responses.get(responseKey) || this.defaultResponse;
   }
 
-  setResponse(pattern: string, response: LLMResponse): void {
+  setResponse(pattern: string, response: CompletionResponse): void {
     this.responses.set(pattern, response);
   }
 
-  setDefaultResponse(response: LLMResponse): void {
+  setDefaultResponse(response: CompletionResponse): void {
     this.defaultResponse = response;
   }
 
@@ -63,7 +60,7 @@ export class MockLLMService implements Partial<ILLMService> {
   }
 }
 
-export class MockLLMConfigManager implements Partial<LLMConfigurationAdapter> {
+export class MockLLMConfigManager {
   private configs: Map<string, LLMConfig> = new Map();
 
   constructor() {
@@ -96,7 +93,7 @@ export class MockLLMConfigManager implements Partial<LLMConfigurationAdapter> {
     this.configs.set(name, config);
   }
 
-  getCredentials(provider: string): any {
+  getCredentials(provider: string): { apiKey: string } {
     return { apiKey: "mock-key" };
   }
 

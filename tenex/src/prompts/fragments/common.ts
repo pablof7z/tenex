@@ -52,7 +52,7 @@ export const toolListFragment: PromptFragment<ToolListArgs> = {
 };
 
 // Phase descriptions fragment
-export const phaseDescriptionsFragment: PromptFragment<{}> = {
+export const phaseDescriptionsFragment: PromptFragment<Record<string, never>> = {
   id: "phase-descriptions",
   priority: 40,
   template: () => `Phases:
@@ -97,7 +97,7 @@ Include this in your response as a "nextAction" field.`,
 };
 
 // Debug mode instructions fragment
-export const debugInstructionsFragment: PromptFragment<{}> = {
+export const debugInstructionsFragment: PromptFragment<Record<string, never>> = {
   id: "debugInstructions",
   priority: 80,
   template: () => `You are in debug mode. This is a special mode for testing and development.

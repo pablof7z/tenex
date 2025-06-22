@@ -1,12 +1,13 @@
-import type { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
+import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { NDKAgentLesson } from "../../../tenex/src/events/NDKAgentLesson.ts";
+import { EVENT_KINDS } from "../lib/types.js";
 import { atom, useAtom } from "jotai";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 // Atom to store the latest lesson event for display
-export const latestLessonAtom = atom<NDKEvent | null>(null);
+export const latestLessonAtom = atom<NDKAgentLesson | null>(null);
 
 /**
  * Hook to monitor for new agent lessons and show notifications
@@ -41,13 +42,14 @@ export function useAgentLessons() {
     useEffect(() => {
         if (!lessons || !initialLoadComplete.current) return;
 
-        for (const lesson of lessons) {
-            if (!seenLessons.current.has(lesson.id)) {
-                seenLessons.current.add(lesson.id);
+        for (const rawLesson of lessons) {
+            if (!seenLessons.current.has(rawLesson.id)) {
+                seenLessons.current.add(rawLesson.id);
 
-                // This is a new lesson after initial load
-                const title = lesson.tagValue("title") || "New Lesson";
-                const agentEventId = lesson.tags.find((tag) => tag[0] === "e")?.[1];
+                // Convert to typed lesson and extract data
+                const lesson = NDKAgentLesson.from(rawLesson);
+                const title = lesson.title || "New Lesson";
+                const agentEventId = lesson.agentId;
 
                 // Find the agent name by fetching the agent event
                 if (agentEventId && ndk) {
@@ -78,8 +80,8 @@ export function useAgentLessons() {
     }, [lessons, ndk, setLatestLesson]);
 
     return {
-        lessons: lessons || [],
-        latestLesson: lessons?.[0] || null,
+        lessons: (lessons || []).map(NDKAgentLesson.from),
+        latestLesson: lessons?.[0] ? NDKAgentLesson.from(lessons[0]) : null,
     };
 }
 
@@ -95,5 +97,5 @@ export function useAgentLessonsByEventId(agentEventId: string | undefined) {
         [agentEventId]
     );
 
-    return lessons || [];
+    return (lessons || []).map(NDKAgentLesson.from);
 }

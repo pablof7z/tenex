@@ -1,7 +1,7 @@
 import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import { nip19 } from "nostr-tools";
 import type { IProcessManager } from "./ProcessManager";
 import type { IProjectManager } from "./ProjectManager";

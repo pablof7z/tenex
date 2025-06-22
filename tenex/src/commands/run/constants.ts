@@ -1,4 +1,4 @@
-import { EVENT_KINDS } from "@tenex/types/core";
+import { EVENT_KINDS } from "@/types/llm";
 
 export const STATUS_KIND = EVENT_KINDS.PROJECT_STATUS;
 export const STATUS_INTERVAL_MS = 60000; // 60 seconds

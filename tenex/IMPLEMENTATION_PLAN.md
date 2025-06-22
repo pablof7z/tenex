@@ -23,7 +23,7 @@ const projectContext = getProjectContext()
 
 ### 1.1 LLM Integration Layer
 ```typescript
-// src/llm/LLMService.ts
+// src/core/llm/MultiLLMService.ts
 interface LLMService {
   complete(configName: string, messages: Message[]): Promise<LLMResponse>
   stream(configName: string, messages: Message[]): AsyncGenerator<StreamChunk>
@@ -41,10 +41,9 @@ interface LLMResponse {
   cost?: number
 }
 
-// src/llm/ConfigManager.ts
-interface LLMConfigManager {
-  loadConfigurations(): Promise<void>
-  getConfig(name: string): LLMConfig
+// src/core/llm/LLMServiceFactory.ts
+interface LLMServiceFactory {
+  createService(configService: ConfigurationService): MultiLLMService
   getEngine(provider: string): Engine
 }
 ```
@@ -397,9 +396,9 @@ interface ExecutionManager {
 ## Module Directory Structure
 ```
 tenex/src/
-├── llm/
-│   ├── LLMService.ts
-│   ├── ConfigManager.ts
+├── core/llm/
+│   ├── MultiLLMService.ts
+│   ├── LLMServiceFactory.ts
 │   └── types.ts
 ├── agents/
 │   ├── AgentRegistry.ts

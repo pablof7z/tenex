@@ -12,12 +12,12 @@ import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { MultiLLMService } from "@/core/llm/MultiLLMService";
 import type { LLMService } from "@/core/llm/types";
 import { getProjectContext } from "@/runtime";
-import { configurationService } from "@tenex/shared/services";
-import path from "path";
+import { projectContext, configService } from "@/services";
+import path from "node:path";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { formatError } from "@/utils/errors";
-import { logDebug, logError, logInfo } from "@tenex/shared/logger";
+import { logDebug, logError, logInfo } from "@/utils/logger";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { v4 as uuidv4 } from "uuid";
@@ -43,36 +43,42 @@ export async function runDebugChat(
 
     logInfo("Starting debug chat mode...");
 
-    // Load LLM configuration from llms.json
-    const tenexPath = path.join(projectPath, ".tenex");
-    const llmSettings = await configurationService.loadLLMConfig(tenexPath);
+    // Load LLM configuration from ProjectContext if available, otherwise from config files
+    let llmSettings;
+    if (projectContext.isInitialized()) {
+      const { llms } = await configService.loadConfig(projectPath);
+      llmSettings = llms;
+    } else {
+      const { llms } = await configService.loadConfig(projectPath);
+      llmSettings = llms;
+    }
     
     if (!llmSettings) {
-      throw new Error("Failed to load LLM configuration from .tenex/llms.json");
+      throw new Error("Failed to load LLM configuration");
     }
     
     // Initialize LLM service instances based on configuration
     const llmInstances = new Map<string, MultiLLMService>();
     
-    // Create MultiLLMService instances for each preset
-    for (const [presetName, presetConfig] of Object.entries(llmSettings.presets)) {
-      const credentials = llmSettings.auth[presetConfig.provider];
+    // Create MultiLLMService instances for each configuration
+    for (const [configName, config] of Object.entries(llmSettings.configurations)) {
+      const credentials = llmSettings.credentials[config.provider];
       if (!credentials?.apiKey) {
-        logError(`Missing API key for provider ${presetConfig.provider} in preset ${presetName}`);
+        logError(`Missing API key for provider ${config.provider} in config ${configName}`);
         continue;
       }
       
       const llmInstance = new MultiLLMService({
-        provider: presetConfig.provider as any,
-        model: presetConfig.model,
+        provider: config.provider as "anthropic" | "openai" | "google" | "ollama" | "mistral" | "groq" | "openrouter",
+        model: config.model,
         apiKey: credentials.apiKey,
         baseUrl: credentials.baseUrl,
         defaultOptions: {
-          temperature: presetConfig.temperature,
-          maxTokens: presetConfig.maxTokens,
+          temperature: config.temperature,
+          maxTokens: config.maxTokens,
         },
       });
-      llmInstances.set(presetName, llmInstance);
+      llmInstances.set(configName, llmInstance);
     }
     
     // Create LLM service that routes to the correct instance
@@ -80,7 +86,7 @@ export async function runDebugChat(
       async complete(request) {
         // Determine which config to use
         const configKey = typeof request === "string" ? request : 
-          (agent.llmConfig || llmSettings.selection?.default || "default");
+          (agent.llmConfig || llmSettings.defaults?.agents || "default");
         
         const llmInstance = llmInstances.get(configKey);
         if (!llmInstance) {
@@ -93,7 +99,7 @@ export async function runDebugChat(
       async *stream(request) {
         // Determine which config to use
         const configKey = typeof request === "string" ? request : 
-          (agent.llmConfig || llmSettings.selection?.default || "default");
+          (agent.llmConfig || llmSettings.defaults?.agents || "default");
         
         const llmInstance = llmInstances.get(configKey);
         if (!llmInstance) {
@@ -127,7 +133,7 @@ export async function runDebugChat(
         role: "debug-agent",
         pubkey: projectCtx.projectSigner.pubkey,
         signer: projectCtx.projectSigner,
-        llmConfig: llmPresetOverride || llmSettings.selection?.default || "default",
+        llmConfig: llmPresetOverride || llmSettings.defaults?.agents || "default",
         tools: [],
         instructions: "You are a debug agent for testing purposes.",
         expertise: "Testing and debugging agent functionality",
@@ -162,7 +168,22 @@ export async function runDebugChat(
 
     // Show system prompt if requested
     if (options.systemPrompt) {
-      const systemPrompt = await buildSystemPrompt(agent, "chat");
+      const projectContext = getRuntimeContext();
+      let inventoryPrompt: string | undefined;
+      if (await inventoryExists(projectContext.projectPath)) {
+        inventoryPrompt = "## Project Inventory\n\nAn inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.";
+      }
+
+      const systemPrompt = new PromptBuilder()
+        .add("agent-system-prompt", {
+          agent,
+          phase: "chat" as Phase,
+          projectTitle: projectContext.title,
+          projectRepository: projectContext.repository,
+          inventoryPrompt,
+        })
+        .build();
+
       console.log(chalk.cyan("\n=== System Prompt ==="));
       console.log(systemPrompt);
       console.log(chalk.cyan("===================\n"));
@@ -258,7 +279,22 @@ export async function runDebugChat(
       }
 
       if (input.toLowerCase() === "prompt") {
-        const systemPrompt = await buildSystemPrompt(agent, "chat");
+        const projectContext = getRuntimeContext();
+        let inventoryPrompt: string | undefined;
+        if (await inventoryExists(projectContext.projectPath)) {
+          inventoryPrompt = "## Project Inventory\n\nAn inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.";
+        }
+
+        const systemPrompt = new PromptBuilder()
+          .add("agent-system-prompt", {
+            agent,
+            phase: "chat" as Phase,
+            projectTitle: projectContext.title,
+            projectRepository: projectContext.repository,
+            inventoryPrompt,
+          })
+          .build();
+
         console.log(chalk.cyan("\n=== System Prompt ==="));
         console.log(systemPrompt);
         console.log(chalk.cyan("===================\n"));
@@ -315,11 +351,11 @@ export async function runDebugChat(
           // Show tool execution summary
           if (result.toolExecutions && result.toolExecutions.length > 0) {
             console.log(chalk.gray("\nTools executed:"));
-            result.toolExecutions.forEach((toolResult) => {
+            for (const toolResult of result.toolExecutions) {
               console.log(
                 chalk.gray(`  - ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`)
               );
-            });
+            }
           }
         } else if (result.error) {
           console.error(chalk.red("\nError:"), result.error);

@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { NDKEvent, NDKPrivateKeySigner, NDKProject } from "@nostr-dev-kit/ndk";
-import { NDKAgent } from "../cli-client/src/events/agent.js";
+import { NDKAgent } from "@tenex/cli";
 import { getNDK } from "../cli-client/src/ndk-setup.js";
 
 const TENEX_PATH = path.join(__dirname, "..", "tenex", "bin", "tenex.ts");

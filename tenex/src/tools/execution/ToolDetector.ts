@@ -1,5 +1,6 @@
-import { logger } from "@tenex/shared";
-import type { ToolInvocation, ToolPattern } from "./types";
+import { logger } from "@/utils/logger";
+import type { ToolInvocation } from "@/types/tool";
+import type { ToolPattern } from "./types";
 
 export class ToolDetector {
   private patterns: ToolPattern[] = [

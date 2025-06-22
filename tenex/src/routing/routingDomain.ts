@@ -1,7 +1,7 @@
 import type { ConversationState } from "@/conversations/types";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type { RoutingDecision } from "./types";
 
 /**

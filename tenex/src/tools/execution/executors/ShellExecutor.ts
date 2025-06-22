@@ -1,12 +1,12 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type {
   ToolExecutionContext,
   ToolExecutionResult,
   ToolExecutor,
   ToolInvocation,
-} from "../types";
+} from "@/types/tool";
 
 const execAsync = promisify(exec);
 

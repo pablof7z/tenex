@@ -9,10 +9,10 @@ import type { AgentExecutionContext } from "../types";
 import { createTestAgent, createTestConversation, createTestProjectContext } from "@/test-utils/helpers/fixtures";
 import { createMockNDK, createMockSigner } from "@/test-utils/mocks";
 import type { NDK } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 
 // Silence logger during tests
-jest.mock("@tenex/shared", () => ({
+jest.mock("@/utils/logger", () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),

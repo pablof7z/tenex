@@ -1,5 +1,6 @@
 import NDK, { type NDKEvent } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS } from "@tenex/types";
+import { NDKAgent } from "@tenex/cli";
+import { EVENT_KINDS } from "./constants.js";
 import type { ConfigData } from "./config";
 import { log } from "./lib/utils/log.js";
 
@@ -69,20 +70,17 @@ export async function fetchAgentConfiguration(
  * @returns The parsed agent definition
  */
 function parseAgentEvent(event: NDKEvent): AgentDefinition {
-    const getTag = (name: string): string | undefined => {
-        const tag = event.tags.find((t) => t[0] === name);
-        return tag ? tag[1] : undefined;
-    };
+    const agent = NDKAgent.from(event);
 
     return {
-        eventId: event.id,
-        name: getTag("title") || "Unknown Agent",
-        description: getTag("description"),
-        role: getTag("role"),
-        instructions: getTag("instructions"),
-        version: Number.parseInt(getTag("version") || "1", 10),
-        publishedAt: event.created_at,
-        publisher: event.pubkey,
+        eventId: agent.id,
+        name: agent.name || "Unknown Agent",
+        description: agent.description,
+        role: agent.role,
+        instructions: agent.instructions,
+        version: agent.version,
+        publishedAt: agent.created_at,
+        publisher: agent.pubkey,
     };
 }
 

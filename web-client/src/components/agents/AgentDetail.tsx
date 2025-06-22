@@ -1,4 +1,4 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKAgentLesson } from "../../../../tenex/src/events/NDKAgentLesson.ts";
 import { Bot, Brain, Sparkles, Tag, User } from "lucide-react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import type { NDKAgent } from "../../lib/ndk-setup";
@@ -6,7 +6,7 @@ import { Badge } from "../ui/badge";
 
 interface AgentDetailProps {
     agent: NDKAgent;
-    lessons: NDKEvent[];
+    lessons: NDKAgentLesson[];
 }
 
 export function AgentDetail({ agent, lessons }: AgentDetailProps) {
@@ -96,7 +96,7 @@ export function AgentDetail({ agent, lessons }: AgentDetailProps) {
                             </div>
                             <div className="space-y-3">
                                 {lessons.map((lesson) => {
-                                    const title = lesson.tagValue("title");
+                                    const title = lesson.title;
                                     const timestamp = lesson.created_at
                                         ? new Date(lesson.created_at * 1000)
                                         : null;
@@ -121,7 +121,7 @@ export function AgentDetail({ agent, lessons }: AgentDetailProps) {
                                                 )}
                                             </div>
                                             <p className="text-sm text-muted-foreground leading-relaxed">
-                                                {lesson.content}
+                                                {lesson.lesson}
                                             </p>
                                         </div>
                                     );

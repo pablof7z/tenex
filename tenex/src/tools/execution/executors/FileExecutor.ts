@@ -1,12 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type {
   ToolExecutionContext,
   ToolExecutionResult,
   ToolExecutor,
   ToolInvocation,
-} from "../types";
+} from "@/types/tool";
 
 export class FileExecutor implements ToolExecutor {
   name = "file";

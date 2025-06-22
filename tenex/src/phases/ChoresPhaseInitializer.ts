@@ -4,7 +4,7 @@ import { getProjectContext } from "@/runtime";
 import { updateInventory } from "@/utils/inventory";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**
@@ -99,7 +99,9 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
     if (conversation.metadata.execute_files) {
       const executeFiles = conversation.metadata.execute_files;
       if (Array.isArray(executeFiles)) {
-        executeFiles.forEach((file) => changedFiles.add(file));
+        for (const file of executeFiles) {
+          changedFiles.add(file);
+        }
       }
     }
 
@@ -108,7 +110,9 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
     for (const event of conversation.history) {
       if (event.content) {
         const fileMatches = this.extractFilePathsFromContent(event.content);
-        fileMatches.forEach((file) => changedFiles.add(file));
+        for (const file of fileMatches) {
+          changedFiles.add(file);
+        }
       }
     }
 
@@ -136,8 +140,11 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
     ];
 
     for (const pattern of patterns) {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
+      let match: RegExpExecArray | null;
+      while (true) {
+        match = pattern.exec(content);
+        if (match === null) break;
+        
         const filePath = match[1];
         // Filter out obvious non-file paths
         if (filePath && !filePath.includes("http") && !filePath.includes("@")) {

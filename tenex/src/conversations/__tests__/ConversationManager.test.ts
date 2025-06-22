@@ -4,11 +4,11 @@ import { FileSystemAdapter } from "../persistence";
 import type { ConversationState } from "../types";
 import { createConversationEvent, createReplyEvent } from "@/test-utils/mocks/events";
 import { createMockFileSystemAdapter } from "@/test-utils/mocks/filesystem";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 
 // Mock dependencies
 jest.mock("../persistence");
-jest.mock("@tenex/shared", () => ({
+jest.mock("@/utils/logger", () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),

@@ -1,4 +1,4 @@
-import type { NDKAgent } from "../../events/agent";
+import type { NDKAgent } from "@tenex/cli";
 import type { ProjectFormData } from "../../types/template";
 import { AgentSelector } from "../agents/AgentSelector";
 

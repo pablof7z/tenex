@@ -3,7 +3,7 @@ import { ProjectLoader } from "@/commands/run/ProjectLoader";
 import { getNDK } from "@/nostr/ndkClient";
 import { getProjectContext, initializeProjectContext } from "@/runtime";
 import { generateInventory, updateInventory } from "@/utils/inventory";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import { Command } from "commander";
 
 export const inventoryCommand = new Command("inventory")

@@ -1,6 +1,7 @@
 import type { Agent, ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logInfo } from "@tenex/shared/logger";
+import { logger } from "@/utils/logger"; 
+const logInfo = logger.info.bind(logger);
 import chalk from "chalk";
 
 export class ProjectDisplay {

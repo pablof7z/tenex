@@ -11,8 +11,8 @@ import {
 import { getNDK } from "@/nostr/ndkClient";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
 import type { NDKKind } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { logger } from "@/utils/logger";
+import { EVENT_KINDS } from "@/types/llm";
 import chalk from "chalk";
 
 export class SubscriptionManager {

@@ -14,9 +14,8 @@ import type { Conversation } from "@/types/conversation";
 import type { AgentSummary } from "@/types/routing";
 import { formatProjectContextForPrompt, getProjectContext } from "@/utils/project";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
-import { configurationService } from "@tenex/shared/services";
-import type { ProjectConfig } from "@tenex/types/config";
+import { logger } from "@/utils/logger";
+import { projectContext, configService } from "@/services";
 import type {
   AgentSelectionDecision,
   FallbackRoutingDecision,
@@ -66,9 +65,8 @@ export class RoutingLLM {
 
     try {
       // Get inventory path from config
-      const config = await configurationService.loadConfiguration(this.projectPath);
-      const projectConfig = config.config as ProjectConfig;
-      const inventoryPath = projectConfig?.paths?.inventory || "context/INVENTORY.md";
+      const { config } = await configService.loadConfig(this.projectPath);
+      const inventoryPath = config?.paths?.inventory || "context/INVENTORY.md";
       const fullPath = path.join(this.projectPath, inventoryPath);
 
       // Try to read inventory file
@@ -359,7 +357,7 @@ export class RoutingLLM {
 
   private parseRoutingDecision(response: string, availableAgents: Agent[]): RoutingDecision {
     try {
-      const parsed = extractJSON<{ phase: string; reasoning?: string; confidence?: number; metadata?: any }>(response);
+      const parsed = extractJSON<{ phase: string; reasoning?: string; confidence?: number; metadata?: Record<string, unknown> }>(response);
       if (!parsed) {
         throw new Error("Failed to extract JSON from response");
       }
@@ -511,19 +509,19 @@ export class RoutingLLM {
   private validatePhase(phase: string): "chat" | "plan" | "execute" | "review" | "chores" {
     const validPhases = ["chat", "plan", "execute", "review", "chores"];
     if (validPhases.includes(phase)) {
-      return phase as any;
+      return phase as "chat" | "plan" | "execute" | "review" | "chores";
     }
     logger.warn("Invalid phase detected, defaulting to chat", { phase });
     return "chat";
   }
 
-  private validateConfidence(confidence: any): number {
+  private validateConfidence(confidence: unknown): number {
     const num = Number(confidence);
-    if (isNaN(num)) return 0.5;
+    if (Number.isNaN(num)) return 0.5;
     return Math.max(0, Math.min(1, num));
   }
 
-  private parseAlternativeAgents(alternatives: any, availableAgents: Agent[]): Agent[] {
+  private parseAlternativeAgents(alternatives: unknown, availableAgents: Agent[]): Agent[] {
     if (!Array.isArray(alternatives)) return [];
 
     return alternatives

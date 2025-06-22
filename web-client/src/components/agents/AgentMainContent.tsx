@@ -1,4 +1,4 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKAgentLesson } from "../../../../tenex/src/events/NDKAgentLesson.ts";
 import { Bot } from "lucide-react";
 import type { NDKAgent } from "../../lib/ndk-setup";
 import { AgentDetail } from "./AgentDetail";
@@ -9,7 +9,7 @@ interface AgentMainContentProps {
     selectedAgent: NDKAgent | null;
     isCreatingNew: boolean;
     isEditing: boolean;
-    lessons: NDKEvent[];
+    lessons: NDKAgentLesson[];
     copiedId: string | null;
     formData: {
         title: string;

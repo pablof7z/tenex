@@ -1,6 +1,6 @@
-import { join } from "path";
-import { logger } from "@tenex/shared";
-import { readdir, stat } from "fs/promises";
+import { join } from "node:path";
+import { logger } from "@/utils/logger";
+import { readdir, stat } from "node:fs/promises";
 
 export interface ProjectFile {
   path: string;
@@ -59,7 +59,7 @@ async function getProjectFiles(dirPath: string, baseDir?: string): Promise<Proje
       }
 
       const fullPath = join(dirPath, entry);
-      const relativePath = fullPath.replace(actualBaseDir + "/", "");
+      const relativePath = fullPath.replace(`${actualBaseDir}/`, "");
 
       try {
         const stats = await stat(fullPath);
@@ -162,7 +162,7 @@ export function formatProjectContextForPrompt(context: ProjectContext): string {
   let output = `## Project Structure (${totalFiles} files)\n\n`;
 
   // Add file type summary
-  output += `### File Types:\n`;
+  output += "### File Types:\n";
   const sortedTypes = Object.entries(fileTypes)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10); // Top 10 file types
@@ -171,7 +171,7 @@ export function formatProjectContextForPrompt(context: ProjectContext): string {
     output += `- ${type}: ${count} files\n`;
   }
 
-  output += `\n### Directory Structure:\n`;
+  output += "\n### Directory Structure:\n";
 
   // Sort directories by depth and name
   const sortedDirs = Object.keys(filesByDir).sort((a, b) => {

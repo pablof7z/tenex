@@ -12,17 +12,19 @@ import { initializeProjectContext } from "@/runtime";
 import type { Agent, AgentConfig } from "@/types/agent";
 import { formatError } from "@/utils/errors";
 import { NDKArticle, type NDKEvent } from "@nostr-dev-kit/ndk";
-import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
-import { logInfo } from "@tenex/shared/logger";
-import { configurationService } from "@tenex/shared/services";
-import { EVENT_KINDS } from "@tenex/types/core";
+import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
+import { logger } from "@/utils/logger"; 
+const logInfo = logger.info.bind(logger);
+import { projectContext, configService } from "@/services";
+import { EVENT_KINDS } from "@/types/llm";
+import type { TenexLLMs } from "@/types/config";
 import chalk from "chalk";
 
 export class EventHandler {
   private agentConfigs: Map<string, AgentConfig>;
   private agentRegistry: AgentRegistry;
   private conversationManager: ConversationManager;
-  private llmSettings: any; // Will be loaded from configurationService
+  private llmSettings: TenexLLMs; // Will be loaded from ProjectContext
   private llmService!: LLMService;
   private routingLLM!: RoutingLLM;
   private conversationRouter!: ConversationRouter;
@@ -65,26 +67,24 @@ export class EventHandler {
     });
 
     // Initialize services
-    // Load LLM configuration directly from configurationService
-    const llmSettings = await configurationService.loadLLMConfig(
-      path.join(this.projectInfo.projectPath, ".tenex")
-    );
-    this.llmSettings = llmSettings;
+    // Load LLM configuration from ConfigService
+    const { llms } = await configService.loadConfig(this.projectInfo.projectPath);
+    this.llmSettings = llms;
 
     // Get default configuration
-    const defaultConfigName = llmSettings.selection?.default || Object.keys(llmSettings.presets)[0];
-    const llmConfig = llmSettings.presets[defaultConfigName];
+    const defaultConfigName = llms.defaults?.agents || Object.keys(llms.configurations)[0];
+    const llmConfig = llms.configurations[defaultConfigName];
     if (!llmConfig) {
       throw new Error("No LLM configuration found");
     }
 
-    const credentials = llmSettings.auth[llmConfig.provider];
+    const credentials = llms.credentials[llmConfig.provider];
     if (!credentials) {
       throw new Error(`No credentials found for provider: ${llmConfig.provider}`);
     }
 
     this.llmService = new MultiLLMService({
-      provider: llmConfig.provider as any,
+      provider: llmConfig.provider as "anthropic" | "openai" | "google" | "ollama" | "mistral" | "groq" | "openrouter",
       model: llmConfig.model,
       apiKey: credentials.apiKey,
       baseUrl: credentials.baseUrl,
@@ -101,8 +101,8 @@ export class EventHandler {
     let routingConfig = "default";
     try {
       routingConfig =
-        this.llmSettings.selection?.agentRouting ||
-        this.llmSettings.selection?.default ||
+        this.llmSettings.defaults?.routing ||
+        this.llmSettings.defaults?.agents ||
         "default";
     } catch {
       routingConfig = "default";

@@ -2,7 +2,7 @@ import { useNDKCurrentPubkey, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 import { type BackendInfo, onlineBackendsAtom } from "../lib/store";
-import { parseBackendStatusEvent, migrateBackendStatus, createBackendInfo } from "@tenex/types";
+import { parseBackendStatusEvent, migrateBackendStatus, createBackendInfo } from "../lib/types.js";
 
 // Custom hook to track online backend status
 export function useBackendStatus() {

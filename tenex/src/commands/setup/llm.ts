@@ -1,8 +1,8 @@
 import os from "node:os";
 import path from "node:path";
-import { LLMConfigEditor } from "@/llm/LLMConfigEditor";
-import * as fileSystem from "@tenex/shared/fs";
-import { logger } from "@tenex/shared/node";
+import { LLMConfigEditor } from "@/core/llm/LLMConfigEditor";
+import * as fileSystem from "@/lib/fs";
+import { logger } from "@/utils/logger";
 import { Command } from "commander";
 
 export const llmCommand = new Command("llm")

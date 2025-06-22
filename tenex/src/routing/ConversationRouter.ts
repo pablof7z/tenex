@@ -7,7 +7,7 @@ import { getProjectContext } from "@/runtime";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type { RoutingLLM } from "./RoutingLLM";
 import {
   applyBusinessRules,

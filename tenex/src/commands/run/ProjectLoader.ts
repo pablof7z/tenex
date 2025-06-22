@@ -1,170 +1,62 @@
 import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
 import { NDKPrivateKeySigner, type NDKProject } from "@nostr-dev-kit/ndk";
-import * as fileSystem from "@tenex/shared/fs";
-import { logError, logInfo } from "@tenex/shared/node";
-import { configurationService } from "@tenex/shared/services";
-import type { ProjectConfig, TenexConfiguration } from "@tenex/types/config";
-import { EVENT_KINDS } from "@tenex/types/events";
+import * as fileSystem from "@/lib/fs";
+import { logError, logInfo } from "@/utils/logger";
+import { projectContext, type LoadedAgent } from "@/services";
+import { EVENT_KINDS } from "@/types/llm";
 import { nip19 } from "nostr-tools";
 import { generateSecretKey } from "nostr-tools";
 
-export interface Agent {
-  name: string;
-  expertise: string;
-  role: string;
-  instructions: string;
-  eventId: string;
-  pubkey: string;
-  signer: NDKPrivateKeySigner;
-}
-
 export interface ProjectRuntimeInfo {
-  config: ProjectConfig;
   projectEvent: NDKProject;
   projectPath: string;
   title: string;
   repository: string;
   projectId: string;
   projectSigner: NDKPrivateKeySigner;
-  agents: Map<string, Agent>;
+  agents: Map<string, LoadedAgent>;
 }
 
 export class ProjectLoader {
   async loadProject(projectPath: string): Promise<ProjectRuntimeInfo> {
-    const configuration = await this.loadConfiguration(projectPath);
-    const config = configuration.config as ProjectConfig;
-    const projectEvent = await this.fetchProjectEvent(config.projectNaddr);
+    // ProjectContext should already be initialized by ProjectManager
+    if (!projectContext.isInitialized()) {
+      throw new Error(
+        "ProjectContext not initialized. Ensure ProjectManager.loadAndInitializeProjectContext() was called first."
+      );
+    }
 
-    // Load agents
-    const agents = await this.loadAgents(projectEvent, configuration, projectPath);
+    const projectEvent = projectContext.getCurrentProject();
+    const projectNsec = projectContext.getCurrentProjectNsec();
+    const agents = projectContext.getAllAgents();
 
-    // Rules management removed - was unused functionality
-
-    // Create project signer
-    const projectSigner = config.nsec
-      ? new NDKPrivateKeySigner(config.nsec)
-      : NDKPrivateKeySigner.generate();
+    // Create project signer from context
+    const projectSigner = new NDKPrivateKeySigner(projectNsec);
 
     return this.extractProjectInfo(
       projectEvent,
-      config,
       projectPath,
       projectSigner,
       agents
     );
   }
 
-  private async loadConfiguration(projectPath: string): Promise<TenexConfiguration> {
-    try {
-      const configuration = await configurationService.loadProjectConfig(projectPath);
-      const config = configuration.config as ProjectConfig;
-
-      if (!config.projectNaddr) {
-        throw new Error("Project configuration missing projectNaddr");
-      }
-
-      return configuration;
-    } catch (err) {
-      if (err instanceof Error && "code" in err && err.code === "ENOENT") {
-        logError("Failed to load project configuration. Is this a TENEX project?");
-        logInfo("Run 'tenex project init' to initialize a project");
-      }
-      throw err;
-    }
-  }
-
-  private async fetchProjectEvent(naddr: string): Promise<NDKProject> {
-    const ndk = getNDK();
-    const event = await ndk.fetchEvent(naddr);
-    if (!event) {
-      throw new Error(`Project event not found: ${naddr}`);
-    }
-    return event as NDKProject;
-  }
-
-  private async loadAgents(
-    projectEvent: NDKProject,
-    configuration: TenexConfiguration,
-    projectPath: string
-  ): Promise<Map<string, Agent>> {
-    const agents = new Map<string, Agent>();
-
-    // Ensure agents directory exists
-    const agentsDir = path.join(projectPath, ".tenex", "agents");
-    await fileSystem.ensureDirectory(agentsDir);
-
-    // Get agent event IDs from project tags
-    const agentTags = projectEvent.tags.filter((tag) => tag[0] === "agent");
-
-    for (const tag of agentTags) {
-      const eventId = tag[1];
-      if (!eventId) continue;
-
-      try {
-        // Fetch agent event to get name, description, role
-        const agentEvent = await getNDK().fetchEvent(eventId);
-        if (!agentEvent || agentEvent.kind !== EVENT_KINDS.AGENT_CONFIG) {
-          continue;
-        }
-
-        const agentName = agentEvent.tagValue("title") || "unnamed";
-        const expertise = agentEvent.tagValue("description") || "";
-        const role = agentEvent.tagValue("role") || "";
-
-        // Cache agent definition
-        const agentDefinition = {
-          eventId: eventId,
-          name: agentName,
-          expertise: expertise,
-          role: role,
-          instructions: agentEvent.content || "",
-          version: agentEvent.tagValue("ver") || "1",
-          systemPrompt: agentEvent.content || "",
-        };
-
-        const agentFile = path.join(agentsDir, `${eventId}.json`);
-        await fileSystem.writeJsonFile(agentFile, agentDefinition);
-
-        // For now, create a temporary agent entry with generated nsec
-        const privateKey = generateSecretKey();
-        const nsec = nip19.nsecEncode(privateKey);
-        const signer = new NDKPrivateKeySigner(nsec);
-
-        agents.set(agentName, {
-          name: agentName,
-          expertise,
-          role,
-          instructions: agentEvent.content || "",
-          eventId,
-          pubkey: signer.pubkey,
-          signer,
-        });
-      } catch (error) {
-        logError(`Failed to load agent signer for event ${eventId}:`, error);
-      }
-    }
-
-    return agents;
-  }
-
   private extractProjectInfo(
     projectEvent: NDKProject,
-    config: ProjectConfig,
     projectPath: string,
     projectSigner: NDKPrivateKeySigner,
-    agents: Map<string, Agent>
+    agents: Map<string, LoadedAgent>
   ): ProjectRuntimeInfo {
     const titleTag = projectEvent.tags.find((tag) => tag[0] === "title");
     const repoTag = projectEvent.tags.find((tag) => tag[0] === "repo");
     const dTag = projectEvent.tags.find((tag) => tag[0] === "d");
 
     return {
-      config,
       projectEvent,
       projectPath,
-      title: titleTag?.[1] || config.title || "Untitled Project",
-      repository: repoTag?.[1] || config.repoUrl || "No repository",
+      title: titleTag?.[1] || "Untitled Project",
+      repository: repoTag?.[1] || "No repository",
       projectId: dTag?.[1] || "",
       projectSigner,
       agents,

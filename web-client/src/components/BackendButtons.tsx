@@ -2,7 +2,7 @@ import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom } from "jotai";
 import { Check, Play } from "lucide-react";
 import { useState } from "react";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/constants";
 import { onlineBackendsAtom } from "../lib/store";
 import { Button } from "./ui/button";
 

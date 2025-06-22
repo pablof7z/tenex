@@ -1,4 +1,4 @@
-import type { LLMFileConfiguration } from "@tenex/types/config";
+import type { LLMFileConfiguration } from "../lib/types.js";
 
 export type LLMProvider =
     | "openai"

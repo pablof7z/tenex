@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 
 export interface IProcessManager {
   spawnProjectRun(projectPath: string, projectId?: string): Promise<void>;

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import { Command } from "commander";
 import { ProjectManager } from "../../daemon/ProjectManager";
 import { getNDK, initNDK, shutdownNDK } from "../../nostr/ndkClient";

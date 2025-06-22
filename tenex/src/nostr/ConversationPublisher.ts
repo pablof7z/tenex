@@ -3,7 +3,7 @@ import type { Conversation, Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKEvent, NDKPrivateKeySigner, NDKTag } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 
 export class ConversationPublisher {
   constructor(

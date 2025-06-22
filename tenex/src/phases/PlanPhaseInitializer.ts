@@ -3,7 +3,7 @@ import { getProjectContext } from "@/runtime";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 
 /**

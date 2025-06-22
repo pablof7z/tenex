@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import { AgentRegistry } from "../AgentRegistry";
 import type { Agent, AgentConfig } from "@/types/agent";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { fileExists, readFile, writeJsonFile, ensureDirectory } from "@tenex/shared/fs";
+import { fileExists, readFile, writeJsonFile, ensureDirectory } from "@/lib/fs";
 import path from "node:path";
 
 // Mock file system
-jest.mock("@tenex/shared/fs");
+jest.mock("@/lib/fs");
 
 describe("AgentRegistry", () => {
   let registry: AgentRegistry;
@@ -42,7 +42,7 @@ describe("AgentRegistry", () => {
         },
       };
 
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(true),
         readFile: jest.fn().mockResolvedValue(JSON.stringify(mockAgentsData)),
         writeJsonFile: jest.fn(),
@@ -67,7 +67,7 @@ describe("AgentRegistry", () => {
     });
 
     it("should create agents.json if it doesn't exist", async () => {
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(false),
         readFile: jest.fn(),
         writeJsonFile: jest.fn(),
@@ -82,7 +82,7 @@ describe("AgentRegistry", () => {
     });
 
     it("should handle invalid JSON in agents.json", async () => {
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(true),
         readFile: jest.fn().mockResolvedValue("invalid json"),
         writeJsonFile: jest.fn(),
@@ -95,7 +95,7 @@ describe("AgentRegistry", () => {
 
   describe("ensureAgent", () => {
     beforeEach(async () => {
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(false),
         readFile: jest.fn(),
         writeJsonFile: jest.fn(),
@@ -223,7 +223,7 @@ describe("AgentRegistry", () => {
         },
       };
 
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(true),
         readFile: jest.fn().mockResolvedValue(JSON.stringify(mockAgentsData)),
         writeJsonFile: jest.fn(),
@@ -267,7 +267,7 @@ describe("AgentRegistry", () => {
         },
       };
 
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(true),
         readFile: jest.fn().mockResolvedValue(JSON.stringify(mockAgentsData)),
         writeJsonFile: jest.fn(),
@@ -284,7 +284,7 @@ describe("AgentRegistry", () => {
     });
 
     it("should return empty array when no agents exist", async () => {
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(false),
         readFile: jest.fn(),
         writeJsonFile: jest.fn(),
@@ -311,7 +311,7 @@ describe("AgentRegistry", () => {
         },
       };
 
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(true),
         readFile: jest.fn().mockResolvedValue(JSON.stringify(mockAgentsData)),
         writeJsonFile: jest.fn(),
@@ -350,7 +350,7 @@ describe("AgentRegistry", () => {
         },
       };
 
-      mock.module("@tenex/shared/fs", () => ({
+      mock.module("@/lib/fs", () => ({
         fileExists: jest.fn().mockResolvedValue(true),
         readFile: jest.fn().mockResolvedValue(JSON.stringify(mockAgentsData)),
         writeJsonFile: jest.fn(),

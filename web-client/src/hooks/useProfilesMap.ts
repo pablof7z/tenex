@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ProfileData } from "@tenex/types/core";
+import type { ProfileData } from "../lib/types.js";
 
 /**
  * Custom hook to fetch profiles for multiple pubkeys and return them as a Map

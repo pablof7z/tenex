@@ -7,3 +7,7 @@ export function formatError(error: unknown): string {
   }
   return String(error);
 }
+
+export function getErrorMessage(error: unknown): string {
+  return formatError(error);
+}

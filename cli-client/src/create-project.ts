@@ -1,10 +1,10 @@
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, type NDKFilter, NDKProject, NDKProjectTemplate } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "./logger.js";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { NDKAgent } from "./events/agent.js";
+import { NDKAgent } from "@tenex/cli";
 import { NDKLLMRule } from "./events/instruction.js";
 
 interface ProjectFormData {

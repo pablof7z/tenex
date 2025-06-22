@@ -31,9 +31,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@tenex/test-utils': path.resolve(__dirname, '../packages/test-utils/src'),
-      '@tenex/types': path.resolve(__dirname, '../packages/types/src'),
-      '@tenex/shared': path.resolve(__dirname, '../shared/src'),
     },
   },
 });

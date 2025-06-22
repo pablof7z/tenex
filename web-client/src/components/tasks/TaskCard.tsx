@@ -1,5 +1,5 @@
 import type { NDKTask } from "@nostr-dev-kit/ndk";
-import { StringUtils, TaskUtils } from "@tenex/shared";
+import { StringUtils } from "../../lib/types.js";
 import { Circle, Code2 } from "lucide-react";
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
@@ -18,12 +18,13 @@ export const TaskCard = memo(
     function TaskCard({ task, onClick, className }: TaskCardProps) {
         // Get task title
         const getTaskTitle = () => {
-            return TaskUtils.getTaskTitle(task);
+            return task.tags?.find((tag) => tag[0] === "title")?.[1] || "Untitled Task";
         };
 
         // Get task complexity
         const getTaskComplexity = () => {
-            return TaskUtils.getComplexity(task);
+            const complexityTag = task.tags?.find((tag) => tag[0] === "complexity")?.[1];
+            return complexityTag ? parseInt(complexityTag, 10) : null;
         };
 
         // Get task content preview

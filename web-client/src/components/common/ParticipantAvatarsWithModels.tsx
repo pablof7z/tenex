@@ -1,8 +1,8 @@
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import type { NDKEvent as NDKEventType } from "@nostr-dev-kit/ndk";
 import { useNDK, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { CSSUtils, ProfileUtils } from "@tenex/shared";
-import { EVENT_KINDS } from "@tenex/types";
+import { CSSUtils, ProfileUtils } from "../../lib/utils/business";
+import { EVENT_KINDS } from "../../lib/constants";
 import { Check, ChevronDown, Cpu } from "lucide-react";
 import { useState } from "react";
 import { useAgentLLMTracking } from "../../hooks/useAgentLLMTracking";

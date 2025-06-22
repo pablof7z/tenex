@@ -1,6 +1,6 @@
 import { Bot, Check, ChevronDown, Eye, Users } from "lucide-react";
 import { memo } from "react";
-import type { NDKAgent } from "../../events/agent";
+import type { NDKAgent } from "@tenex/cli";
 import type { NDKLLMRule } from "../../types/template";
 import { ProfileDisplay } from "../ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";

@@ -3,7 +3,7 @@
  * Manages a single NDK instance for the CLI
  */
 import NDK from "@nostr-dev-kit/ndk";
-import { getRelayUrls } from "@tenex/shared";
+import { getRelayUrls } from "@/utils/relays";
 
 let ndk: NDK | undefined;
 

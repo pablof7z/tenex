@@ -1,5 +1,5 @@
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { CSSUtils, ProfileUtils } from "@tenex/shared";
+import { CSSUtils, ProfileUtils } from "../../lib/utils/business";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
 

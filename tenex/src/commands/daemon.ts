@@ -4,9 +4,9 @@ import { ProcessManager } from "@/daemon/ProcessManager";
 import { ProjectManager } from "@/daemon/ProjectManager";
 import { initNDK, shutdownNDK } from "@/nostr/ndkClient";
 import { runInteractiveSetup } from "@/utils/setup";
-import { logger } from "@tenex/shared";
-import { configurationService } from "@tenex/shared/services";
-import type { GlobalConfig } from "@tenex/types/config";
+import { logger } from "@/utils/logger";
+import { configService } from "@/services";
+import type { TenexConfig } from "@/types/config";
 import { Command } from "commander";
 
 export const daemonCommand = new Command("daemon")
@@ -63,20 +63,23 @@ export const daemonCommand = new Command("daemon")
     }
   });
 
-async function loadDaemonConfig(configPath?: string): Promise<GlobalConfig> {
+async function loadDaemonConfig(configPath?: string): Promise<TenexConfig> {
   try {
-    // If config path is provided, construct the proper context path
-    const contextPath = configPath ? path.dirname(configPath) : "";
-    const configuration = await configurationService.loadConfiguration(contextPath, true);
-
-    return configuration.config as GlobalConfig;
+    // If config path is provided, load from that directory, otherwise load global config
+    if (configPath) {
+      const { config } = await configService.loadConfig(path.dirname(configPath));
+      return config;
+    } else {
+      const { config } = await configService.loadConfig(); // No project path = global only
+      return config;
+    }
   } catch (_error) {
     // Config doesn't exist yet
     return {};
   }
 }
 
-function getWhitelistedPubkeys(cliOption?: string, config?: GlobalConfig): string[] {
+function getWhitelistedPubkeys(cliOption?: string, config?: TenexConfig): string[] {
   const pubkeys: Set<string> = new Set();
 
   // If CLI option is provided, ONLY use those pubkeys (don't merge with config)

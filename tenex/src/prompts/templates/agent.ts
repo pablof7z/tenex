@@ -2,12 +2,11 @@ import type { Agent, AgentContext } from "@/types/agent";
 import type { AgentSummary } from "@/types/routing";
 import { PromptBuilder } from "../core/PromptBuilder";
 
-export class AgentPromptBuilder {
-  static buildAgentPrompt(
-    agent: Agent,
-    context: AgentContext,
-    tools: Array<{ name: string; description: string }>
-  ): string {
+export function buildAgentPrompt(
+  agent: Agent,
+  context: AgentContext,
+  tools: Array<{ name: string; description: string }>
+): string {
     const builder = new PromptBuilder();
 
     return builder
@@ -54,9 +53,9 @@ Current task: ${context.incomingEvent.content}`,
 }`,
       })
       .build();
-  }
+}
 
-  static buildExpertFeedbackPrompt(expert: Agent, workToReview: string, context: string): string {
+export function buildExpertFeedbackPrompt(expert: Agent, workToReview: string, context: string): string {
     const builder = new PromptBuilder();
 
     return builder
@@ -93,5 +92,4 @@ Be constructive and specific.`,
 }`,
       })
       .build();
-  }
 }

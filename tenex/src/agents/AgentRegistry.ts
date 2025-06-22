@@ -1,9 +1,11 @@
 import path from "node:path";
 import type { Agent, AgentConfig } from "@/types/agent";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
-import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@tenex/shared/fs";
-import type { AgentDefinition, AgentReference, AgentsJson } from "@tenex/types/agents";
+import { logger } from "@/utils/logger";
+import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
+import type { AgentDefinition } from "@/types/agent";
+import type { TenexAgents } from "@/types/config";
+import { configService } from "@/services";
 import { nip19 } from "nostr-tools";
 import { generateSecretKey } from "nostr-tools";
 
@@ -12,7 +14,7 @@ export class AgentRegistry {
   private agentsByPubkey: Map<string, Agent> = new Map();
   private registryPath: string;
   private agentsDir: string;
-  private registry: AgentsJson = {};
+  private registry: TenexAgents = {};
 
   constructor(private projectPath: string) {
     this.registryPath = path.join(projectPath, ".tenex", "agents.json");
@@ -24,20 +26,14 @@ export class AgentRegistry {
     await ensureDirectory(path.join(this.projectPath, ".tenex"));
     await ensureDirectory(this.agentsDir);
 
-    // Load agents from agents.json file
-    if (await fileExists(this.registryPath)) {
-      try {
-        const content = await readFile(this.registryPath, "utf-8");
-        this.registry = JSON.parse(content);
-        logger.info(
-          `Loaded agent registry with ${Object.keys(this.registry).length} agents from ${this.registryPath}`
-        );
-      } catch (error) {
-        logger.error("Failed to load agent registry", { error });
-        this.registry = {};
-      }
-    } else {
-      logger.info("No existing agent registry found, starting with empty registry");
+    // Load agents using ConfigService
+    try {
+      this.registry = await configService.loadTenexAgents(path.join(this.projectPath, ".tenex"));
+      logger.info(
+        `Loaded agent registry with ${Object.keys(this.registry).length} agents via ConfigService`
+      );
+    } catch (error) {
+      logger.error("Failed to load agent registry", { error });
       this.registry = {};
     }
   }
@@ -144,8 +140,12 @@ export class AgentRegistry {
     return Array.from(this.agents.values());
   }
 
+  getAllAgentsMap(): Map<string, Agent> {
+    return new Map(this.agents);
+  }
+
   private async saveRegistry(): Promise<void> {
-    await writeJsonFile(this.registryPath, this.registry);
+    await configService.saveProjectAgents(this.projectPath, this.registry);
   }
 
   async loadAgentBySlug(slug: string): Promise<Agent | null> {
