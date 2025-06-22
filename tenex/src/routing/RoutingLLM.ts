@@ -202,8 +202,12 @@ export class RoutingLLM {
         conversationId: conversation.id,
         currentPhase: conversation.phase,
         lastMessage,
-        phaseHistory: conversation.metadata.phaseHistory || "",
-        conversationSummary: conversation.metadata.summary || "",
+        phaseHistory: typeof conversation.metadata.phaseHistory === 'string' 
+          ? conversation.metadata.phaseHistory 
+          : "",
+        conversationSummary: typeof conversation.metadata.summary === 'string' 
+          ? conversation.metadata.summary 
+          : "",
       };
 
       // First check if we should transition phases

@@ -16,7 +16,7 @@ const validateProjectArgs = (args: unknown): args is ProjectFragmentArgs => {
     return false;
   }
   const obj = args as Record<string, unknown>;
-  return (
+  return Boolean(
     obj.project &&
     typeof obj.project === "object" &&
     obj.project !== null &&

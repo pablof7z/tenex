@@ -18,7 +18,6 @@ export async function generateInventory(projectPath: string): Promise<void> {
   const executor = new ClaudeCodeExecutor({
     prompt,
     projectPath,
-    mode: "run",
     timeout: 300000,
     onMessage: (message) => {
       if (message.type === "assistant") {
@@ -57,7 +56,6 @@ export async function updateInventory(projectPath: string, files: string[]): Pro
   const executor = new ClaudeCodeExecutor({
     prompt,
     projectPath,
-    mode: "run",
     timeout: 300000,
     onMessage: (message) => {
       if (message.type === "assistant") {

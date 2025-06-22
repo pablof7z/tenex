@@ -1,11 +1,12 @@
 import { AgentExecutor, createMinimalProjectAgent, createProjectAgent } from "@/agents";
 import type { ConversationManager } from "@/conversations";
+import type { ConversationState } from "@/conversations/types";
 import type { LLMService } from "@/core/llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
 import { projectContext } from "@/services";
 import type { Agent } from "@/types/agent";
-import type { Phase } from "@/types/conversation";
+import type { Phase, Conversation } from "@/types/conversation";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
@@ -20,6 +21,46 @@ import {
 
 export class ConversationRouter {
   private agentExecutor: AgentExecutor;
+
+  /**
+   * Convert ConversationState to Conversation for type compatibility
+   */
+  private convertToConversation(state: ConversationState): Conversation {
+    const metadata: Record<string, string | number | boolean | string[]> = {};
+    
+    // Convert known fields
+    if (state.metadata.branch !== undefined) metadata.branch = state.metadata.branch;
+    if (state.metadata.summary !== undefined) metadata.summary = state.metadata.summary;
+    if (state.metadata.requirements !== undefined) metadata.requirements = state.metadata.requirements;
+    if (state.metadata.plan !== undefined) metadata.plan = state.metadata.plan;
+    
+    // Convert other fields with type checking
+    for (const [key, value] of Object.entries(state.metadata)) {
+      if (key === 'branch' || key === 'summary' || key === 'requirements' || key === 'plan') {
+        continue; // Already handled
+      }
+      
+      // Only include values that match the Conversation metadata type
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean' ||
+        (Array.isArray(value) && value.every(v => typeof v === 'string'))
+      ) {
+        metadata[key] = value;
+      }
+    }
+    
+    return {
+      id: state.id,
+      title: state.title,
+      phase: state.phase,
+      history: state.history,
+      currentAgent: state.currentAgent,
+      phaseStartedAt: state.phaseStartedAt,
+      metadata,
+    };
+  }
 
   constructor(
     private conversationManager: ConversationManager,
@@ -61,6 +102,7 @@ export class ConversationRouter {
         routingDecision = {
           phase: "chat",
           reasoning: validation.reason || "Invalid routing decision, defaulting to chat",
+          confidence: 0.5,
         };
       }
 
@@ -140,7 +182,7 @@ export class ConversationRouter {
 
       // Route within current phase
       let routingDecision = await this.routingLLM.routeNextAction(
-        conversation,
+        this.convertToConversation(conversation),
         event.content || "",
         availableAgents
       );
@@ -201,8 +243,8 @@ export class ConversationRouter {
         let agent = availableAgents.find((a) => a.pubkey === routingDecision.nextAgent);
 
         // If agent not found, try to assign a default one
-        if (!agent && conversation.phase !== "chat") {
-          agent = getDefaultAgentForPhase(conversation.phase, availableAgents);
+        if (!agent) {
+          agent = getDefaultAgentForPhase(conversation.phase, availableAgents) || undefined;
           if (agent) {
             logger.info("Assigned default agent for phase", {
               phase: conversation.phase,
@@ -357,7 +399,7 @@ export class ConversationRouter {
     const projectNsec = projectContext.getCurrentProjectNsec();
     const projectSigner = new NDKPrivateKeySigner(projectNsec);
     await this.publisher.publishPhaseTransition(
-      conversation,
+      this.convertToConversation(conversation),
       newPhase,
       context,
       projectSigner,

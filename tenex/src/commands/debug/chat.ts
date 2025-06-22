@@ -10,7 +10,7 @@ import { ConversationPublisher } from "@/nostr/ConversationPublisher";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { MultiLLMService } from "@/core/llm/MultiLLMService";
 import type { LLMService } from "@/core/llm/types";
-import { projectContext, configService } from "@/services";
+import { projectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import path from "node:path";
 import type { Agent } from "@/types/agent";
@@ -45,76 +45,8 @@ export async function runDebugChat(
     // Initialize project context if needed
     await ensureProjectInitialized(projectPath);
 
-    // Load LLM configuration
-    const { llms: llmSettings } = await configService.loadConfig(projectPath);
-
-    if (!llmSettings) {
-      throw new Error("Failed to load LLM configuration");
-    }
-
-    // Initialize LLM service instances based on configuration
-    const llmInstances = new Map<string, MultiLLMService>();
-
-    // Create MultiLLMService instances for each configuration
-    for (const [configName, config] of Object.entries(llmSettings.configurations)) {
-      const credentials = llmSettings.credentials[config.provider];
-      if (!credentials?.apiKey) {
-        logError(`Missing API key for provider ${config.provider} in config ${configName}`);
-        continue;
-      }
-
-      const llmInstance = new MultiLLMService({
-        provider: config.provider as
-          | "anthropic"
-          | "openai"
-          | "google"
-          | "ollama"
-          | "mistral"
-          | "groq"
-          | "openrouter",
-        model: config.model,
-        apiKey: credentials.apiKey,
-        baseUrl: credentials.baseUrl,
-        defaultOptions: {
-          temperature: config.temperature,
-          maxTokens: config.maxTokens,
-        },
-      });
-      llmInstances.set(configName, llmInstance);
-    }
-
-    // Create LLM service that routes to the correct instance
-    const llmService: LLMService = {
-      async complete(request) {
-        // Determine which config to use
-        const configKey =
-          typeof request === "string"
-            ? request
-            : agent.llmConfig || llmSettings.defaults?.agents || "default";
-
-        const llmInstance = llmInstances.get(configKey);
-        if (!llmInstance) {
-          throw new Error(`LLM configuration '${configKey}' not found`);
-        }
-
-        return llmInstance.complete(request);
-      },
-
-      async *stream(request) {
-        // Determine which config to use
-        const configKey =
-          typeof request === "string"
-            ? request
-            : agent.llmConfig || llmSettings.defaults?.agents || "default";
-
-        const llmInstance = llmInstances.get(configKey);
-        if (!llmInstance) {
-          throw new Error(`LLM configuration '${configKey}' not found`);
-        }
-
-        yield* llmInstance.stream(request);
-      },
-    };
+    // Create the LLM service with routing support
+    const multiLLMService = await MultiLLMService.createForProject(projectPath) as MultiLLMService;
 
     // Get project context and create signer
     const project = projectContext.getCurrentProject();
@@ -143,7 +75,7 @@ export async function runDebugChat(
         role: "debug-agent",
         pubkey: projectSigner.pubkey,
         signer: projectSigner,
-        llmConfig: llmPresetOverride || llmSettings.defaults?.agents || "default",
+        llmConfig: llmPresetOverride || "default",
         tools: [],
         instructions: "You are a debug agent for testing purposes.",
         expertise: "Testing and debugging agent functionality",
@@ -170,6 +102,9 @@ export async function runDebugChat(
     const ndk = getNDK();
     const conversationPublisher = new ConversationPublisher(ndk);
 
+    // Create agent-aware LLM service that routes based on agent's llmConfig
+    const llmService = multiLLMService.createAgentAwareLLMService(agent);
+    
     // Initialize AgentExecutor
     const agentExecutor = new AgentExecutor(llmService, conversationPublisher);
 

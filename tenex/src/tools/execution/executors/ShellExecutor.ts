@@ -6,6 +6,7 @@ import type {
   ToolExecutionResult,
   ToolExecutor,
   ToolInvocation,
+  ShellToolParameters,
 } from "@/types/tool";
 
 const execAsync = promisify(exec);
@@ -15,6 +16,11 @@ export class ShellExecutor implements ToolExecutor {
 
   private readonly maxOutputLength = 10000;
   private readonly timeout = 30000; // 30 seconds
+
+  private isShellToolParameters(params: any): params is ShellToolParameters {
+    return typeof params === 'object' && params !== null && 
+           'command' in params && typeof params.command === 'string';
+  }
 
   canExecute(toolName: string): boolean {
     return toolName === "shell";
@@ -27,7 +33,10 @@ export class ShellExecutor implements ToolExecutor {
     const startTime = Date.now();
 
     try {
-      const command = invocation.parameters.command as string;
+      if (!this.isShellToolParameters(invocation.parameters)) {
+        throw new Error("Invalid parameters for shell command");
+      }
+      const command = invocation.parameters.command;
 
       // Security check - basic command validation
       if (this.isDangerousCommand(command)) {

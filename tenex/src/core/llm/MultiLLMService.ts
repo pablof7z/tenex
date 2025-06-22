@@ -22,51 +22,153 @@ import type {
   ToolCall,
   ToolDefinition,
 } from "./types";
+import { configService } from "@/services";
+import type { TenexLLMs } from "@/types/config";
+import type { Agent } from "@/types/agent";
 
 const llmLogger = logger.forModule("llm");
 
 /**
- * Clean LLM service implementation using multi-llm-ts
- * Single responsibility: Convert between our interface and multi-llm-ts
+ * LLM service implementation using multi-llm-ts
+ * Supports both single configuration and multi-configuration with routing
  */
 export class MultiLLMService implements LLMService {
-  private engine: LlmEngine;
-  private config: LLMConfig;
+  private static projectInstances = new Map<string, MultiLLMService>();
+  
+  // Single instance mode properties
+  private engine?: LlmEngine;
+  private config?: LLMConfig;
   private chatModel: ChatModel | null = null;
+  
+  // Multi instance mode properties
+  private llmInstances?: Map<string, MultiLLMService>;
+  private llmSettings?: TenexLLMs;
+  private isRoutingMode = false;
 
-  constructor(config: LLMConfig) {
-    this.config = config;
-    try {
-      const providerName = this.mapProviderName(config.provider);
-      llmLogger.debug(
-        `Initializing LLM engine for provider: ${providerName}, model: ${config.model}`
-      );
-
-      this.engine = igniteEngine(providerName, {
-        apiKey: config.apiKey,
-        baseURL: config.baseUrl,
-      });
-
-      // Try to build the model - multi-llm-ts v4 requires ChatModel objects
+  constructor(config?: LLMConfig) {
+    if (config) {
+      // Single instance mode
+      this.config = config;
       try {
-        this.chatModel = this.engine.buildModel(config.model);
-        llmLogger.debug(`ChatModel built successfully for ${config.model}`);
-      } catch (modelError) {
-        // This is expected for some providers like OpenRouter where models need to be loaded first
-        llmLogger.debug(`Initial model build skipped for ${config.model}, will load on demand`);
-        // Will try to load models later if needed
+        const providerName = this.mapProviderName(config.provider);
+        llmLogger.debug(
+          `Initializing LLM engine for provider: ${providerName}, model: ${config.model}`
+        );
+
+        this.engine = igniteEngine(providerName, {
+          apiKey: config.apiKey,
+          baseURL: config.baseUrl,
+        });
+
+        // Try to build the model - multi-llm-ts v4 requires ChatModel objects
+        try {
+          this.chatModel = this.engine.buildModel(config.model);
+          llmLogger.debug(`ChatModel built successfully for ${config.model}`);
+        } catch (modelError) {
+          // This is expected for some providers like OpenRouter where models need to be loaded first
+          llmLogger.debug(`Initial model build skipped for ${config.model}, will load on demand`);
+          // Will try to load models later if needed
+        }
+
+        llmLogger.debug("LLM engine initialized successfully");
+      } catch (error) {
+        llmLogger.error(`Failed to initialize LLM engine: ${error}`);
+        throw new Error(
+          `Failed to initialize LLM engine: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    } else {
+      // Routing mode - will be initialized with initializeForProject
+      this.isRoutingMode = true;
+    }
+  }
+
+  /**
+   * Create or retrieve a MultiLLMService instance for a project
+   * This creates a routing instance that manages multiple LLM configurations
+   */
+  static async createForProject(projectPath: string): Promise<LLMService> {
+    let instance = this.projectInstances.get(projectPath);
+    if (!instance) {
+      instance = new MultiLLMService();
+      await instance.initializeForProject(projectPath);
+      this.projectInstances.set(projectPath, instance);
+    }
+    return instance;
+  }
+
+  /**
+   * Clear cached instance for a project (useful for testing)
+   */
+  static clearProjectInstance(projectPath: string): void {
+    this.projectInstances.delete(projectPath);
+  }
+
+  private async initializeForProject(projectPath: string): Promise<void> {
+    // Load LLM configuration
+    const { llms } = await configService.loadConfig(projectPath);
+    this.llmSettings = llms;
+    this.llmInstances = new Map();
+
+    if (!llms.configurations || Object.keys(llms.configurations).length === 0) {
+      throw new Error("No LLM configurations found");
+    }
+
+    // Create MultiLLMService instances for each configuration
+    for (const [configName, config] of Object.entries(llms.configurations)) {
+      const credentials = llms.credentials[config.provider];
+      if (!credentials?.apiKey) {
+        llmLogger.error(`Missing API key for provider ${config.provider} in config ${configName}`);
+        continue;
       }
 
-      llmLogger.debug("LLM engine initialized successfully");
-    } catch (error) {
-      llmLogger.error(`Failed to initialize LLM engine: ${error}`);
-      throw new Error(
-        `Failed to initialize LLM engine: ${error instanceof Error ? error.message : String(error)}`
+      const llmInstance = new MultiLLMService({
+        provider: config.provider as
+          | "anthropic"
+          | "openai"
+          | "google"
+          | "ollama"
+          | "mistral"
+          | "groq"
+          | "openrouter",
+        model: config.model,
+        apiKey: credentials.apiKey,
+        baseUrl: credentials.baseUrl,
+        defaultOptions: {
+          temperature: config.temperature,
+          maxTokens: config.maxTokens,
+        },
+      });
+      
+      this.llmInstances.set(configName, llmInstance);
+      llmLogger.debug(
+        `Initialized LLM instance: ${configName} - provider: ${config.provider}, model: ${config.model}`
       );
+    }
+
+    if (this.llmInstances.size === 0) {
+      throw new Error("No valid LLM configurations could be initialized");
     }
   }
 
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
+    // Handle routing mode
+    if (this.isRoutingMode) {
+      const configKey = this.getConfigKey(request);
+      const llmInstance = this.llmInstances?.get(configKey);
+      
+      if (!llmInstance) {
+        throw new Error(`LLM configuration '${configKey}' not found`);
+      }
+      
+      return llmInstance.complete(request);
+    }
+
+    // Single instance mode
+    if (!this.engine || !this.config) {
+      throw new Error("LLM service not properly initialized");
+    }
+
     try {
       // Ensure we have a ChatModel
       if (!this.chatModel) {
@@ -100,6 +202,24 @@ export class MultiLLMService implements LLMService {
   }
 
   async *stream(request: CompletionRequest): AsyncIterable<StreamChunk> {
+    // Handle routing mode
+    if (this.isRoutingMode) {
+      const configKey = this.getConfigKey(request);
+      const llmInstance = this.llmInstances?.get(configKey);
+      
+      if (!llmInstance) {
+        throw new Error(`LLM configuration '${configKey}' not found`);
+      }
+      
+      yield* llmInstance.stream(request);
+      return;
+    }
+
+    // Single instance mode
+    if (!this.engine) {
+      throw new Error("LLM service not properly initialized");
+    }
+
     // Ensure we have a ChatModel
     if (!this.chatModel) {
       await this.ensureChatModel();
@@ -123,8 +243,70 @@ export class MultiLLMService implements LLMService {
     }
   }
 
+  /**
+   * Determine which LLM configuration to use based on request context
+   */
+  private getConfigKey(request: CompletionRequest | string | { _context?: { agent?: { llmConfig?: string } } }): string {
+    // Handle string requests (direct config key)
+    if (typeof request === "string") {
+      return request;
+    }
+
+    // Extract config from request context
+    const context = (request as any)._context;
+    if (context?.agent?.llmConfig) {
+      return context.agent.llmConfig;
+    }
+
+    // Use defaults
+    if (!this.llmSettings) {
+      return "default";
+    }
+
+    return (
+      this.llmSettings.defaults?.agents ||
+      this.llmSettings.defaults?.routing ||
+      (this.llmInstances ? Array.from(this.llmInstances.keys())[0] : "default") ||
+      "default"
+    );
+  }
+
+  /**
+   * Create an LLM service with agent context for proper routing
+   */
+  createAgentAwareLLMService(agent?: Agent): LLMService {
+    if (!this.isRoutingMode) {
+      return this;
+    }
+
+    const self = this;
+    return {
+      async complete(request: CompletionRequest): Promise<CompletionResponse> {
+        const configKey = agent?.llmConfig || self.getConfigKey(request);
+        const llmInstance = self.llmInstances?.get(configKey);
+        
+        if (!llmInstance) {
+          throw new Error(`LLM configuration '${configKey}' not found`);
+        }
+        
+        return llmInstance.complete(request);
+      },
+
+      async *stream(request: CompletionRequest): AsyncIterable<StreamChunk> {
+        const configKey = agent?.llmConfig || self.getConfigKey(request);
+        const llmInstance = self.llmInstances?.get(configKey);
+        
+        if (!llmInstance) {
+          throw new Error(`LLM configuration '${configKey}' not found`);
+        }
+        
+        yield* llmInstance.stream(request);
+      },
+    };
+  }
+
   private async ensureChatModel(): Promise<void> {
-    if (this.chatModel) return;
+    if (this.chatModel || !this.engine || !this.config) return;
 
     try {
       // Try to load models from the provider
@@ -169,7 +351,7 @@ export class MultiLLMService implements LLMService {
     const opts: LlmCompletionOpts = {};
 
     // Apply default options first
-    if (this.config.defaultOptions) {
+    if (this.config?.defaultOptions) {
       if (this.config.defaultOptions.temperature !== undefined) {
         opts.temperature = this.config.defaultOptions.temperature;
       }
@@ -212,7 +394,7 @@ export class MultiLLMService implements LLMService {
   private mapResponse(response: LlmResponse): CompletionResponse {
     const result: CompletionResponse = {
       content: response.content || "",
-      model: this.config.model, // Use the configured model
+      model: this.config?.model || "unknown", // Use the configured model
     };
 
     if (response.usage) {
@@ -264,6 +446,8 @@ export class MultiLLMService implements LLMService {
   }
 
   private async loadModelsForProvider(): Promise<ModelsList | null> {
+    if (!this.config) return null;
+
     const engineConfig = {
       apiKey: this.config.apiKey,
       baseURL: this.config.baseUrl,

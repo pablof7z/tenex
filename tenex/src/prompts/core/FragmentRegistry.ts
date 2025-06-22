@@ -1,7 +1,7 @@
 import type { PromptFragment } from "./types";
 
 export class FragmentRegistry {
-  private fragments = new Map<string, PromptFragment>();
+  private fragments = new Map<string, PromptFragment<any>>();
 
   register<T>(fragment: PromptFragment<T>): void {
     if (!fragment.id) {

@@ -28,7 +28,7 @@ export class TracingLogger {
   /**
    * Format message with tracing context
    */
-  private formatMessage(message: string, additionalContext?: Record<string, unknown>): unknown[] {
+  private formatMessage(message: string, additionalContext?: Record<string, unknown>): [Record<string, unknown>] {
     const tracingData = formatTracingContext(this.context);
     const contextData = {
       ...tracingData,

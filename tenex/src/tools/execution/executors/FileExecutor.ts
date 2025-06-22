@@ -6,12 +6,32 @@ import type {
   ToolExecutionResult,
   ToolExecutor,
   ToolInvocation,
+  FileReadParameters,
+  FileWriteParameters,
+  FileEditParameters,
 } from "@/types/tool";
 
 export class FileExecutor implements ToolExecutor {
   name = "file";
 
   private readonly maxFileSize = 1024 * 1024 * 5; // 5MB
+
+  private isFileReadParameters(params: any): params is FileReadParameters {
+    return typeof params === 'object' && params !== null && 'path' in params && typeof params.path === 'string';
+  }
+
+  private isFileWriteParameters(params: any): params is FileWriteParameters {
+    return typeof params === 'object' && params !== null && 
+           'path' in params && typeof params.path === 'string' &&
+           'content' in params && typeof params.content === 'string';
+  }
+
+  private isFileEditParameters(params: any): params is FileEditParameters {
+    return typeof params === 'object' && params !== null && 
+           'path' in params && typeof params.path === 'string' &&
+           'oldContent' in params && typeof params.oldContent === 'string' &&
+           'newContent' in params && typeof params.newContent === 'string';
+  }
 
   canExecute(toolName: string): boolean {
     return toolName === "file";
@@ -50,7 +70,10 @@ export class FileExecutor implements ToolExecutor {
     context: ToolExecutionContext,
     startTime: number
   ): Promise<ToolExecutionResult> {
-    const filePath = this.resolvePath(invocation.parameters.path as string, context.projectPath);
+    if (!this.isFileReadParameters(invocation.parameters)) {
+      throw new Error("Invalid parameters for file read");
+    }
+    const filePath = this.resolvePath(invocation.parameters.path, context.projectPath);
 
     // Check file exists
     const stats = await fs.stat(filePath);
@@ -87,8 +110,11 @@ export class FileExecutor implements ToolExecutor {
     context: ToolExecutionContext,
     startTime: number
   ): Promise<ToolExecutionResult> {
-    const filePath = this.resolvePath(invocation.parameters.path as string, context.projectPath);
-    const content = invocation.parameters.content as string;
+    if (!this.isFileWriteParameters(invocation.parameters)) {
+      throw new Error("Invalid parameters for file write");
+    }
+    const filePath = this.resolvePath(invocation.parameters.path, context.projectPath);
+    const content = invocation.parameters.content;
 
     // Ensure directory exists
     await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -118,9 +144,12 @@ export class FileExecutor implements ToolExecutor {
     context: ToolExecutionContext,
     startTime: number
   ): Promise<ToolExecutionResult> {
-    const filePath = this.resolvePath(invocation.parameters.path as string, context.projectPath);
-    const oldContent = invocation.parameters.oldContent as string;
-    const newContent = invocation.parameters.newContent as string;
+    if (!this.isFileEditParameters(invocation.parameters)) {
+      throw new Error("Invalid parameters for file edit");
+    }
+    const filePath = this.resolvePath(invocation.parameters.path, context.projectPath);
+    const oldContent = invocation.parameters.oldContent;
+    const newContent = invocation.parameters.newContent;
 
     // Read current file
     const currentContent = await fs.readFile(filePath, "utf-8");

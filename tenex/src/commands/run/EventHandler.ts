@@ -1,6 +1,6 @@
 import { getEventKindName } from "@/commands/run/constants";
 import { ConversationManager } from "@/conversations";
-import { LLMServiceManager } from "@/core/llm/LLMServiceManager";
+import { MultiLLMService } from "@/core/llm/MultiLLMService";
 import type { LLMService } from "@/core/llm/types";
 import { ConversationPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
@@ -34,8 +34,8 @@ export class EventHandler {
     const { llms } = await configService.loadConfig(this.projectPath);
     this.llmSettings = llms;
 
-    // Use LLMServiceManager to create the LLM service
-    this.llmService = await LLMServiceManager.create(this.projectPath);
+    // Use MultiLLMService to create the LLM service with routing support
+    this.llmService = await MultiLLMService.createForProject(this.projectPath);
 
     // Initialize routing system
     let routingConfig = "default";

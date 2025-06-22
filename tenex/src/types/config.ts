@@ -78,7 +78,7 @@ export interface TenexLLMs {
       enableCaching?: boolean;
     };
   };
-  defaults: {
+  defaults?: {
     agents?: string;
     routing?: string;
     [agentSlug: string]: string | undefined;

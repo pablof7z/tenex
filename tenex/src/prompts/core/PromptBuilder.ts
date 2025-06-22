@@ -10,7 +10,11 @@ export class PromptBuilder {
         `Fragment "${fragmentId}" not found in registry. Available fragments: ${fragmentRegistry.getAllIds().join(", ")}`
       );
     }
-    this.fragments.push({ fragmentId, args, condition });
+    this.fragments.push({ 
+      fragmentId, 
+      args, 
+      condition: condition ? (unknownArgs) => condition(unknownArgs as T) : undefined 
+    });
     return this;
   }
 
@@ -19,7 +23,7 @@ export class PromptBuilder {
     this.fragments.push({
       fragmentId: fragment.id,
       args,
-      condition,
+      condition: condition ? (unknownArgs) => condition(unknownArgs as T) : undefined,
     });
     return this;
   }

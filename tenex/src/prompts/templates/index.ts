@@ -11,7 +11,7 @@ import "../fragments/routing";
 // Export all template builders
 export * from "./routing";
 export * from "./phases";
-export { AgentPromptBuilder } from "./agent";
+export * from "./agent";
 
 // Re-export core utilities
 export { PromptBuilder } from "../core/PromptBuilder";
