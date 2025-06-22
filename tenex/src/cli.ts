@@ -8,7 +8,6 @@ import { runDebugSystemPrompt } from "./commands/debug/index";
 import { inventoryCommand } from "./commands/inventory/index";
 import { projectCommand } from "./commands/project/index";
 import { setupCommand } from "./commands/setup/index";
-import { createTestCommand } from "./commands/test/index";
 import { initNDK } from "./nostr/ndkClient";
 
 const program = new Command();
@@ -19,7 +18,6 @@ program.name("tenex").description("TENEX Command Line Interface").version("0.1.0
 program.addCommand(daemonCommand);
 program.addCommand(projectCommand);
 program.addCommand(setupCommand);
-program.addCommand(createTestCommand());
 program.addCommand(inventoryCommand);
 
 // Add debug command

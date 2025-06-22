@@ -38,11 +38,11 @@ export class ConfigService {
   // PATH UTILITIES
   // =====================================================================================
 
-  private getGlobalPath(): string {
+  getGlobalPath(): string {
     return path.join(os.homedir(), ".tenex");
   }
 
-  private getProjectPath(projectPath: string): string {
+  getProjectPath(projectPath: string): string {
     return path.join(projectPath, ".tenex");
   }
 

@@ -1,6 +1,5 @@
 import path from "node:path";
-import type { TenexConfig } from "@/types/config";
-import { directoryExists, ensureDirectory, readJsonFile, writeJsonFile } from "./filesystem.js";
+import { directoryExists, ensureDirectory } from "./filesystem.js";
 
 /**
  * Get paths for common .tenex files
@@ -18,35 +17,7 @@ export function getTenexPaths(projectPath: string) {
     };
 }
 
-/**
- * Read project config from .tenex/config.json
- */
-export async function readProjectConfig(projectPath: string): Promise<TenexConfig | null> {
-    const paths = getTenexPaths(projectPath);
-    return readJsonFile<TenexConfig>(paths.configJson);
-}
-
-/**
- * Write project config to .tenex/config.json
- */
-export async function writeProjectConfig(
-    projectPath: string,
-    config: TenexConfig
-): Promise<void> {
-    const paths = getTenexPaths(projectPath);
-    await writeJsonFile(paths.configJson, config);
-}
-
-/**
- * Get project name from config or path
- */
-export async function getProjectName(projectPath: string): Promise<string> {
-    const config = await readProjectConfig(projectPath);
-    if (config) {
-        return config.title || path.basename(projectPath);
-    }
-    return path.basename(projectPath);
-}
+// Configuration operations removed - use ConfigService from @/services instead
 
 /**
  * Check if a project has been initialized (has .tenex directory)

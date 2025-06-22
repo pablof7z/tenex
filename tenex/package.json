@@ -11,7 +11,6 @@
   "scripts": {
     "start": "bun run ./src/cli.ts",
     "build": "bun scripts/build-bundled.js",
-    "build:simple": "bun scripts/build-simple.js",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "test:watch": "bun test --watch",

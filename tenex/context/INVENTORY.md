@@ -38,7 +38,6 @@ Version: 1.0.0
     - **src/commands/project/** - Directory containing 3 files
     - **src/commands/run/** - Directory containing 7 files
     - **src/commands/setup/** - Directory containing 2 files
-    - **src/commands/test/** - Directory containing 5 files
     - **src/conversations/__tests__/** - Directory containing 2 files
     - **src/conversations/persistence/** - Directory containing 3 files
     - **src/core/llm/** - Directory containing 4 files
