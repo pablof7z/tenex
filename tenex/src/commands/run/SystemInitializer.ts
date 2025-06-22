@@ -1,11 +1,11 @@
 import { ConversationManager } from "@/conversations";
-import { MultiLLMService } from "@/core/llm/MultiLLMService";
-import type { LLMService } from "@/core/llm/types";
+import { MultiLLMService } from "@/llm/MultiLLMService";
+import type { LLMService } from "@/llm/types";
 import { ConversationPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
 import { configService, projectContext } from "@/services";
-import type { TenexLLMs } from "@/types/config";
+import type { TenexLLMs } from "@/services/config/types";
 import { logger } from "@/utils/logger";
 
 export interface SystemComponents {

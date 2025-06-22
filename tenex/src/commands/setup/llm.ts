@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { LLMConfigEditor } from "@/core/llm/LLMConfigEditor";
+import { LLMConfigEditor } from "@/llm/LLMConfigEditor";
 import * as fileSystem from "@/lib/fs";
 import { logger } from "@/utils/logger";
 import { Command } from "commander";

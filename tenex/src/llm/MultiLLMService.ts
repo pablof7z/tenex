@@ -23,7 +23,7 @@ import type {
   ToolDefinition,
 } from "./types";
 import { configService } from "@/services";
-import type { TenexLLMs } from "@/types/config";
+import type { TenexLLMs } from "@/services/config/types";
 import type { Agent } from "@/agents/types";
 
 const llmLogger = logger.forModule("llm");

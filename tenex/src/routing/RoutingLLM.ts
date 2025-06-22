@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { LLMService, Message } from "@/core/llm/types";
+import type { LLMService, Message } from "../llm/types";
 import {
   RoutingPromptBuilder,
   extractJSON,

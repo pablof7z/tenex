@@ -1,15 +1,15 @@
 import os from "node:os";
 import path from "node:path";
-import { MultiLLMService } from "@/core/llm/MultiLLMService";
-import type { CompletionRequest } from "@/core/llm/types";
+import { MultiLLMService } from "./MultiLLMService";
+import type { CompletionRequest } from "./types";
 import search from "@inquirer/search";
 import * as fileSystem from "@/lib/fs";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
-import type { LLMPreset, ProviderAuth } from "@/types/llm";
-import type { LLMConfig } from "@/types/llm";
-import type { LLMProvider } from "@/types/llm";
-import type { TenexLLMs } from "@/types/config";
+import type { LLMPreset, ProviderAuth } from "@/llm/types";
+import type { LLMConfig } from "@/llm/types";
+import type { LLMProvider } from "@/llm/types";
+import type { TenexLLMs } from "@/services/config/types";
 import chalk from "chalk";
 import inquirer from "inquirer";
 

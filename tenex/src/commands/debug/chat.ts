@@ -8,8 +8,8 @@ import { ConversationManager } from "@/conversations/ConversationManager";
 import type { ConversationState } from "@/conversations/types";
 import { ConversationPublisher } from "@/nostr/ConversationPublisher";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
-import { MultiLLMService } from "@/core/llm/MultiLLMService";
-import type { LLMService } from "@/core/llm/types";
+import { MultiLLMService } from "@/llm/MultiLLMService";
+import type { LLMService } from "@/llm/types";
 import { projectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import path from "node:path";
@@ -29,7 +29,7 @@ interface DebugChatOptions {
 
 export async function runDebugChat(
   initialAgentName: string | undefined,
-  options: DebugChatOptions
+  options: DebugChatOptions,
 ) {
   try {
     const projectPath = process.cwd();
@@ -46,7 +46,9 @@ export async function runDebugChat(
     await ensureProjectInitialized(projectPath);
 
     // Create the LLM service with routing support
-    const multiLLMService = await MultiLLMService.createForProject(projectPath) as MultiLLMService;
+    const multiLLMService = (await MultiLLMService.createForProject(
+      projectPath,
+    )) as MultiLLMService;
 
     // Get project context and create signer
     const project = projectContext.getCurrentProject();
@@ -104,7 +106,7 @@ export async function runDebugChat(
 
     // Create agent-aware LLM service that routes based on agent's llmConfig
     const llmService = multiLLMService.createAgentAwareLLMService(agent);
-    
+
     // Initialize AgentExecutor
     const agentExecutor = new AgentExecutor(llmService, conversationPublisher);
 
@@ -133,7 +135,12 @@ export async function runDebugChat(
 
     // Handle single message mode
     if (options.message) {
-      logDebug("Processing single message:", "general", "debug", options.message);
+      logDebug(
+        "Processing single message:",
+        "general",
+        "debug",
+        options.message,
+      );
 
       // Create execution context
       const context: AgentExecutionContext = {
@@ -166,8 +173,8 @@ export async function runDebugChat(
           result.toolExecutions.forEach((toolResult, idx) => {
             console.log(
               chalk.gray(
-                `  ${idx + 1}. ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`
-              )
+                `  ${idx + 1}. ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`,
+              ),
             );
           });
         }
@@ -274,7 +281,11 @@ export async function runDebugChat(
         ];
 
         // Execute using AgentExecutor without parent tracing context
-        const result = await agentExecutor.execute(context, mockEvent, undefined);
+        const result = await agentExecutor.execute(
+          context,
+          mockEvent,
+          undefined,
+        );
 
         // Clear thinking indicator
         process.stdout.write(`\r${" ".repeat(20)}\r`);
@@ -292,8 +303,8 @@ export async function runDebugChat(
             for (const toolResult of result.toolExecutions) {
               console.log(
                 chalk.gray(
-                  `  - ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`
-                )
+                  `  - ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`,
+                ),
               );
             }
           }

@@ -1,7 +1,7 @@
 import { AgentExecutor, createMinimalProjectAgent, createProjectAgent } from "@/agents";
 import type { ConversationManager } from "@/conversations";
 import type { ConversationState } from "@/conversations/types";
-import type { LLMService } from "@/core/llm/types";
+import type { LLMService } from "../llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
 import { projectContext } from "@/services";

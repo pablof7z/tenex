@@ -1,6 +1,6 @@
-import { PromptBuilder } from '../core/PromptBuilder';
-import { fragmentRegistry } from '../core/FragmentRegistry';
-import type { PromptFragment } from '../core/types';
+import { PromptBuilder } from "../core/PromptBuilder";
+import { fragmentRegistry } from "../core/FragmentRegistry";
+import type { PromptFragment } from "../core/types";
 
 describe('PromptBuilder', () => {
   let builder: PromptBuilder;

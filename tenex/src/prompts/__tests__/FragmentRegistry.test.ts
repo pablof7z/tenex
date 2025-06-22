@@ -1,5 +1,5 @@
-import { FragmentRegistry } from '../core/FragmentRegistry';
-import type { PromptFragment } from '../core/types';
+import { FragmentRegistry } from "../core/FragmentRegistry";
+import type { PromptFragment } from "../core/types";
 
 describe('FragmentRegistry', () => {
   let registry: FragmentRegistry;

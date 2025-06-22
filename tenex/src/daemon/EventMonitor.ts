@@ -49,11 +49,6 @@ export class EventMonitor implements IEventMonitor {
   }
 
   private async handleEvent(event: NDKEvent): Promise<void> {
-    // Check if event is from whitelisted pubkey
-    if (!this.whitelistedPubkeys.has(event.pubkey)) {
-      return;
-    }
-
     // Check if event has project "a" tag
     const projectTag = this.getProjectTag(event);
     if (!projectTag) {
@@ -69,7 +64,6 @@ export class EventMonitor implements IEventMonitor {
 
     // Check if project is already running
     if (await this.processManager.isProjectRunning(projectIdentifier)) {
-      logger.debug("Project already running", { projectIdentifier });
       return;
     }
 

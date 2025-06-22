@@ -4,7 +4,7 @@ import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import type { AgentDefinition } from "@/agents/types";
-import type { TenexAgents } from "@/types/config";
+import type { TenexAgents } from "@/services/config/types";
 import { configService } from "@/services";
 import { nip19 } from "nostr-tools";
 import { generateSecretKey } from "nostr-tools";

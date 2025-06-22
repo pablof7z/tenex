@@ -1,4 +1,4 @@
-import { FragmentRegistry } from '../core/FragmentRegistry';
+import { FragmentRegistry } from "../core/FragmentRegistry";
 import { agentFragment } from '../fragments/agent';
 import { projectFragment } from '../fragments/project';
 import { toolsFragment } from '../fragments/tools';

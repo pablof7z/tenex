@@ -1,4 +1,4 @@
-import type { CompletionResponse, LLMService, Message } from "@/core/llm/types";
+import type { CompletionResponse, LLMService, Message } from "@/llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { PromptBuilder } from "@/prompts";
 import { projectContext } from "@/services";
@@ -9,7 +9,7 @@ import {
   createTracingLogger,
 } from "@/tracing";
 import type { Phase } from "@/conversations/types";
-import type { LLMMetadata } from "@/types/nostr";
+import type { LLMMetadata } from "@/nostr/types";
 import { inventoryExists } from "@/utils/inventory";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";

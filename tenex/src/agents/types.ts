@@ -75,9 +75,6 @@ export interface AgentProfile {
   capabilities: string[];
 }
 
-// Agent configuration types moved to @/types/config
-
-// Tracked agents type moved to config types
 
 /**
  * Configuration load options
@@ -101,4 +98,21 @@ export interface AgentDefinition {
   publisher?: string;
   llmConfig?: string;
   tools?: string[];
+}
+
+/**
+ * Agent configuration for orchestration system
+ */
+export interface AgentConfiguration {
+  name: string;
+  nsec: string;
+  eventId?: string;
+  role?: string;
+}
+
+/**
+ * Project agents configuration
+ */
+export interface ProjectAgentsConfig {
+  agents: Record<string, AgentConfiguration>;
 }

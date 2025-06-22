@@ -12,7 +12,7 @@ import { getNDK } from "@/nostr/ndkClient";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
-import { EVENT_KINDS } from "@/types/llm";
+import { EVENT_KINDS } from "@/llm/types";
 import chalk from "chalk";
 
 export class SubscriptionManager {

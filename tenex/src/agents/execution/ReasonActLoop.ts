@@ -1,4 +1,4 @@
-import type { CompletionResponse, LLMService, Message } from "@/core/llm/types";
+import type { CompletionResponse, LLMService, Message } from "@/llm/types";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger, createToolExecutionContext } from "@/tracing";
 import { ToolExecutionManager } from "@/tools/execution";

@@ -6,7 +6,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
 import { projectContext } from "@/services";
-import { EVENT_KINDS } from "@/types/llm";
+import { EVENT_KINDS } from "@/llm/types";
 import chalk from "chalk";
 
 export class EventHandler {

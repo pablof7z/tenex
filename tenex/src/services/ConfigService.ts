@@ -2,8 +2,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileExists, readJsonFile, writeJsonFile, ensureDirectory } from "@/lib/fs";
 import { logger } from "@/utils/logger";
-import type { TenexConfig, TenexAgents, TenexLLMs, LoadedConfig, ConfigFile } from "@/types/config";
-import { TenexConfigSchema, TenexAgentsSchema, TenexLLMsSchema } from "@/types/config";
+import type { TenexConfig, TenexAgents, TenexLLMs, LoadedConfig, ConfigFile } from "@/services/config/types";
+import { TenexConfigSchema, TenexAgentsSchema, TenexLLMsSchema } from "@/services/config/types";
 import type { z } from "zod";
 
 /**

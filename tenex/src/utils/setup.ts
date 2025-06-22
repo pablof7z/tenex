@@ -1,6 +1,6 @@
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
-import type { TenexConfig } from "@/types/config";
+import type { TenexConfig } from "@/services/config/types";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
