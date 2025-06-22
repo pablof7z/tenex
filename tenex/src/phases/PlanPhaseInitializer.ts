@@ -1,10 +1,12 @@
 import type { ConversationState } from "@/conversations/types";
-import { getProjectContext } from "@/runtime";
+import { projectContext } from "@/services";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { logger } from "@/utils/logger";
+import { PromptBuilder } from "@/prompts";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
+import { handlePhaseError } from "./utils";
 
 /**
  * Plan Phase Initializer
@@ -26,13 +28,13 @@ export class PlanPhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const projectContext = getProjectContext();
+      const project = projectContext.getCurrentProject();
 
       // Find an agent suitable for planning
       const planningAgent =
         availableAgents.find((agent) => agent.role.toLowerCase().includes("architect")) ||
-        availableAgents.find((agent) => 
-          ["planning", "design", "architecture"].some(keyword => 
+        availableAgents.find((agent) =>
+          ["planning", "design", "architecture"].some((keyword) =>
             agent.expertise.toLowerCase().includes(keyword.toLowerCase())
           )
         ) ||
@@ -81,11 +83,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
         },
       };
     } catch (error) {
-      logger.error("[PLAN Phase] Failed to initialize plan phase", { error });
-      return {
-        success: false,
-        message: `Plan phase initialization failed: ${error}`,
-      };
+      return handlePhaseError("Plan", error);
     }
   }
 
@@ -95,10 +93,12 @@ export class PlanPhaseInitializer implements PhaseInitializer {
     instruction: string
   ): Promise<boolean> {
     try {
-      const projectContext = getProjectContext();
+      const project = projectContext.getCurrentProject();
 
       // Prepare the prompt for Claude Code
-      const prompt = `${context}\n\n${instruction}`;
+      const prompt = new PromptBuilder()
+        .add("plan-phase-prompt", { context, instruction })
+        .build();
 
       logger.info("[PLAN Phase] Triggering Claude Code CLI", {
         conversationId: conversation.id,
@@ -108,7 +108,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
       // Create executor with proper separation of concerns
       const executor = new ClaudeCodeExecutor({
         prompt,
-        projectPath: projectContext.projectPath,
+        projectPath: process.cwd(),
         timeout: 300000, // 5 minutes
         onMessage: async (message) => {
           // Log important messages
@@ -118,10 +118,10 @@ export class PlanPhaseInitializer implements PhaseInitializer {
               sessionId: message.session_id,
             });
           }
-          
+
           // The phase initializer can decide to publish to Nostr if needed
           // But for now, we just log the messages
-          if (message.type === "error") {
+          if (message.is_error || message.subtype === "error") {
             logger.error("[PLAN Phase] Claude error message", { message });
           }
         },
@@ -171,16 +171,9 @@ export class PlanPhaseInitializer implements PhaseInitializer {
     const recentRequests = userMessages.slice(-3).join(" ");
 
     // Create a clear task description
-    const taskDescription = `Based on the user's request: "${recentRequests}"
-
-Create a detailed implementation plan that:
-1. Addresses the specific requirements mentioned
-2. Includes technical architecture and design decisions
-3. Breaks down the work into clear implementation steps
-4. Identifies any tools, libraries, or frameworks needed
-5. Considers testing and quality assurance
-
-Focus on being actionable and specific rather than asking questions.`;
+    const taskDescription = new PromptBuilder()
+      .add("plan-task-description", { recentRequests })
+      .build();
 
     return taskDescription;
   }

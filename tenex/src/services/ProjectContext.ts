@@ -124,9 +124,7 @@ export class ProjectContext {
 
   private ensureInitialized(): void {
     if (!this._initialized) {
-      throw new Error(
-        "ProjectContext not initialized. Call ProjectContext.initialize() first."
-      );
+      throw new Error("ProjectContext not initialized. Call ProjectContext.initialize() first.");
     }
   }
 }

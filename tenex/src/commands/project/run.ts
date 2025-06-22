@@ -1,17 +1,17 @@
 import path from "node:path";
 import { EventHandler } from "@/commands/run/EventHandler";
 import { ProjectDisplay } from "@/commands/run/ProjectDisplay";
-import { ProjectLoader, type ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
-import { ProjectManager } from "@/daemon/ProjectManager";
-import { getNDK, initNDK, shutdownNDK } from "@/nostr/ndkClient";
+import { getNDK, shutdownNDK } from "@/nostr/ndkClient";
+import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import chalk from "chalk";
 import { Command } from "commander";
+import { projectContext } from "@/services";
 
 export const projectRunCommand = new Command("run")
   .description("Run the TENEX agent orchestration system for the current project")
@@ -20,24 +20,16 @@ export const projectRunCommand = new Command("run")
     try {
       const projectPath = path.resolve(options.path);
 
-      // Initialize NDK and get singleton
-      await initNDK();
+      // Initialize project context (includes NDK setup)
+      await ensureProjectInitialized(projectPath);
       const ndk = getNDK();
-
-      // First, initialize ProjectContext using ProjectManager
-      const projectManager = new ProjectManager();
-      await projectManager.loadAndInitializeProjectContext(projectPath, ndk);
-      
-      // Then load project using ProjectLoader (which uses ProjectContext)
-      const projectLoader = new ProjectLoader();
-      const projectInfo = await projectLoader.loadProject(projectPath);
 
       // Display project information
       const projectDisplay = new ProjectDisplay();
-      await projectDisplay.displayProjectInfo(projectInfo);
+      await projectDisplay.displayProjectInfo(projectPath);
 
       // Start the project listener
-      await runProjectListener(projectInfo, ndk);
+      await runProjectListener(projectPath, ndk);
     } catch (err) {
       const errorMessage = formatError(err);
       logger.error(`Failed to start project: ${errorMessage}`);
@@ -45,21 +37,24 @@ export const projectRunCommand = new Command("run")
     }
   });
 
-async function runProjectListener(projectInfo: ProjectRuntimeInfo, _ndk: NDK) {
+async function runProjectListener(projectPath: string, _ndk: NDK) {
   try {
-    logger.info(`Starting listener for project: ${projectInfo.title} (${projectInfo.projectId})`);
+    const project = projectContext.getCurrentProject();
+    const titleTag = project.tagValue("title") || "Untitled Project";
+    const dTag = project.tagValue("d") || "";
+    logger.info(`Starting listener for project: ${titleTag} (${dTag})`);
 
     // Initialize event handler
-    const eventHandler = new EventHandler(projectInfo);
+    const eventHandler = new EventHandler(projectPath);
     await eventHandler.initialize();
 
     // Initialize subscription manager
-    const subscriptionManager = new SubscriptionManager(eventHandler, projectInfo);
+    const subscriptionManager = new SubscriptionManager(eventHandler, projectPath);
     await subscriptionManager.start();
 
     // Start status publisher
     const statusPublisher = new StatusPublisher();
-    await statusPublisher.startPublishing(projectInfo);
+    await statusPublisher.startPublishing(projectPath);
 
     logger.success(
       `Project listener active. Monitoring events from the last ${STARTUP_FILTER_MINUTES} minutes.`

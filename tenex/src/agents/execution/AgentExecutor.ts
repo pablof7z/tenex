@@ -1,14 +1,11 @@
 import type { CompletionResponse, LLMService, Message } from "@/core/llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { PromptBuilder } from "@/prompts";
-import { getProjectContext } from "@/runtime";
-import { ToolExecutionManager } from "@/tools/execution";
+import { projectContext } from "@/services";
 import {
   type TracingContext,
   type TracingLogger,
   createAgentExecutionContext,
-  createChildContext,
-  createToolExecutionContext,
   createTracingLogger,
 } from "@/tracing";
 import type { Phase } from "@/types/conversation";
@@ -16,20 +13,18 @@ import type { LLMMetadata } from "@/types/nostr";
 import { inventoryExists } from "@/utils/inventory";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
-import type {
-  AgentExecutionContext,
-  AgentExecutionResult,
-  AgentPromptContext,
-} from "./types";
-import type { ToolExecutionResult } from "@/types/tool";
+import type { AgentExecutionContext, AgentExecutionResult, AgentPromptContext } from "./types";
+import { ReasonActLoop } from "./ReasonActLoop";
 
 export class AgentExecutor {
-  private toolManager = new ToolExecutionManager();
+  private reasonActLoop: ReasonActLoop;
 
   constructor(
     private llmService: LLMService,
     private conversationPublisher: ConversationPublisher
-  ) {}
+  ) {
+    this.reasonActLoop = new ReasonActLoop(llmService);
+  }
 
   /**
    * Execute an agent's assignment for a conversation
@@ -77,9 +72,15 @@ export class AgentExecutor {
       );
 
       // 3. Execute the Reason-Act loop
-      const reasonActResult = await this.executeReasonActLoop(
+      const reasonActResult = await this.reasonActLoop.execute(
         initialResponse,
-        context,
+        {
+          projectPath: process.cwd(),
+          conversationId: context.conversation.id,
+          agentName: context.agent.name,
+          phase: context.phase,
+          llmConfig: context.agent.llmConfig || "default",
+        },
         promptContext.systemPrompt,
         userPrompt,
         tracingContext
@@ -136,13 +137,13 @@ export class AgentExecutor {
    * Build the complete prompt context for the agent
    */
   private async buildPromptContext(context: AgentExecutionContext): Promise<AgentPromptContext> {
-    const projectContext = getProjectContext();
+    const project = projectContext.getCurrentProject();
     const promptBuilder = new PromptBuilder();
 
     // Build inventory prompt if needed
     let inventoryPrompt: string | undefined;
     if (context.phase === "chat") {
-      const hasInventory = await inventoryExists(projectContext.projectPath);
+      const hasInventory = await inventoryExists(process.cwd());
       if (hasInventory) {
         inventoryPrompt = `## Project Inventory
 
@@ -155,8 +156,8 @@ An inventory file exists for this project. To get detailed project structure and
       .add("agent-system-prompt", {
         agent: context.agent,
         phase: context.phase,
-        projectTitle: projectContext.title,
-        projectRepository: projectContext.repository,
+        projectTitle: project.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Project",
+        projectRepository: project.tags.find((tag) => tag[0] === "repo")?.[1] || "No repository",
         inventoryPrompt,
       })
       .build();
@@ -200,7 +201,9 @@ An inventory file exists for this project. To get detailed project structure and
         conversationContent: promptContext.conversationHistory || "",
         phaseContext: promptContext.phaseContext,
         constraints: promptContext.constraints,
-        agentType: promptContext.phaseContext.includes("Phase:") ? "assigned expert" : "project assistant",
+        agentType: promptContext.phaseContext.includes("Phase:")
+          ? "assigned expert"
+          : "project assistant",
       })
       .build();
 
@@ -269,164 +272,6 @@ An inventory file exists for this project. To get detailed project structure and
   }
 
   /**
-   * Execute the Reason-Act loop for tool usage
-   */
-  private async executeReasonActLoop(
-    initialResponse: CompletionResponse,
-    context: AgentExecutionContext,
-    systemPrompt: string,
-    userPrompt: string,
-    tracingContext: TracingContext
-  ): Promise<{
-    finalResponse: CompletionResponse;
-    finalContent: string;
-    allToolResults: ToolExecutionResult[];
-  }> {
-    const tracingLogger = createTracingLogger(tracingContext, "agent");
-    const maxIterations = 3; // Prevent infinite loops
-    let currentResponse = initialResponse;
-    let finalContent = currentResponse.content;
-    const allToolResults: ToolExecutionResult[] = [];
-    let iteration = 0;
-
-    const toolContext = {
-      projectPath: getProjectContext().projectPath,
-      conversationId: context.conversation.id,
-      agentName: context.agent.name,
-      phase: context.phase,
-    };
-
-    // Process tool invocations iteratively
-    while (iteration < maxIterations) {
-      // Process response for tool invocations
-      const { enhancedResponse, toolResults, invocations } = await this.toolManager.processResponse(
-        currentResponse.content,
-        toolContext
-      );
-
-      // If no tools were invoked, we're done
-      if (invocations.length === 0) {
-        tracingLogger.debug("No tool invocations found, completing Reason-Act loop", {
-          agent: context.agent.name,
-          iteration,
-        });
-        break;
-      }
-
-      // Map tool results with proper tool names
-      const mappedResults: ToolExecutionResult[] = toolResults.map((result, index) => {
-        const invocation = invocations[index];
-        return {
-          ...result,
-          toolName: invocation?.toolName || "unknown",
-        };
-      });
-
-      // Log tool execution with tracing
-      for (const invocation of invocations) {
-        const toolTracingContext = createToolExecutionContext(tracingContext, invocation.toolName);
-        const toolLogger = createTracingLogger(toolTracingContext, "tools");
-        
-        toolLogger.startOperation("tool_execution", {
-          tool: invocation.toolName,
-          action: invocation.action,
-        });
-        
-        const toolResult = mappedResults.find(r => r.toolName === invocation.toolName);
-        
-        toolLogger.completeOperation("tool_execution", {
-          tool: invocation.toolName,
-          success: toolResult?.success || false,
-        });
-      }
-
-      allToolResults.push(...mappedResults);
-
-      // If tools were invoked, send results back to LLM for reasoning
-      tracingLogger.info("Tool invocations completed, continuing Reason-Act loop", {
-        agent: context.agent.name,
-        iteration,
-        toolCount: invocations.length,
-        tools: invocations.map(i => i.toolName),
-      });
-
-      // Build continuation prompt with tool results
-      const continuationPrompt = this.buildContinuationPrompt(
-        userPrompt,
-        enhancedResponse,
-        mappedResults
-      );
-
-      // Generate next response
-      const messages: Message[] = [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-        { role: "assistant", content: currentResponse.content },
-        { role: "user", content: continuationPrompt },
-      ];
-
-      tracingLogger.logLLMRequest(context.agent.llmConfig || "default");
-      const llmStartTime = Date.now();
-
-      currentResponse = await this.llmService.complete({ messages });
-
-      const llmDuration = Date.now() - llmStartTime;
-      tracingLogger.logLLMResponse(
-        context.agent.llmConfig || "default",
-        llmDuration,
-        currentResponse.usage?.promptTokens,
-        currentResponse.usage?.completionTokens
-      );
-
-      finalContent = currentResponse.content;
-      iteration++;
-    }
-
-    if (iteration >= maxIterations) {
-      tracingLogger.warning("Reason-Act loop reached maximum iterations", {
-        agent: context.agent.name,
-        iterations: maxIterations,
-      });
-    }
-
-    return {
-      finalResponse: currentResponse,
-      finalContent,
-      allToolResults,
-    };
-  }
-
-  /**
-   * Build continuation prompt with tool results
-   */
-  private buildContinuationPrompt(
-    originalPrompt: string,
-    enhancedResponse: string,
-    toolResults: ToolExecutionResult[]
-  ): string {
-    let prompt = "Based on the tool execution results:\n\n";
-
-    for (const result of toolResults) {
-      prompt += `**${result.toolName}**: `;
-      if (result.success) {
-        prompt +=
-          typeof result.output === "string"
-            ? result.output
-            : JSON.stringify(result.output, null, 2);
-      } else {
-        prompt += `Error: ${result.error}`;
-      }
-      prompt += "\n\n";
-    }
-
-    prompt += "\nPlease continue with your analysis or provide a final response. ";
-    prompt += "If you need to use more tools, you can do so. ";
-    prompt += "If you have all the information needed, provide your complete response.";
-
-    return prompt;
-  }
-
-  /**
    * Build LLM metadata for response tracking
    */
   private buildLLMMetadata(
@@ -440,7 +285,7 @@ An inventory file exists for this project. To get detailed project structure and
 
     return {
       model: response.model || "unknown",
-      cost: 0, // TODO: Calculate cost based on model and token usage
+      cost: 0,
       promptTokens: response.usage.promptTokens,
       completionTokens: response.usage.completionTokens,
       totalTokens: response.usage.totalTokens,

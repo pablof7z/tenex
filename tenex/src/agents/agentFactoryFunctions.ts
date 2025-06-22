@@ -1,6 +1,6 @@
-import type { ProjectContext } from "@/runtime";
+import { projectContext } from "@/services";
 import type { Agent } from "@/types/agent";
-import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 export interface ProjectAgentOptions {
   name?: string;
@@ -14,14 +14,14 @@ export interface ProjectAgentOptions {
 /**
  * Creates a project agent configuration for the chat phase
  */
-export function createProjectAgent(
-  projectContext: ProjectContext,
-  options: ProjectAgentOptions = {}
-): Agent {
+export function createProjectAgent(options: ProjectAgentOptions = {}): Agent {
+  const projectNsec = projectContext.getCurrentProjectNsec();
+  const projectSigner = new NDKPrivateKeySigner(projectNsec);
+
   return {
     name: options.name || "Project",
-    pubkey: projectContext.projectSigner.pubkey,
-    signer: projectContext.projectSigner,
+    pubkey: projectSigner.pubkey,
+    signer: projectSigner,
     role: options.role || "Requirements Analyst",
     expertise: options.expertise || "Understanding user needs and clarifying requirements",
     instructions:
@@ -37,13 +37,15 @@ export function createProjectAgent(
  * Creates a minimal project agent configuration (no instructions)
  */
 export function createMinimalProjectAgent(
-  projectContext: ProjectContext,
   options: Omit<ProjectAgentOptions, "instructions"> = {}
 ): Omit<Agent, "instructions"> {
+  const projectNsec = projectContext.getCurrentProjectNsec();
+  const projectSigner = new NDKPrivateKeySigner(projectNsec);
+
   return {
     name: options.name || "Project",
-    pubkey: projectContext.projectSigner.pubkey,
-    signer: projectContext.projectSigner,
+    pubkey: projectSigner.pubkey,
+    signer: projectSigner,
     role: options.role || "Requirements analyst",
     expertise: options.expertise || "Understanding user needs and clarifying requirements",
     llmConfig: options.llmConfig || "default",

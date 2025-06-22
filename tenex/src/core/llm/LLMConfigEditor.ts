@@ -6,13 +6,8 @@ import search from "@inquirer/search";
 import * as fileSystem from "@/lib/fs";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
-import type {
-  LLMPreset,
-  ProviderAuth,
-} from "@/types/llm";
-import type {
-  LLMConfig,
-} from "@/types/llm";
+import type { LLMPreset, ProviderAuth } from "@/types/llm";
+import type { LLMConfig } from "@/types/llm";
 import type { LLMProvider } from "@/types/llm";
 import type { TenexLLMs } from "@/types/config";
 import chalk from "chalk";
@@ -404,10 +399,9 @@ export class LLMConfigEditor {
     try {
       if (this.isGlobal) {
         return await configService.loadTenexLLMs(path.join(os.homedir(), ".tenex"));
-      } else {
+      }
         const { llms } = await configService.loadConfig(this.configPath);
         return llms;
-      }
     } catch (error) {
       logger.error(`Failed to load LLM configuration: ${error}`);
       return {
@@ -614,7 +608,7 @@ export class LLMConfigEditor {
       // API key is stored in auth, not on config
     }
 
-    const testSuccessful = await this.testConfiguration(testConfig, configName);
+    const testSuccessful = await this.testConfiguration(testConfig, llmsConfig, configName);
 
     if (!testSuccessful) {
       const { retry } = await inquirer.prompt([
@@ -782,7 +776,7 @@ export class LLMConfigEditor {
           // Update defaults if needed
           for (const [key, value] of Object.entries(llmsConfig.defaults)) {
             if (value === configName) {
-              llmsConfig.selection[key] = newName;
+              llmsConfig.defaults[key] = newName;
             }
           }
         }
@@ -818,10 +812,10 @@ export class LLMConfigEditor {
     if (confirm) {
       delete llmsConfig.configurations[configName];
 
-      // Update selection if needed
-      for (const [key, value] of Object.entries(llmsConfig.selection)) {
+      // Update defaults if needed
+      for (const [key, value] of Object.entries(llmsConfig.defaults)) {
         if (value === configName) {
-          delete llmsConfig.selection[key];
+          delete llmsConfig.defaults[key];
         }
       }
 
@@ -898,7 +892,11 @@ export class LLMConfigEditor {
     await this.testConfiguration(config, llmsConfig, configName);
   }
 
-  private async testConfiguration(config: LLMConfig, llmsConfig: TenexLLMs, _configName?: string): Promise<boolean> {
+  private async testConfiguration(
+    config: LLMConfig,
+    llmsConfig: TenexLLMs,
+    _configName?: string
+  ): Promise<boolean> {
     try {
       // Validate config before testing
       if (!config.provider) {
@@ -970,5 +968,4 @@ export class LLMConfigEditor {
       return false;
     }
   }
-
 }

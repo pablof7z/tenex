@@ -23,7 +23,6 @@ export interface AgentExecutionResult {
   publishedEvent?: NDKEvent;
 }
 
-
 export interface AgentPromptContext {
   systemPrompt: string;
   conversationHistory?: string;

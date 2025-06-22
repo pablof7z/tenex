@@ -1,14 +1,16 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
 import type { ConversationState } from "@/conversations/types";
-import { getProjectContext } from "@/runtime";
+import { projectContext } from "@/services";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
+import { PromptBuilder } from "@/prompts";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
+import { handlePhaseError } from "./utils";
 
 /**
  * Execute Phase Initializer
@@ -30,7 +32,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const projectContext = getProjectContext();
+      const project = projectContext.getCurrentProject();
 
       // Find an agent suitable for execution
       const executionAgent =
@@ -53,7 +55,8 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
       const branchName = await this.createExecutionBranch(conversation);
 
       // Get the plan from previous phase
-      const plan = conversation.metadata.plan_summary || "Implement the features as discussed";
+      const planSummary = conversation.metadata.plan_summary;
+      const plan = typeof planSummary === 'string' ? planSummary : "Implement the features as discussed";
 
       // Trigger Claude Code CLI for implementation
       const claudeCodeTriggered = await this.triggerClaudeCode(
@@ -76,18 +79,14 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
         },
       };
     } catch (error) {
-      logger.error("[EXECUTE Phase] Failed to initialize execute phase", { error });
-      return {
-        success: false,
-        message: `Execute phase initialization failed: ${error}`,
-      };
+      return handlePhaseError("Execute", error);
     }
   }
 
   private async createExecutionBranch(conversation: ConversationState): Promise<string> {
     try {
-      const projectContext = getProjectContext();
-      const projectPath = projectContext.projectPath;
+      const project = projectContext.getCurrentProject();
+      const projectPath = process.cwd();
 
       // Generate branch name from conversation
       const baseName = conversation.title
@@ -131,10 +130,13 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
     instruction: string
   ): Promise<boolean> {
     try {
-      const projectContext = getProjectContext();
+      const project = projectContext.getCurrentProject();
+      const projectPath = process.cwd();
 
       // Prepare the prompt for Claude Code
-      const prompt = `Current Plan:\n${plan}\n\nInstruction: ${instruction}`;
+      const prompt = new PromptBuilder()
+        .add("execute-phase-prompt", { plan, instruction })
+        .build();
 
       logger.info("[EXECUTE Phase] Triggering Claude Code CLI for execution", {
         conversationId: conversation.id,
@@ -144,7 +146,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
       // Create executor with proper separation of concerns
       const executor = new ClaudeCodeExecutor({
         prompt,
-        projectPath: projectContext.projectPath,
+        projectPath,
         timeout: 300000, // 5 minutes
         onMessage: async (message) => {
           // Log important messages
@@ -154,12 +156,9 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
               sessionId: message.session_id,
             });
           }
-          
+
           // The phase initializer can decide to publish to Nostr if needed
           // But for now, we just log the messages
-          if (message.type === "error") {
-            logger.error("[EXECUTE Phase] Claude error message", { message });
-          }
         },
         onError: (error) => {
           logger.error("[EXECUTE Phase] Claude Code execution error", { error });
@@ -175,7 +174,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
       });
 
       const result = await executor.execute();
-      
+
       if (result.success) {
         // Store session ID in conversation metadata for tracking
         if (result.sessionId) {

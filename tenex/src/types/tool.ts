@@ -18,28 +18,25 @@ export type FileEditParameters = {
   newContent: string;
 };
 
-export type FileToolParameters = 
-  | FileReadParameters 
-  | FileWriteParameters 
-  | FileEditParameters;
+export type FileToolParameters = FileReadParameters | FileWriteParameters | FileEditParameters;
 
 export type ClaudeCodeToolParameters = {
   mode: "run" | "plan";
   prompt: string;
 };
 
-export type ToolParameters = 
-  | ShellToolParameters 
-  | FileToolParameters 
+export type ToolParameters =
+  | ShellToolParameters
+  | FileToolParameters
   | ClaudeCodeToolParameters
   | Record<string, string | number | boolean>;
 
 // Tool execution result types
-export type ToolOutput = 
-  | string          // Command output, file content
-  | number          // Exit codes, file sizes
-  | boolean         // Success flags
-  | object          // Structured data
+export type ToolOutput =
+  | string // Command output, file content
+  | number // Exit codes, file sizes
+  | boolean // Success flags
+  | object // Structured data
   | null;
 
 export interface ToolExecutionMetadata {

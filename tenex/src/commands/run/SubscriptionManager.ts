@@ -1,6 +1,6 @@
 import type { EventHandler } from "@/commands/run/EventHandler";
-import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
+import { projectContext } from "@/services";
 import {
   addProcessedEvent,
   clearProcessedEvents,
@@ -18,18 +18,18 @@ import chalk from "chalk";
 export class SubscriptionManager {
   private subscriptions: NDKSubscription[] = [];
   private eventHandler: EventHandler;
-  private projectInfo: ProjectRuntimeInfo;
+  private projectPath: string;
 
-  constructor(eventHandler: EventHandler, projectInfo: ProjectRuntimeInfo) {
+  constructor(eventHandler: EventHandler, projectPath: string) {
     this.eventHandler = eventHandler;
-    this.projectInfo = projectInfo;
+    this.projectPath = projectPath;
   }
 
   async start(): Promise<void> {
     logger.info(chalk.cyan("📡 Setting up project subscriptions..."));
 
     // Load previously processed event IDs from disk
-    await loadProcessedEvents(this.projectInfo.projectPath);
+    await loadProcessedEvents(this.projectPath);
 
     // 1. Subscribe to project updates (NDKProject events)
     await this.subscribeToProjectUpdates();
@@ -42,7 +42,8 @@ export class SubscriptionManager {
   }
 
   private async subscribeToProjectUpdates(): Promise<void> {
-    const projectFilter = this.projectInfo.projectEvent.filter();
+    const project = projectContext.getCurrentProject();
+    const projectFilter = project.filter();
 
     logger.info(chalk.blue("  • Setting up project update subscription..."));
     logger.debug("Project update filter:", projectFilter);
@@ -63,8 +64,9 @@ export class SubscriptionManager {
 
   private async subscribeToProjectEvents(): Promise<void> {
     // Filter for all events that tag this project
+    const project = projectContext.getCurrentProject();
     const projectTagFilter: NDKFilter = {
-      ...this.projectInfo.projectEvent.filter(),
+      ...project.filter(),
       limit: 1,
     };
 
@@ -97,7 +99,7 @@ export class SubscriptionManager {
     }
 
     // Mark as processed
-    addProcessedEvent(this.projectInfo.projectPath, event.id);
+    addProcessedEvent(this.projectPath, event.id);
 
     // Log receipt
     if (event.kind !== EVENT_KINDS.PROJECT_STATUS) {
@@ -123,7 +125,7 @@ export class SubscriptionManager {
     this.subscriptions = [];
 
     // Flush any pending saves to disk before stopping
-    await flushProcessedEvents(this.projectInfo.projectPath);
+    await flushProcessedEvents(this.projectPath);
     clearProcessedEvents();
 
     logger.info("All subscriptions stopped");

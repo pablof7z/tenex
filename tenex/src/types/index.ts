@@ -1,5 +1,4 @@
 // Re-export common types used throughout the CLI
-export type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 
 // Conversation types
 export * from "./conversation";

@@ -57,4 +57,3 @@ export interface ClaudeCodeOptions {
   dangerouslySkipPermissions?: boolean;
   projectPath?: string;
 }
-

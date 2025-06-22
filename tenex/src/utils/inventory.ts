@@ -9,9 +9,7 @@ const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
 /**
  * Generate inventory using Claude Code
  */
-export async function generateInventory(
-  projectPath: string
-): Promise<void> {
+export async function generateInventory(projectPath: string): Promise<void> {
   logger.info("Generating project inventory with Claude Code", { projectPath });
 
   const inventoryPath = await getInventoryPath(projectPath);
@@ -39,9 +37,9 @@ export async function generateInventory(
       });
     },
   });
-  
+
   const result = await executor.execute();
-  
+
   if (!result.success) {
     throw new Error(`Inventory generation failed: ${result.error}`);
   }
@@ -50,10 +48,7 @@ export async function generateInventory(
 /**
  * Update inventory for specific files using Claude Code
  */
-export async function updateInventory(
-  projectPath: string,
-  files: string[]
-): Promise<void> {
+export async function updateInventory(projectPath: string, files: string[]): Promise<void> {
   logger.info("Updating inventory with Claude Code", { projectPath, files });
 
   const inventoryPath = await getInventoryPath(projectPath);
@@ -81,9 +76,9 @@ export async function updateInventory(
       });
     },
   });
-  
+
   const result = await executor.execute();
-  
+
   if (!result.success) {
     throw new Error(`Inventory update failed: ${result.error}`);
   }
@@ -124,11 +119,10 @@ async function loadProjectConfig(projectPath: string) {
         paths: { inventory: DEFAULT_INVENTORY_PATH },
         title: titleTag?.[1] || "Untitled Project",
       };
-    } else {
+    }
       // Fallback: try to load config directly
       const { config } = await configService.loadConfig(projectPath);
       return config;
-    }
   } catch (error) {
     logger.debug("Failed to load project config", { error });
     return { paths: { inventory: DEFAULT_INVENTORY_PATH } };
@@ -159,7 +153,7 @@ Focus on providing value to developers who need to quickly understand the codeba
 function buildUpdateInventoryPrompt(inventoryPath: string, files: string[]): string {
   return `Update the existing inventory at ${inventoryPath} for the following changed files:
 
-${files.map(f => `- ${f}`).join('\n')}
+${files.map((f) => `- ${f}`).join("\n")}
 
 Please:
 1. Read the existing inventory

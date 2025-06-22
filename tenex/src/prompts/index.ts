@@ -16,6 +16,7 @@ import "./fragments/agent-specific";
 import "./fragments/common";
 import "./fragments/context";
 import "./fragments/generic";
+import "./fragments/phase";
 import "./fragments/project";
 import "./fragments/routing";
 import "./fragments/routing-system";

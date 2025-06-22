@@ -12,10 +12,23 @@ import { logger } from "@/utils/logger";
 import { configService, ProjectContext } from "@/services";
 import type { AgentProfile } from "@/types/agent";
 import type { TenexConfig } from "@/types/config";
-import type { Agent, ProjectData } from "@/types/llm";
+import type { Agent } from "@/types/llm";
 import chalk from "chalk";
 
 const execAsync = promisify(exec);
+
+export interface ProjectData {
+  identifier: string;
+  pubkey: string;
+  naddr: string;
+  title: string;
+  description?: string;
+  repoUrl?: string;
+  hashtags: string[];
+  agentEventIds: string[];
+  createdAt?: number;
+  updatedAt?: number;
+}
 
 export interface IProjectManager {
   initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData>;
@@ -110,14 +123,14 @@ export class ProjectManager implements IProjectManager {
     try {
       // Load project configuration
       const { config } = await configService.loadConfig(projectPath);
-      
+
       if (!config.projectNaddr) {
         throw new Error("Project configuration missing projectNaddr");
       }
 
       // Fetch project from Nostr
       const project = await this.fetchProject(config.projectNaddr, ndk);
-      
+
       // Get project nsec
       const projectNsec = config.nsec;
       if (!projectNsec) {
@@ -132,7 +145,7 @@ export class ProjectManager implements IProjectManager {
       // Get all agents from registry
       const agentMap = agentRegistry.getAllAgentsMap();
       const loadedAgents = new Map();
-      
+
       // Convert to LoadedAgent format with slugs
       for (const [slug, agent] of agentMap.entries()) {
         loadedAgents.set(slug, {
@@ -143,7 +156,7 @@ export class ProjectManager implements IProjectManager {
 
       // Initialize ProjectContext
       ProjectContext.initialize(project, projectNsec, loadedAgents);
-      
+
       logger.info("ProjectContext initialized successfully", {
         projectTitle: project.tagValue("title"),
         agentCount: loadedAgents.size,

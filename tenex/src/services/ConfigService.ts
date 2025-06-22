@@ -2,18 +2,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileExists, readJsonFile, writeJsonFile, ensureDirectory } from "@/lib/fs";
 import { logger } from "@/utils/logger";
-import type {
-  TenexConfig,
-  TenexAgents,
-  TenexLLMs,
-  LoadedConfig,
-  ConfigFile,
-} from "@/types/config";
-import {
-  TenexConfigSchema,
-  TenexAgentsSchema,
-  TenexLLMsSchema,
-} from "@/types/config";
+import type { TenexConfig, TenexAgents, TenexLLMs, LoadedConfig, ConfigFile } from "@/types/config";
+import { TenexConfigSchema, TenexAgentsSchema, TenexLLMsSchema } from "@/types/config";
+import type { z } from "zod";
 
 /**
  * Centralized configuration service for TENEX
@@ -60,7 +51,7 @@ export class ConfigService {
 
     // Load global config
     const globalConfig = await this.loadTenexConfig(globalPath);
-    
+
     // Load project config if provided
     let projectConfig: TenexConfig = {};
     if (projPath) {
@@ -85,7 +76,9 @@ export class ConfigService {
 
     // Load LLMs (merge global and project)
     const globalLLMs = await this.loadTenexLLMs(globalPath);
-    const projectLLMs = projPath ? await this.loadTenexLLMs(projPath) : { configurations: {}, defaults: {}, credentials: {} };
+    const projectLLMs = projPath
+      ? await this.loadTenexLLMs(projPath)
+      : { configurations: {}, defaults: {}, credentials: {} };
     const llms: TenexLLMs = {
       configurations: { ...globalLLMs.configurations, ...projectLLMs.configurations },
       defaults: { ...globalLLMs.defaults, ...projectLLMs.defaults },
@@ -101,7 +94,7 @@ export class ConfigService {
 
   async loadTenexConfig(basePath: string): Promise<TenexConfig> {
     return this.loadConfigFile(
-      this.getConfigFilePath(basePath, 'config.json'),
+      this.getConfigFilePath(basePath, "config.json"),
       TenexConfigSchema,
       {}
     );
@@ -109,18 +102,18 @@ export class ConfigService {
 
   async loadTenexAgents(basePath: string): Promise<TenexAgents> {
     return this.loadConfigFile(
-      this.getConfigFilePath(basePath, 'agents.json'),
+      this.getConfigFilePath(basePath, "agents.json"),
       TenexAgentsSchema,
       {}
     );
   }
 
   async loadTenexLLMs(basePath: string): Promise<TenexLLMs> {
-    return this.loadConfigFile(
-      this.getConfigFilePath(basePath, 'llms.json'),
-      TenexLLMsSchema,
-      { configurations: {}, defaults: {}, credentials: {} }
-    );
+    return this.loadConfigFile(this.getConfigFilePath(basePath, "llms.json"), TenexLLMsSchema, {
+      configurations: {},
+      defaults: {},
+      credentials: {},
+    });
   }
 
   // =====================================================================================
@@ -129,7 +122,7 @@ export class ConfigService {
 
   async saveTenexConfig(basePath: string, config: TenexConfig): Promise<void> {
     await this.saveConfigFile(
-      this.getConfigFilePath(basePath, 'config.json'),
+      this.getConfigFilePath(basePath, "config.json"),
       config,
       TenexConfigSchema
     );
@@ -137,18 +130,14 @@ export class ConfigService {
 
   async saveTenexAgents(basePath: string, agents: TenexAgents): Promise<void> {
     await this.saveConfigFile(
-      this.getConfigFilePath(basePath, 'agents.json'),
+      this.getConfigFilePath(basePath, "agents.json"),
       agents,
       TenexAgentsSchema
     );
   }
 
   async saveTenexLLMs(basePath: string, llms: TenexLLMs): Promise<void> {
-    await this.saveConfigFile(
-      this.getConfigFilePath(basePath, 'llms.json'),
-      llms,
-      TenexLLMsSchema
-    );
+    await this.saveConfigFile(this.getConfigFilePath(basePath, "llms.json"), llms, TenexLLMsSchema);
   }
 
   // =====================================================================================
@@ -211,11 +200,7 @@ export class ConfigService {
   // PRIVATE IMPLEMENTATION
   // =====================================================================================
 
-  private async loadConfigFile<T>(
-    filePath: string,
-    schema: any,
-    defaultValue: T
-  ): Promise<T> {
+  private async loadConfigFile<T>(filePath: string, schema: z.ZodSchema<T>, defaultValue: T): Promise<T> {
     // Check cache first
     const cached = this.getFromCache<T>(filePath);
     if (cached) {
@@ -230,7 +215,7 @@ export class ConfigService {
 
       const data = await readJsonFile(filePath);
       const validated = schema.parse(data);
-      
+
       this.addToCache(filePath, validated);
       return validated as T;
     } catch (error) {
@@ -239,24 +224,20 @@ export class ConfigService {
     }
   }
 
-  private async saveConfigFile<T>(
-    filePath: string,
-    data: T,
-    schema: any
-  ): Promise<void> {
+  private async saveConfigFile<T>(filePath: string, data: T, schema: z.ZodSchema<T>): Promise<void> {
     try {
       // Ensure directory exists
       await ensureDirectory(path.dirname(filePath));
-      
+
       // Validate before saving
       const validated = schema.parse(data);
-      
+
       // Save to file
       await writeJsonFile(filePath, validated);
-      
+
       // Update cache
       this.addToCache(filePath, validated);
-      
+
       logger.debug(`Configuration saved: ${filePath}`);
     } catch (error) {
       logger.error(`Failed to save config file: ${filePath}`, { error });

@@ -2,12 +2,9 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@/lib/fs";
-import type { ConversationState } from "../types";
-import type {
-  ConversationMetadata,
-  ConversationPersistenceAdapter,
-  ConversationSearchCriteria,
-} from "./types";
+import type { ConversationState, ConversationMetadata as ConvMetadata } from "../types";
+import type { Phase } from "@/types/conversation";
+import type { ConversationPersistenceAdapter, ConversationSearchCriteria, ConversationMetadata } from "./types";
 
 export class FileSystemAdapter implements ConversationPersistenceAdapter {
   private conversationsDir: string;
@@ -92,6 +89,12 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
         return key in obj;
       }
 
+      // Type guard for Phase
+      function isValidPhase(value: unknown): value is Phase {
+        return typeof value === 'string' && 
+          ["chat", "plan", "execute", "review", "chores"].includes(value);
+      }
+
       // Validate required properties
       if (
         !hasProperty(data, "id") ||
@@ -105,6 +108,24 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
         return null;
       }
 
+      // Validate phase
+      if (!isValidPhase(data.phase)) {
+        logger.error("Invalid phase", { id: conversationId, phase: data.phase });
+        return null;
+      }
+
+      // Validate metadata is an object
+      if (typeof data.metadata !== 'object' || data.metadata === null || Array.isArray(data.metadata)) {
+        logger.error("Invalid metadata structure", { id: conversationId });
+        return null;
+      }
+
+      // Build metadata object with proper typing
+      const metadata: ConvMetadata = {};
+      for (const [key, value] of Object.entries(data.metadata)) {
+        metadata[key] = value;
+      }
+
       // Reconstruct conversation with validated data
       const conversation: ConversationState = {
         id: String(data.id),
@@ -115,7 +136,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
         phaseStartedAt: hasProperty(data, "phaseStartedAt")
           ? Number(data.phaseStartedAt)
           : undefined,
-        metadata: data.metadata,
+        metadata,
       };
 
       logger.info("Conversation loaded", { id: conversationId });

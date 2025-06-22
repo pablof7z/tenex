@@ -1,19 +1,18 @@
-import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { STATUS_INTERVAL_MS, STATUS_KIND } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 import { formatError } from "@/utils/errors";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logWarning } from "@/utils/logger";
 import { projectContext, configService } from "@/services";
 
 export class StatusPublisher {
   private statusInterval?: NodeJS.Timeout;
 
-  async startPublishing(projectInfo: ProjectRuntimeInfo): Promise<void> {
-    await this.publishStatusEvent(projectInfo);
+  async startPublishing(projectPath: string): Promise<void> {
+    await this.publishStatusEvent(projectPath);
 
     this.statusInterval = setInterval(async () => {
-      await this.publishStatusEvent(projectInfo);
+      await this.publishStatusEvent(projectPath);
     }, STATUS_INTERVAL_MS);
   }
 
@@ -24,7 +23,7 @@ export class StatusPublisher {
     }
   }
 
-  private async publishStatusEvent(projectInfo: ProjectRuntimeInfo): Promise<void> {
+  private async publishStatusEvent(projectPath: string): Promise<void> {
     try {
       const ndk = getNDK();
       const event = new NDKEvent(ndk);
@@ -33,13 +32,16 @@ export class StatusPublisher {
       event.content = "";
 
       // Tag the project event properly
-      event.tag(projectInfo.projectEvent);
+      const project = projectContext.getCurrentProject();
+      event.tag(project);
 
-      await this.addAgentPubkeys(event, projectInfo.projectPath);
-      await this.addModelTags(event, projectInfo.projectPath);
+      await this.addAgentPubkeys(event, projectPath);
+      await this.addModelTags(event, projectPath);
 
       // Sign the event with the project's signer
-      await event.sign(projectInfo.projectSigner);
+      const projectNsec = projectContext.getCurrentProjectNsec();
+      const projectSigner = new NDKPrivateKeySigner(projectNsec);
+      await event.sign(projectSigner);
       await event.publish();
     } catch (err) {
       const errorMessage = formatError(err);
@@ -75,13 +77,15 @@ export class StatusPublisher {
         event.tags.push(["model", config.model, configName]);
       }
 
-      // Also check if there are agent-specific selections
-      for (const [agentName, presetRef] of Object.entries(llms.selection)) {
-        if (agentName === "default") continue;
+      // Also check if there are agent-specific defaults
+      if (llms.defaults) {
+        for (const [agentName, configName] of Object.entries(llms.defaults)) {
+          if (!configName || agentName === "agents" || agentName === "routing") continue;
 
-        const preset = presetRef ? llms.presets[presetRef] : undefined;
-        if (preset?.model) {
-          event.tags.push(["model", preset.model, `${agentName}-default`]);
+          const config = llms.configurations[configName];
+          if (config?.model) {
+            event.tags.push(["model", config.model, `${agentName}-default`]);
+          }
         }
       }
     } catch (_err) {

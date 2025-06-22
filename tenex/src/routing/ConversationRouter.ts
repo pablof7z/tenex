@@ -3,9 +3,10 @@ import type { ConversationManager } from "@/conversations";
 import type { LLMService } from "@/core/llm/types";
 import type { ConversationPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
-import { getProjectContext } from "@/runtime";
+import { projectContext } from "@/services";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { RoutingLLM } from "./RoutingLLM";
@@ -170,10 +171,10 @@ export class ConversationRouter {
         }
       } else if (conversation.phase === "chat") {
         // In chat phase, the project responds directly to the user
-        const projectContext = getProjectContext();
+        const currentProject = projectContext.getCurrentProject();
 
         // Execute project response logic
-        const projectAgent = createProjectAgent(projectContext);
+        const projectAgent = createProjectAgent();
         const executionResult = await this.agentExecutor.execute(
           {
             agent: projectAgent,
@@ -270,11 +271,11 @@ export class ConversationRouter {
     });
 
     // Publish phase initialization response
-    const projectContext = getProjectContext();
+    const currentProject = projectContext.getCurrentProject();
 
     if (phase === "chat") {
       // In chat phase, project responds using LLM
-      const projectAgent = createProjectAgent(projectContext);
+      const projectAgent = createProjectAgent();
 
       // Execute using the agent executor to generate an actual response
       const executionResult = await this.agentExecutor.execute(
@@ -353,12 +354,13 @@ export class ConversationRouter {
     const context = await this.conversationManager.compactHistory(conversationId, newPhase);
 
     // Publish phase transition event
-    const projectContext = getProjectContext();
+    const projectNsec = projectContext.getCurrentProjectNsec();
+    const projectSigner = new NDKPrivateKeySigner(projectNsec);
     await this.publisher.publishPhaseTransition(
       conversation,
       newPhase,
       context,
-      projectContext.projectSigner,
+      projectSigner,
       triggeringEvent
     );
 

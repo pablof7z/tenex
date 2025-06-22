@@ -1,13 +1,12 @@
 import { logger } from "@/utils/logger";
-import type { ToolInvocation } from "@/types/tool";
-import type { ToolPattern } from "./types";
+import type { ToolInvocation, ToolPattern } from "@/types/tool";
 
 export class ToolDetector {
   private patterns: ToolPattern[] = [
     // Shell command pattern: <execute>command</execute>
     {
       pattern: /<execute>(.*?)<\/execute>/gs,
-      parser: (match) => ({
+      parser: (match: RegExpMatchArray) => ({
         toolName: "shell",
         action: "execute",
         parameters: { command: match[1]?.trim() || "" },
@@ -18,7 +17,7 @@ export class ToolDetector {
     // File read pattern: <read>filepath</read>
     {
       pattern: /<read>(.*?)<\/read>/gs,
-      parser: (match) => ({
+      parser: (match: RegExpMatchArray) => ({
         toolName: "file",
         action: "read",
         parameters: { path: match[1]?.trim() || "" },
@@ -29,7 +28,7 @@ export class ToolDetector {
     // File write pattern: <write file="path">content</write>
     {
       pattern: /<write\s+file="([^"]+)">(.*?)<\/write>/gs,
-      parser: (match) => ({
+      parser: (match: RegExpMatchArray) => ({
         toolName: "file",
         action: "write",
         parameters: {
@@ -43,7 +42,7 @@ export class ToolDetector {
     // File edit pattern: <edit file="path" from="old" to="new"/>
     {
       pattern: /<edit\s+file="([^"]+)"\s+from="([^"]*)"\s+to="([^"]*)"\/>/gs,
-      parser: (match) => ({
+      parser: (match: RegExpMatchArray) => ({
         toolName: "file",
         action: "edit",
         parameters: {
@@ -58,7 +57,7 @@ export class ToolDetector {
     // Claude Code pattern: <claude_code mode="run|plan">prompt</claude_code>
     {
       pattern: /<claude_code(?:\s+mode="(run|plan)")?>([^<]*)<\/claude_code>/gs,
-      parser: (match) => ({
+      parser: (match: RegExpMatchArray) => ({
         toolName: "claude_code",
         action: "execute",
         parameters: {

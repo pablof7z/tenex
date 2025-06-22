@@ -1,15 +1,13 @@
-import type { ProjectContext } from "@/runtime";
+import { projectContext } from "@/services";
 import type { Conversation, Phase } from "@/types/conversation";
 import type { LLMMetadata } from "@/types/nostr";
 import type NDK from "@nostr-dev-kit/ndk";
-import type { NDKEvent, NDKPrivateKeySigner, NDKTag } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 
 export class ConversationPublisher {
-  constructor(
-    private projectContext: ProjectContext,
-    private ndk: NDK
-  ) {}
+  constructor(private ndk: NDK) {}
 
   async publishAgentResponse(
     eventToReply: NDKEvent,
@@ -37,7 +35,8 @@ export class ConversationPublisher {
     });
 
     // Tag the project
-    reply.tag(this.projectContext.projectEvent);
+    const project = projectContext.getCurrentProject();
+    reply.tag(project);
 
     // Add LLM metadata if present
     if (llmMetadata) {
@@ -85,7 +84,8 @@ export class ConversationPublisher {
     const event = triggeringEvent.reply();
 
     // Tag the project
-    event.tag(this.projectContext.projectEvent);
+    const project = projectContext.getCurrentProject();
+    event.tag(project);
 
     // Phase transition tags
     event.tag(["phase-transition", `${conversation.phase}-to-${newPhase}`]);
@@ -124,7 +124,8 @@ export class ConversationPublisher {
     reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
 
     // Tag the project
-    reply.tag(this.projectContext.projectEvent);
+    const project = projectContext.getCurrentProject();
+    reply.tag(project);
 
     // Add any custom metadata tags
     if (metadata) {
@@ -136,7 +137,9 @@ export class ConversationPublisher {
     reply.content = content;
 
     // Sign with project signer
-    await reply.sign(this.projectContext.projectSigner);
+    const projectNsec = projectContext.getCurrentProjectNsec();
+    const projectSigner = new NDKPrivateKeySigner(projectNsec);
+    await reply.sign(projectSigner);
 
     await reply.publish();
 

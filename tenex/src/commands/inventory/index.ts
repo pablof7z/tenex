@@ -1,7 +1,6 @@
 import * as path from "node:path";
-import { ProjectLoader } from "@/commands/run/ProjectLoader";
-import { getNDK } from "@/nostr/ndkClient";
-import { getProjectContext, initializeProjectContext } from "@/runtime";
+import { projectContext } from "@/services";
+import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { generateInventory, updateInventory } from "@/utils/inventory";
 import { logger } from "@/utils/logger";
 import { Command } from "commander";
@@ -20,26 +19,12 @@ inventoryCommand
     try {
       const projectPath = options.path || process.cwd();
 
-      // Initialize runtime
-      const projectLoader = new ProjectLoader();
-      const projectInfo = await projectLoader.loadProject(projectPath);
-      initializeProjectContext({
-        projectEvent: projectInfo.projectEvent,
-        projectSigner: projectInfo.projectSigner,
-        agents: projectInfo.agents,
-        projectPath: projectInfo.projectPath,
-        title: projectInfo.title,
-        repository: projectInfo.repository,
-      });
-      const projectContext = getProjectContext();
+      // Initialize project context
+      await ensureProjectInitialized(projectPath);
 
       logger.info("Generating project inventory", { projectPath });
 
-      await generateInventory(
-        projectPath,
-        projectContext.projectSigner,
-        "manual-inventory-generation"
-      );
+      await generateInventory(projectPath);
 
       console.log("\nInventory generation started with Claude Code.");
       console.log("Claude will analyze your project and create a comprehensive inventory.");
@@ -58,27 +43,12 @@ inventoryCommand
     try {
       const projectPath = options.path || process.cwd();
 
-      // Initialize runtime
-      const projectLoader = new ProjectLoader();
-      const projectInfo = await projectLoader.loadProject(projectPath);
-      initializeProjectContext({
-        projectEvent: projectInfo.projectEvent,
-        projectSigner: projectInfo.projectSigner,
-        agents: projectInfo.agents,
-        projectPath: projectInfo.projectPath,
-        title: projectInfo.title,
-        repository: projectInfo.repository,
-      });
-      const projectContext = getProjectContext();
+      // Initialize project context
+      await ensureProjectInitialized(projectPath);
 
       logger.info("Updating inventory for files", { files });
 
-      await updateInventory(
-        projectPath,
-        files,
-        projectContext.projectSigner,
-        "manual-inventory-update"
-      );
+      await updateInventory(projectPath, files);
 
       console.log("\nInventory update started with Claude Code.");
       console.log(`Claude will update the inventory for ${files.length} file(s).`);

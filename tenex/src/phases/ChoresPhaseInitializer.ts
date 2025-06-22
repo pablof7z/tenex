@@ -1,11 +1,13 @@
 import type { ConversationState } from "@/conversations/types";
 import { getNDK } from "@/nostr/ndkClient";
-import { getProjectContext } from "@/runtime";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { projectContext } from "@/services";
 import { updateInventory } from "@/utils/inventory";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { logger } from "@/utils/logger";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
+import { handlePhaseError } from "./utils";
 
 /**
  * Chores Phase Initializer
@@ -27,9 +29,10 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const projectContext = getProjectContext();
+      const project = projectContext.getCurrentProject();
+      const projectNsec = projectContext.getCurrentProjectNsec();
+      const signer = new NDKPrivateKeySigner(projectNsec);
       const ndk = getNDK();
-      const signer = projectContext.projectSigner;
 
       // Get the list of changed files from the conversation metadata
       const changedFiles = this.extractChangedFiles(conversation);
@@ -53,7 +56,7 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
       });
 
       try {
-        await updateInventory(projectContext.projectPath, changedFiles, signer, conversation.id);
+        await updateInventory(process.cwd(), changedFiles);
 
         logger.info("[CHORES Phase] Inventory update started with Claude Code");
 
@@ -81,11 +84,7 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
         };
       }
     } catch (error) {
-      logger.error("[CHORES Phase] Failed to initialize chores phase", { error });
-      return {
-        success: false,
-        message: `Chores phase initialization failed: ${error}`,
-      };
+      return handlePhaseError("Chores", error);
     }
   }
 
@@ -144,7 +143,7 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
       while (true) {
         match = pattern.exec(content);
         if (match === null) break;
-        
+
         const filePath = match[1];
         // Filter out obvious non-file paths
         if (filePath && !filePath.includes("http") && !filePath.includes("@")) {

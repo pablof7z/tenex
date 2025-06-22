@@ -1,41 +1,36 @@
-import type { Agent, ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@/utils/logger"; 
+import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
 import chalk from "chalk";
+import { projectContext } from "@/services";
+import type { LoadedAgent } from "@/services/ProjectContext";
 
 export class ProjectDisplay {
-  async displayProjectInfo(projectInfo: ProjectRuntimeInfo): Promise<void> {
-    this.displayBasicInfo(projectInfo);
-    await this.displayAgentConfigurations(
-      projectInfo.projectEvent,
-      projectInfo.projectPath,
-      projectInfo.agents
-    );
+  async displayProjectInfo(projectPath: string): Promise<void> {
+    this.displayBasicInfo(projectPath);
+    await this.displayAgentConfigurations();
     // Note: Documentation display moved to after subscription EOSE
     logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
   }
 
-  private displayBasicInfo(projectInfo: ProjectRuntimeInfo): void {
+  private displayBasicInfo(projectPath: string): void {
+    const project = projectContext.getCurrentProject();
+    const titleTag = project.tagValue("title") || "Untitled Project";
+    const repoTag = project.tagValue("repo") || "No repository";
+
     logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     logInfo(chalk.cyan("📦 Project Information"));
     logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    logInfo(chalk.gray("Title:      ") + chalk.white(projectInfo.title));
-    logInfo(chalk.gray("Repository: ") + chalk.white(projectInfo.repository));
-    logInfo(chalk.gray("Path:       ") + chalk.white(projectInfo.projectPath));
-    if (projectInfo.projectEvent.id) {
-      logInfo(
-        chalk.gray("Event ID:   ") +
-          chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`)
-      );
+    logInfo(chalk.gray("Title:      ") + chalk.white(titleTag));
+    logInfo(chalk.gray("Repository: ") + chalk.white(repoTag));
+    logInfo(chalk.gray("Path:       ") + chalk.white(projectPath));
+    if (project.id) {
+      logInfo(chalk.gray("Event ID:   ") + chalk.gray(`${project.id.substring(0, 16)}...`));
     }
   }
 
-  private async displayAgentConfigurations(
-    _projectEvent: NDKEvent,
-    _projectPath: string,
-    agents: Map<string, Agent>
-  ): Promise<void> {
+  private async displayAgentConfigurations(): Promise<void> {
+    const agents = projectContext.getAllAgents();
     if (agents.size === 0) {
       logInfo(chalk.yellow("No agent configurations found for this project."));
       return;
@@ -46,11 +41,13 @@ export class ProjectDisplay {
     logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
     for (const [, agent] of agents) {
-      this.displayAgent(agent.eventId, agents);
+      if (agent.eventId) {
+        this.displayAgent(agent.eventId, agents);
+      }
     }
   }
 
-  private displayAgent(eventId: string, agents: Map<string, Agent>): void {
+  private displayAgent(eventId: string, agents: Map<string, LoadedAgent>): void {
     // Find agent by eventId
     const agentEntry = Array.from(agents.entries()).find(([, agent]) => agent.eventId === eventId);
 
@@ -63,7 +60,7 @@ export class ProjectDisplay {
 
     // Display agent information with instance pubkey
     logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
-    logInfo(chalk.gray("Description: ") + chalk.white(agent.description));
+    logInfo(chalk.gray("Expertise:   ") + chalk.white(agent.expertise));
     if (agent.role) {
       logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
     }

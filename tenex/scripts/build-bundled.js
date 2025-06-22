@@ -2,17 +2,17 @@
 
 /**
  * build-bundled.js - Creates a bundled build of TENEX CLI for npm publishing
- * 
+ *
  * This is the primary build script used for creating the npm package.
  * It bundles all workspace dependencies (@tenex/*) into a single output file
  * while keeping external npm dependencies as runtime requirements.
- * 
+ *
  * Key features:
  * - Bundles all @tenex/* workspace packages into the output
  * - Keeps external npm dependencies as external (not bundled)
  * - Removes workspace dependencies from the published package.json
  * - Creates a standalone package that doesn't require workspace setup
- * 
+ *
  * Usage: bun scripts/build-bundled.js (or npm run build)
  */
 

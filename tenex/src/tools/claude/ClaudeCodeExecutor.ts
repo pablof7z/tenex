@@ -23,12 +23,12 @@ export interface ClaudeCodeResult {
 
 /**
  * ClaudeCodeExecutor - Responsible ONLY for spawning and managing the Claude Code process
- * 
+ *
  * Single Responsibility: Execute Claude Code CLI and stream parsed messages to callbacks
  * - Does NOT publish Nostr events
  * - Does NOT handle business logic
  * - Does NOT decide what to do with messages
- * 
+ *
  * The caller decides what to do with the messages via callbacks
  */
 export class ClaudeCodeExecutor {
@@ -54,7 +54,7 @@ export class ClaudeCodeExecutor {
         "--output-format",
         "stream-json",
         "--verbose",
-        this.options.prompt
+        this.options.prompt,
       ];
 
       logger.info("Spawning Claude Code process", {
@@ -76,7 +76,7 @@ export class ClaudeCodeExecutor {
       // Handle stdout - parse JSONL messages
       this.process.stdout?.on("data", (chunk: string) => {
         this.stdout += chunk;
-        
+
         // Parse lines and fire callbacks
         this.parser.parseLines(chunk);
       });

@@ -1,9 +1,11 @@
 import type { ConversationState } from "@/conversations/types";
-import { getProjectContext } from "@/runtime";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { projectContext } from "@/services";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { logger } from "@/utils/logger";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
+import { handlePhaseError } from "./utils";
 
 /**
  * Chat Phase Initializer
@@ -25,7 +27,7 @@ export class ChatPhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const projectContext = getProjectContext();
+      const project = projectContext.getCurrentProject();
 
       // In chat phase, the project responds directly
       // No specific agent is needed yet
@@ -33,17 +35,13 @@ export class ChatPhaseInitializer implements PhaseInitializer {
         success: true,
         // Don't return a message - let the ConversationRouter handle the actual response
         metadata: {
-          projectPubkey: projectContext.projectSigner.pubkey,
+          projectPubkey: new NDKPrivateKeySigner(projectContext.getCurrentProjectNsec()).pubkey,
           availableAgents: availableAgents.length,
           phase: "chat",
         },
       };
     } catch (error) {
-      logger.error("[CHAT Phase] Failed to initialize chat phase", { error });
-      return {
-        success: false,
-        message: `Chat phase initialization failed: ${error}`,
-      };
+      return handlePhaseError("Chat", error);
     }
   }
 }

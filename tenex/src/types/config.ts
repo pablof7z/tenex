@@ -12,7 +12,7 @@ import { z } from "zod";
 export interface TenexConfig {
   // Global fields
   whitelistedPubkeys?: string[];
-  
+
   // Project fields (optional for global config)
   title?: string;
   description?: string;
@@ -37,9 +37,11 @@ export const TenexConfigSchema = z.object({
   hashtags: z.array(z.string()).optional(),
   createdAt: z.number().optional(),
   updatedAt: z.number().optional(),
-  paths: z.object({
-    inventory: z.string().optional(),
-  }).optional(),
+  paths: z
+    .object({
+      inventory: z.string().optional(),
+    })
+    .optional(),
 });
 
 // =====================================================================================
@@ -54,11 +56,13 @@ export interface TenexAgents {
   };
 }
 
-export const TenexAgentsSchema = z.record(z.object({
-  nsec: z.string(),
-  file: z.string(),
-  eventId: z.string().optional(),
-}));
+export const TenexAgentsSchema = z.record(
+  z.object({
+    nsec: z.string(),
+    file: z.string(),
+    eventId: z.string().optional(),
+  })
+);
 
 // =====================================================================================
 // LLM SCHEMA (llms.json)
@@ -89,19 +93,23 @@ export interface TenexLLMs {
 }
 
 export const TenexLLMsSchema = z.object({
-  configurations: z.record(z.object({
-    provider: z.string(),
-    model: z.string(),
-    temperature: z.number().optional(),
-    maxTokens: z.number().optional(),
-    enableCaching: z.boolean().optional(),
-  })),
+  configurations: z.record(
+    z.object({
+      provider: z.string(),
+      model: z.string(),
+      temperature: z.number().optional(),
+      maxTokens: z.number().optional(),
+      enableCaching: z.boolean().optional(),
+    })
+  ),
   defaults: z.record(z.string()).optional().default({}),
-  credentials: z.record(z.object({
-    apiKey: z.string().optional(),
-    baseUrl: z.string().optional(),
-    headers: z.record(z.string()).optional(),
-  })),
+  credentials: z.record(
+    z.object({
+      apiKey: z.string().optional(),
+      baseUrl: z.string().optional(),
+      headers: z.record(z.string()).optional(),
+    })
+  ),
 });
 
 // =====================================================================================
@@ -118,7 +126,7 @@ export interface LoadedConfig {
 // HELPER TYPES
 // =====================================================================================
 
-export type ConfigFile = 'config.json' | 'agents.json' | 'llms.json';
+export type ConfigFile = "config.json" | "agents.json" | "llms.json";
 
 export interface ConfigPaths {
   global: string;

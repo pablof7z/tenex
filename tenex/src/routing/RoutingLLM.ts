@@ -25,10 +25,6 @@ import type {
 } from "./types";
 
 export class RoutingLLM {
-  private cachedInventory: string | null = null;
-  private inventoryCacheTime = 0;
-  private readonly INVENTORY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
   constructor(
     private llmService: LLMService,
     private configName = "default",
@@ -50,17 +46,11 @@ export class RoutingLLM {
   }
 
   /**
-   * Get project inventory content (cached)
+   * Get project inventory content
    */
   private async getProjectInventory(): Promise<string | null> {
     if (!this.projectPath) {
       return null;
-    }
-
-    // Check cache
-    const now = Date.now();
-    if (this.cachedInventory && now - this.inventoryCacheTime < this.INVENTORY_CACHE_DURATION) {
-      return this.cachedInventory;
     }
 
     try {
@@ -71,9 +61,6 @@ export class RoutingLLM {
 
       // Try to read inventory file
       const inventory = await fs.readFile(fullPath, "utf-8");
-
-      this.cachedInventory = inventory;
-      this.inventoryCacheTime = now;
       logger.debug("Loaded project inventory for routing");
 
       return inventory;
@@ -357,7 +344,12 @@ export class RoutingLLM {
 
   private parseRoutingDecision(response: string, availableAgents: Agent[]): RoutingDecision {
     try {
-      const parsed = extractJSON<{ phase: string; reasoning?: string; confidence?: number; metadata?: Record<string, unknown> }>(response);
+      const parsed = extractJSON<{
+        phase: string;
+        reasoning?: string;
+        confidence?: number;
+        metadata?: Record<string, unknown>;
+      }>(response);
       if (!parsed) {
         throw new Error("Failed to extract JSON from response");
       }

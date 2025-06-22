@@ -1,126 +1,69 @@
-import path from "node:path";
-import { AgentRegistry } from "@/agents";
-import type { ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { getEventKindName } from "@/commands/run/constants";
 import { ConversationManager } from "@/conversations";
-import { MultiLLMService } from "@/core/llm/MultiLLMService";
+import { LLMServiceManager } from "@/core/llm/LLMServiceManager";
 import type { LLMService } from "@/core/llm/types";
 import { ConversationPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
-import { initializeProjectContext } from "@/runtime";
-import type { Agent, AgentConfig } from "@/types/agent";
 import { formatError } from "@/utils/errors";
-import { NDKArticle, type NDKEvent } from "@nostr-dev-kit/ndk";
-import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
-import { logger } from "@/utils/logger"; 
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
-import { projectContext, configService } from "@/services";
+import { configService, projectContext } from "@/services";
 import { EVENT_KINDS } from "@/types/llm";
 import type { TenexLLMs } from "@/types/config";
 import chalk from "chalk";
 
 export class EventHandler {
-  private agentConfigs: Map<string, AgentConfig>;
-  private agentRegistry: AgentRegistry;
   private conversationManager: ConversationManager;
-  private llmSettings: TenexLLMs; // Will be loaded from ProjectContext
+  private llmSettings!: TenexLLMs;
   private llmService!: LLMService;
   private routingLLM!: RoutingLLM;
   private conversationRouter!: ConversationRouter;
   private conversationPublisher!: ConversationPublisher;
 
-  constructor(private projectInfo: ProjectRuntimeInfo) {
-    this.agentConfigs = new Map();
-    this.agentRegistry = new AgentRegistry(projectInfo.projectPath);
-    this.conversationManager = new ConversationManager(projectInfo.projectPath);
-    // Will load LLM settings from configurationService
-    // Services will be initialized in initialize()
+  constructor(private projectPath: string) {
+    this.conversationManager = new ConversationManager(projectPath);
   }
 
   async initialize(): Promise<void> {
-    // Get agents from project loader
-    const convertedAgents = new Map<string, Agent>();
-    for (const [name, projectAgent] of this.projectInfo.agents) {
-      const agent: Agent = {
-        name: projectAgent.name,
-        pubkey: projectAgent.pubkey,
-        signer: projectAgent.signer,
-        role: projectAgent.role,
-        expertise: projectAgent.expertise,
-        instructions: projectAgent.instructions,
-        llmConfig: "default",
-        tools: [],
-        eventId: projectAgent.eventId,
-      };
-      convertedAgents.set(name, agent);
-    }
+    // Initialize conversation manager
+    await this.conversationManager.initialize();
 
-    // Initialize project context globally
-    initializeProjectContext({
-      projectEvent: this.projectInfo.projectEvent,
-      projectSigner: this.projectInfo.projectSigner,
-      agents: convertedAgents,
-      projectPath: this.projectInfo.projectPath,
-      title: this.projectInfo.title,
-      repository: this.projectInfo.repository,
-    });
-
-    // Initialize services
     // Load LLM configuration from ConfigService
-    const { llms } = await configService.loadConfig(this.projectInfo.projectPath);
+    const { llms } = await configService.loadConfig(this.projectPath);
     this.llmSettings = llms;
 
-    // Get default configuration
-    const defaultConfigName = llms.defaults?.agents || Object.keys(llms.configurations)[0];
-    const llmConfig = llms.configurations[defaultConfigName];
-    if (!llmConfig) {
-      throw new Error("No LLM configuration found");
-    }
-
-    const credentials = llms.credentials[llmConfig.provider];
-    if (!credentials) {
-      throw new Error(`No credentials found for provider: ${llmConfig.provider}`);
-    }
-
-    this.llmService = new MultiLLMService({
-      provider: llmConfig.provider as "anthropic" | "openai" | "google" | "ollama" | "mistral" | "groq" | "openrouter",
-      model: llmConfig.model,
-      apiKey: credentials.apiKey,
-      baseUrl: credentials.baseUrl,
-      defaultOptions: {
-        temperature: llmConfig.temperature,
-        maxTokens: llmConfig.maxTokens,
-      },
-    });
-
-    await this.agentRegistry.loadFromProject();
-    await this.conversationManager.initialize();
+    // Use LLMServiceManager to create the LLM service
+    this.llmService = await LLMServiceManager.create(this.projectPath);
 
     // Initialize routing system
     let routingConfig = "default";
     try {
       routingConfig =
-        this.llmSettings.defaults?.routing ||
-        this.llmSettings.defaults?.agents ||
-        "default";
+        this.llmSettings.defaults?.routing || this.llmSettings.defaults?.agents || "default";
     } catch {
       routingConfig = "default";
     }
-    this.routingLLM = new RoutingLLM(this.llmService, routingConfig, this.projectInfo.projectPath);
+    this.routingLLM = new RoutingLLM(this.llmService, routingConfig, this.projectPath);
     logInfo(`Initialized RoutingLLM with configuration: ${routingConfig}`);
 
-    // Get the initialized project context
-    const projectContext = {
-      projectEvent: this.projectInfo.projectEvent,
-      projectSigner: this.projectInfo.projectSigner,
-      agents: convertedAgents,
-      projectPath: this.projectInfo.projectPath,
-      title: this.projectInfo.title,
-      repository: this.projectInfo.repository,
+    // Get project and agents from ProjectContext
+    const project = projectContext.getCurrentProject();
+    const projectNsec = projectContext.getCurrentProjectNsec();
+    const agents = projectContext.getAllAgents();
+
+    // Create project context for ConversationPublisher
+    const projectInfo = {
+      projectEvent: project,
+      projectSigner: { pubkey: project.pubkey, nsec: projectNsec },
+      agents: agents,
+      projectPath: this.projectPath,
+      title: project.tagValue("title") || "Untitled Project",
+      repository: project.tagValue("repo") || "",
     };
 
-    this.conversationPublisher = new ConversationPublisher(projectContext, getNDK());
+    this.conversationPublisher = new ConversationPublisher(getNDK());
     this.conversationRouter = new ConversationRouter(
       this.conversationManager,
       this.routingLLM,
@@ -128,36 +71,12 @@ export class EventHandler {
       this.llmService
     );
 
-    // Load agent configurations
-    await this.loadAgentConfigs();
-
-    // Create the new agent system
-    if (!this.projectInfo.projectEvent.id) {
+    // Verify project event ID
+    if (!project.id) {
       throw new Error("Project event ID is required but was not found");
     }
 
     logInfo("EventHandler initialized with conversation routing support");
-  }
-
-  private async loadAgentConfigs(): Promise<void> {
-    // Register agents from ProjectLoader into the AgentRegistry
-    for (const [name, agent] of this.projectInfo.agents) {
-      const config: AgentConfig = {
-        name: agent.name,
-        role: agent.role,
-        expertise: agent.role, // Use role as expertise for now
-        instructions: agent.instructions,
-        nsec: agent.signer.nsec,
-        eventId: agent.eventId,
-        pubkey: agent.pubkey,
-        tools: [],
-      };
-
-      this.agentConfigs.set(name, config);
-
-      // Ensure agent is in registry
-      await this.agentRegistry.ensureAgent(name, config);
-    }
   }
 
   async handleEvent(event: NDKEvent): Promise<void> {
@@ -227,9 +146,11 @@ export class EventHandler {
     // Check if this message is directed to the system (project or agents)
     // If it has p-tags that don't belong to our system, skip routing
     if (pTags.length > 0) {
+      const project = projectContext.getCurrentProject();
+      const agents = projectContext.getAllAgents();
       const systemPubkeys = new Set([
-        this.projectInfo.projectSigner.pubkey,
-        ...Array.from(this.projectInfo.agents.values()).map((a) => a.pubkey),
+        project.pubkey,
+        ...Array.from(agents.values()).map((a) => a.pubkey),
       ]);
 
       const isDirectedToSystem = mentionedPubkeys.some((pubkey) => systemPubkeys.has(pubkey));
@@ -250,8 +171,8 @@ export class EventHandler {
     if (!hasEventTag) {
       // This is a new conversation - route through the routing LLM
       try {
-        // Get all available agents
-        const availableAgents = await this.agentRegistry.getAllAgents();
+        // Get all available agents from project context
+        const availableAgents = Array.from(projectContext.getAllAgents().values());
 
         // Route the new conversation through the routing LLM
         await this.conversationRouter.routeNewConversation(event, availableAgents);
@@ -263,7 +184,7 @@ export class EventHandler {
     } else {
       // This is a reply within an existing conversation
       try {
-        const availableAgents = await this.agentRegistry.getAllAgents();
+        const availableAgents = Array.from(projectContext.getAllAgents().values());
         await this.conversationRouter.routeReply(event, availableAgents);
         logInfo(chalk.green("✅ Reply routed successfully"));
       } catch (error) {
@@ -308,135 +229,21 @@ export class EventHandler {
   }
 
   private async handleProjectEvent(event: NDKEvent): Promise<void> {
-    this.logProjectUpdate(event);
-    const agentEventIds = this.extractAgentEventIds(event);
-
-    if (agentEventIds.length > 0) {
-      logInfo(`Processing ${agentEventIds.length} agent(s)`);
-      await this.fetchAndSaveAgents(agentEventIds);
-    }
-
-    // Update project configuration if details have changed
-    const newTitle = event.tags.find((tag) => tag[0] === "title")?.[1];
-    const newDescription = event.content;
-    const newRepo = event.tags.find((tag) => tag[0] === "repo")?.[1];
-
-    let configUpdated = false;
-    const configPath = path.join(this.projectInfo.projectPath, "config.json");
-
-    try {
-      const configContent = await readFile(configPath, "utf-8");
-      const configData = JSON.parse(configContent);
-      const config = { ...configData };
-
-      if (newTitle && newTitle !== config.title) {
-        config.title = newTitle;
-        this.projectInfo.title = newTitle;
-        configUpdated = true;
-      }
-
-      if (newDescription && newDescription !== config.description) {
-        config.description = newDescription;
-        configUpdated = true;
-      }
-
-      if (newRepo && newRepo !== config.repository) {
-        config.repository = newRepo;
-        this.projectInfo.repository = newRepo;
-        configUpdated = true;
-      }
-
-      if (configUpdated) {
-        await writeJsonFile(configPath, config);
-        logInfo(chalk.green("✅ Updated project configuration"));
-
-        // Project context update would happen here if needed
-      }
-    } catch (error) {
-      logInfo(chalk.yellow(`⚠️  Could not update config.json: ${formatError(error)}`));
-    }
-  }
-
-  private logProjectUpdate(event: NDKEvent): void {
     const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled";
     logInfo(`📋 Project event update received: ${title}`);
-  }
 
-  private extractAgentEventIds(event: NDKEvent): string[] {
-    return event.tags
+    // Log what changed for informational purposes
+    const agentEventIds = event.tags
       .filter((tag) => tag[0] === "agent" && tag[1])
-      .map((tag) => tag[1])
-      .filter((id): id is string => Boolean(id));
-  }
+      .map((tag) => tag[1]);
 
-  private async fetchAndSaveAgents(agentEventIds: string[]): Promise<void> {
-    const agentsDir = path.join(this.projectInfo.projectPath, ".tenex", "agents");
-
-    // Ensure agents directory exists
-    await ensureDirectory(agentsDir);
-
-    for (const agentEventId of agentEventIds) {
-      const agentConfigPath = path.join(agentsDir, `${agentEventId}.json`);
-
-      // Check if we already have this agent definition
-      if (await fileExists(agentConfigPath)) {
-        continue; // Already have it
-      }
-
-      try {
-        const ndk = getNDK();
-        const agentEvent = await ndk.fetchEvent(agentEventId);
-
-        if (agentEvent && agentEvent.kind === EVENT_KINDS.AGENT_CONFIG) {
-          const agentName = agentEvent.tagValue("title") || "unnamed";
-          const agentConfig = {
-            eventId: agentEventId,
-            name: agentName,
-            description: agentEvent.tagValue("description"),
-            role: agentEvent.tagValue("role"),
-            instructions: agentEvent.tagValue("instructions"),
-            version: (() => {
-              const versionStr = agentEvent.tagValue("version");
-              if (!versionStr) return 1;
-              const parsed = Number.parseInt(versionStr, 10);
-              return Number.isNaN(parsed) ? 1 : parsed;
-            })(),
-            publishedAt: agentEvent.created_at,
-            publisher: agentEvent.pubkey,
-          };
-
-          await writeJsonFile(agentConfigPath, agentConfig);
-          logInfo(chalk.green(`✅ Saved new agent definition: ${agentName}`));
-
-          // Ensure this agent has an nsec in agents.json
-          await this.ensureAgentNsec(agentName, agentEventId);
-        }
-      } catch (err) {
-        const errorMessage = formatError(err);
-        logInfo(chalk.red(`Failed to fetch agent ${agentEventId}: ${errorMessage}`));
-      }
+    if (agentEventIds.length > 0) {
+      logInfo(`Project references ${agentEventIds.length} agent(s)`);
     }
-  }
 
-  private async ensureAgentNsec(agentName: string, agentEventId: string): Promise<void> {
-    try {
-      const config: AgentConfig = {
-        name: agentName,
-        role: "agent", // Default role
-        expertise: "agent", // Default expertise
-        instructions: "", // Will be populated from agent event
-        nsec: "", // Will be generated by ensureAgent
-        eventId: agentEventId,
-        pubkey: "", // Will be generated by ensureAgent
-        tools: [],
-      };
-
-      await this.agentRegistry.ensureAgent(agentName, config);
-      logInfo(chalk.green(`✅ Ensured agent exists: ${agentName}`));
-    } catch (err) {
-      const errorMessage = formatError(err);
-      logInfo(chalk.red(`Failed to create agent ${agentName}: ${errorMessage}`));
-    }
+    // Note: Configuration updates should be handled by a separate service
+    // that monitors project events and updates the local state accordingly.
+    // EventHandler should only process events, not modify local files.
   }
 
   private async handleNewConversation(event: NDKEvent): Promise<void> {
@@ -445,8 +252,8 @@ export class EventHandler {
     logInfo(chalk.gray("Content: ") + chalk.white(event.content));
 
     try {
-      // Get all available agents from the registry
-      const availableAgents = await this.agentRegistry.getAllAgents();
+      // Get all available agents from project context
+      const availableAgents = Array.from(projectContext.getAllAgents().values());
 
       // Route the new conversation through the routing system
       await this.conversationRouter.routeNewConversation(event, availableAgents);

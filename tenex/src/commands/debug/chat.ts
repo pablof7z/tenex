@@ -3,7 +3,6 @@ import { AgentRegistry } from "@/agents/AgentRegistry";
 import { AgentExecutor } from "@/agents/execution/AgentExecutor";
 import type { AgentExecutionContext } from "@/agents/execution/types";
 import { PromptBuilder } from "@/prompts";
-import { getProjectContext as getRuntimeContext } from "@/runtime";
 import { inventoryExists } from "@/utils/inventory";
 import { ConversationManager } from "@/conversations/ConversationManager";
 import type { ConversationState } from "@/conversations/types";
@@ -11,14 +10,14 @@ import { ConversationPublisher } from "@/nostr/ConversationPublisher";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { MultiLLMService } from "@/core/llm/MultiLLMService";
 import type { LLMService } from "@/core/llm/types";
-import { getProjectContext } from "@/runtime";
 import { projectContext, configService } from "@/services";
+import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import path from "node:path";
 import type { Agent } from "@/types/agent";
 import type { Phase } from "@/types/conversation";
 import { formatError } from "@/utils/errors";
 import { logDebug, logError, logInfo } from "@/utils/logger";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { v4 as uuidv4 } from "uuid";
 
@@ -43,23 +42,19 @@ export async function runDebugChat(
 
     logInfo("Starting debug chat mode...");
 
-    // Load LLM configuration from ProjectContext if available, otherwise from config files
-    let llmSettings;
-    if (projectContext.isInitialized()) {
-      const { llms } = await configService.loadConfig(projectPath);
-      llmSettings = llms;
-    } else {
-      const { llms } = await configService.loadConfig(projectPath);
-      llmSettings = llms;
-    }
-    
+    // Initialize project context if needed
+    await ensureProjectInitialized(projectPath);
+
+    // Load LLM configuration
+    const { llms: llmSettings } = await configService.loadConfig(projectPath);
+
     if (!llmSettings) {
       throw new Error("Failed to load LLM configuration");
     }
-    
+
     // Initialize LLM service instances based on configuration
     const llmInstances = new Map<string, MultiLLMService>();
-    
+
     // Create MultiLLMService instances for each configuration
     for (const [configName, config] of Object.entries(llmSettings.configurations)) {
       const credentials = llmSettings.credentials[config.provider];
@@ -67,9 +62,16 @@ export async function runDebugChat(
         logError(`Missing API key for provider ${config.provider} in config ${configName}`);
         continue;
       }
-      
+
       const llmInstance = new MultiLLMService({
-        provider: config.provider as "anthropic" | "openai" | "google" | "ollama" | "mistral" | "groq" | "openrouter",
+        provider: config.provider as
+          | "anthropic"
+          | "openai"
+          | "google"
+          | "ollama"
+          | "mistral"
+          | "groq"
+          | "openrouter",
         model: config.model,
         apiKey: credentials.apiKey,
         baseUrl: credentials.baseUrl,
@@ -80,38 +82,44 @@ export async function runDebugChat(
       });
       llmInstances.set(configName, llmInstance);
     }
-    
+
     // Create LLM service that routes to the correct instance
     const llmService: LLMService = {
       async complete(request) {
         // Determine which config to use
-        const configKey = typeof request === "string" ? request : 
-          (agent.llmConfig || llmSettings.defaults?.agents || "default");
-        
+        const configKey =
+          typeof request === "string"
+            ? request
+            : agent.llmConfig || llmSettings.defaults?.agents || "default";
+
         const llmInstance = llmInstances.get(configKey);
         if (!llmInstance) {
           throw new Error(`LLM configuration '${configKey}' not found`);
         }
-        
+
         return llmInstance.complete(request);
       },
-      
+
       async *stream(request) {
         // Determine which config to use
-        const configKey = typeof request === "string" ? request : 
-          (agent.llmConfig || llmSettings.defaults?.agents || "default");
-        
+        const configKey =
+          typeof request === "string"
+            ? request
+            : agent.llmConfig || llmSettings.defaults?.agents || "default";
+
         const llmInstance = llmInstances.get(configKey);
         if (!llmInstance) {
           throw new Error(`LLM configuration '${configKey}' not found`);
         }
-        
+
         yield* llmInstance.stream(request);
       },
     };
 
-    // Get project context
-    const projectCtx = await getProjectContext();
+    // Get project context and create signer
+    const project = projectContext.getCurrentProject();
+    const projectNsec = projectContext.getCurrentProjectNsec();
+    const projectSigner = new NDKPrivateKeySigner(projectNsec);
 
     // Load agent from registry or create default
     const agentRegistry = new AgentRegistry(projectPath);
@@ -125,14 +133,16 @@ export async function runDebugChat(
         throw new Error(`Agent '${initialAgentName}' not found`);
       }
       // Use the existing agent but potentially override llmConfig if --llm specified
-      agent = llmPresetOverride ? { ...existingAgent, llmConfig: llmPresetOverride } : existingAgent;
+      agent = llmPresetOverride
+        ? { ...existingAgent, llmConfig: llmPresetOverride }
+        : existingAgent;
     } else {
       // Create default debug agent
       agent = {
         name: "Debug Agent",
         role: "debug-agent",
-        pubkey: projectCtx.projectSigner.pubkey,
-        signer: projectCtx.projectSigner,
+        pubkey: projectSigner.pubkey,
+        signer: projectSigner,
         llmConfig: llmPresetOverride || llmSettings.defaults?.agents || "default",
         tools: [],
         instructions: "You are a debug agent for testing purposes.",
@@ -158,28 +168,29 @@ export async function runDebugChat(
     // Initialize NDK and ConversationPublisher for AgentExecutor
     await initNDK();
     const ndk = getNDK();
-    const conversationPublisher = new ConversationPublisher(projectCtx, ndk);
-    
+    const conversationPublisher = new ConversationPublisher(ndk);
+
     // Initialize AgentExecutor
     const agentExecutor = new AgentExecutor(llmService, conversationPublisher);
-    
+
     // Track messages separately for interactive mode
     const messages: Array<{ role: string; content: string }> = [];
 
     // Show system prompt if requested
     if (options.systemPrompt) {
-      const projectContext = getRuntimeContext();
+      const projectCtx = projectContext;
       let inventoryPrompt: string | undefined;
-      if (await inventoryExists(projectContext.projectPath)) {
-        inventoryPrompt = "## Project Inventory\n\nAn inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.";
+      if (await inventoryExists(projectPath)) {
+        inventoryPrompt =
+          "## Project Inventory\n\nAn inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.";
       }
 
       const systemPrompt = new PromptBuilder()
         .add("agent-system-prompt", {
           agent,
           phase: "chat" as Phase,
-          projectTitle: projectContext.title,
-          projectRepository: projectContext.repository,
+          projectTitle: project.tagValue("title") || "Untitled Project",
+          projectRepository: project.tagValue("repo") || undefined,
           inventoryPrompt,
         })
         .build();
@@ -192,7 +203,7 @@ export async function runDebugChat(
     // Handle single message mode
     if (options.message) {
       logDebug("Processing single message:", "general", "debug", options.message);
-      
+
       // Create execution context
       const context: AgentExecutionContext = {
         agent,
@@ -279,18 +290,18 @@ export async function runDebugChat(
       }
 
       if (input.toLowerCase() === "prompt") {
-        const projectContext = getRuntimeContext();
         let inventoryPrompt: string | undefined;
-        if (await inventoryExists(projectContext.projectPath)) {
-          inventoryPrompt = "## Project Inventory\n\nAn inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.";
+        if (await inventoryExists(projectPath)) {
+          inventoryPrompt =
+            "## Project Inventory\n\nAn inventory file exists for this project. To get detailed project structure and file information, please refer to the inventory file generated by Claude Code.";
         }
 
         const systemPrompt = new PromptBuilder()
           .add("agent-system-prompt", {
             agent,
             phase: "chat" as Phase,
-            projectTitle: projectContext.title,
-            projectRepository: projectContext.repository,
+            projectTitle: project.tagValue("title") || "Untitled Project",
+            projectRepository: project.tagValue("repo") || undefined,
             inventoryPrompt,
           })
           .build();
@@ -353,7 +364,9 @@ export async function runDebugChat(
             console.log(chalk.gray("\nTools executed:"));
             for (const toolResult of result.toolExecutions) {
               console.log(
-                chalk.gray(`  - ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`)
+                chalk.gray(
+                  `  - ${toolResult.toolName} ${toolResult.success ? "✓" : "✗"}${toolResult.error ? `: ${toolResult.error}` : ""}`
+                )
               );
             }
           }
@@ -379,4 +392,3 @@ export async function runDebugChat(
     process.exit(1);
   }
 }
-

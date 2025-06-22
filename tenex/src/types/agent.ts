@@ -23,17 +23,16 @@ export interface AgentContext {
   incomingEvent: NDKEvent; // The event we're responding to
 }
 
-
 export interface ToolCallArguments {
   // Common tool arguments
-  command?: string;      // For shell tools
-  path?: string;         // For file tools  
-  content?: string;      // For file write/edit
-  oldContent?: string;   // For file edit
-  newContent?: string;   // For file edit
-  mode?: string;         // For claude_code tool
-  prompt?: string;       // For claude_code tool
-  
+  command?: string; // For shell tools
+  path?: string; // For file tools
+  content?: string; // For file write/edit
+  oldContent?: string; // For file edit
+  newContent?: string; // For file edit
+  mode?: string; // For claude_code tool
+  prompt?: string; // For claude_code tool
+
   // Allow other tool arguments
   [key: string]: string | number | boolean | undefined;
 }
@@ -56,7 +55,6 @@ export interface ToolCall {
   args: ToolCallArguments;
   id?: string;
 }
-
 
 export interface AgentConfig {
   name: string;

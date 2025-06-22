@@ -1,8 +1,0 @@
-⚠️ Invalid routing decision {
-  reason: "Invalid phase transition from chat to execute",
-  decision: {
-    phase: "execute",
-    reasoning: "The user has provided clear and specific implementation requirements for creating a JavaScript test file with exact output and verification method.",
-    confidence: 0.95,
-  },
-}

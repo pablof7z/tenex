@@ -171,7 +171,12 @@ interface FullPromptArgs {
 export const fullPromptFragment: PromptFragment<FullPromptArgs> = {
   id: "full-prompt",
   priority: 100, // Last to execute
-  template: ({ conversationContent, phaseContext, constraints = [], agentType = "project assistant" }) => {
+  template: ({
+    conversationContent,
+    phaseContext,
+    constraints = [],
+    agentType = "project assistant",
+  }) => {
     return `${conversationContent}
 
 ${phaseContext}

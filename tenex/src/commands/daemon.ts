@@ -69,10 +69,9 @@ async function loadDaemonConfig(configPath?: string): Promise<TenexConfig> {
     if (configPath) {
       const { config } = await configService.loadConfig(path.dirname(configPath));
       return config;
-    } else {
+    }
       const { config } = await configService.loadConfig(); // No project path = global only
       return config;
-    }
   } catch (_error) {
     // Config doesn't exist yet
     return {};
