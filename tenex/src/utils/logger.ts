@@ -1,14 +1,34 @@
 import chalk from "chalk";
 
+/**
+ * TENEX Logging System
+ * 
+ * Environment Variables:
+ * - LOG_LEVEL: Sets default verbosity (silent|normal|verbose|debug)
+ * - TENEX_LOG: Enable specific modules with optional verbosity
+ *   Format: module1:level,module2:level
+ *   Example: TENEX_LOG=agent:debug,llm:verbose,tools
+ *   If no level specified, defaults to debug
+ * 
+ * Available modules:
+ * - agent: Agent execution and behavior
+ * - conversation: Conversation management  
+ * - llm: LLM interactions
+ * - nostr: Nostr protocol operations
+ * - tools: Tool execution
+ * - general: General/miscellaneous logging
+ * 
+ * Tracing (execution flow debugging) is only enabled for modules
+ * with verbose or debug verbosity levels.
+ */
+
 export type VerbosityLevel = "silent" | "normal" | "verbose" | "debug";
 
 export type LogModule =
   | "agent"
-  | "team"
   | "conversation"
   | "llm"
   | "nostr"
-  | "orchestration"
   | "tools"
   | "general";
 
@@ -54,9 +74,34 @@ export function parseModuleVerbosity(): ModuleVerbosityConfig {
       config.default = logLevel;
     }
 
-    // Parse module-specific verbosity from environment variables
+    // Parse TENEX_LOG environment variable
+    // Format: TENEX_LOG=module1:level,module2:level
+    // Example: TENEX_LOG=agent:debug,llm:verbose,tools:debug
+    // If no level specified, defaults to debug
+    // Example: TENEX_LOG=agent,llm,tools (all set to debug)
+    const tenexLog = process.env.TENEX_LOG;
+    if (tenexLog) {
+      const modules = tenexLog.split(',').map(s => s.trim());
+      for (const moduleSpec of modules) {
+        if (moduleSpec) {
+          const [moduleName, level] = moduleSpec.split(':');
+          if (moduleName) {
+            const moduleKey = moduleName.toLowerCase();
+            const verbosityLevel = (level as VerbosityLevel) || 'debug';
+            
+            if (verbosityLevels[verbosityLevel] !== undefined) {
+              if (!config.modules) {
+                config.modules = {};
+              }
+              config.modules[moduleKey] = verbosityLevel;
+            }
+          }
+        }
+      }
+    }
+
+    // Legacy support: Parse module-specific verbosity from old format
     // Format: LOG_MODULE_<MODULE>=<level>
-    // Example: LOG_MODULE_TEAM=debug LOG_MODULE_LLM=silent
     for (const key of Object.keys(process.env)) {
       const match = key.match(/^LOG_MODULE_(.+)$/);
       if (match?.[1]) {

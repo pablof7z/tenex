@@ -6,7 +6,7 @@ import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
 import { configService, projectContext } from "@/services";
 import type { TenexLLMs } from "@/services/config/types";
-import { logger } from "@/utils/logger";
+import { logInfo } from "@/utils/logger";
 
 export interface SystemComponents {
   conversationManager: ConversationManager;

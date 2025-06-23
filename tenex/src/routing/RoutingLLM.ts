@@ -205,9 +205,7 @@ export class RoutingLLM {
         phaseHistory: typeof conversation.metadata.phaseHistory === 'string' 
           ? conversation.metadata.phaseHistory 
           : "",
-        conversationSummary: typeof conversation.metadata.summary === 'string' 
-          ? conversation.metadata.summary 
-          : "",
+        conversationSummary: conversation.metadata.summary || "",
       };
 
       // First check if we should transition phases

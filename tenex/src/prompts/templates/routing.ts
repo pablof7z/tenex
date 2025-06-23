@@ -1,5 +1,6 @@
 import type { AgentSummary } from "@/routing/types";
 import { PromptBuilder } from "../core/PromptBuilder";
+import "../fragments/routing-prompts"; // Ensure fragments are registered
 
 export interface RoutingPromptArgs {
   message?: string;
@@ -14,33 +15,25 @@ export interface RoutingPromptArgs {
 export function buildNewConversationRoutingPrompt(args: RoutingPromptArgs): string {
   const builder = new PromptBuilder();
 
-  let promptBuilder = builder
-    .add("base-context", {
+  return builder
+    .add("routing-base-context", {
       content: "You are a routing system for a development assistant platform.",
     })
     .add("task-description", {
       content:
         "Analyze this user message and determine the appropriate phase and initial approach.",
-    });
-
-  if (args.projectContext || args.projectInventory) {
-    const enrichedContext = formatEnrichedProjectContext(
-      args.projectContext,
-      args.projectInventory
-    );
-    promptBuilder = promptBuilder.add("base-context", {
-      content: enrichedContext,
-    });
-  }
-
-  return promptBuilder
+    })
+    .add("enriched-project-context", {
+      projectContext: args.projectContext,
+      projectInventory: args.projectInventory,
+    }, (ctxArgs) => !!(ctxArgs.projectContext || ctxArgs.projectInventory))
     .add("phase-descriptions", {})
     .add("agent-list", {
       agents: args.agents || [],
       format: "simple",
     })
-    .add("user-context", {
-      content: `User message: "${args.message}"`,
+    .add("new-conversation-routing", {
+      message: args.message || "",
     })
     .add("json-response", {
       schema: `{
@@ -56,17 +49,17 @@ export function buildPhaseTransitionRoutingPrompt(args: RoutingPromptArgs): stri
   const builder = new PromptBuilder();
 
   return builder
-    .add("base-context", {
+    .add("routing-base-context", {
       content: "You are evaluating whether a conversation should transition to a new phase.",
     })
     .add("task-description", {
       content: "Analyze the conversation state and determine if a phase transition is needed.",
     })
     .add("phase-descriptions", {})
-    .add("user-context", {
-      content: `Current phase: ${args.currentPhase}
-Phase history: ${args.phaseHistory}
-Conversation summary: ${args.conversationSummary}`,
+    .add("phase-transition-context", {
+      currentPhase: args.currentPhase,
+      phaseHistory: args.phaseHistory,
+      conversationSummary: args.conversationSummary,
     })
     .add("json-response", {
       schema: `{
@@ -83,34 +76,26 @@ Conversation summary: ${args.conversationSummary}`,
 export function buildSelectAgentRoutingPrompt(args: RoutingPromptArgs): string {
   const builder = new PromptBuilder();
 
-  let promptBuilder = builder
-    .add("base-context", {
+  return builder
+    .add("routing-base-context", {
       content: "You are selecting the best agent for the current task.",
     })
     .add("task-description", {
       content:
         "Choose the most appropriate agent based on the conversation context and requirements.",
-    });
-
-  if (args.projectContext || args.projectInventory) {
-    const enrichedContext = formatEnrichedProjectContext(
-      args.projectContext,
-      args.projectInventory
-    );
-    promptBuilder = promptBuilder.add("base-context", {
-      content: enrichedContext,
-    });
-  }
-
-  return promptBuilder
+    })
+    .add("enriched-project-context", {
+      projectContext: args.projectContext,
+      projectInventory: args.projectInventory,
+    }, (ctxArgs) => !!(ctxArgs.projectContext || ctxArgs.projectInventory))
     .add("agent-list", {
       agents: args.agents || [],
       format: "detailed",
     })
-    .add("user-context", {
-      content: `Current phase: ${args.currentPhase}
-Message: "${args.message}"
-Conversation summary: ${args.conversationSummary}`,
+    .add("agent-selection-context", {
+      currentPhase: args.currentPhase,
+      message: args.message,
+      conversationSummary: args.conversationSummary,
     })
     .add("json-response", {
       schema: `{
@@ -126,33 +111,25 @@ Conversation summary: ${args.conversationSummary}`,
 export function buildFallbackRoutingPrompt(args: RoutingPromptArgs): string {
   const builder = new PromptBuilder();
 
-  let promptBuilder = builder
-    .add("base-context", {
+  return builder
+    .add("routing-base-context", {
       content:
         "You are performing fallback routing when the primary system couldn't make a decision.",
     })
     .add("task-description", {
       content: "Make the best possible routing decision with limited information.",
-    });
-
-  if (args.projectContext || args.projectInventory) {
-    const enrichedContext = formatEnrichedProjectContext(
-      args.projectContext,
-      args.projectInventory
-    );
-    promptBuilder = promptBuilder.add("base-context", {
-      content: enrichedContext,
-    });
-  }
-
-  return promptBuilder
+    })
+    .add("enriched-project-context", {
+      projectContext: args.projectContext,
+      projectInventory: args.projectInventory,
+    }, (ctxArgs) => !!(ctxArgs.projectContext || ctxArgs.projectInventory))
     .add("phase-descriptions", {})
     .add("agent-list", {
       agents: args.agents || [],
       format: "simple",
     })
-    .add("user-context", {
-      content: `User message: "${args.message}"`,
+    .add("new-conversation-routing", {
+      message: args.message || "",
     })
     .add("json-response", {
       schema: `{
@@ -164,24 +141,6 @@ export function buildFallbackRoutingPrompt(args: RoutingPromptArgs): string {
 }`,
     })
     .build();
-}
-
-function formatEnrichedProjectContext(basicContext?: string, inventory?: string): string {
-  const sections: string[] = [];
-
-  sections.push("## Project Context\n");
-
-  if (inventory) {
-    // Include the inventory markdown content
-    sections.push("### Project Inventory");
-    sections.push(inventory);
-    sections.push("");
-  } else if (basicContext) {
-    // Fallback to basic context
-    sections.push(basicContext);
-  }
-
-  return sections.join("\n");
 }
 
 export const RoutingPromptBuilder = {

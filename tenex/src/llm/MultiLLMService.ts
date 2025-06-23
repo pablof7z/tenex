@@ -280,7 +280,7 @@ export class MultiLLMService implements LLMService {
 
     // Fall back to first available instance
     if (this.llmInstances && this.llmInstances.size > 0) {
-      return Array.from(this.llmInstances.keys())[0];
+      return Array.from(this.llmInstances.keys())[0] || "default";
     }
 
     return "default";

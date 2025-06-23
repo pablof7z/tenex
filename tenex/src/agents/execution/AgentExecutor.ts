@@ -1,5 +1,5 @@
 import type { CompletionResponse, LLMService, Message } from "@/llm/types";
-import type { ConversationPublisher } from "@/nostr";
+import type { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
 import { PromptBuilder } from "@/prompts";
 import { projectContext } from "@/services";
 import {
@@ -27,6 +27,7 @@ export class AgentExecutor {
   constructor(
     private llmService: LLMService,
     private conversationPublisher: ConversationPublisher,
+    private typingIndicatorPublisher?: TypingIndicatorPublisher,
   ) {
     this.reasonActLoop = new ReasonActLoop(llmService);
   }
@@ -59,7 +60,15 @@ export class AgentExecutor {
       // 1. Build the agent's prompt
       const promptContext = await this.buildPromptContext(context);
 
-      // 2. Generate initial response via LLM
+      // 2. Publish typing indicator start
+      if (this.typingIndicatorPublisher) {
+        await this.typingIndicatorPublisher.publishTypingStart(
+          triggeringEvent,
+          context.agent.signer,
+        );
+      }
+
+      // 3. Generate initial response via LLM
       tracingLogger.logLLMRequest(context.agent.llmConfig || "default");
 
       const { response: initialResponse, userPrompt } =
@@ -72,7 +81,7 @@ export class AgentExecutor {
         context.agent.llmConfig || "default",
       );
 
-      // 3. Execute the Reason-Act loop
+      // 4. Execute the Reason-Act loop
       const reasonActResult = await this.reasonActLoop.execute(
         initialResponse,
         {
@@ -87,20 +96,20 @@ export class AgentExecutor {
         tracingContext,
       );
 
-      // 4. Build metadata with final response
+      // 5. Build metadata with final response
       const llmMetadata = this.buildLLMMetadata(
         reasonActResult.finalResponse,
         promptContext.systemPrompt,
         userPrompt,
       );
 
-      // 5. Determine next responder
+      // 6. Determine next responder
       const nextResponder = this.determineNextResponder(
         context,
         reasonActResult.finalContent,
       );
 
-      // 6. Publish response to Nostr
+      // 7. Publish response to Nostr
       const publishedEvent = await this.publishResponse(
         context,
         triggeringEvent,
@@ -109,6 +118,14 @@ export class AgentExecutor {
         llmMetadata,
         tracingContext,
       );
+
+      // 8. Publish typing indicator stop
+      if (this.typingIndicatorPublisher) {
+        await this.typingIndicatorPublisher.publishTypingStop(
+          triggeringEvent,
+          context.agent.signer,
+        );
+      }
 
       tracingLogger.completeOperation("agent_execution", {
         agentName: context.agent.name,
@@ -126,6 +143,14 @@ export class AgentExecutor {
         publishedEvent,
       };
     } catch (error) {
+      // Ensure typing indicator is stopped even on error
+      if (this.typingIndicatorPublisher) {
+        await this.typingIndicatorPublisher.publishTypingStop(
+          triggeringEvent,
+          context.agent.signer,
+        );
+      }
+
       tracingLogger.failOperation("agent_execution", error, {
         agentName: context.agent.name,
       });

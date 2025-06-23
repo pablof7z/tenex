@@ -18,15 +18,25 @@ export const daemonCommand = new Command("daemon")
     logger.info("Starting TENEX daemon");
 
     // Load configuration
-    const { config: globalConfig } = await configService.loadConfig(
+    const { config: globalConfig, llms: globalLLMs } = await configService.loadConfig(
       options.config ? path.dirname(options.config) : undefined
     );
 
     // Get whitelisted pubkeys
     let whitelistedPubkeys = configService.getWhitelistedPubkeys(options.whitelist, globalConfig);
 
-    if (whitelistedPubkeys.length === 0) {
-      logger.info("No whitelisted pubkeys found. Starting interactive setup...");
+    // Check for required configurations
+    const needsSetup = whitelistedPubkeys.length === 0 || 
+                       !globalLLMs.configurations || 
+                       Object.keys(globalLLMs.configurations).length === 0;
+
+    if (needsSetup) {
+      if (whitelistedPubkeys.length === 0) {
+        logger.info("No whitelisted pubkeys found. Starting interactive setup...");
+      }
+      if (!globalLLMs.configurations || Object.keys(globalLLMs.configurations).length === 0) {
+        logger.info("No LLM configurations found. Starting interactive setup...");
+      }
 
       // Run interactive setup
       const setupConfig = await runInteractiveSetup();

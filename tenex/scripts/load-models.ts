@@ -29,9 +29,9 @@ async function testLoadModels() {
       
       if (models.chat && models.chat.length > 0) {
         console.log(chalk.green(`✅ Found ${models.chat.length} chat models:`));
-        models.chat.slice(0, 5).forEach((model: any) => {
-          console.log(`   - ${model.id || model}`);
-        });
+        for (const model of models.chat.slice(0, 5)) {
+          console.log(`   - ${(model as { id?: string }).id || model}`);
+        }
         if (models.chat.length > 5) {
           console.log(`   ... and ${models.chat.length - 5} more`);
         }
@@ -57,9 +57,9 @@ async function testLoadModels() {
           const models = await loadModels(provider.id, {});
           if (models.chat && models.chat.length > 0) {
             console.log(chalk.green(`   ✅ Works without API key! Found ${models.chat.length} models`));
-            models.chat.slice(0, 3).forEach((model: any) => {
-              console.log(`      - ${model.id || model}`);
-            });
+            for (const model of models.chat.slice(0, 3)) {
+              console.log(`      - ${(model as { id?: string }).id || model}`);
+            }
           }
         } catch (retryError) {
           console.log(chalk.gray("   Still requires API key"));

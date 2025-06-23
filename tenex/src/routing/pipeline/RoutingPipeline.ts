@@ -11,40 +11,42 @@ export class RoutingPipeline {
       handlers: this.handlers.map(h => h.name)
     });
 
+    let currentContext = context;
+
     for (const handler of this.handlers) {
-      if (handler.canHandle(context)) {
+      if (handler.canHandle(currentContext)) {
         logger.debug(`Executing handler: ${handler.name}`, {
-          conversationId: context.conversation.id
+          conversationId: currentContext.conversation.id
         });
         
         try {
-          context = await handler.handle(context);
+          currentContext = await handler.handle(currentContext);
           
-          if (context.handled) {
+          if (currentContext.handled) {
             logger.debug(`Handler ${handler.name} completed request`, {
-              conversationId: context.conversation.id
+              conversationId: currentContext.conversation.id
             });
             break;
           }
         } catch (error) {
           logger.error(`Handler ${handler.name} failed`, {
             error,
-            conversationId: context.conversation.id
+            conversationId: currentContext.conversation.id
           });
-          context.error = error instanceof Error ? error : new Error(String(error));
+          currentContext.error = error instanceof Error ? error : new Error(String(error));
           break;
         }
       }
     }
 
-    if (!context.handled && !context.error) {
+    if (!currentContext.handled && !currentContext.error) {
       logger.warn("No handler processed the request", {
-        conversationId: context.conversation.id,
-        event: context.event.id
+        conversationId: currentContext.conversation.id,
+        event: currentContext.event.id
       });
     }
 
-    return context;
+    return currentContext;
   }
 
   addHandler(handler: MessageHandler): void {

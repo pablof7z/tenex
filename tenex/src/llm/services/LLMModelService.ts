@@ -87,13 +87,15 @@ const FALLBACK_MODELS: Record<string, string[]> = {
 };
 
 // Simple in-memory cache
-interface CacheEntry {
-  models: string[];
+interface CacheEntry<T = string[]> {
+  models: T;
   timestamp: number;
 }
 
+type ModelCache = CacheEntry<string[]> | CacheEntry<OpenRouterModelWithMetadata[]>;
+
 class LLMModelService {
-  private cache: Map<string, CacheEntry> = new Map();
+  private cache = new Map<string, ModelCache>();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -106,7 +108,7 @@ class LLMModelService {
   /**
    * Check if cache is still valid
    */
-  private isCacheValid(entry: CacheEntry | undefined): boolean {
+  private isCacheValid(entry: ModelCache | undefined): boolean {
     if (!entry) return false;
     return Date.now() - entry.timestamp < this.cacheTimeout;
   }
@@ -120,7 +122,7 @@ class LLMModelService {
     
     if (this.isCacheValid(cached)) {
       logger.debug(`Using cached models for ${provider}`);
-      return cached!.models;
+      return cached?.models as string[];
     }
 
     try {
@@ -130,11 +132,16 @@ class LLMModelService {
       logger.info(chalk.cyan(`🔍 Fetching ${provider} models...`));
       const models = await loadModels(providerId, config);
       
-      if (models && models.chat && models.chat.length > 0) {
+      if (models?.chat && models.chat.length > 0) {
         // Extract model IDs from the chat models
-        const modelIds = models.chat.map((model: any) => 
-          typeof model === 'string' ? model : model.id || model.name || String(model)
-        );
+        const modelIds = models.chat.map((model) => {
+          if (typeof model === 'string') return model;
+          if (typeof model === 'object' && model !== null) {
+            const m = model as { id?: string; name?: string };
+            return m.id || m.name || String(model);
+          }
+          return String(model);
+        });
         
         logger.info(chalk.green(`✅ Found ${modelIds.length} models from API`));
         
@@ -148,7 +155,7 @@ class LLMModelService {
       }
       
       // Fall back to default models if none found
-      logger.info(chalk.yellow(`⚠️  No models found from API, using defaults`));
+      logger.info(chalk.yellow("⚠️  No models found from API, using defaults"));
       return FALLBACK_MODELS[provider] || [];
     } catch (error) {
       logger.warn(`Could not fetch ${provider} models: ${error}`);
@@ -162,21 +169,26 @@ class LLMModelService {
    */
   async fetchOpenRouterModelsWithMetadata(): Promise<OpenRouterModelWithMetadata[]> {
     try {
-      // First check if OpenRouter is accessible
-      const models = await loadModels("openrouter", {});
+      // Check cache first
+      const cacheKey = 'openrouter-metadata';
+      const cached = this.cache.get(cacheKey);
       
-      if (models && models.chat && models.chat.length > 0) {
-        // Fetch full metadata for pricing info
-        const response = await fetch("https://openrouter.ai/api/v1/models", {
+      if (this.isCacheValid(cached)) {
+        logger.debug("Using cached OpenRouter metadata");
+        return cached?.models as OpenRouterModelWithMetadata[];
+      }
+
+      // Fetch full metadata directly (no need to call loadModels first)
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
           headers: {
             "HTTP-Referer": "https://tenex.dev",
             "X-Title": "TENEX CLI",
           },
-        });
+      });
 
-        if (response.ok) {
-          const data = (await response.json()) as OpenRouterModelsResponse;
-          return data.data
+      if (response.ok) {
+        const data = (await response.json()) as OpenRouterModelsResponse;
+        const models = data.data
             .filter((model) => {
               // Check if model supports text input and output
               const hasTextInput = model.input_modalities?.includes("text") ?? true;
@@ -197,7 +209,14 @@ class LLMModelService {
                 : undefined,
             }))
             .sort((a, b) => a.id.localeCompare(b.id));
-        }
+          
+          // Cache the results
+          this.cache.set(cacheKey, {
+            models,
+            timestamp: Date.now()
+          });
+          
+          return models;
       }
       
       throw new Error("Could not fetch OpenRouter models");

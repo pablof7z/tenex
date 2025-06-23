@@ -469,7 +469,19 @@ export class LLMConfigEditor {
     // Test the configuration BEFORE saving it
     logger.info(chalk.cyan("\n🧪 Testing configuration before saving..."));
 
-    const testSuccessful = await llmTestService.testConfiguration(newConfig, llmsConfig, configName);
+    // Create a temporary llmsConfig with the new credentials for testing
+    const testLlmsConfig = JSON.parse(JSON.stringify(llmsConfig)); // Deep copy
+    if (apiKey && provider !== "ollama") {
+      if (!testLlmsConfig.credentials) {
+        testLlmsConfig.credentials = {};
+      }
+      testLlmsConfig.credentials[provider] = {
+        apiKey,
+        baseUrl: provider === "openrouter" ? "https://openrouter.ai/api/v1" : undefined,
+      };
+    }
+
+    const testSuccessful = await llmTestService.testConfiguration(newConfig, testLlmsConfig, configName);
 
     if (!testSuccessful) {
       const { retry } = await inquirer.prompt([
@@ -498,6 +510,14 @@ export class LLMConfigEditor {
         llmsConfig.defaults = {};
       }
       llmsConfig.defaults.agents = configName;
+    }
+
+    // If no agent routing is set and this is the first/only configuration, set it as agent routing too
+    if (!llmsConfig.defaults) {
+      llmsConfig.defaults = {};
+    }
+    if (!llmsConfig.defaults.agentRouting && Object.keys(llmsConfig.configurations).length === 1) {
+      llmsConfig.defaults.agentRouting = configName;
     }
 
     // If this is global config and a new API key was entered, save it to credentials

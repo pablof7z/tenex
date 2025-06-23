@@ -27,7 +27,7 @@ export class ProcessManager implements IProcessManager {
     }
 
     // Get the CLI binary path
-    const cliBinPath = path.join(__dirname, "..", "..", "bin", "tenex.ts");
+    const cliBinPath = path.join(__dirname, "..", "cli.ts");
 
     // Spawn the process
     const child = spawn("bun", ["run", cliBinPath, "project", "run"], {

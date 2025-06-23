@@ -4,6 +4,16 @@
   "description": "TENEX Command Line Interface",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./events": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    }
+  },
   "bin": {
     "tenex": "src/cli.ts"
   },
@@ -33,8 +43,6 @@
   "dependencies": {
     "@inquirer/search": "^3.0.15",
     "@nostr-dev-kit/ndk": "^2.14.29",
-    "@tenex/shared": "file:../shared",
-    "@tenex/types": "file:../packages/types",
     "@types/inquirer": "^9.0.8",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",

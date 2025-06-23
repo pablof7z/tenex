@@ -48,7 +48,7 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
 - Ask clarifying questions when requirements are unclear`);
     
     // Tools section
-    parts.push(`## Available Tools`);
+    parts.push("## Available Tools");
     if (agent.tools && agent.tools.length > 0) {
       parts.push(agent.tools.join(", "));
       parts.push(getToolInstructions());

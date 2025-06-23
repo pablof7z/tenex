@@ -46,6 +46,9 @@ try {
 
   // Bundle the CLI with workspace dependencies included
   await $`bun build ${projectRoot}/src/cli.ts --outdir ${distDir} --target node --format esm --external ${externalDeps}`;
+  
+  // Build browser-compatible exports
+  await $`bun build ${projectRoot}/src/browser.ts --outdir ${distDir} --target browser --format esm --external @nostr-dev-kit/ndk`;
   console.log("✅ Built CLI with bundled workspace dependencies");
 } catch (error) {
   console.error("❌ Build failed:", error);

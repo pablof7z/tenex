@@ -1,6 +1,7 @@
 import type { Agent, AgentContext } from "@/agents/types";
 import type { AgentSummary } from "@/routing/types";
 import { PromptBuilder } from "../core/PromptBuilder";
+import "../fragments/agent-prompts"; // Ensure fragments are registered
 
 export function buildAgentPrompt(
   agent: Agent,
@@ -22,17 +23,17 @@ export function buildAgentPrompt(
       },
       (args) => !!args.content
     )
-    .add("conversation-context", {
-      content: `Conversation: ${context.conversation.title}
-Phase: ${context.phase}
-Current task: ${context.incomingEvent.content}`,
+    .add("agent-conversation-context", {
+      conversationTitle: context.conversation.title,
+      phase: context.phase,
+      currentTask: context.incomingEvent.content,
     })
     .add("tool-list", { tools })
     .add("agent-list", {
       agents: context.availableAgents,
       format: "simple",
     })
-    .add("next-action", {
+    .add("agent-next-action", {
       availableActions: [
         "handoff: Transfer to another agent (specify pubkey)",
         "phase_transition: Move to a different phase",
@@ -41,17 +42,7 @@ Current task: ${context.incomingEvent.content}`,
         "continue: Continue working on the task",
       ],
     })
-    .add("json-response", {
-      schema: `{
-  "response": "your response to the task",
-  "toolCalls": [{"tool": "name", "args": {}}], // optional
-  "nextAction": {
-    "type": "handoff|phase_transition|complete|human_input|continue",
-    "target": "pubkey or phase name", // if applicable
-    "reasoning": "why this action"
-  }
-}`,
-    })
+    .add("agent-response-schema", {})
     .build();
 }
 
@@ -71,29 +62,11 @@ export function buildExpertFeedbackPrompt(
     .add("base-context", {
       content: "You are providing expert feedback on the following work.",
     })
-    .add("review-context", {
-      content: `Context: ${context}`,
+    .add("expert-feedback-context", {
+      context: context,
+      workToReview: workToReview,
     })
-    .add("work-to-review", {
-      content: `Work to review:\n${workToReview}`,
-    })
-    .add("task-description", {
-      content: `Provide feedback focusing on:
-1. Technical correctness within your expertise
-2. Best practices and standards
-3. Potential issues or improvements
-4. Whether this meets the requirements
-
-Be constructive and specific.`,
-    })
-    .add("json-response", {
-      schema: `{
-  "feedback": "your detailed feedback",
-  "confidence": 0.0-1.0,
-  "issues": ["list of specific issues found"], // optional
-  "suggestions": ["list of improvements"], // optional
-  "approved": true|false
-}`,
-    })
+    .add("expert-feedback-task", {})
+    .add("expert-feedback-response", {})
     .build();
 }

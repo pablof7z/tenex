@@ -16,17 +16,17 @@ export class FileExecutor implements ToolExecutor {
 
   private readonly maxFileSize = 1024 * 1024 * 5; // 5MB
 
-  private isFileReadParameters(params: any): params is FileReadParameters {
+  private isFileReadParameters(params: unknown): params is FileReadParameters {
     return typeof params === 'object' && params !== null && 'path' in params && typeof params.path === 'string';
   }
 
-  private isFileWriteParameters(params: any): params is FileWriteParameters {
+  private isFileWriteParameters(params: unknown): params is FileWriteParameters {
     return typeof params === 'object' && params !== null && 
            'path' in params && typeof params.path === 'string' &&
            'content' in params && typeof params.content === 'string';
   }
 
-  private isFileEditParameters(params: any): params is FileEditParameters {
+  private isFileEditParameters(params: unknown): params is FileEditParameters {
     return typeof params === 'object' && params !== null && 
            'path' in params && typeof params.path === 'string' &&
            'oldContent' in params && typeof params.oldContent === 'string' &&
