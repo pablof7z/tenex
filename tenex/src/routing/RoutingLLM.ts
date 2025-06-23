@@ -11,7 +11,7 @@ import {
 } from "@/prompts";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
-import { formatProjectContextForPrompt, getProjectContext as getFileSystemProjectContext } from "@/utils/project";
+import { formatProjectContextForPrompt, analyzeProjectStructure } from "@/utils/project";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { getProjectContext, configService } from "@/services";
@@ -37,7 +37,7 @@ export class RoutingLLM {
         }
 
         try {
-            const projectContext = await getFileSystemProjectContext(this.projectPath);
+            const projectContext = await analyzeProjectStructure(this.projectPath);
             return formatProjectContextForPrompt(projectContext);
         } catch (error) {
             logger.error("Failed to get project context", { error });

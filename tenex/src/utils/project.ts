@@ -17,9 +17,9 @@ export interface ProjectContext {
 }
 
 /**
- * Get project context including file structure and metadata
+ * Analyze project structure including file structure and metadata
  */
-export async function getProjectContext(projectPath: string): Promise<ProjectContext> {
+export async function analyzeProjectStructure(projectPath: string): Promise<ProjectContext> {
   try {
     const files = await getProjectFiles(projectPath);
     const directories = files.filter((f) => f.isDirectory).map((f) => f.relativePath);
