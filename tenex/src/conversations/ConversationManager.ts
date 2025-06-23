@@ -95,6 +95,18 @@ export class ConversationManager {
     const tracingLogger = createTracingLogger(phaseContext, "conversation");
 
     const previousPhase = conversation.phase;
+    
+    // Check if phase is actually changing
+    if (previousPhase === phase) {
+      // Log staying in same phase
+      tracingLogger.info(`[CONVERSATION] Staying in phase "${phase}"`, {
+        phase,
+        conversationTitle: conversation.title,
+        context
+      });
+      return;
+    }
+    
     conversation.phase = phase;
     conversation.phaseStartedAt = Date.now();
 
