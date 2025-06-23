@@ -43,6 +43,15 @@ export class CliClient {
     const result = await this.parseJsonResponse(output, 'project creation');
     this.logger.debug('Project creation response', { result });
     
+    // Log the encoded event
+    if (result.encode) {
+      this.logger.info('Project event created', {
+        eventId: result.eventId,
+        encode: result.encode,
+        naddr: result.naddr
+      });
+    }
+    
     // Send project start event
     await this.startProject(result.naddr);
     
@@ -97,6 +106,14 @@ export class CliClient {
     
     const parsed = await this.parseJsonResponse(output, 'message');
     this.logger.debug('Message sent successfully', { threadId: parsed.threadId });
+    
+    // Log the encoded event if available
+    if (parsed.eventId) {
+      this.logger.info('Message event published', { 
+        eventId: parsed.eventId,
+        encode: parsed.encode || 'Not available in response'
+      });
+    }
     
     if (!parsed.threadId) {
       throw new Error('Response missing threadId field');

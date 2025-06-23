@@ -1,4 +1,5 @@
 import type { StoredAgentData } from "./types";
+import { getDefaultToolsForAgent } from "./constants";
 
 /**
  * Default boss agent definition
@@ -29,6 +30,6 @@ You have access to the phase_transition tool. Use it like this:
 - To start review: <phase_transition>review</phase_transition>
 
 IMPORTANT: Always specify the target phase inside the tags. Never use empty tags like <phase_transition/>.`,
-  tools: ["phase_transition", "bash", "file-system", "web-search"],
+  tools: getDefaultToolsForAgent(true), // Boss agent gets PM tools
   llmConfig: "default",
 };

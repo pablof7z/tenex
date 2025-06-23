@@ -18,6 +18,7 @@ import type { AgentExecutionContext, AgentExecutionResult, AgentPromptContext } 
 import { ReasonActLoop } from "./ReasonActLoop";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { ToolExecutionResult } from "@/tools/types";
+import { getDefaultToolsForAgent } from "@/agents/constants";
 
 export class AgentExecutor {
     private reasonActLoop: ReasonActLoop;
@@ -55,10 +56,24 @@ export class AgentExecutor {
         });
 
         try {
-            // 1. Build the agent's prompt
-            const promptContext = await this.buildPromptContext(context);
+            // 1. Get phase-aware tools for this agent
+            const phaseAwareTools = context.agent.isBoss 
+                ? getDefaultToolsForAgent(true, context.phase)
+                : context.agent.tools || getDefaultToolsForAgent(false);
 
-            // 2. Publish typing indicator start
+            // Create a modified agent with phase-aware tools
+            const agentWithPhaseTools = {
+                ...context.agent,
+                tools: phaseAwareTools
+            };
+
+            // 2. Build the agent's prompt with phase-aware agent
+            const promptContext = await this.buildPromptContext({
+                ...context,
+                agent: agentWithPhaseTools
+            });
+
+            // 3. Publish typing indicator start
             if (this.typingIndicatorPublisher) {
                 await this.typingIndicatorPublisher.publishTypingStart(
                     triggeringEvent,
@@ -66,7 +81,7 @@ export class AgentExecutor {
                 );
             }
 
-            // 3. Generate initial response via LLM
+            // 4. Generate initial response via LLM
             tracingLogger.logLLMRequest(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
 
             const { response: initialResponse, userPrompt } = await this.generateResponse(
@@ -76,7 +91,7 @@ export class AgentExecutor {
 
             tracingLogger.logLLMResponse(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
 
-            // 4. Execute the Reason-Act loop
+            // 5. Execute the Reason-Act loop with phase-aware agent
             const reasonActResult = await this.reasonActLoop.execute(
                 initialResponse,
                 {
@@ -85,7 +100,7 @@ export class AgentExecutor {
                     agentName: context.agent.name,
                     phase: context.phase,
                     llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-                    agent: context.agent, // Pass the full agent object
+                    agent: agentWithPhaseTools, // Pass agent with phase-aware tools
                     conversation: context.conversation, // Pass the full conversation object
                 },
                 promptContext.systemPrompt,
@@ -181,10 +196,21 @@ export class AgentExecutor {
         const hasInventory =
             context.phase === "chat" ? await inventoryExists(process.cwd()) : false;
 
+        // Get phase-aware tools for this agent
+        const phaseAwareTools = context.agent.isBoss 
+            ? getDefaultToolsForAgent(true, context.phase)
+            : context.agent.tools || getDefaultToolsForAgent(false);
+
+        // Create a modified agent with phase-aware tools
+        const agentWithPhaseTools = {
+            ...context.agent,
+            tools: phaseAwareTools
+        };
+
         // Build system prompt
         const systemPrompt = promptBuilder
             .add("agent-system-prompt", {
-                agent: context.agent,
+                agent: agentWithPhaseTools,
                 phase: context.phase,
                 projectTitle:
                     project.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Project",
@@ -215,7 +241,7 @@ export class AgentExecutor {
             systemPrompt,
             conversationHistory,
             phaseContext,
-            availableTools: context.agent.tools,
+            availableTools: phaseAwareTools,
             constraints: constraints,
         };
     }

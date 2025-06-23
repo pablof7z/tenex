@@ -29,7 +29,7 @@ export class GetCurrentRequirementsExecutor implements ToolExecutor {
       
       logger.info("Extracting current requirements from conversation");
       
-      const requirements = await RequirementsExtractor.extractRequirements(conversation);
+      const requirements = await RequirementsExtractor.extractRequirements(conversation, context.projectPath);
       
       if (!requirements) {
         return {
@@ -48,7 +48,7 @@ export class GetCurrentRequirementsExecutor implements ToolExecutor {
         duration: Date.now() - startTime,
         metadata: {
           requirementsFound: true,
-          requirements: requirements
+          requirementsSummary: requirements.summary
         }
       };
     } catch (error) {

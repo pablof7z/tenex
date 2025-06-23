@@ -71,6 +71,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
         const result = {
             threadId,
             eventId,
+            encode: event.encode(), // Add the encoded event
             project: options.project,
             message: options.message,
             author: user.npub,
@@ -81,6 +82,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
             logger.info(chalk.green("✅ Message sent successfully!"));
             logger.info(chalk.gray(`Thread ID: ${data.threadId}`));
             logger.info(chalk.gray(`Event ID: ${data.eventId}`));
+            logger.info(chalk.gray(`Encode: ${data.encode}`));
             logger.info(chalk.gray(`Project: ${data.project}`));
         });
 

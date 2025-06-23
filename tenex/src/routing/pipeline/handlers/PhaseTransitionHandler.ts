@@ -5,6 +5,7 @@ import {
   meetsPhaseTransitionCriteria 
 } from "@/routing/routingDomain";
 import { getProjectContext } from "@/services";
+import { RequirementsExtractor } from "@/services/RequirementsExtractor";
 import { logger } from "@/utils/logger";
 
 export class PhaseTransitionHandler implements MessageHandler {
@@ -43,6 +44,35 @@ export class PhaseTransitionHandler implements MessageHandler {
       );
       context.handled = true;
       return context;
+    }
+
+    // If transitioning to plan phase and no requirements exist, extract them
+    if (requestedPhase === "plan" && currentPhase === "chat" && !context.conversation.metadata.requirements) {
+      logger.info("Extracting requirements before phase transition");
+      
+      const extractedRequirements = await RequirementsExtractor.extractRequirements(
+        context.conversation,
+        context.conversationManager.getProjectPath()
+      );
+      
+      if (extractedRequirements) {
+        // Update conversation metadata with extracted requirements
+        const formattedRequirements = RequirementsExtractor.formatRequirements(extractedRequirements);
+        await context.conversationManager.updateMetadata(
+          context.conversation.id,
+          {
+            ...context.conversation.metadata,
+            requirements: formattedRequirements
+          }
+        );
+        
+        // Update the conversation object in context to reflect the new metadata
+        context.conversation.metadata.requirements = formattedRequirements;
+        
+        logger.info("Requirements extracted and stored successfully");
+      } else {
+        logger.warn("Failed to extract requirements from conversation");
+      }
     }
 
     // Check if transition criteria are met

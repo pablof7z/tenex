@@ -61,9 +61,11 @@ export async function createProject(options: CreateProjectOptions): Promise<void
         // Output result
         const result = {
             naddr,
+            encode: project.encode(), // Add the encoded event
             name: options.name,
             description: options.description || `A TENEX project: ${options.name}`,
             projectId,
+            eventId: project.id,
             author: user.npub
         };
 
@@ -71,6 +73,8 @@ export async function createProject(options: CreateProjectOptions): Promise<void
             logger.info(chalk.green("✅ Project created successfully!"));
             logger.info(chalk.gray(`Project ID: ${data.projectId}`));
             logger.info(chalk.gray(`NADDR: ${data.naddr}`));
+            logger.info(chalk.gray(`Encode: ${data.encode}`));
+            logger.info(chalk.gray(`Event ID: ${data.eventId}`));
             logger.info(chalk.gray(`Author: ${data.author}`));
         });
 

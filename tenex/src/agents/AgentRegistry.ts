@@ -10,6 +10,7 @@ import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import { BOSS_AGENT_DEFINITION } from "./projectAgentDefinition";
 import { getNDK } from "@/nostr";
 import { getProjectContext } from "@/services";
+import { getDefaultToolsForAgent } from "./constants";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -82,7 +83,7 @@ export class AgentRegistry {
         expertise: config.expertise || config.role,
         instructions: config.instructions || "",
         llmConfig: config.llmConfig,
-        tools: config.tools,
+        tools: config.tools || getDefaultToolsForAgent(false), // Non-boss agents get default tools
       };
 
       const definitionPath = path.join(this.agentsDir, fileName);
@@ -119,7 +120,7 @@ export class AgentRegistry {
           expertise: config.expertise || config.role,
           instructions: config.instructions || "",
           llmConfig: config.llmConfig,
-          tools: config.tools,
+          tools: config.tools || getDefaultToolsForAgent(false), // Non-boss agents get default tools
         };
         await writeJsonFile(definitionPath, agentDefinition);
       }
@@ -138,7 +139,7 @@ export class AgentRegistry {
       expertise: agentDefinition.expertise || agentDefinition.role,
       instructions: agentDefinition.instructions,
       llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-      tools: agentDefinition.tools || [],
+      tools: agentDefinition.tools || getDefaultToolsForAgent(registryEntry.boss || false),
       eventId: registryEntry.eventId,
       slug: name,
       isBoss: registryEntry.boss,

@@ -87,6 +87,17 @@ export class ToolDetector {
         return null; // Don't create an invocation for invalid syntax
       },
     },
+
+    // Get current requirements pattern: <get_current_requirements/>
+    {
+      pattern: /<get_current_requirements\s*\/>/gs,
+      parser: (match: RegExpMatchArray) => ({
+        toolName: "get_current_requirements",
+        action: "extract",
+        parameters: {},
+        rawMatch: match[0],
+      }),
+    },
   ];
 
   /**

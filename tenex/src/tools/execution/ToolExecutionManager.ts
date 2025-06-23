@@ -1,6 +1,7 @@
 import { logger } from "@/utils/logger";
 import { ToolDetector } from "./ToolDetector";
 import { FileExecutor, ShellExecutor, PhaseTransitionExecutor } from "./executors";
+import { GetCurrentRequirementsExecutor } from "./executors/GetCurrentRequirementsExecutor";
 import type {
   ToolExecutionContext,
   ToolExecutionResult,
@@ -17,6 +18,7 @@ export class ToolExecutionManager {
     this.registerExecutor(new ShellExecutor());
     this.registerExecutor(new FileExecutor());
     this.registerExecutor(new PhaseTransitionExecutor());
+    this.registerExecutor(new GetCurrentRequirementsExecutor());
   }
 
   /**

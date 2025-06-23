@@ -24,6 +24,10 @@ export class ConversationManager {
     this.persistence = new FileSystemAdapter(projectPath);
   }
 
+  getProjectPath(): string {
+    return this.projectPath;
+  }
+
   async initialize(): Promise<void> {
     await ensureDirectory(this.conversationsDir);
     await this.persistence.initialize();

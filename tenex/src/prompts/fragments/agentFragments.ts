@@ -150,7 +150,7 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
     parts.push("## Available Tools");
     if (agent.tools && agent.tools.length > 0) {
       parts.push(agent.tools.join(", "));
-      parts.push(getToolInstructions());
+      parts.push(getToolInstructions(agent.tools));
     } else {
       parts.push("No tools assigned");
     }
@@ -485,19 +485,21 @@ function getPhaseInstructions(phase: Phase): string {
   }
 }
 
-function getToolInstructions(): string {
-  return `## Tool Instructions
-When you need to perform actions, use the appropriate tool syntax:
+function getToolInstructions(availableTools: string[]): string {
+  if (availableTools.length === 0) {
+    return "";
+  }
 
-### File Operations (file tool)
+  const toolInstructions: Record<string, string> = {
+    file: `### File Operations (file tool)
 - Read: <read>path/to/file</read>
 - Write: <write file="path/to/file">content</write>
-- Edit: <edit file="path/to/file" from="old text" to="new text"/>
+- Edit: <edit file="path/to/file" from="old text" to="new text"/>`,
 
-### Shell Commands (shell tool)
-- Execute: <execute>command</execute>
+    shell: `### Shell Commands (shell tool)
+- Execute: <execute>command</execute>`,
 
-### Claude Code (claude_code tool)
+    claude_code: `### Claude Code (claude_code tool)
 - Run mode: <claude_code>prompt describing the task</claude_code>
 - Plan mode: <claude_code mode="plan">prompt describing what to plan</claude_code>
 
@@ -506,20 +508,42 @@ Use Claude Code for complex tasks that require:
 - Understanding complex code relationships
 - Searching for patterns across the codebase
 - Implementing features that span multiple files
-- Any task that would benefit from Claude's advanced capabilities
+- Any task that would benefit from Claude's advanced capabilities`,
 
-### Phase Transition (phase_transition tool - boss agents only)
+    phase_transition: `### Phase Transition (phase_transition tool)
 - Transition to plan: <phase_transition>plan</phase_transition>
 - Transition to execute: <phase_transition>execute</phase_transition>
 - Transition to review: <phase_transition>review</phase_transition>
 
-Phase transitions are only available to boss agents and follow these rules:
+Phase transitions follow these rules:
 - From chat → plan (when requirements are clear)
 - From plan → execute (when plan is approved) or chat (need more info)
 - From execute → review (when implementation is complete) or plan (major changes needed)
-- From review → execute (fixes needed), chat (discuss results), or chores (cleanup)
+- From review → execute (fixes needed), chat (discuss results), or chores (cleanup)`,
 
-Tools will be executed automatically and results will be included in your response.`;
+    get_current_requirements: `### Get Current Requirements (get_current_requirements tool)
+- Extract and display current requirements: <get_current_requirements/>
+
+Use this tool in the chat phase to:
+- Show the user what requirements have been understood from the conversation
+- Allow the user to verify and modify requirements before transitioning to the plan phase
+- Check if requirements are clear enough to proceed`
+  };
+
+  const instructions: string[] = ["## Tool Instructions"];
+  instructions.push("When you need to perform actions, use the appropriate tool syntax:");
+  instructions.push("");
+
+  for (const tool of availableTools) {
+    if (toolInstructions[tool]) {
+      instructions.push(toolInstructions[tool]);
+      instructions.push("");
+    }
+  }
+
+  instructions.push("Tools will be executed automatically and results will be included in your response.");
+  
+  return instructions.join("\n");
 }
 
 // ========================================================================
