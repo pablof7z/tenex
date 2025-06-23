@@ -4,6 +4,7 @@ import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";
 import type { RoutingDecision } from "./types";
 import { isEventFromUser } from "@/nostr/utils";
+import { evaluatePhaseCompletion } from "./phase-completion";
 
 /**
  * Determine if a phase transition is valid
@@ -12,7 +13,7 @@ export function canTransitionPhase(currentPhase: Phase, targetPhase: Phase): boo
   const validTransitions: Record<Phase, Phase[]> = {
     chat: ["plan"],
     plan: ["execute", "chat"], // Can go back to chat if more clarification needed
-    execute: ["review", "plan"], // Can go back to plan if issues found
+    execute: ["review", "plan", "chat"], // Can go back to plan if issues found or chat for clarification
     review: ["execute", "chat", "chores"], // Can go back to execute for fixes, chat for new requirements, or chores for maintenance
     chores: ["chat"], // After chores, typically start a new conversation
   };
@@ -165,86 +166,59 @@ export function meetsPhaseTransitionCriteria(
 ): { canTransition: boolean; reason: string } {
   const currentPhase = conversation.phase;
 
-  switch (targetPhase) {
-    case "plan":
-      // Can transition to plan if requirements are clear (from chat)
-      if (currentPhase === "chat") {
-        const hasUserMessages = conversation.history.some((event) => isEventFromUser(event));
-        if (!hasUserMessages) {
-          return {
-            canTransition: false,
-            reason: "No user requirements found to create a plan",
-          };
-        }
-        return {
-          canTransition: true,
-          reason: "Requirements gathered, ready for planning",
-        };
-      }
-      break;
-
-    case "execute":
-      // Can transition to execute if plan exists
-      if (currentPhase === "plan") {
-        const hasPlanSummary = conversation.metadata.plan_summary;
-        if (!hasPlanSummary) {
-          return {
-            canTransition: false,
-            reason: "No plan summary found, cannot proceed to execution",
-          };
-        }
-        return {
-          canTransition: true,
-          reason: "Plan approved, ready for implementation",
-        };
-      }
-      break;
-
-    case "review":
-      // Can transition to review if implementation exists
-      if (currentPhase === "execute") {
-        const hasExecuteSummary = conversation.metadata.execute_summary;
-        if (!hasExecuteSummary) {
-          return {
-            canTransition: false,
-            reason: "No implementation summary found, cannot proceed to review",
-          };
-        }
-        return {
-          canTransition: true,
-          reason: "Implementation complete, ready for review",
-        };
-      }
-      break;
-
-    case "chat":
-      // Can always go back to chat for clarification
-      return {
-        canTransition: true,
-        reason: "Returning to chat for clarification",
-      };
-
-    case "chores":
-      // Can transition to chores from review phase
-      if (currentPhase === "review") {
-        const hasReviewSummary = conversation.metadata.review_summary;
-        if (!hasReviewSummary) {
-          // Still allow transition even without review summary
-          return {
-            canTransition: true,
-            reason: "Proceeding to maintenance tasks",
-          };
-        }
-        return {
-          canTransition: true,
-          reason: "Review complete, performing maintenance tasks",
-        };
-      }
-      break;
+  // First check if the transition path is valid
+  if (!canTransitionPhase(currentPhase, targetPhase)) {
+    return {
+      canTransition: false,
+      reason: `No valid transition path from ${currentPhase} to ${targetPhase}`,
+    };
   }
 
+  // Always allow going back to chat for clarification
+  if (targetPhase === "chat") {
+    return {
+      canTransition: true,
+      reason: "Returning to chat for clarification",
+    };
+  }
+
+  // Evaluate if current phase is completed using robust completion logic
+  const currentPhaseCompletion = evaluatePhaseCompletion(currentPhase, conversation);
+
+  // Only allow transition if current phase is completed successfully
+  if (!currentPhaseCompletion.completed) {
+    const incompleteItems = [];
+    
+    // Extract incomplete criteria based on phase
+    const criteria = currentPhaseCompletion.criteria;
+    if (criteria.chat) {
+      if (!criteria.chat.requirementsCaptured) incompleteItems.push("requirements not captured");
+      if (!criteria.chat.userNeedsClarified) incompleteItems.push("user needs not clarified");
+      if (!criteria.chat.readyForPlanning) incompleteItems.push("not ready for planning");
+    } else if (criteria.plan) {
+      if (!criteria.plan.architectureDocumented) incompleteItems.push("architecture not documented");
+      if (!criteria.plan.tasksIdentified) incompleteItems.push("tasks not identified");
+      if (!criteria.plan.userApproval) incompleteItems.push("user approval not obtained");
+    } else if (criteria.execute) {
+      if (!criteria.execute.allTasksCompleted) incompleteItems.push("tasks not completed");
+      if (!criteria.execute.codeCommitted) incompleteItems.push("code not committed");
+    } else if (criteria.review) {
+      if (!criteria.review.validationComplete) incompleteItems.push("validation not complete");
+    }
+
+    const reason = incompleteItems.length > 0 
+      ? `Current phase (${currentPhase}) not complete: ${incompleteItems.join(", ")}`
+      : `Current phase (${currentPhase}) not complete`;
+
+    return {
+      canTransition: false,
+      reason,
+    };
+  }
+
+  // Phase is complete, allow transition
   return {
-    canTransition: false,
-    reason: `No valid transition path from ${currentPhase} to ${targetPhase}`,
+    canTransition: true,
+    reason: `${currentPhase} phase complete, ready for ${targetPhase}`,
   };
 }

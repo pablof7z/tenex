@@ -87,7 +87,8 @@ function evaluateChatCompletion(conversation: Conversation): PhaseCompletionCrit
 function evaluatePlanCompletion(conversation: Conversation): PhaseCompletionCriteria {
   const hasPlan = !!conversation.metadata.plan || !!conversation.metadata.plan_summary;
   const hasArchitecture = !!conversation.metadata.architecture;
-  const hasApproval = !!conversation.metadata.plan_approved;
+  const hasApproval = conversation.metadata.plan_approved === true || 
+                     conversation.metadata.plan_approved === "true";
   const hasTasks = !!conversation.metadata.tasks;
   
   const criteria = {
@@ -95,7 +96,7 @@ function evaluatePlanCompletion(conversation: Conversation): PhaseCompletionCrit
       architectureDocumented: hasArchitecture || hasPlan,
       tasksIdentified: hasTasks || hasPlan,
       userApproval: hasApproval,
-      feasibilityChecked: true // Would need actual implementation
+      feasibilityChecked: hasPlan // Simplified - assume feasibility checked if plan exists
     }
   };
   
@@ -119,9 +120,9 @@ function evaluateExecuteCompletion(conversation: Conversation): PhaseCompletionC
   const criteria = {
     execute: {
       allTasksCompleted: hasImplementation,
-      testsPass: true, // Would need actual test results
+      testsPass: hasImplementation, // Assume tests pass if implementation is complete
       codeCommitted: hasBranch && hasImplementation,
-      noBlockingIssues: true // Would need issue tracking
+      noBlockingIssues: hasImplementation // Assume no blocking issues if implementation is complete
     }
   };
   
@@ -144,9 +145,9 @@ function evaluateReviewCompletion(conversation: Conversation): PhaseCompletionCr
   const criteria = {
     review: {
       validationComplete: hasValidation || hasReviewSummary,
-      testsConducted: true, // Would need test results
-      feedbackIncorporated: true, // Would need feedback tracking
-      documentationUpdated: true // Would need doc status
+      testsConducted: hasReviewSummary, // Assume tests conducted if review summary exists
+      feedbackIncorporated: hasReviewSummary, // Assume feedback incorporated if review complete
+      documentationUpdated: hasReviewSummary // Assume docs updated if review complete
     }
   };
   
@@ -167,9 +168,9 @@ function evaluateChoresCompletion(conversation: Conversation): PhaseCompletionCr
   
   const criteria = {
     chores: {
-      inventoryUpdated: true, // Would need inventory check
+      inventoryUpdated: hasChoresSummary, // Assume inventory updated if chores complete
       maintenanceTasksComplete: hasChoresSummary,
-      cleanupDone: true // Would need cleanup verification
+      cleanupDone: hasChoresSummary // Assume cleanup done if chores complete
     }
   };
   
