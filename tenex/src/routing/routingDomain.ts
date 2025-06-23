@@ -3,6 +3,7 @@ import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";
 import type { RoutingDecision } from "./types";
+import { isEventFromUser } from "@/nostr/utils";
 
 /**
  * Determine if a phase transition is valid
@@ -168,9 +169,7 @@ export function meetsPhaseTransitionCriteria(
     case "plan":
       // Can transition to plan if requirements are clear (from chat)
       if (currentPhase === "chat") {
-        const hasUserMessages = conversation.history.some(
-          (event) => !event.tags.some((tag) => tag[0] === "llm-model")
-        );
+        const hasUserMessages = conversation.history.some((event) => isEventFromUser(event));
         if (!hasUserMessages) {
           return {
             canTransition: false,

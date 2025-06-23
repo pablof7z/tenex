@@ -28,7 +28,6 @@ export class ConversationRouter {
   private agentExecutor: AgentExecutor;
   private replyPipeline: RoutingPipeline;
 
-
   constructor(
     private conversationManager: ConversationManager,
     private routingLLM: RoutingLLM,
@@ -52,10 +51,8 @@ export class ConversationRouter {
    * Route a new conversation event
    */
   async routeNewConversation(event: NDKEvent, availableAgents: Agent[]): Promise<void> {
-    logger.info("Routing new conversation", {
-      eventId: event.id,
-      content: event.content?.substring(0, 100),
-    });
+    // Log conversation start with human-readable format
+    logger.conversationStart(event.content || "", event.id, event.content);
 
     try {
       // Create conversation
@@ -71,10 +68,12 @@ export class ConversationRouter {
       const validation = validateRoutingDecision(routingDecision, conversation, availableAgents);
 
       if (!validation.valid) {
-        logger.warn("Invalid routing decision", {
-          reason: validation.reason,
-          decision: routingDecision,
-        });
+        logger.conversationError(
+          `Invalid routing decision: ${validation.reason}`,
+          { decision: routingDecision },
+          conversation.id,
+          conversation.title
+        );
         // Fallback to chat phase
         routingDecision = {
           phase: "chat",
@@ -83,17 +82,18 @@ export class ConversationRouter {
         };
       }
 
-      logger.info("Routing decision", {
-        conversationId: conversation.id,
+      // Log routing decision with clear formatting
+      logger.routingDecision({
         phase: routingDecision.phase,
+        reasoning: routingDecision.reasoning,
         confidence: routingDecision.confidence,
-        enhanced: true,
-      });
+        agent: routingDecision.agent?.name,
+      }, conversation.id, conversation.title);
 
       // Initialize the determined phase
       await this.initializePhase(conversation.id, routingDecision.phase, availableAgents, event);
     } catch (error) {
-      logger.error("Failed to route new conversation", { error });
+      logger.conversationError("Failed to route new conversation", { error });
       throw error;
     }
   }
@@ -102,8 +102,6 @@ export class ConversationRouter {
    * Route a reply within an existing conversation
    */
   async routeReply(event: NDKEvent, availableAgents: Agent[]): Promise<void> {
-    logger.info("Routing reply", { eventId: event.id });
-
     try {
       // Find the conversation this reply belongs to
       const conversation = this.conversationManager.getConversationByEvent(
@@ -111,9 +109,12 @@ export class ConversationRouter {
       );
 
       if (!conversation) {
-        logger.error("No conversation found for reply");
+        logger.conversationError("No conversation found for reply", { eventId: event.id });
         return;
       }
+
+      // Log the user message
+      logger.userMessage(event.content || "", conversation.id, conversation.title, event.id);
 
       // Add event to conversation history
       await this.conversationManager.addEvent(conversation.id, event);
@@ -134,21 +135,21 @@ export class ConversationRouter {
       const result = await this.replyPipeline.execute(context);
 
       if (result.error) {
-        logger.error("Routing pipeline failed", { 
+        logger.conversationError("Routing pipeline failed", { 
           error: result.error,
           conversationId: conversation.id 
-        });
+        }, conversation.id, conversation.title);
         throw result.error;
       }
 
       if (!result.handled) {
-        logger.warn("No handler processed the reply", {
+        logger.conversationError("No handler processed the reply", {
           conversationId: conversation.id,
           eventId: event.id
-        });
+        }, conversation.id, conversation.title);
       }
     } catch (error) {
-      logger.error("Failed to route reply", { error });
+      logger.conversationError("Failed to route reply", { error });
       throw error;
     }
   }
@@ -167,18 +168,24 @@ export class ConversationRouter {
       throw new Error(`Conversation ${conversationId} not found`);
     }
 
+    // Log phase transition
+    if (conversation.phase !== phase) {
+      logger.phaseTransition(
+        conversation.phase, 
+        phase, 
+        "Initializing new phase based on routing decision",
+        conversation.id,
+        conversation.title
+      );
+    }
+
     // Update conversation phase
     await this.conversationManager.updatePhase(conversationId, phase);
 
     // Initialize the phase
     const result = await initializePhase(phase, conversation, availableAgents);
 
-    logger.info("Phase initialized", {
-      conversationId,
-      phase,
-      success: result.success,
-      nextAgent: result.nextAgent,
-    });
+    logger.info(`Phase initialized: ${phase} (success: ${result.success}, nextAgent: ${result.nextAgent})`, "conversation", "normal");
 
     // Update conversation metadata with initialization result
     await this.conversationManager.updateMetadata(conversationId, {

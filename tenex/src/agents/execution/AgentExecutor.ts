@@ -119,6 +119,15 @@ export class AgentExecutor {
         tracingContext,
       );
 
+      // Log the agent response in human-readable format
+      logger.agentResponse(
+        context.agent.name,
+        reasonActResult.finalContent,
+        context.conversation.id,
+        context.conversation.title,
+        publishedEvent.id
+      );
+
       // 8. Publish typing indicator stop
       if (this.typingIndicatorPublisher) {
         await this.typingIndicatorPublisher.publishTypingStop(

@@ -337,6 +337,141 @@ export class ScopedLogger {
   }
 }
 
+// Conversation flow logging functions
+function truncateText(text: string, maxLength: number = 100): string {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + "...";
+}
+
+function formatConversationHeader(conversationId?: string, title?: string): string {
+  if (!conversationId) return "";
+  const shortId = conversationId.substring(0, 8);
+  const formattedTitle = title ? ` "${title}"` : "";
+  return chalk.gray(`[${shortId}${formattedTitle}]`);
+}
+
+// Human-readable conversation flow logging
+export function logConversationStart(userMessage: string, conversationId?: string, title?: string, eventId?: string): void {
+  if (!shouldLog("info", "conversation", "normal")) return;
+  
+  const header = formatConversationHeader(conversationId, title);
+  
+  console.log();
+  console.log(chalk.bold.cyan(`🗣️  NEW CONVERSATION ${header}`));
+  console.log(chalk.white(`   User: ${chalk.italic(truncateText(userMessage, 80))}`));
+  if (eventId) {
+    console.log(chalk.dim(`   Event: ${eventId.substring(0, 12)}...`));
+  }
+  console.log();
+}
+
+export function logRoutingDecision(decision: {
+  phase: string;
+  reasoning: string;
+  confidence: number;
+  agent?: string;
+}, conversationId?: string, title?: string): void {
+  if (!shouldLog("info", "conversation", "normal")) return;
+  
+  const header = formatConversationHeader(conversationId, title);
+  
+  console.log(chalk.yellow(`🎯 ROUTING DECISION ${header}`));
+  console.log(chalk.white(`   Phase: ${chalk.bold.green(decision.phase.toUpperCase())}`));
+  console.log(chalk.white(`   Reasoning: ${decision.reasoning}`));
+  console.log(chalk.white(`   Confidence: ${chalk.bold(Math.round(decision.confidence * 100))}%`));
+  if (decision.agent) {
+    console.log(chalk.white(`   Agent: ${chalk.bold.blue(decision.agent)}`));
+  }
+  console.log();
+}
+
+export function logLLMInteraction(type: string, config: {
+  model?: string;
+  systemPrompt?: string;
+  userPrompt?: string;
+  response?: string;
+  reasoning?: string;
+}, conversationId?: string, title?: string): void {
+  if (!shouldLog("info", "llm", "verbose")) return;
+  
+  const header = formatConversationHeader(conversationId, title);
+  const maxLength = 500; // Configurable via env var in future
+  
+  console.log(chalk.magenta(`🤖 LLM ${type.toUpperCase()} ${header}`));
+  if (config.model) {
+    console.log(chalk.white(`   Model: ${chalk.bold(config.model)}`));
+  }
+  
+  if (config.systemPrompt) {
+    console.log(chalk.white(`   System: ${chalk.dim(truncateText(config.systemPrompt, maxLength))}`));
+  }
+  
+  if (config.userPrompt) {
+    console.log(chalk.white(`   Prompt: ${chalk.dim(truncateText(config.userPrompt, maxLength))}`));
+  }
+  
+  if (config.response) {
+    console.log(chalk.white(`   Response: ${truncateText(config.response, maxLength)}`));
+  }
+  
+  if (config.reasoning) {
+    console.log(chalk.white(`   Reasoning: ${config.reasoning}`));
+  }
+  console.log();
+}
+
+export function logPhaseTransition(from: string, to: string, reason?: string, conversationId?: string, title?: string): void {
+  if (!shouldLog("info", "conversation", "normal")) return;
+  
+  const header = formatConversationHeader(conversationId, title);
+  
+  console.log(chalk.blue(`🔄 PHASE TRANSITION ${header}`));
+  console.log(chalk.white(`   ${chalk.bold.red(from.toUpperCase())} → ${chalk.bold.green(to.toUpperCase())}`));
+  if (reason) {
+    console.log(chalk.white(`   Reason: ${reason}`));
+  }
+  console.log();
+}
+
+export function logUserMessage(message: string, conversationId?: string, title?: string, eventId?: string): void {
+  if (!shouldLog("info", "conversation", "normal")) return;
+  
+  const header = formatConversationHeader(conversationId, title);
+  
+  console.log(chalk.cyan(`👤 USER MESSAGE ${header}`));
+  console.log(chalk.white(`   "${message}"`));
+  if (eventId) {
+    console.log(chalk.dim(`   Event: ${eventId.substring(0, 12)}...`));
+  }
+  console.log();
+}
+
+export function logAgentResponse(agentName: string, message: string, conversationId?: string, title?: string, eventId?: string): void {
+  if (!shouldLog("info", "conversation", "normal")) return;
+  
+  const header = formatConversationHeader(conversationId, title);
+  
+  console.log(chalk.green(`🤖 ${agentName.toUpperCase()} RESPONSE ${header}`));
+  console.log(chalk.white(`   "${truncateText(message, 200)}"`));
+  if (eventId) {
+    console.log(chalk.dim(`   Event: ${eventId.substring(0, 12)}...`));
+  }
+  console.log();
+}
+
+export function logConversationError(error: string, context?: Record<string, any>, conversationId?: string, title?: string): void {
+  const header = formatConversationHeader(conversationId, title);
+  
+  console.log(chalk.red(`❌ CONVERSATION ERROR ${header}`));
+  console.log(chalk.white(`   ${error}`));
+  if (context) {
+    Object.entries(context).forEach(([key, value]) => {
+      console.log(chalk.dim(`   ${key}: ${value}`));
+    });
+  }
+  console.log();
+}
+
 // Export a logger object for compatibility
 export const logger = {
   info: (message: string, ...args: unknown[]) => logInfo(message, undefined, "normal", ...args),
@@ -348,4 +483,13 @@ export const logger = {
   debug: (message: string, ...args: unknown[]) => logDebug(message, undefined, "debug", ...args),
   createAgent: createAgentLogger,
   forModule: (module: LogModule) => new ScopedLogger(module),
+  
+  // Conversation flow logging
+  conversationStart: logConversationStart,
+  routingDecision: logRoutingDecision,
+  llmInteraction: logLLMInteraction,
+  phaseTransition: logPhaseTransition,
+  userMessage: logUserMessage,
+  agentResponse: logAgentResponse,
+  conversationError: logConversationError,
 };

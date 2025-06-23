@@ -11,6 +11,7 @@ import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import { FileSystemAdapter } from "./persistence";
 import type { ConversationMetadata, Conversation } from "./types";
+import { isEventFromUser } from "@/nostr/utils";
 
 export class ConversationManager {
   private conversations: Map<string, Conversation> = new Map();
@@ -131,7 +132,7 @@ export class ConversationManager {
     // Update the conversation summary to include the latest message
     // This ensures other parts of the system have access to updated context
     if (event.content) {
-      const isUser = !event.tags.some((tag) => tag[0] === "llm-model");
+      const isUser = isEventFromUser(event);
       if (isUser) {
         // For user messages, update the summary to be more descriptive
         conversation.metadata.summary = event.content;
@@ -199,7 +200,7 @@ export class ConversationManager {
 
     // Extract user requirements from conversation history
     const userMessages = conversation.history
-      .filter((event) => !event.tags.some((tag) => tag[0] === "llm-model"))
+      .filter((event) => isEventFromUser(event))
       .map((event) => event.content)
       .join("\n");
 

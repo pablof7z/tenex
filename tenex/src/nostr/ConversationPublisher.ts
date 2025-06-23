@@ -18,6 +18,10 @@ export class ConversationPublisher {
   ): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
+    // Tag the project
+    const project = projectContext.getCurrentProject();
+    reply.tag(project);
+
     // Remove ALL existing p-tags first
     // NDK's reply() method adds p-tags automatically, so we need to clean them
     reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
@@ -33,10 +37,6 @@ export class ConversationPublisher {
       myPubkey: signer.pubkey,
       nextAgent,
     });
-
-    // Tag the project
-    const project = projectContext.getCurrentProject();
-    reply.tag(project);
 
     // Add LLM metadata if present
     if (llmMetadata) {
@@ -120,12 +120,12 @@ export class ConversationPublisher {
   ): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
-    // Remove existing p-tags (project is responding)
-    reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
-
     // Tag the project
     const project = projectContext.getCurrentProject();
     reply.tag(project);
+
+    // Remove existing p-tags (project is responding)
+    reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
 
     // Add any custom metadata tags
     if (metadata) {

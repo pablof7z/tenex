@@ -1,4 +1,5 @@
 import type { Phase, Conversation } from "@/conversations/types";
+import { isEventFromUser } from "@/nostr/utils";
 
 export interface PhaseCompletionCriteria {
   phase: Phase;
@@ -59,9 +60,7 @@ export function evaluatePhaseCompletion(
 }
 
 function evaluateChatCompletion(conversation: Conversation): PhaseCompletionCriteria {
-  const hasUserMessages = conversation.history.some(
-    event => !event.tags.some(tag => tag[0] === 'llm-model')
-  );
+  const hasUserMessages = conversation.history.some(event => isEventFromUser(event));
   const hasRequirements = !!conversation.metadata.requirements;
   const hasSummary = !!conversation.metadata.summary;
   

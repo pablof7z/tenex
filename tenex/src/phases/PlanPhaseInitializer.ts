@@ -7,6 +7,7 @@ import { logger } from "@/utils/logger";
 import { PromptBuilder } from "@/prompts";
 import type { PhaseInitializationResult, PhaseInitializer } from "./types";
 import { handlePhaseError } from "./utils";
+import { isEventFromUser, isEventFromAgent } from "@/nostr/utils";
 
 /**
  * Plan Phase Initializer
@@ -160,7 +161,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
   private extractTaskFromConversation(conversation: Conversation): string {
     // Get user messages to understand what they're asking for
     const userMessages = conversation.history
-      .filter((event) => !event.tags.some((tag) => tag[0] === "llm-model"))
+      .filter((event) => isEventFromUser(event))
       .map((event) => event.content);
 
     if (userMessages.length === 0) {
@@ -192,7 +193,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
 
         // Extract author info
         const authorPubkey = event.pubkey;
-        const isUser = !event.tags.some((tag) => tag[0] === "llm-model");
+        const isUser = isEventFromUser(event);
         const author = isUser ? "User" : "Assistant";
 
         return `${author}: ${event.content}`;

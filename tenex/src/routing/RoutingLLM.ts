@@ -98,31 +98,23 @@ export class RoutingLLM {
         { role: "user", content: prompt },
       ];
 
-      // Log the full request
-      logger.info("RoutingLLM.routeNewConversation - Sending to LLM", {
+      // Log LLM interaction with human-readable format
+      logger.llmInteraction("Route New Conversation", {
+        model: this.configName,
         systemPrompt,
         userPrompt: prompt,
-        configName: this.configName,
-        messageContent: event.content,
-        availableAgentsCount: availableAgents.length,
-        hasInventory: !!projectInventory,
-      });
+      }, event.id, event.content);
 
       const response = await this.llmService.complete({ messages });
 
-      // Log the raw response
-      logger.info("RoutingLLM.routeNewConversation - Received response", {
-        response,
-        configName: this.configName,
-      });
-
       const decision = this.parseRoutingDecision(response.content, availableAgents);
 
-      // Log the parsed decision
-      logger.info("RoutingLLM.routeNewConversation - Parsed decision", {
-        decision,
-        configName: this.configName,
-      });
+      // Log the response and decision
+      logger.llmInteraction("Route New Conversation Response", {
+        model: this.configName,
+        response: response.content,
+        reasoning: decision.reasoning,
+      }, event.id, event.content);
 
       return decision;
     } catch (error) {
@@ -162,23 +154,25 @@ export class RoutingLLM {
         { role: "user", content: prompt },
       ];
 
-      logger.info("RoutingLLM.selectAgent - Sending to LLM", {
+      // Log LLM interaction for agent selection
+      logger.llmInteraction("Agent Selection", {
+        model: this.configName,
         systemPrompt,
         userPrompt: prompt,
-        configName: this.configName,
-        currentPhase: context.currentPhase,
-        availableAgentsCount: availableAgents.length,
-        hasInventory: !!projectInventory,
       });
 
       const response = await this.llmService.complete({ messages });
 
-      logger.info("RoutingLLM.selectAgent - Received response", {
-        response,
-        configName: this.configName,
+      const decision = this.parseAgentSelection(response.content, availableAgents);
+
+      // Log the response and selection
+      logger.llmInteraction("Agent Selection Response", {
+        model: this.configName,
+        response: response.content,
+        reasoning: decision.reasoning,
       });
 
-      return this.parseAgentSelection(response.content, availableAgents);
+      return decision;
     } catch (error) {
       logger.error("Failed to select agent", { error });
       throw error;
@@ -273,23 +267,25 @@ export class RoutingLLM {
         { role: "user", content: prompt },
       ];
 
-      logger.info("RoutingLLM.determinePhaseTransition - Sending to LLM", {
+      // Log phase transition evaluation
+      logger.llmInteraction("Phase Transition Evaluation", {
+        model: this.configName,
         systemPrompt,
         userPrompt: prompt,
-        configName: this.configName,
-        currentPhase: context.currentPhase,
-        phaseHistory: context.phaseHistory,
-        hasInventory: !!projectInventory,
       });
 
       const response = await this.llmService.complete({ messages });
 
-      logger.info("RoutingLLM.determinePhaseTransition - Received response", {
-        response,
-        configName: this.configName,
+      const decision = this.parsePhaseTransition(response.content);
+
+      // Log the response and decision
+      logger.llmInteraction("Phase Transition Decision", {
+        model: this.configName,
+        response: response.content,
+        reasoning: decision.reasoning,
       });
 
-      return this.parsePhaseTransition(response.content);
+      return decision;
     } catch (error) {
       logger.error("Failed to determine phase transition", { error });
       throw error;
