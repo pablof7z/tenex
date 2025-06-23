@@ -43,7 +43,7 @@ export class AgentRegistry {
     }
   }
 
-  async ensureAgent(name: string, config: AgentConfig): Promise<Agent> {
+  async ensureAgent(name: string, config: Omit<AgentConfig, 'nsec'> & { nsec?: string }): Promise<Agent> {
     // Check if agent already exists
     const existingAgent = this.agents.get(name);
     if (existingAgent) {
@@ -90,7 +90,8 @@ export class AgentRegistry {
       logger.info(`Created new agent "${name}" with nsec`);
       
       // Publish kind:0 and request events for new agent
-      await this.publishAgentEvents(signer, config, registryEntry.eventId);
+      const { nsec: _, ...configWithoutNsec } = config;
+      await this.publishAgentEvents(signer, configWithoutNsec, registryEntry.eventId);
     } else {
       // Load agent definition from file
       const definitionPath = path.join(this.agentsDir, registryEntry.file);
@@ -190,7 +191,7 @@ export class AgentRegistry {
     await configService.saveProjectAgents(this.projectPath, this.registry);
   }
 
-  private async publishAgentEvents(signer: NDKPrivateKeySigner, config: AgentConfig, ndkAgentEventId?: string): Promise<void> {
+  private async publishAgentEvents(signer: NDKPrivateKeySigner, config: Omit<AgentConfig, 'nsec'>, ndkAgentEventId?: string): Promise<void> {
     try {
       // Load project config to get project info
       const projectConfig = await configService.loadTenexConfig(this.projectPath);

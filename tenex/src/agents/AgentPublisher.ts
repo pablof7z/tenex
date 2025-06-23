@@ -66,7 +66,7 @@ export class AgentPublisher {
    */
   async publishAgentRequest(
     signer: NDKPrivateKeySigner,
-    agentConfig: AgentConfig,
+    agentConfig: Omit<AgentConfig, 'nsec'>,
     projectPubkey: string,
     ndkAgentEventId?: string
   ): Promise<NDKEvent> {
@@ -125,7 +125,7 @@ export class AgentPublisher {
    */
   async publishAgentCreation(
     signer: NDKPrivateKeySigner,
-    agentConfig: AgentConfig,
+    agentConfig: Omit<AgentConfig, 'nsec'>,
     projectName: string,
     projectPubkey: string,
     ndkAgentEventId?: string

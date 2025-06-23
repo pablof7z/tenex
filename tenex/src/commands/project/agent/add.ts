@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { input } from "@inquirer/prompts";
 import { nip19 } from "nostr-tools";
-import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { AgentRegistry } from "@/agents/AgentRegistry";
 import { AgentPublisher } from "@/agents/AgentPublisher";
 import { logger } from "@/utils/logger";
@@ -47,13 +47,6 @@ export const agentAddCommand = new Command("add")
         validate: (value) => value.trim() ? true : "Prompt is required",
       });
 
-      // Generate agent keys
-      const signer = NDKPrivateKeySigner.generate();
-      const { nsec, pubkey, npub } = signer;
-
-      // Create agent slug
-      const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-");
-
       // Load existing registry
       const registry = new AgentRegistry(projectPath);
       await registry.loadFromProject();
@@ -64,49 +57,23 @@ export const agentAddCommand = new Command("add")
         throw new Error(`Agent with name "${name}" already exists`);
       }
 
-      // Create agent without eventId (local-only)
-      const agent = await registry.createAgent(name, role, {
+      // Create agent config
+      const agentConfig = {
+        name,
+        role,
         expertise: role,
         instructions: prompt,
         llmConfig: "default",
         tools: ["bash", "file-system", "web-search"],
-      });
-
-      // Ensure agents directory exists
-      const agentsDir = path.join(projectPath, ".tenex", "agents");
-      await fs.mkdir(agentsDir, { recursive: true });
-
-      // Save agent definition
-      const agentFile = path.join(agentsDir, `${slug}.json`);
-      const agentData = {
-        name: agent.name,
-        role: agent.role,
-        expertise: agent.expertise,
-        instructions: agent.instructions,
-        llmConfig: agent.llmConfig,
-        tools: agent.tools,
-        pubkey: agent.pubkey,
       };
 
-      await fs.writeFile(agentFile, JSON.stringify(agentData, null, 2));
-
-      // Update agents.json without eventId
-      const agentsJsonPath = path.join(projectPath, ".tenex", "agents.json");
-      let agentsJson: Record<string, { nsec: string; file: string }> = {};
+      // Use AgentRegistry to ensure agent (this handles all file operations)
+      const agent = await registry.ensureAgent(name, agentConfig);
       
-      try {
-        const content = await fs.readFile(agentsJsonPath, "utf-8");
-        agentsJson = JSON.parse(content);
-      } catch {
-        // File doesn't exist, start with empty object
-      }
-
-      agentsJson[slug] = {
-        nsec: agent.nsec,
-        file: `${slug}.json`,
-      };
-
-      await fs.writeFile(agentsJsonPath, JSON.stringify(agentsJson, null, 2));
+      // Get the agent's nsec from the signer
+      const nsec = (agent.signer as NDKPrivateKeySigner).privateKey;
+      const pubkey = agent.pubkey;
+      const npub = nip19.npubEncode(pubkey);
 
       // Publish kind:0 profile and agent request to Nostr
       try {
@@ -130,14 +97,12 @@ export const agentAddCommand = new Command("add")
           // Publish agent profile (kind:0) and request event only
           // No NDKAgent event since this is a local-only agent
           await publisher.publishAgentCreation(
-            signer,
+            agent.signer,
             {
               name: agent.name,
               role: agent.role,
               expertise: agent.expertise,
               instructions: agent.instructions || "",
-              nsec: agent.nsec,
-              pubkey: agent.pubkey,
               tools: agent.tools,
               llmConfig: agent.llmConfig,
             },
@@ -153,9 +118,9 @@ export const agentAddCommand = new Command("add")
       }
 
       logger.info(`✅ Local agent "${name}" created successfully`);
-      logger.info(`   Slug: ${slug}`);
+      logger.info(`   Name: ${name}`);
       logger.info(`   Pubkey: ${agent.pubkey}`);
-      logger.info(`   Stored in: ${agentFile}`);
+      logger.info(`   Stored in: .tenex/agents/`);
 
     } catch (error) {
       logger.error("Failed to create agent:", error);
