@@ -2,16 +2,20 @@ import { ProcessController } from './ProcessController';
 import type { ProjectInfo } from './types';
 import { retry } from './utils/Retry';
 import { Logger } from './utils/Logger';
+import { NDKPrivateKeySigner, NDKEvent, type NDK } from '@nostr-dev-kit/ndk';
 
 export class CliClient {
   private logger: Logger;
+  private signer: NDKPrivateKeySigner;
   
   constructor(
     private processController: ProcessController,
     private nsec: string,
-    private cliPath: string
+    private cliPath: string,
+    private ndk: NDK
   ) {
     this.logger = new Logger({ component: 'CliClient' });
+    this.signer = new NDKPrivateKeySigner(nsec);
   }
   
   async createProject(options: {
@@ -86,39 +90,28 @@ export class CliClient {
     }
   }
   
-  async sendMessage(projectNaddr: string, message: string): Promise<string> {
-    const args = ['--json', 'message', '--nsec', this.nsec, '--project', projectNaddr, '--message', message];
-    
-    this.logger.info('Sending message to project', { 
-      projectNaddr,
+  async sendMessage(projectEvent: NDKEvent, message: string): Promise<string> {
+    this.logger.info('Creating conversation', { 
+      projectId: projectEvent.id,
       message: message.substring(0, 50) + '...'
     });
     
-    // Use retry for command execution
-    const output = await retry(
-      () => this.runCommand(args),
-      {
-        maxAttempts: 3,
-        initialDelay: 1000,
-        logger: this.logger
-      }
-    );
+    // Create a new conversation event (kind 11 thread root)
+    const conversationEvent = new NDKEvent(this.ndk);
+    conversationEvent.kind = 11; // NIP-11 thread root
+    conversationEvent.content = message;
+    conversationEvent.tag(projectEvent);
     
-    const parsed = await this.parseJsonResponse(output, 'message');
-    this.logger.debug('Message sent successfully', { threadId: parsed.threadId });
+    // Sign and publish the event
+    await conversationEvent.sign(this.signer);
+    await conversationEvent.publish();
     
-    // Log the encoded event if available
-    if (parsed.eventId) {
-      this.logger.info('Message event published', { 
-        eventId: parsed.eventId,
-        encode: parsed.encode || 'Not available in response'
-      });
-    }
+    this.logger.info('Conversation event published', { 
+      eventId: conversationEvent.id,
+      encode: conversationEvent.rawEvent()
+    });
     
-    if (!parsed.threadId) {
-      throw new Error('Response missing threadId field');
-    }
-    return parsed.threadId;
+    return conversationEvent.id;
   }
   
   async listProjects(): Promise<ProjectInfo[]> {
@@ -150,7 +143,8 @@ export class CliClient {
       {
         env: {
           ...process.env,
-          NODE_ENV: 'test'
+          NODE_ENV: 'test',
+          RELAYS: 'ws://localhost:10547'
         }
       }
     );

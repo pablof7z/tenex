@@ -14,14 +14,13 @@ import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
 interface AgentIdentityArgs {
   name: string;
   role: string;
-  expertise: string;
 }
 
 export const agentIdentityFragment: PromptFragment<AgentIdentityArgs> = {
   id: "agent-identity",
   priority: 5,
-  template: ({ name, role, expertise }) =>
-    `You are ${name}, a ${role}.\nYour expertise: ${expertise}`,
+  template: ({ name, role }) =>
+    `You are ${name}, a ${role}.`,
 };
 
 // Agent profile with capabilities - More detailed agent description
@@ -126,10 +125,6 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
       projectName: projectTitle
     }));
     
-    // Add expertise if available
-    if (agent.expertise) {
-      parts.push(`## Your Expertise\n${agent.expertise}`);
-    }
     
     // Phase info
     parts.push(`## Current Phase: ${phase.toUpperCase()}\n${getPhaseInstructions(phase)}`);

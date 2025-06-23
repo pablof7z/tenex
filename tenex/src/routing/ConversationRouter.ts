@@ -70,7 +70,7 @@ export class ConversationRouter {
       if (!validation.valid) {
         logger.conversationError(
           `Invalid routing decision: ${validation.reason}`,
-          { decision: routingDecision },
+          { decision: JSON.stringify(routingDecision) },
           conversation.id,
           conversation.title
         );

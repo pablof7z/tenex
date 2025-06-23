@@ -17,6 +17,15 @@ export class GetCurrentRequirementsExecutor implements ToolExecutor {
     const startTime = Date.now();
     
     try {
+      // Only the boss agent can get requirements
+      if (!context.agent.isBoss) {
+        return {
+          success: false,
+          error: "Permission denied: Only the project manager can get current requirements",
+          duration: Date.now() - startTime
+        };
+      }
+
       const { conversation } = context;
       
       if (!conversation) {

@@ -30,7 +30,6 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
     if (agent) {
       console.log(chalk.white("Name:"), agent.name);
       console.log(chalk.white("Role:"), agent.role);
-      console.log(chalk.white("Expertise:"), agent.expertise);
       if (agent.tools && agent.tools.length > 0) {
         console.log(chalk.white("Tools:"), agent.tools.join(", "));
       }

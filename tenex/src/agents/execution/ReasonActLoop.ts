@@ -131,6 +131,7 @@ export class ReasonActLoop {
       toolLogger.startOperation("tool_execution", {
         tool: invocation.toolName,
         action: invocation.action,
+        parameters: invocation.parameters
       });
 
       const toolResult = mappedResults.find((r) => r.toolName === invocation.toolName);

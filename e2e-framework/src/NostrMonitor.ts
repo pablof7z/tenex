@@ -5,9 +5,10 @@ import { retry } from './utils/Retry';
 import { Logger } from './utils/Logger';
 
 export class NostrMonitor {
-  private ndk: NDK;
+  public readonly ndk: NDK;
   private subscriptions: Map<string, NDKSubscription> = new Map();
   private logger: Logger;
+  private globalProjectSubscription?: NDKSubscription;
   
   constructor(relays: string[]) {
     this.ndk = new NDK({
@@ -39,6 +40,12 @@ export class NostrMonitor {
   
   async disconnect(): Promise<void> {
     try {
+      // Stop global project subscription if exists
+      if (this.globalProjectSubscription) {
+        this.globalProjectSubscription.stop();
+        this.globalProjectSubscription = undefined;
+      }
+      
       for (const sub of this.subscriptions.values()) {
         sub.stop();
       }
@@ -81,17 +88,10 @@ export class NostrMonitor {
   }
   
   async waitForProjectEvent(
-    projectNaddr: string,
+    projectEvent: NDKEvent,
     additionalFilter: Partial<NDKFilter>,
     options: { timeout?: number; validate?: (event: NDKEvent) => boolean } = {}
   ): Promise<NDKEvent> {
-    // Fetch the project event first to get its proper filter
-    const projectEvent = await this.ndk.fetchEvent(projectNaddr);
-    
-    if (!projectEvent) {
-      throw new Error(`Failed to fetch project event for naddr: ${projectNaddr}`);
-    }
-    
     // Combine the project's filter with additional filters
     const filter: NDKFilter = {
       ...projectEvent.filter(),
@@ -101,14 +101,7 @@ export class NostrMonitor {
     return this.waitForEvent(filter, options);
   }
   
-  async subscribeToProject(projectNaddr: string): Promise<AsyncIterableIterator<NDKEvent>> {
-    // Fetch the project event first to get its proper filter
-    const projectEvent = await this.ndk.fetchEvent(projectNaddr);
-    
-    if (!projectEvent) {
-      throw new Error(`Failed to fetch project event for naddr: ${projectNaddr}`);
-    }
-    
+  async subscribeToProject(projectEvent: NDKEvent): Promise<AsyncIterableIterator<NDKEvent>> {
     // Use the project's filter and add the kinds we want to monitor
     const filter: NDKFilter = {
       ...projectEvent.filter(),
@@ -146,5 +139,52 @@ export class NostrMonitor {
     } finally {
       sub.stop();
     }
+  }
+  
+  /**
+   * Starts a global subscription for all project events, logging them for debugging.
+   * This subscription runs for the entire session and shows all events with formatted output.
+   * 
+   * @param projectEvent - Optional project event to filter events. If not provided, shows all events.
+   */
+  async startGlobalProjectEventMonitoring(projectEvent?: NDKEvent): Promise<void> {
+    // Stop existing subscription if any
+    if (this.globalProjectSubscription) {
+      this.globalProjectSubscription.stop();
+    }
+    
+    let filter: NDKFilter;
+    
+    if (projectEvent) {
+      filter = projectEvent.filter();
+    } else {
+      // Monitor all events - this is useful for debugging
+      filter = {};
+    }
+    
+    this.globalProjectSubscription = this.ndk.subscribe(filter, {
+      closeOnEose: false
+    });
+    
+    this.globalProjectSubscription.on('event', (event: NDKEvent) => {
+      // Format the event for debugging
+      const pubkeyPrefix = event.pubkey.substring(0, 6);
+      const conversationId = event.tagValue('E')?.substring(0, 6) || 'N/A';
+      const contentPreview = event.content ? 
+        event.content.substring(0, 100) + (event.content.length > 100 ? '...' : '') : 
+        '<empty>';
+      
+      this.logger.info('🔍 Project Event', {
+        pubkey: pubkeyPrefix,
+        kind: event.kind,
+        conversationId,
+        content: contentPreview,
+        tags: event.tags.map(t => t[0]),
+      });
+    });
+    
+    this.logger.info('Started global project event monitoring', { 
+      project: projectEvent?.encode() || 'all'
+    });
   }
 }

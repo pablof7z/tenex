@@ -36,7 +36,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
         availableAgents.find((agent) => agent.role.toLowerCase().includes("developer")) ||
         availableAgents.find((agent) =>
           ["implementation", "coding", "development"].some((keyword) =>
-            agent.expertise.toLowerCase().includes(keyword.toLowerCase())
+            agent.role.toLowerCase().includes(keyword.toLowerCase())
           )
         ) ||
         availableAgents[0]; // Fallback to first available agent
@@ -107,7 +107,7 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
 
     logger.info("[EXECUTE Phase] Triggering Claude Code CLI for execution", {
       conversationId: conversation.id,
-      promptLength: prompt.length,
+      prompt: prompt,
     });
 
     const result = await ExecutionService.executeClaudeCode({

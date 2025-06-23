@@ -18,9 +18,11 @@ export async function initNDK(): Promise<void> {
   }
 
   const relays = getRelayUrls();
+  const useExplicitRelays = process.env.RELAYS !== undefined;
+  
   ndk = new NDK({
     explicitRelayUrls: [...relays],
-    enableOutboxModel: true,
+    enableOutboxModel: !useExplicitRelays,
     autoConnectUserRelays: true,
     autoFetchUserMutelist: true,
   });

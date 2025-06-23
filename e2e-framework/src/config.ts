@@ -59,7 +59,7 @@ export const DEFAULT_CONFIG: FrameworkConfig = {
   
   nostr: {
     defaultRelays: [
-      'wss://relay.primal.net',
+      'ws://localhost:10547',
     ]
   },
   

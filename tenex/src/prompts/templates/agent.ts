@@ -14,7 +14,6 @@ export function buildAgentPrompt(
     .add("agent-identity", {
       name: agent.name,
       role: agent.role,
-      expertise: agent.expertise,
     })
     .add(
       "custom-instructions",
@@ -57,7 +56,6 @@ export function buildExpertFeedbackPrompt(
     .add("agent-identity", {
       name: expert.name,
       role: expert.role,
-      expertise: expert.expertise,
     })
     .add("base-context", {
       content: "You are providing expert feedback on the following work.",

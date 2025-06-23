@@ -9,10 +9,9 @@ const DEFAULT_RELAY_URLS = [
  * Get relay URLs for NDK connection
  */
 export function getRelayUrls(): string[] {
-  // Check environment variable first
-  const envRelays = process.env.TENEX_RELAYS;
-  if (envRelays) {
-    return envRelays.split(",").map((url) => url.trim());
+  const relaysEnv = process.env.RELAYS;
+  if (relaysEnv) {
+    return relaysEnv.split(",").map((url) => url.trim());
   }
 
   return DEFAULT_RELAY_URLS;

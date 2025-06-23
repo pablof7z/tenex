@@ -65,13 +65,8 @@ export class TaskPublisher {
   async updateTask(task: NDKTask, update: TaskUpdateOptions): Promise<NDKEvent> {
 
     // Create a regular event that references the task
-    const updateEvent = new NDKEvent(this.ndk);
-    updateEvent.kind = 1; // Regular text note
-    
-    // Reference the task
-    updateEvent.tags.push(["e", task.id]);
-    updateEvent.tags.push(["a", task.tagAddress()]);
-    
+    const updateEvent = task.reply();
+
     // Tag the project
     const projectCtx = getProjectContext();
     updateEvent.tag(projectCtx.project);
@@ -116,12 +111,7 @@ export class TaskPublisher {
       return;
     }
 
-    const updateEvent = new NDKEvent(this.ndk);
-    updateEvent.kind = 1;
-    
-    // Reference the task
-    updateEvent.tags.push(["e", task.id]);
-    updateEvent.tags.push(["a", task.tagAddress()]);
+    const updateEvent = task.reply();
     
     // Tag the project
     const projectCtx = getProjectContext();

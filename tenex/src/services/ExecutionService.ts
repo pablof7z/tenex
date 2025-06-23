@@ -31,11 +31,16 @@ export interface ClaudeExecutionResult {
  * Shared execution service for git operations and Claude Code execution
  * Extracted from ExecutePhaseInitializer to enable reuse
  */
+
+// biome-ignore lint/complexity/noStaticOnlyClass: <explanation>
 export class ExecutionService {
   /**
    * Create a git branch for execution
    */
-  static createExecutionBranch(baseName: string, projectPath: string = process.cwd()): GitBranchResult {
+  static createExecutionBranch(
+    baseName: string,
+    projectPath: string = process.cwd()
+  ): GitBranchResult {
     try {
       // Check if we're in a git repository
       try {
@@ -44,8 +49,17 @@ export class ExecutionService {
           stdio: "ignore",
         });
       } catch {
-        logger.info("Not a git repository, skipping branch creation");
-        return { branchName: "no-git", created: false };
+        logger.info("Not a git repository, initializing git repository");
+        try {
+          execSync("git init", {
+            cwd: projectPath,
+            stdio: "pipe",
+          });
+          logger.info("Git repository initialized successfully");
+        } catch (initError) {
+          logger.error("Failed to initialize git repository", { error: initError });
+          return { branchName: "no-git", created: false };
+        }
       }
 
       // Generate branch name
@@ -78,7 +92,7 @@ export class ExecutionService {
   static async executeClaudeCode(options: ClaudeExecutionOptions): Promise<ClaudeExecutionResult> {
     try {
       logger.info("Executing Claude Code", {
-        promptLength: options.prompt.length,
+        prompt: options.prompt,
         projectPath: options.projectPath,
       });
 

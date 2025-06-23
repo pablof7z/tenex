@@ -94,7 +94,8 @@ export class Orchestrator {
     this.cliClient = new CliClient(
       this.processController,
       this.nsec,
-      path.join(process.cwd(), config.cli.path)
+      path.join(process.cwd(), config.cli.path),
+      this.nostrMonitor.ndk
     );
     
     // Initialize logger
@@ -103,6 +104,34 @@ export class Orchestrator {
       debug: options.debug,
       logFile: options.logFile
     });
+  }
+  
+  /**
+   * Gets the CLI client for direct access
+   * @internal
+   */
+  get client(): CliClient {
+    return this.cliClient;
+  }
+  
+  /**
+   * Creates a reply to an event using NDK
+   * @internal
+   */
+  async createReply(eventToReplyTo: NDKEvent, projectEvent: NDKEvent, message: string): Promise<string> {
+    const signer = new NDKPrivateKeySigner(this.nsec);
+    const reply = eventToReplyTo.reply();
+    reply.content = message;
+    reply.tag(projectEvent); // Tag the project event
+    await reply.sign(signer);
+    await reply.publish();
+    
+    this.logger.info('Reply event published', { 
+      eventId: reply.id,
+      encode: reply.encode()
+    });
+    
+    return reply.id;
   }
   
   /**
@@ -154,7 +183,8 @@ export class Orchestrator {
             ...process.env,
             TENEX_CONFIG_DIR: this.environment.getConfigDir(),
             LOG_LEVEL: 'debug',
-            TENEX_LOG: 'general:debug,nostr:debug,agent:debug'
+            TENEX_LOG: 'general:debug,nostr:debug,agent:debug',
+            RELAYS: 'ws://localhost:10547'
           },
           cwd: path.join(process.cwd(), '..', 'tenex')
         }
@@ -167,6 +197,10 @@ export class Orchestrator {
       // Connect Nostr monitor
       this.logger.debug('Connecting to Nostr relays', { relays: this.options.relays });
       await this.nostrMonitor.connect();
+      
+      // Start global project event monitoring for debugging
+      this.logger.debug('Starting global project event monitoring');
+      await this.nostrMonitor.startGlobalProjectEventMonitoring();
       
       setupComplete = true;
       this.logger.info('Orchestrator setup complete');
@@ -232,11 +266,19 @@ export class Orchestrator {
     const info = await this.cliClient.createProject(options);
     this.logger.debug('Project created', { naddr: info.naddr });
     
+    // Fetch the project event once
+    this.logger.debug('Fetching project event', { naddr: info.naddr });
+    const projectEvent = await this.nostrMonitor.ndk.fetchEvent(info.naddr);
+    if (!projectEvent) {
+      throw new Error(`Failed to fetch project event after creation: ${info.naddr}`);
+    }
+    
     return new Project(
       this,
       info.naddr,
       info.name,
-      this.environment.getProjectDir(info.name)
+      this.environment.getProjectDir(info.name),
+      projectEvent
     );
   }
   

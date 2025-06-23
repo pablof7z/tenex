@@ -7,7 +7,6 @@ export interface Agent {
   pubkey: string;
   signer: NDKPrivateKeySigner;
   role: string;
-  expertise: string;
   instructions?: string;
   llmConfig: string;
   tools: string[];
@@ -61,7 +60,6 @@ export interface ToolCall {
 export interface AgentConfig {
   name: string;
   role: string;
-  expertise: string;
   instructions?: string;
   nsec: string;
   eventId?: string;
@@ -85,7 +83,6 @@ export interface ConfigurationLoadOptions {
 export interface StoredAgentData {
   name: string;
   role: string;
-  expertise?: string;
   instructions?: string;
   llmConfig?: string;
   tools?: string[];

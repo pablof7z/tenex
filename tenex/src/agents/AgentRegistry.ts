@@ -80,7 +80,6 @@ export class AgentRegistry {
       agentDefinition = {
         name: config.name,
         role: config.role,
-        expertise: config.expertise || config.role,
         instructions: config.instructions || "",
         llmConfig: config.llmConfig,
         tools: config.tools || getDefaultToolsForAgent(false), // Non-boss agents get default tools
@@ -117,7 +116,6 @@ export class AgentRegistry {
         agentDefinition = {
           name: config.name,
           role: config.role,
-          expertise: config.expertise || config.role,
           instructions: config.instructions || "",
           llmConfig: config.llmConfig,
           tools: config.tools || getDefaultToolsForAgent(false), // Non-boss agents get default tools
@@ -136,7 +134,6 @@ export class AgentRegistry {
       pubkey,
       signer,
       role: agentDefinition.role,
-      expertise: agentDefinition.expertise || agentDefinition.role,
       instructions: agentDefinition.instructions,
       llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
       tools: agentDefinition.tools || getDefaultToolsForAgent(registryEntry.boss || false),
@@ -201,7 +198,6 @@ export class AgentRegistry {
     return this.ensureAgent(slug, {
       name: BOSS_AGENT_DEFINITION.name,
       role: BOSS_AGENT_DEFINITION.role,
-      expertise: BOSS_AGENT_DEFINITION.expertise || BOSS_AGENT_DEFINITION.role,
       instructions: BOSS_AGENT_DEFINITION.instructions,
       tools: BOSS_AGENT_DEFINITION.tools || [],
       llmConfig: BOSS_AGENT_DEFINITION.llmConfig,
@@ -283,7 +279,6 @@ export class AgentRegistry {
     const config: AgentConfig = {
       name: agentDefinition.name,
       role: agentDefinition.role,
-      expertise: agentDefinition.expertise || agentDefinition.role,
       instructions: agentDefinition.instructions || "",
       nsec: registryEntry.nsec,
       eventId: registryEntry.eventId,
@@ -311,9 +306,6 @@ export class AgentRegistry {
     }
 
     // Optional fields with type validation
-    if (definition.expertise !== undefined && typeof definition.expertise !== 'string') {
-      throw new Error('Agent expertise must be a string');
-    }
 
     if (definition.instructions !== undefined && typeof definition.instructions !== 'string') {
       throw new Error('Agent instructions must be a string');

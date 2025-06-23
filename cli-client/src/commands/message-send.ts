@@ -3,7 +3,6 @@ import { logger } from "../logger.js";
 import chalk from "chalk";
 import { getNDK } from "../ndk-setup.js";
 import { outputResult, outputError } from "../utils/output.js";
-import { v4 as uuidv4 } from "uuid";
 import { nip19 } from "nostr-tools";
 
 interface SendMessageOptions {
@@ -29,11 +28,8 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
 
         // Create message event
         const event = new NDKEvent(ndk);
-        event.kind = 1; // Text note
+        event.kind = 11; // Thread root event
         event.content = options.message;
-
-        // Generate thread ID
-        const threadId = uuidv4();
 
         // Parse the project naddr to get the a tag format
         let aTag: string;
@@ -54,34 +50,39 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
             aTag = options.project;
         }
         
+        // Extract first line of message as title (or use a default)
+        const firstLine = options.message.split('\n')[0].trim();
+        const title = firstLine.length > 0 ? firstLine.substring(0, 100) : "New Thread";
+        
         // Add tags
         event.tags = [
             ["a", aTag], // Reference to project in kind:pubkey:identifier format
-            ["subject", "Thread"],
-            ["thread-id", threadId]
+            ["title", title]
         ];
 
         // Publish the event
         await event.publish();
 
-        // Get event ID
+        // Get event ID (which is also the thread ID for kind 11 events)
         const eventId = event.id;
 
         // Output result
         const result = {
-            threadId,
+            threadId: eventId, // Thread ID is the event ID for kind 11 root messages
             eventId,
             encode: event.encode(), // Add the encoded event
             project: options.project,
             message: options.message,
             author: user.npub,
-            timestamp: event.created_at
+            timestamp: event.created_at,
+            title
         };
 
         outputResult(result, { json: options.json }, (data) => {
             logger.info(chalk.green("✅ Message sent successfully!"));
             logger.info(chalk.gray(`Thread ID: ${data.threadId}`));
             logger.info(chalk.gray(`Event ID: ${data.eventId}`));
+            logger.info(chalk.gray(`Title: ${data.title}`));
             logger.info(chalk.gray(`Encode: ${data.encode}`));
             logger.info(chalk.gray(`Project: ${data.project}`));
         });

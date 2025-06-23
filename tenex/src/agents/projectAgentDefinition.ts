@@ -11,7 +11,6 @@ import { getDefaultToolsForAgent } from "./constants";
 export const BOSS_AGENT_DEFINITION: StoredAgentData = {
   name: "Project Manager",
   role: "Project Manager",
-  expertise: "Project coordination, requirements analysis, and phase management",
   instructions: `You are the project manager responsible for:
 - Understanding and clarifying user requirements in the chat phase
 - Coordinating work between different agents

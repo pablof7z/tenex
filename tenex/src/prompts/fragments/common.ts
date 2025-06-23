@@ -19,12 +19,12 @@ export const agentListFragment: PromptFragment<AgentListArgs> = {
     const header = "Available agents:";
 
     if (format === "simple") {
-      const list = agents.map((a) => `- ${a.name} (${a.role}): ${a.expertise}`).join("\n");
+      const list = agents.map((a) => `- ${a.name} (${a.role})`).join("\n");
       return `${header}\n${list}`;
     }
     const list = agents
       .map(
-        (a) => `- ${a.name} (pubkey: ${a.pubkey})\n  Role: ${a.role}\n  Expertise: ${a.expertise}`
+        (a) => `- ${a.name} (pubkey: ${a.pubkey})\n  Role: ${a.role}`
       )
       .join("\n\n");
     return `${header}\n${list}`;

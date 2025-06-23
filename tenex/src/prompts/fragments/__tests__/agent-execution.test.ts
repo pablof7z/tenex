@@ -15,12 +15,11 @@ describe("Agent Execution Prompt Fragments", () => {
         name: "TestAgent",
         role: "Developer",
         instructions: "Test instructions",
-        expertise: "Test expertise",
         tools: ["file", "shell"],
         pubkey: "test-pubkey",
-        nsec: "test-nsec",
         signer: {} as any,
         llmConfig: "test-config",
+        slug: "test-agent",
       };
 
       const prompt = new PromptBuilder()
@@ -34,7 +33,6 @@ describe("Agent Execution Prompt Fragments", () => {
 
       expect(prompt).toContain("You are TestAgent, a Developer");
       expect(prompt).toContain("Test instructions");
-      expect(prompt).toContain("Test expertise");
       expect(prompt).toContain("Current Phase: CHAT");
       expect(prompt).toContain("Project: Test Project");
       expect(prompt).toContain("Repository: https://github.com/test/repo");
@@ -102,12 +100,11 @@ describe("Agent Execution Prompt Fragments", () => {
         name: "IntegratedAgent",
         role: "Full Stack Developer",
         instructions: "Build amazing applications",
-        expertise: "TypeScript, React, Node.js",
         tools: ["claude_code"],
         pubkey: "test-pubkey",
-        nsec: "test-nsec",
         signer: {} as any,
         llmConfig: "test-config",
+        slug: "integrated-agent",
       };
 
       const mockHistory: Conversation["history"] = [

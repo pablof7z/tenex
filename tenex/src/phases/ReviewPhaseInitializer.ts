@@ -60,7 +60,7 @@ export class ReviewPhaseInitializer implements PhaseInitializer {
           assignedReviewers: reviewAgents.map((a) => ({
             name: a.name,
             pubkey: a.pubkey,
-            expertise: a.expertise,
+            role: a.role,
           })),
           primaryReviewer: primaryReviewer.name,
           phase: "review",
@@ -88,13 +88,9 @@ export class ReviewPhaseInitializer implements PhaseInitializer {
     ];
 
     const reviewAgents = agents.filter((agent) => {
-      const roleMatch = reviewKeywords.some((keyword) =>
+      return reviewKeywords.some((keyword) =>
         agent.role.toLowerCase().includes(keyword)
       );
-      const expertiseMatch = reviewKeywords.some((keyword) =>
-        agent.expertise.toLowerCase().includes(keyword)
-      );
-      return roleMatch || expertiseMatch;
     });
 
     // If no specific review agents found, use all available agents

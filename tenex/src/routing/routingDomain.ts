@@ -11,7 +11,7 @@ import { evaluatePhaseCompletion } from "./phase-completion";
  */
 export function canTransitionPhase(currentPhase: Phase, targetPhase: Phase): boolean {
   const validTransitions: Record<Phase, Phase[]> = {
-    chat: ["plan"],
+    chat: ["plan", "execute"],
     plan: ["execute", "chat"], // Can go back to chat if more clarification needed
     execute: ["review", "plan", "chat"], // Can go back to plan if issues found or chat for clarification
     review: ["execute", "chat", "chores"], // Can go back to execute for fixes, chat for new requirements, or chores for maintenance

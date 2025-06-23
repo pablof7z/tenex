@@ -13,7 +13,8 @@ function createMockEvent(content: string, tags: string[][] = []): NDKEvent {
     pubkey: 'mock-pubkey',
     created_at: Math.floor(Date.now() / 1000),
     kind: 1,
-    sig: 'mock-signature'
+    sig: 'mock-signature',
+    filter: () => ({ kinds: [1] })
   } as NDKEvent;
 }
 
@@ -33,18 +34,22 @@ describe('Conversation', () => {
         }
       },
       monitor: {
-        waitForProjectEvent: async (naddr: string, filter: any, options?: any) => {
-          mockOrchestrator['waitCall'] = { naddr, filter, options };
+        waitForProjectEvent: async (projectEvent: NDKEvent, filter: any, options?: any) => {
+          mockOrchestrator['waitCall'] = { projectEvent, filter, options };
           
-          // Simulate different responses based on filter
+          // Determine which event to return based on the test context
           if (options?.validate) {
-            // For completion test
-            const mockEvent = createMockEvent('Task completed successfully');
-            if (options.validate(mockEvent)) {
-              return mockEvent;
+            // Check if the validate function is looking for completion indicators
+            const testEvent = createMockEvent('test');
+            const completedEvent = createMockEvent('completed');
+            
+            // If it accepts "completed" but not "test", it's a completion check
+            if (!options.validate(testEvent) && options.validate(completedEvent)) {
+              return createMockEvent('Task completed successfully');
             }
           }
           
+          // Default: return a normal reply message
           return createMockEvent('Reply message', [['e', threadId]]);
         }
       }
@@ -54,8 +59,9 @@ describe('Conversation', () => {
     mockProject = {
       naddr: 'naddr456',
       name: 'test-project',
-      directory: '/tmp/test-project'
-    } as Project;
+      directory: '/tmp/test-project',
+      event: createMockEvent('Project event')
+    } as any;
     
     conversation = new Conversation(
       mockOrchestrator,
@@ -86,14 +92,13 @@ describe('Conversation', () => {
     test('should wait for event with correct filter', async () => {
       const reply = await conversation.waitForReply();
       
-      expect(mockOrchestrator['waitCall']).toEqual({
-        naddr: 'naddr456',
-        filter: {
-          kinds: [1],
-          '#e': ['thread123']
-        },
-        options: {}
+      const waitCall = mockOrchestrator['waitCall'];
+      expect(waitCall.projectEvent.content).toBe('Project event');
+      expect(waitCall.filter).toEqual({
+        kinds: [1111]  // NDKKind.GenericReply
       });
+      expect(waitCall.options).toBeDefined();
+      expect(waitCall.options.validate).toBeDefined();
       
       expect(reply.content).toBe('Reply message');
     });
@@ -106,7 +111,10 @@ describe('Conversation', () => {
       
       await conversation.waitForReply(options);
       
-      expect(mockOrchestrator['waitCall'].options).toEqual(options);
+      const waitCall = mockOrchestrator['waitCall'];
+      // Check individual properties since validate function is wrapped
+      expect(waitCall.options.timeout).toBe(5000);
+      expect(typeof waitCall.options.validate).toBe('function');
     });
     
     test('should store messages in conversation', async () => {

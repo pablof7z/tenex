@@ -1,4 +1,4 @@
-import type { NDKEvent } from '@nostr-dev-kit/ndk';
+import { NDKKind, type NDKEvent } from '@nostr-dev-kit/ndk';
 import type { Orchestrator } from './Orchestrator';
 import type { Project } from './Project';
 import type { ReplyOptions, CompletionOptions } from './types';
@@ -29,6 +29,7 @@ import { EventEmitter } from 'events';
  */
 export class Conversation extends EventEmitter {
   private messages: NDKEvent[] = [];
+  private lastEvent?: NDKEvent;
   
   /**
    * Creates a new Conversation instance.
@@ -72,10 +73,16 @@ export class Conversation extends EventEmitter {
    * ```
    */
   async sendMessage(content: string): Promise<void> {
-    await this.orchestrator.client.sendMessage(
-      this.project.naddr,
-      content
-    );
+    if (this.lastEvent) {
+      // Reply to the last event in the conversation
+      await this.orchestrator.createReply(this.lastEvent, this.project.event, content);
+    } else {
+      // This is the first message, create a new conversation thread
+      await this.orchestrator.client.sendMessage(
+        this.project.event,
+        content
+      );
+    }
   }
   
   /**
@@ -117,10 +124,9 @@ export class Conversation extends EventEmitter {
     }
     
     const event = await this.orchestrator.monitor.waitForProjectEvent(
-      this.project.naddr,
+      this.project.event,
       {
-        kinds: [NostrEventKinds.NOTE],
-        '#e': [this.threadId]
+        kinds: [NDKKind.GenericReply],
       },
       {
         ...replyOptions,
@@ -141,6 +147,7 @@ export class Conversation extends EventEmitter {
     );
     
     this.messages.push(event);
+    this.lastEvent = event; // Track the last event for replies
     return event;
   }
   

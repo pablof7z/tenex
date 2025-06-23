@@ -60,7 +60,7 @@ export class ClaudeCodeExecutor {
 
       logger.info("Spawning Claude Code process", {
         cwd: this.options.projectPath,
-        promptLength: this.options.prompt.length,
+        prompt: this.options.prompt,
       });
 
       this.process = spawn("claude", args, {

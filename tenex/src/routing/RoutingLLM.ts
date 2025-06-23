@@ -113,7 +113,6 @@ export class RoutingLLM {
                 name: agent.name,
                 pubkey: agent.pubkey,
                 role: agent.role,
-                expertise: agent.expertise,
             }));
 
             const projectContextString = await this.getProjectContextString();
@@ -181,7 +180,6 @@ export class RoutingLLM {
                 name: agent.name,
                 pubkey: agent.pubkey,
                 role: agent.role,
-                expertise: agent.expertise,
             }));
 
             const projectContextString = await this.getProjectContextString();
@@ -356,7 +354,6 @@ export class RoutingLLM {
                 name: agent.name,
                 pubkey: agent.pubkey,
                 role: agent.role,
-                expertise: agent.expertise,
             }));
 
             const projectContextString = await this.getProjectContextString();

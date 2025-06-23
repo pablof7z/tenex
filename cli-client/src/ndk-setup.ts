@@ -14,10 +14,9 @@ const DEFAULT_RELAY_URLS = [
  * Get relay URLs for NDK connection
  */
 function getRelayUrls(): string[] {
-  // Check environment variable first
-  const envRelays = process.env.TENEX_RELAYS;
-  if (envRelays) {
-    return envRelays.split(',').map(url => url.trim());
+  const relaysEnv = process.env.RELAYS;
+  if (relaysEnv) {
+    return relaysEnv.split(',').map(url => url.trim());
   }
   
   return DEFAULT_RELAY_URLS;
@@ -33,11 +32,12 @@ export interface NDKSetupConfig {
 export async function getNDK(config: NDKSetupConfig = {}): Promise<NDK> {
     if (!ndkInstance) {
         const relays = config.relays || getRelayUrls();
+        const useExplicitRelays = process.env.RELAYS !== undefined;
 
         ndkInstance = new NDK({
             explicitRelayUrls: [...relays],
             outboxRelayUrls: [...relays],
-            enableOutboxModel: true,
+            enableOutboxModel: !useExplicitRelays,
         });
 
         if (config.nsec) {

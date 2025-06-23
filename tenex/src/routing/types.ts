@@ -5,7 +5,6 @@ export interface AgentSummary {
   name: string;
   pubkey: string;
   role: string;
-  expertise: string;
 }
 
 export interface RoutingContext {

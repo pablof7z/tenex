@@ -62,10 +62,7 @@ export class ProjectDisplay {
 
     // Display agent information with instance pubkey
     logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
-    logInfo(chalk.gray("Expertise:   ") + chalk.white(agent.expertise));
-    if (agent.role) {
-      logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
-    }
+    logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
     logInfo(chalk.gray("Pubkey:      ") + chalk.white(agent.pubkey));
     logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
   }

@@ -13,6 +13,7 @@ export * from "./routingPrompts";
 import "./fragments/agentFragments";
 import "./fragments/common";
 import "./fragments/context";
+import "./fragments/execute-task-prompt";
 import "./fragments/generic";
 import "./fragments/phase";
 import "./fragments/phase-prompts";

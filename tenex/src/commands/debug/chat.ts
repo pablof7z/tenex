@@ -80,7 +80,6 @@ export async function runDebugChat(
         llmConfig: llmPresetOverride || DEFAULT_AGENT_LLM_CONFIG,
         tools: [],
         instructions: "You are a debug agent for testing purposes.",
-        expertise: "Testing and debugging agent functionality",
         slug: "debug",
       };
     }

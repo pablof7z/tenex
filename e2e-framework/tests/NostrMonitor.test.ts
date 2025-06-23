@@ -136,13 +136,10 @@ describe('NostrMonitor', () => {
   });
   
   describe('waitForProjectEvent', () => {
-    test('should fetch project event and combine filters', async () => {
-      const projectNaddr = 'naddr1234';
+    test('should combine project filter with additional filters', async () => {
       const projectEvent = {
         filter: () => ({ authors: ['pubkey123'], '#d': ['project123'] })
       };
-      
-      mockFetchEvent.mockResolvedValueOnce(projectEvent);
       
       const mockSub = {
         on: mock(),
@@ -161,44 +158,24 @@ describe('NostrMonitor', () => {
       });
       
       monitor.waitForProjectEvent(
-        projectNaddr,
+        projectEvent as any,
         { kinds: [1], '#e': ['thread123'] }
       );
       
-      expect(mockFetchEvent).toHaveBeenCalledWith(projectNaddr);
-    });
-    
-    test('should throw if project event not found', async () => {
-      mockFetchEvent.mockResolvedValueOnce(null);
-      
-      await expect(
-        monitor.waitForProjectEvent('naddr1234', { kinds: [1] })
-      ).rejects.toThrow('Failed to fetch project event for naddr: naddr1234');
+      expect(mockSubscribe).toHaveBeenCalled();
     });
   });
   
   describe('subscribeToProject', () => {
-    test('should fetch project event and create subscription', async () => {
-      const projectNaddr = 'naddr1234';
+    test('should create subscription with project filter', async () => {
       const projectEvent = {
         filter: () => ({ authors: ['pubkey123'], '#d': ['project123'] })
       };
       
-      mockFetchEvent.mockResolvedValueOnce(projectEvent);
+      const result = await monitor.subscribeToProject(projectEvent as any);
       
-      const result = await monitor.subscribeToProject(projectNaddr);
-      
-      expect(mockFetchEvent).toHaveBeenCalledWith(projectNaddr);
       expect(result).toBeDefined();
       expect(result[Symbol.asyncIterator]).toBeDefined();
-    });
-    
-    test('should throw if project event not found', async () => {
-      mockFetchEvent.mockResolvedValueOnce(null);
-      
-      await expect(
-        monitor.subscribeToProject('naddr1234')
-      ).rejects.toThrow('Failed to fetch project event for naddr: naddr1234');
     });
     
     test('should use correct kinds filter', async () => {
@@ -206,15 +183,13 @@ describe('NostrMonitor', () => {
         filter: () => ({ authors: ['pubkey123'] })
       };
       
-      mockFetchEvent.mockResolvedValueOnce(projectEvent);
-      
       let capturedFilter: any;
       mockSubscribe.mockImplementationOnce((filter) => {
         capturedFilter = filter;
         return { on: mock(), stop: mock() };
       });
       
-      await monitor.subscribeToProject('naddr1234');
+      await monitor.subscribeToProject(projectEvent as any);
       
       // The internal createEventIterator will be called with the combined filter
       // We can't easily test this without exposing internals, but we know it works

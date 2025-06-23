@@ -37,7 +37,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
         availableAgents.find((agent) => agent.role.toLowerCase().includes("architect")) ||
         availableAgents.find((agent) =>
           ["planning", "design", "architecture"].some((keyword) =>
-            agent.expertise.toLowerCase().includes(keyword.toLowerCase())
+            agent.role.toLowerCase().includes(keyword.toLowerCase())
           )
         ) ||
         availableAgents[0]; // Fallback to first available agent
@@ -116,7 +116,7 @@ export class PlanPhaseInitializer implements PhaseInitializer {
 
       logger.info("[PLAN Phase] Triggering Claude Code CLI", {
         conversationId: conversation.id,
-        promptLength: prompt.length,
+        promp: prompt,
       });
 
       // Create executor with proper separation of concerns

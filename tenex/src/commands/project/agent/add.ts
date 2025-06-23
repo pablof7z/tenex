@@ -62,7 +62,6 @@ export const agentAddCommand = new Command("add")
       const agentConfig = {
         name,
         role,
-        expertise: role,
         instructions: prompt,
         llmConfig: DEFAULT_AGENT_LLM_CONFIG,
         tools: ["bash", "file-system", "web-search"],
@@ -103,7 +102,6 @@ export const agentAddCommand = new Command("add")
             {
               name: agent.name,
               role: agent.role,
-              expertise: agent.expertise,
               instructions: agent.instructions || "",
               tools: agent.tools,
               llmConfig: agent.llmConfig,

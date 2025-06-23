@@ -1,6 +1,7 @@
 import type { Orchestrator } from './Orchestrator';
 import { Conversation } from './Conversation';
 import type { ConversationOptions, WaitOptions } from './types';
+import type { NDKEvent } from '@nostr-dev-kit/ndk';
 
 /**
  * Represents a TENEX project for E2E testing.
@@ -30,6 +31,7 @@ export class Project {
    * @param naddr - The Nostr address (naddr) of the project
    * @param name - The project name
    * @param directory - The project directory path
+   * @param event - The NDKProject event
    * 
    * @internal
    */
@@ -37,7 +39,8 @@ export class Project {
     private orchestrator: Orchestrator,
     public readonly naddr: string,
     public readonly name: string,
-    public readonly directory: string
+    public readonly directory: string,
+    public readonly event: NDKEvent
   ) {}
   
   /**
@@ -59,7 +62,7 @@ export class Project {
   async startConversation(options: ConversationOptions): Promise<Conversation> {
     console.log(`Sending message to project ${this.naddr}: "${options.message}"`);
     const threadId = await this.orchestrator.client.sendMessage(
-      this.naddr,
+      this.event,
       options.message
     );
     console.log(`Message sent with thread ID: ${threadId}`);
