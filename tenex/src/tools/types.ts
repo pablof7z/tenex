@@ -55,11 +55,14 @@ export interface ToolInvocation {
   rawMatch: string;
 }
 
+import type { Agent } from "@/agents/types";
+
 export interface ToolExecutionContext {
   projectPath: string;
   conversationId: string;
   agentName: string;
   phase: string;
+  agent: Agent;
 }
 
 export interface ToolExecutionResult {

@@ -6,12 +6,15 @@ import type { ToolExecutionResult, ToolInvocation } from "@/tools/types";
 import type { Phase } from "@/conversations/types";
 import { PromptBuilder } from "@/prompts";
 
+import type { Agent } from "@/agents/types";
+
 interface ReasonActContext {
   projectPath: string;
   conversationId: string;
   agentName: string;
   phase: Phase;
   llmConfig: string;
+  agent: Agent;
 }
 
 interface ReasonActResult {
@@ -44,6 +47,7 @@ export class ReasonActLoop {
       conversationId: context.conversationId,
       agentName: context.agentName,
       phase: context.phase,
+      agent: context.agent,
     };
 
     while (iteration < ReasonActLoop.MAX_ITERATIONS) {

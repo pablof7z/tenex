@@ -1,7 +1,13 @@
 import type { ToolExecutor, ToolInvocation, ToolExecutionContext, ToolExecutionResult } from "@/tools/types";
 import { logger } from "@/utils/logger";
-import { configService } from "@/services";
 
+/**
+ * Executes phase transition requests.
+ * 
+ * This is a privileged tool that can only be executed by agents with 'boss: true' 
+ * in their agents.json configuration. Typically, this is the project manager agent
+ * that orchestrates the conversation flow between different phases.
+ */
 export class PhaseTransitionExecutor implements ToolExecutor {
   name = "phase_transition";
 
@@ -17,11 +23,7 @@ export class PhaseTransitionExecutor implements ToolExecutor {
 
     try {
       // Only the boss agent can perform phase transitions
-      // Load agent registry to check boss flag
-      const agentsConfig = await configService.loadProjectAgents(context.projectPath);
-      const agentEntry = agentsConfig[context.agentName];
-      
-      if (!agentEntry?.boss) {
+      if (!context.agent.isBoss) {
         return {
           success: false,
           error: "Only the boss agent can perform phase transitions",

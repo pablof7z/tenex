@@ -139,6 +139,7 @@ export class AgentRegistry {
       tools: agentDefinition.tools || [],
       eventId: registryEntry.eventId,
       slug: name,
+      isBoss: registryEntry.boss,
     };
 
     // Store in both maps

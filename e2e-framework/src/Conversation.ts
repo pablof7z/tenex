@@ -4,6 +4,7 @@ import type { Project } from './Project';
 import type { ReplyOptions, CompletionOptions } from './types';
 import { getConfig } from './config';
 import { NostrEventKinds } from './constants';
+import { EventEmitter } from 'events';
 
 /**
  * Represents a conversation thread within a TENEX project.
@@ -26,7 +27,7 @@ import { NostrEventKinds } from './constants';
  * await conversation.waitForCompletion();
  * ```
  */
-export class Conversation {
+export class Conversation extends EventEmitter {
   private messages: NDKEvent[] = [];
   
   /**
@@ -45,7 +46,19 @@ export class Conversation {
     private threadId: string,
     _title: string
   ) {
+    super();
     // Title is available for future use
+    
+    // Monitor for phase transition events
+    this.monitorPhaseTransitions();
+  }
+  
+  /**
+   * Monitor for phase transition events in the conversation
+   */
+  private monitorPhaseTransitions(): void {
+    // This is a placeholder for monitoring phase transitions
+    // In a real implementation, we would subscribe to specific event types
   }
   
   /**
@@ -71,6 +84,7 @@ export class Conversation {
    * @param options - Reply wait options
    * @param options.timeout - Maximum time to wait in milliseconds (default: 30000)
    * @param options.validate - Optional validation function to filter replies
+   * @param options.afterMessage - Wait for reply after a specific message content
    * @returns The reply event
    * @throws {Error} If no reply is received within the timeout
    * 
@@ -84,16 +98,46 @@ export class Conversation {
    *   validate: (event) => event.content.includes('completed'),
    *   timeout: 60000
    * });
+   * 
+   * // Wait for reply after a specific message
+   * const reply = await conversation.waitForReply({
+   *   afterMessage: 'What features should it have?'
+   * });
    * ```
    */
-  async waitForReply(options: ReplyOptions = {}): Promise<NDKEvent> {
+  async waitForReply(options: ReplyOptions & { afterMessage?: string } = {}): Promise<NDKEvent> {
+    const { afterMessage, ...replyOptions } = options;
+    
+    // If waiting for reply after specific message, track message index
+    let afterMessageIndex = -1;
+    if (afterMessage) {
+      afterMessageIndex = this.messages.findIndex(msg => 
+        msg.content.includes(afterMessage)
+      );
+    }
+    
     const event = await this.orchestrator.monitor.waitForProjectEvent(
       this.project.naddr,
       {
         kinds: [NostrEventKinds.NOTE],
         '#e': [this.threadId]
       },
-      options
+      {
+        ...replyOptions,
+        validate: (event) => {
+          // Skip messages before the target message
+          if (afterMessageIndex >= 0 && this.messages.length <= afterMessageIndex + 1) {
+            return false;
+          }
+          
+          // Apply custom validation if provided
+          if (replyOptions.validate) {
+            return replyOptions.validate(event);
+          }
+          
+          return true;
+        }
+      }
     );
     
     this.messages.push(event);

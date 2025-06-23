@@ -3,6 +3,9 @@ import { FileCreationScenario } from './FileCreationScenario';
 import { MultiAgentScenario } from './MultiAgentScenario';
 import { BuildModeScenario } from './BuildModeScenario';
 import { ErrorHandlingScenario } from './ErrorHandlingScenario';
+import { BrainstormingScenario } from './BrainstormingScenario';
+import { PhaseTransitionScenario } from './PhaseTransitionScenario';
+import { SimpleBrainstormingScenario } from './SimpleBrainstormingScenario';
 
 export interface ScenarioInfo {
   name: string;
@@ -15,7 +18,10 @@ export class ScenarioRegistry {
     ['file-creation', FileCreationScenario],
     ['multi-agent', MultiAgentScenario],
     ['build-mode', BuildModeScenario],
-    ['error-handling', ErrorHandlingScenario]
+    ['error-handling', ErrorHandlingScenario],
+    ['brainstorming', BrainstormingScenario],
+    ['phase-transition', PhaseTransitionScenario],
+    ['simple-brainstorming', SimpleBrainstormingScenario]
   ]);
   
   static getScenario(name: string): typeof BaseScenario | undefined {

@@ -1,14 +1,11 @@
 import type { AgentDefinition } from "./types";
 
 /**
- * The slug used for the project manager agent
- */
-export const PROJECT_AGENT_SLUG = "project";
-
-/**
  * Default boss agent definition
  * This agent represents the project manager and has special capabilities
- * like phase transitions and project coordination
+ * like phase transitions and project coordination.
+ * 
+ * Note: Only agents with 'boss: true' in agents.json can use the phase_transition tool
  */
 export const BOSS_AGENT_DEFINITION: AgentDefinition = {
   name: "Project Manager",

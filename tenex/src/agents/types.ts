@@ -13,6 +13,7 @@ export interface Agent {
   tools: string[];
   eventId?: string; // NDKAgent event ID
   slug: string; // Agent slug/key from agents.json
+  isBoss?: boolean; // Whether this agent has boss privileges (e.g., phase transitions)
 }
 
 export interface AgentContext {
