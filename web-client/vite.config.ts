@@ -8,6 +8,7 @@ export default defineConfig({
 	resolve: {
 		alias: [
 			{ find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
+			{ find: "buffer", replacement: "buffer" },
 		],
 	},
 	optimizeDeps: {
@@ -17,5 +18,8 @@ export default defineConfig({
 		fs: {
 			allow: [".."],
 		},
+	},
+	define: {
+		global: "globalThis",
 	},
 });

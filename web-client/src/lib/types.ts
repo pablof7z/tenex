@@ -132,6 +132,7 @@ export function parseBackendStatusEvent(event: any): BackendInfo | null {
       status: content.status || 'online',
       lastSeen: event.created_at * 1000,
       capabilities: content.capabilities || [],
+      projects: content.projects || [],
       metadata: content.metadata || {}
     };
   } catch {
@@ -148,6 +149,7 @@ export function migrateBackendStatus(status: any): BackendInfo {
     status: status.status || 'online',
     lastSeen: status.lastSeen,
     capabilities: status.capabilities || [],
+    projects: status.projects || [],
     metadata: status.metadata || {}
   };
 }
@@ -161,6 +163,15 @@ export function createBackendInfo(pubkey: string, data: Partial<BackendInfo> = {
   };
 }
 
-export function isOllamaModelsResponse(response: any): boolean {
+interface OllamaModel {
+  name: string;
+  [key: string]: any;
+}
+
+interface OllamaModelsResponse {
+  models: OllamaModel[];
+}
+
+export function isOllamaModelsResponse(response: any): response is OllamaModelsResponse {
   return response && Array.isArray(response.models);
 }

@@ -4,7 +4,7 @@ import {
     useNDKCurrentPubkey,
     useNDKSessionLogin,
 } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowRight, Chrome, Key, UserPlus, Zap } from "lucide-react";
+import { ArrowRight, Chrome, Copy, Key, UserPlus, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
@@ -13,16 +13,19 @@ export function LoginScreen() {
     const [nsecInput, setNsecInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [selectedMethod, setSelectedMethod] = useState<"extension" | "key" | "new" | null>(null);
+    const [newAccountPubkey, setNewAccountPubkey] = useState<string | null>(null);
+    const [newAccountSigner, setNewAccountSigner] = useState<NDKPrivateKeySigner | null>(null);
+    const [copied, setCopied] = useState(false);
     const login = useNDKSessionLogin();
     const currentPubkey = useNDKCurrentPubkey();
     const navigate = useNavigate();
 
-    // Redirect if already logged in
+    // Redirect if already logged in (but not if we just created a new account)
     useEffect(() => {
-        if (currentPubkey) {
+        if (currentPubkey && !newAccountPubkey) {
             navigate("/", { replace: true });
         }
-    }, [currentPubkey, navigate]);
+    }, [currentPubkey, navigate, newAccountPubkey]);
 
     const handleNip07Login = useCallback(async () => {
         setIsLoading(true);
@@ -55,13 +58,30 @@ export function LoginScreen() {
         setIsLoading(true);
         try {
             const signer = NDKPrivateKeySigner.generate();
-            login(signer);
-        } catch (_error) {
-            // console.error("Account generation failed:", error);
+            const pubkey = signer.pubkey;
+            setNewAccountPubkey(pubkey);
+            setNewAccountSigner(signer);
+            // Don't login immediately - wait for user to continue
+        } catch (error) {
+            console.error("Account generation failed:", error);
         } finally {
             setIsLoading(false);
         }
-    }, [login]);
+    }, []);
+
+    const handleCopyPubkey = useCallback(async () => {
+        if (newAccountPubkey) {
+            await navigator.clipboard.writeText(newAccountPubkey);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    }, [newAccountPubkey]);
+
+    const handleContinueToDashboard = useCallback(() => {
+        if (newAccountSigner) {
+            login(newAccountSigner);
+        }
+    }, [newAccountSigner, login]);
 
     return (
         <div className="min-h-screen bg-[#0F1419] text-white flex flex-col">
@@ -174,16 +194,61 @@ export function LoginScreen() {
                                         ⚠️ Make sure to backup your private key after creation
                                     </p>
                                 </div>
-                                <Button
-                                    onClick={handleNewAccount}
-                                    disabled={isLoading}
-                                    variant="primary"
-                                    size="xl"
-                                    rounded="xl"
-                                    className="w-full bg-[#A855F7] hover:bg-[#9333EA] dark:bg-[#A855F7] dark:hover:bg-[#9333EA]"
-                                >
-                                    {isLoading ? "Creating..." : "Generate New Identity"}
-                                </Button>
+                                
+                                {/* Display Generated Pubkey */}
+                                {newAccountPubkey && (
+                                    <div className="bg-[#238636]/10 border border-[#238636]/30 rounded-xl p-4 animate-in slide-in-from-top-2 duration-200">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-2 h-2 bg-[#238636] rounded-full" />
+                                            <span className="text-[#238636] text-sm font-medium">Account Created Successfully</span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-[#8B949E] text-xs font-medium mb-1 block">Your Public Key</label>
+                                                <div className="flex items-center gap-2">
+                                                    <code className="flex-1 bg-[#0F1419] border border-[#30363D] rounded-lg p-3 text-[#F0F6FC] text-sm font-mono break-all">
+                                                        {newAccountPubkey}
+                                                    </code>
+                                                    <button
+                                                        onClick={handleCopyPubkey}
+                                                        className="flex-shrink-0 p-3 bg-[#21262D] hover:bg-[#30363D] border border-[#30363D] rounded-lg transition-colors"
+                                                        title="Copy public key"
+                                                    >
+                                                        <Copy className="w-4 h-4 text-[#8B949E]" />
+                                                    </button>
+                                                </div>
+                                                {copied && (
+                                                    <p className="text-[#238636] text-xs mt-1">Copied to clipboard!</p>
+                                                )}
+                                            </div>
+                                            <p className="text-[#8B949E] text-xs">
+                                                This is your unique identifier on Nostr. You can share this with others.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            onClick={handleContinueToDashboard}
+                                            variant="success"
+                                            size="xl"
+                                            rounded="xl"
+                                            className="w-full bg-[#238636] hover:bg-[#2EA043] dark:bg-[#238636] dark:hover:bg-[#2EA043]"
+                                        >
+                                            Continue to Dashboard
+                                        </Button>
+                                    </div>
+                                )}
+                                
+                                {!newAccountPubkey && (
+                                    <Button
+                                        onClick={handleNewAccount}
+                                        disabled={isLoading}
+                                        variant="primary"
+                                        size="xl"
+                                        rounded="xl"
+                                        className="w-full bg-[#A855F7] hover:bg-[#9333EA] dark:bg-[#A855F7] dark:hover:bg-[#9333EA]"
+                                    >
+                                        {isLoading ? "Creating..." : "Generate New Identity"}
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>

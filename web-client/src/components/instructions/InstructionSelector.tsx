@@ -1,6 +1,6 @@
 import { FileText } from "lucide-react";
 import { useState } from "react";
-import type { NDKAgent } from "@tenex/cli";
+import type { NDKAgent } from "@tenex/cli/events";
 import { useInstructions } from "../../hooks/useInstructions";
 import type { NDKLLMRule } from "../../types/template";
 import { ItemSelector } from "../common/ItemSelector";

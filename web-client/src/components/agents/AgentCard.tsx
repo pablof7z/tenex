@@ -1,6 +1,6 @@
 import { Bot } from "lucide-react";
 import { memo } from "react";
-import type { NDKAgent } from "@tenex/cli";
+import type { NDKAgent } from "@tenex/cli/events";
 import { ProfileDisplay } from "../ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";
 

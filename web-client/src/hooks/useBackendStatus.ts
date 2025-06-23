@@ -33,7 +33,7 @@ export function useBackendStatus() {
                 // Try to parse JSON content from new format with validation
                 const parsed = parseBackendStatusEvent(event.content);
                 if (parsed) {
-                    backendInfo = createBackendInfo({
+                    backendInfo = createBackendInfo(backendPubkey, {
                         name: `Backend ${backendPubkey.slice(0, 8)}`,
                         hostname: parsed.hostname,
                         lastSeen: event.created_at || Date.now() / 1000,
@@ -44,7 +44,7 @@ export function useBackendStatus() {
                     const rawParsed = JSON.parse(event.content);
                     const migrated = migrateBackendStatus(rawParsed);
                     if (migrated) {
-                        backendInfo = createBackendInfo({
+                        backendInfo = createBackendInfo(backendPubkey, {
                             name: `Backend ${backendPubkey.slice(0, 8)}`,
                             hostname: migrated.hostname,
                             lastSeen: event.created_at || Date.now() / 1000,
@@ -54,7 +54,7 @@ export function useBackendStatus() {
                 }
             } catch {
                 // Fallback for old format (plain text hostname)
-                backendInfo = createBackendInfo({
+                backendInfo = createBackendInfo(backendPubkey, {
                     name: event.content || `Backend ${backendPubkey.slice(0, 8)}`,
                     hostname: event.content || "Unknown",
                     lastSeen: event.created_at || Date.now() / 1000,

@@ -1,5 +1,5 @@
 import type { NDKEvent, NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
-import type { NDKAgent } from "@tenex/cli";
+import type { NDKAgent } from "@tenex/cli/events";
 
 export interface NDKLLMRule extends NDKEvent {
     title?: string;

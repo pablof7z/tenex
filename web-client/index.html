@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nostr Projects</title>
+    <script>
+      // Polyfill Buffer for browser compatibility
+      if (typeof global === 'undefined') {
+        var global = globalThis;
+      }
+    </script>
   </head>
   <body style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;">
     <div id="root"></div>

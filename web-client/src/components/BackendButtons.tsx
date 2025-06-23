@@ -53,7 +53,7 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
                 {Array.from(onlineBackends.entries()).map(([backendPubkey, backendInfo]) => (
                     <BackendButton
                         key={backendPubkey}
-                        backendName={backendInfo.hostname}
+                        backendName={backendInfo.hostname || backendInfo.name || `Backend ${backendPubkey.slice(0, 8)}`}
                         onStart={() => handleStartTask(backendPubkey)}
                         isTriggered={triggeredBackends.has(backendPubkey)}
                     />

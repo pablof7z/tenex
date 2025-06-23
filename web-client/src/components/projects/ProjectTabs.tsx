@@ -34,7 +34,7 @@ export function ProjectTabs({
         project
             ? [
                   {
-                      kinds: [EVENT_KINDS.PROJECT_STATUS],
+                      kinds: [EVENT_KINDS.PROJECT_STATUS as any],
                       "#a": [`31933:${project.pubkey}:${project.dTag}`],
                       limit: 1,
                   },

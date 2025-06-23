@@ -2,7 +2,7 @@ import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { type NDKProject, useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronRight, FileText, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { NDKAgent } from "@tenex/cli";
+import { NDKAgent } from "@tenex/cli/events";
 import { cn } from "../../lib/utils";
 import type { InstructionWithAgents, NDKLLMRule } from "../../types/template";
 import { InstructionSelector } from "../instructions/InstructionSelector";

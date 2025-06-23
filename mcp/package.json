@@ -39,7 +39,6 @@
         "commander": "^13.1.0",
         "inquirer": "^12.5.0",
         "simple-git": "^3.25.0",
-        "yaml": "^2.7.0",
-        "@tenex/types": "file:../packages/types"
+        "yaml": "^2.7.0"
     }
 }

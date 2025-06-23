@@ -1,6 +1,6 @@
 import { type NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { StringUtils } from "@tenex/shared";
+import { StringUtils } from "../../lib/string-utils";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../../contexts/NavigationContext";
