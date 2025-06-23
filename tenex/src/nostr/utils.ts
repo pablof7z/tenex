@@ -7,19 +7,10 @@ import { getProjectContext, isProjectContextInitialized } from "@/services";
  * @returns true if the event is from an agent, false if from a user
  */
 export function isEventFromAgent(event: NDKEvent): boolean {
-  if (!event.pubkey) return false;
-  
-  if (!isProjectContextInitialized()) {
-    // If project context is not initialized, fall back to checking tags
-    // This is safer than throwing an error in utility functions
-    return event.tags.some((tag) => tag[0] === "llm-model");
-  }
-  
   const projectCtx = getProjectContext();
   
   // Check if it's from the project itself
-  console.log(`[isEventFromAgent] deciding whether the event ${event.kind} with content ${event.content.substring(0, 21)} is from the project`, { projectPubkey: projectCtx.project.pubkey, eventPubkey: event.pubkey })
-  if (projectCtx.project.pubkey === event.pubkey) {
+  if (projectCtx.pubkey === event.pubkey) {
     return true;
   }
   
@@ -66,9 +57,9 @@ export function getAgentSlugFromEvent(event: NDKEvent): string | undefined {
 }
 
 /**
- * Check if an event is from the project itself (not an individual agent)
+ * Check if an event is from the project agent
  * @param event - The NDK event to check
- * @returns true if the event is from the project, false otherwise
+ * @returns true if the event is from the project agent, false otherwise
  */
 export function isEventFromProject(event: NDKEvent): boolean {
   if (!event.pubkey) return false;
@@ -79,5 +70,6 @@ export function isEventFromProject(event: NDKEvent): boolean {
   }
   
   const projectCtx = getProjectContext();
-  return projectCtx.project.pubkey === event.pubkey;
+  // Check if it's from the project agent (not the project owner)
+  return projectCtx.pubkey === event.pubkey;
 }

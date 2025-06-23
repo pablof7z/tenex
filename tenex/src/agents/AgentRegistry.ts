@@ -7,7 +7,7 @@ import type { TenexAgents } from "@/services/config/types";
 import { configService } from "@/services";
 import { AgentPublisher } from "@/agents/AgentPublisher";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import { PROJECT_AGENT_DEFINITION, PROJECT_AGENT_SLUG } from "./projectAgentDefinition";
+import { BOSS_AGENT_DEFINITION } from "./projectAgentDefinition";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -50,11 +50,6 @@ export class AgentRegistry {
     const existingAgent = this.agents.get(name);
     if (existingAgent) {
       return existingAgent;
-    }
-
-    // Special handling for project agent
-    if (name === PROJECT_AGENT_SLUG) {
-      return this.ensureProjectAgent(config.nsec);
     }
 
     // Check if we have it in registry
@@ -201,72 +196,65 @@ export class AgentRegistry {
   }
 
   /**
-   * Ensure the project agent exists with the given nsec
+   * Create a new boss agent with the given configuration
    */
-  private async ensureProjectAgent(nsec?: string): Promise<Agent> {
-    // Check if we have it in registry
-    let registryEntry = this.registry[PROJECT_AGENT_SLUG];
-    
-    if (!registryEntry) {
-      if (!nsec) {
-        throw new Error("Project agent nsec is required for initialization");
-      }
-
-      // Create new registry entry for project
-      const fileName = "project.json";
-      registryEntry = {
-        nsec,
-        file: fileName,
-      };
-
-      // Save project agent definition to file
-      const definitionPath = path.join(this.agentsDir, fileName);
-      await writeJsonFile(definitionPath, PROJECT_AGENT_DEFINITION);
-
-      this.registry[PROJECT_AGENT_SLUG] = registryEntry;
-      await this.saveRegistry();
-
-      logger.info("Created project agent in registry");
-    }
-
-    // Create NDKPrivateKeySigner
-    const signer = new NDKPrivateKeySigner(registryEntry.nsec);
-    const pubkey = signer.pubkey;
-
-    // Create Agent instance with project definition
-    const agent: Agent = {
-      name: PROJECT_AGENT_DEFINITION.name,
-      pubkey,
-      signer,
-      role: PROJECT_AGENT_DEFINITION.role,
-      expertise: PROJECT_AGENT_DEFINITION.expertise || PROJECT_AGENT_DEFINITION.role,
-      instructions: PROJECT_AGENT_DEFINITION.instructions,
-      llmConfig: PROJECT_AGENT_DEFINITION.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-      tools: PROJECT_AGENT_DEFINITION.tools || [],
-      eventId: registryEntry.eventId,
-      slug: PROJECT_AGENT_SLUG,
+  async createBossAgent(slug: string, nsec: string): Promise<Agent> {
+    // Create registry entry with boss flag
+    const fileName = `${slug}.json`;
+    const registryEntry = {
+      nsec,
+      file: fileName,
+      boss: true,
     };
 
-    // Store in both maps
-    this.agents.set(PROJECT_AGENT_SLUG, agent);
-    this.agentsByPubkey.set(pubkey, agent);
+    // Save boss agent definition to file
+    const definitionPath = path.join(this.agentsDir, fileName);
+    await writeJsonFile(definitionPath, BOSS_AGENT_DEFINITION);
 
-    return agent;
+    this.registry[slug] = registryEntry;
+    await this.saveRegistry();
+
+    logger.info(`Created boss agent "${slug}" in registry`);
+
+    // Create and return the agent with boss definition
+    return this.ensureAgent(slug, {
+      name: BOSS_AGENT_DEFINITION.name,
+      role: BOSS_AGENT_DEFINITION.role,
+      expertise: BOSS_AGENT_DEFINITION.expertise || BOSS_AGENT_DEFINITION.role,
+      instructions: BOSS_AGENT_DEFINITION.instructions,
+      tools: BOSS_AGENT_DEFINITION.tools || [],
+      llmConfig: BOSS_AGENT_DEFINITION.llmConfig,
+      nsec
+    });
+  }
+
+  /**
+   * Get the boss agent if one exists
+   */
+  getBossAgent(): Agent | undefined {
+    // Find the agent with boss flag
+    for (const [slug, registryEntry] of Object.entries(this.registry)) {
+      if (registryEntry.boss) {
+        return this.agents.get(slug);
+      }
+    }
+    return undefined;
   }
 
   private async publishAgentEvents(signer: NDKPrivateKeySigner, config: Omit<AgentConfig, 'nsec'>, ndkAgentEventId?: string): Promise<void> {
     try {
       // Load project config to get project info
       const projectConfig = await configService.loadTenexConfig(this.projectPath);
+      const projectName = projectConfig.description || "Unknown Project";
       
-      if (!projectConfig.nsec) {
-        logger.warn("Project nsec not found, skipping agent event publishing");
+      // Get boss agent to find project pubkey
+      const bossAgent = this.getBossAgent();
+      if (!bossAgent) {
+        logger.warn("Boss agent not found, skipping agent event publishing");
         return;
       }
-
-      const projectSigner = new NDKPrivateKeySigner(projectConfig.nsec);
-      const projectPubkey = projectSigner.pubkey;
-      const projectName = projectConfig.description || "Unknown Project";
+      
+      const projectPubkey = bossAgent.pubkey;
       
       // Initialize NDK
       const ndk = new NDK({

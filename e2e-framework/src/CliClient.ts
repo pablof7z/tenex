@@ -53,12 +53,12 @@ export class CliClient {
   }
   
   async startProject(projectNaddr: string): Promise<void> {
-    const args = ['project', 'start', '--nsec', this.nsec, '--project', projectNaddr];
+    const args = ['--json', 'project', 'start', '--nsec', this.nsec, '--project', projectNaddr];
     
     this.logger.info('Starting project', { projectNaddr });
     
     // Use retry for command execution
-    await retry(
+    const output = await retry(
       () => this.runCommand(args),
       {
         maxAttempts: 3,
@@ -67,8 +67,14 @@ export class CliClient {
       }
     );
     
-    // Just verify it succeeded, no response data expected
-    this.logger.debug('Project started successfully');
+    // Try to parse JSON response if available
+    try {
+      const result = await this.parseJsonResponse(output, 'project start');
+      this.logger.debug('Project started successfully', { eventId: result.eventId });
+    } catch {
+      // If no JSON response, just verify command succeeded
+      this.logger.debug('Project started successfully (no JSON response)');
+    }
   }
   
   async sendMessage(projectNaddr: string, message: string): Promise<string> {

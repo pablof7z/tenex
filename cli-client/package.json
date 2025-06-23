@@ -17,12 +17,14 @@
         "chalk": "^5.3.0",
         "commander": "^11.1.0",
         "inquirer": "^9.2.0",
-        "ora": "^7.0.1"
+        "ora": "^7.0.1",
+        "uuid": "^9.0.1"
     },
     "devDependencies": {
         "@biomejs/biome": "^1.4.1",
         "@types/node": "^20.10.0",
         "@types/inquirer": "^9.0.7",
+        "@types/uuid": "^9.0.7",
         "typescript": "^5.3.0"
     },
     "keywords": ["tenex", "nostr", "cli", "ai", "collaboration"],

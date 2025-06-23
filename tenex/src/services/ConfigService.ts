@@ -195,6 +195,11 @@ export class ConfigService {
     await this.saveTenexAgents(globalPath, agents);
   }
 
+  async loadProjectAgents(projectPath: string): Promise<TenexAgents> {
+    const projPath = this.getProjectPath(projectPath);
+    return this.loadTenexAgents(projPath);
+  }
+
   async saveProjectAgents(projectPath: string, agents: TenexAgents): Promise<void> {
     const projPath = this.getProjectPath(projectPath);
     await ensureDirectory(projPath);

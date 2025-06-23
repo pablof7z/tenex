@@ -50,11 +50,6 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
 
       // Update metadata
       await this.updateMetadata(conversation);
-
-      logger.info("Conversation saved", {
-        id: conversation.id,
-        title: conversation.title,
-      });
     } catch (error) {
       logger.error("Failed to save conversation", { error, id: conversation.id });
       throw error;
@@ -139,7 +134,6 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
         metadata,
       };
 
-      logger.info("Conversation loaded", { id: conversationId });
       return conversation;
     } catch (error) {
       logger.error("Failed to load conversation", { error, id: conversationId });

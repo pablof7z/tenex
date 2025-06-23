@@ -17,7 +17,6 @@ export interface TenexConfig {
   description?: string;
   repoUrl?: string;
   projectNaddr?: string;
-  nsec?: string;
   paths?: {
     inventory?: string;
   };
@@ -28,7 +27,6 @@ export const TenexConfigSchema = z.object({
   description: z.string().optional(),
   repoUrl: z.string().optional(),
   projectNaddr: z.string().optional(),
-  nsec: z.string().optional(),
   paths: z
     .object({
       inventory: z.string().optional(),
@@ -45,6 +43,7 @@ export interface TenexAgents {
     nsec: string;
     file: string;
     eventId?: string;
+    boss?: boolean;
   };
 }
 
@@ -53,6 +52,7 @@ export const TenexAgentsSchema = z.record(
     nsec: z.string(),
     file: z.string(),
     eventId: z.string().optional(),
+    boss: z.boolean().optional(),
   })
 );
 

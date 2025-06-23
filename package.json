@@ -2,7 +2,7 @@
     "name": "tenex",
     "version": "1.0.0",
     "private": true,
-    "workspaces": ["tenex", "web-client", "mcp", "cli-client"],
+    "workspaces": ["tenex", "web-client", "mcp", "cli-client", "e2e-framework"],
     "scripts": {
         "build": "bun run build:all",
         "build:all": "bun workspaces foreach run build",

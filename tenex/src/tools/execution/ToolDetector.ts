@@ -67,6 +67,17 @@ export class ToolDetector {
         rawMatch: match[0],
       }),
     },
+
+    // Phase transition pattern: <phase_transition>phase_name</phase_transition>
+    {
+      pattern: /<phase_transition>(plan|execute|review)<\/phase_transition>/gs,
+      parser: (match: RegExpMatchArray) => ({
+        toolName: "phase_transition",
+        action: "transition",
+        parameters: { phase: match[1]?.trim() || "" },
+        rawMatch: match[0],
+      }),
+    },
   ];
 
   /**

@@ -5,7 +5,7 @@ import {
     type NDKProject,
     useNDKCurrentUser,
 } from "@nostr-dev-kit/ndk-hooks";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../contexts/NavigationContext";
 import type { ProjectAgent } from "../hooks/useProjectAgents";
@@ -16,6 +16,7 @@ import {
     selectedTaskAtom,
     selectedThreadAtom,
     themeAtom,
+    toggleThemeAtom,
 } from "../lib/store";
 import { LayoutDialogs } from "./layout/LayoutDialogs";
 import { LayoutDrawers } from "./layout/LayoutDrawers";
@@ -33,7 +34,8 @@ export function DesktopLayout() {
     const [selectedProject, setSelectedProject] = useAtom(selectedProjectAtom);
     const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null);
     const onlineProjects = useAtomValue(onlineProjectsAtom);
-    const [theme, setTheme] = useAtom(themeAtom);
+    const theme = useAtomValue(themeAtom);
+    const toggleTheme = useSetAtom(toggleThemeAtom);
 
     // Only fetch projects at this level
     const projects = useUserProjects();
@@ -110,7 +112,7 @@ export function DesktopLayout() {
                 filteredProjects={filteredProjects}
                 onlineProjects={onlineProjects}
                 theme={theme}
-                onThemeChange={(newTheme) => setTheme(newTheme as "light" | "dark")}
+                onThemeChange={() => toggleTheme()}
                 onProjectToggle={toggleProjectActivation}
                 onCreateProject={() => setShowCreateDialog(true)}
                 onSearch={() => setShowSearchDialog(true)}

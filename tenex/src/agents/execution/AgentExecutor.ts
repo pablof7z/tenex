@@ -12,11 +12,12 @@ import {
 import type { Phase } from "@/conversations/types";
 import type { LLMMetadata } from "@/nostr/types";
 import { inventoryExists } from "@/utils/inventory";
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { AgentExecutionContext, AgentExecutionResult, AgentPromptContext } from "./types";
 import { ReasonActLoop } from "./ReasonActLoop";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
+import type { ToolExecutionResult } from "@/tools/types";
 
 export class AgentExecutor {
     private reasonActLoop: ReasonActLoop;
@@ -103,14 +104,18 @@ export class AgentExecutor {
                 reasonActResult.finalContent
             );
 
-            // 7. Publish response to Nostr
+            // 7. Check for phase transition in tool results
+            const phaseTransition = this.extractPhaseTransition(reasonActResult.allToolResults);
+            
+            // 8. Publish response to Nostr
             const publishedEvent = await this.publishResponse(
                 context,
                 triggeringEvent,
                 reasonActResult.finalContent,
                 nextResponder,
                 llmMetadata,
-                tracingContext
+                tracingContext,
+                phaseTransition
             );
 
             // Log the agent response in human-readable format
@@ -122,7 +127,7 @@ export class AgentExecutor {
                 publishedEvent.id
             );
 
-            // 8. Publish typing indicator stop
+            // 9. Publish typing indicator stop
             if (this.typingIndicatorPublisher) {
                 await this.typingIndicatorPublisher.publishTypingStop(
                     triggeringEvent,
@@ -254,18 +259,9 @@ export class AgentExecutor {
         context: AgentExecutionContext,
         response: string
     ): string | undefined {
-        // Check if response indicates phase transition
-        if (response.includes("PHASE_TRANSITION:")) {
-            return undefined; // Router will handle
-        }
-
-        // Check if response indicates specific agent handoff
-        const handoffMatch = response.match(/HANDOFF_TO:\s*(\S+)/);
-        if (handoffMatch) {
-            return handoffMatch[1];
-        }
-
-        // Default: continue with user
+        // Currently, agents don't hand off to other agents
+        // If this is needed in the future, it should be implemented
+        // as a tool similar to phase_transition
         return undefined;
     }
 
@@ -278,17 +274,26 @@ export class AgentExecutor {
         content: string,
         nextResponder: string | undefined,
         llmMetadata?: LLMMetadata,
-        tracingContext?: TracingContext
+        tracingContext?: TracingContext,
+        phaseTransition?: string
     ): Promise<NDKEvent> {
         const tracingLogger = tracingContext
             ? createTracingLogger(tracingContext, "nostr")
             : logger.forModule("nostr");
+        
+        // Check if this is a phase transition request
+        const additionalTags: NDKTag[] = [];
+        if (phaseTransition) {
+            additionalTags.push(["phase", phaseTransition]);
+        }
+        
         const event = await this.conversationPublisher.publishAgentResponse(
             triggeringEvent,
             content,
             nextResponder || "",
             context.agent.signer,
-            llmMetadata
+            llmMetadata,
+            additionalTags
         );
 
         if (tracingContext && "logEventPublished" in tracingLogger) {
@@ -331,6 +336,8 @@ export class AgentExecutor {
             promptTokens: response.usage.promptTokens,
             completionTokens: response.usage.completionTokens,
             totalTokens: response.usage.totalTokens,
+            systemPrompt,
+            userPrompt,
         };
     }
 
@@ -369,6 +376,18 @@ export class AgentExecutor {
         const completionCost = (completionTokens / 1_000_000) * pricing.completion;
 
         return promptCost + completionCost;
+    }
+
+    /**
+     * Extract phase transition from tool results
+     */
+    private extractPhaseTransition(toolResults: ToolExecutionResult[]): string | undefined {
+        for (const result of toolResults) {
+            if (result.toolName === "phase_transition" && result.success && result.metadata?.requestedPhase) {
+                return result.metadata.requestedPhase as string;
+            }
+        }
+        return undefined;
     }
 
     /**

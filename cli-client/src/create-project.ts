@@ -4,7 +4,7 @@ import { logger } from "./logger.js";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { NDKAgent } from "@tenex/cli";
+// import { NDKAgent } from "@tenex/cli";
 import { NDKLLMRule } from "./events/instruction.js";
 
 interface ProjectFormData {
@@ -14,7 +14,7 @@ interface ProjectFormData {
     repoUrl?: string;
     imageUrl?: string;
     selectedTemplate?: NDKProjectTemplate;
-    selectedAgents?: NDKAgent[];
+    selectedAgents?: NDKEvent[];
     selectedInstructions?: InstructionWithAgents[];
 }
 
@@ -152,7 +152,8 @@ export class ProjectCreator {
         const spinner = ora("Fetching available agents...").start();
 
         try {
-            const filters: NDKFilter[] = [{ kinds: [NDKAgent.kind], limit: 100 }];
+            // const filters: NDKFilter[] = [{ kinds: [NDKAgent.kind], limit: 100 }];
+            const filters: NDKFilter[] = [{ kinds: [4199], limit: 100 }]; // NDKAgent.kind = 4199
             const agentEvents = await this.ndk.fetchEvents(filters);
             spinner.stop();
 
@@ -162,9 +163,10 @@ export class ProjectCreator {
             }
 
             const agents = Array.from(agentEvents).map((event) => {
-                const agent = NDKAgent.from(event);
-                const name = agent.name || "Unnamed Agent";
-                const description = agent.description || agent.role || "";
+                // const agent = NDKAgent.from(event);
+                const agent = event; // Temporary workaround
+                const name = agent.tagValue?.("title") || "Unnamed Agent";
+                const description = agent.content || "";
                 return {
                     name: `${name} - ${description}`.substring(0, 80),
                     value: agent,
@@ -227,8 +229,8 @@ export class ProjectCreator {
             for (const instruction of selectedInstructions) {
                 if (formData.selectedAgents && formData.selectedAgents.length > 0) {
                     const agentChoices = formData.selectedAgents.map((agent) => ({
-                        name: agent.name,
-                        value: agent.name,
+                        name: agent.tagValue?.("title") || "Unnamed",
+                        value: agent.tagValue?.("title") || "Unnamed",
                     }));
 
                     const { assignToAll } = await inquirer.prompt([
@@ -297,7 +299,7 @@ export class ProjectCreator {
         if (formData.selectedAgents && formData.selectedAgents.length > 0) {
             logger.info(
                 `Agents (${formData.selectedAgents.length}): ${chalk.white(
-                    formData.selectedAgents.map((a) => a.name).join(", ")
+                    formData.selectedAgents.map((a) => a.tagValue?.("title") || "Unnamed").join(", ")
                 )}`
             );
         }

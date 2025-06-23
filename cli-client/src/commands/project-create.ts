@@ -2,6 +2,7 @@ import { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
 import { logger } from "../logger.js";
 import chalk from "chalk";
 import { getNDK } from "../ndk-setup.js";
+import { outputResult, outputError } from "../utils/output.js";
 
 interface CreateProjectOptions {
     name: string;
@@ -9,11 +10,14 @@ interface CreateProjectOptions {
     description?: string;
     repo?: string;
     hashtags?: string;
+    json?: boolean;
 }
 
 export async function createProject(options: CreateProjectOptions): Promise<void> {
     try {
-        logger.info(chalk.blue("🚀 Creating TENEX project..."));
+        if (!options.json) {
+            logger.info(chalk.blue("🚀 Creating TENEX project..."));
+        }
 
         // Connect to Nostr
         const ndk = await getNDK({ nsec: options.nsec });
@@ -54,17 +58,25 @@ export async function createProject(options: CreateProjectOptions): Promise<void
 
         const naddr = project.encode();
 
-        logger.info(chalk.green("✅ Project created successfully!"));
-        logger.info(chalk.gray(`Project ID: ${projectId}`));
-        logger.info(chalk.gray(`NADDR: ${naddr}`));
-        logger.info(chalk.gray(`Author: ${user.npub}`));
+        // Output result
+        const result = {
+            naddr,
+            name: options.name,
+            description: options.description || `A TENEX project: ${options.name}`,
+            projectId,
+            author: user.npub
+        };
 
-        // Return the naddr for programmatic usage
-        logger.info(naddr);
+        outputResult(result, { json: options.json }, (data) => {
+            logger.info(chalk.green("✅ Project created successfully!"));
+            logger.info(chalk.gray(`Project ID: ${data.projectId}`));
+            logger.info(chalk.gray(`NADDR: ${data.naddr}`));
+            logger.info(chalk.gray(`Author: ${data.author}`));
+        });
 
         process.exit(0);
     } catch (error) {
-        logger.error(chalk.red("❌ Failed to create project:"), error);
+        outputError(error as Error, { json: options.json });
         process.exit(1);
     }
 }

@@ -78,15 +78,16 @@ export const agentAddCommand = new Command("add")
 
       // Publish kind:0 profile and agent request to Nostr
       try {
-        // Load project config to get project info
+        // Load project config and agents to get project info
         const projectConfig = await configService.loadTenexConfig(projectPath);
+        const projectName = projectConfig.description || "Unknown Project";
         
-        if (!projectConfig.nsec) {
-          logger.warn("Project nsec not found, skipping Nostr publishing");
+        // Get boss agent pubkey
+        const bossAgent = registry.getBossAgent();
+        if (!bossAgent) {
+          logger.warn("Boss agent not found, skipping Nostr publishing");
         } else {
-          const projectSigner = new NDKPrivateKeySigner(projectConfig.nsec);
-          const projectPubkey = projectSigner.pubkey;
-          const projectName = projectConfig.description || "Unknown Project";
+          const projectPubkey = bossAgent.pubkey;
           
           // Initialize NDK
           await initNDK();

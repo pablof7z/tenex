@@ -41,6 +41,12 @@ export async function startProject(options: StartProjectOptions): Promise<void> 
         await event.publish();
 
         logger.info(chalk.green("✅ Project start event sent successfully!"));
+        
+        // In JSON mode, output success
+        const parentOptions = (options as any).json;
+        if (parentOptions) {
+            console.log(JSON.stringify({ success: true, eventId: event.id }));
+        }
 
         process.exit(0);
     } catch (error) {

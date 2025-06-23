@@ -123,17 +123,29 @@ export class Orchestrator {
       this.logger.debug('Writing daemon config', { npub: this.npub });
       await this.environment.writeConfig(config);
       
+      // Write LLM config if provided
+      if (this.options.llmConfig) {
+        await this.environment.writeLLMConfig([{
+          ...this.options.llmConfig,
+          name: 'default'
+        }]);
+      }
+      
       // Start daemon
       this.logger.info('Starting TENEX daemon');
       const tenexPath = path.join(process.cwd(), '..', 'tenex', 'src', 'cli.ts');
+      const projectsPath = path.join(this.environment.getTempDir(), 'projects');
+      
       this.daemonHandle = await this.processController.spawn(
         'daemon',
         'bun',
-        [tenexPath, 'daemon'],
+        [tenexPath, 'daemon', '--projects-path', projectsPath],
         {
           env: {
             ...process.env,
-            TENEX_CONFIG_DIR: this.environment.getConfigDir()
+            TENEX_CONFIG_DIR: this.environment.getConfigDir(),
+            LOG_LEVEL: 'debug',
+            TENEX_LOG: 'general:debug,nostr:debug,agent:debug'
           },
           cwd: path.join(process.cwd(), '..', 'tenex')
         }
@@ -281,18 +293,30 @@ export class Orchestrator {
       }
     })();
     
+    // Also monitor daemon output to see what projects it's processing
+    let outputMonitor: Promise<void>;
+    
     // Wait for daemon ready signal and continue logging after
     let ready = false;
     for await (const line of this.daemonHandle.stdout) {
       this.logger.debug('Daemon output', { line });
       
-      if (!ready && (line.includes('TENEX daemon is running') || line.includes('Monitoring events from'))) {
+      if (!ready && (line.includes('TENEX daemon is running') || line.includes('Monitoring events from') || line.includes('Starting TENEX daemon') || line.includes('Whitelisted pubkeys'))) {
         ready = true;
         // Continue reading stdout in background to prevent blocking
-        (async () => {
+        outputMonitor = (async () => {
           if (!this.daemonHandle) return;
           for await (const line of this.daemonHandle.stdout) {
             this.logger.debug('Daemon output', { line });
+            
+            // Log important daemon events
+            if (line.includes('Project started') || 
+                line.includes('Agent created') || 
+                line.includes('Processing event') ||
+                line.includes('Received event') ||
+                line.includes('Starting project')) {
+              this.logger.info('Daemon event', { line });
+            }
           }
         })();
         return;

@@ -10,6 +10,20 @@
       if (typeof global === 'undefined') {
         var global = globalThis;
       }
+      
+      // Apply theme immediately to prevent flash
+      (function() {
+        const getInitialTheme = () => {
+          const stored = localStorage.getItem("theme");
+          if (stored === "dark" || stored === "light") return stored;
+          return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        };
+        
+        const theme = getInitialTheme();
+        if (theme === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+      })();
     </script>
   </head>
   <body style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;">

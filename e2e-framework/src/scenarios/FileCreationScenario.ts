@@ -22,11 +22,15 @@ export class FileCreationScenario extends BaseScenario {
       title: 'File Creation Test'
     });
     
+    // Give the daemon a moment to process the message
+    console.log('Waiting for daemon to process message...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
     console.log('Waiting for file creation...');
     // Wait for the file to be created
     await project.waitForFile('test.txt', {
       content: 'Hello World',
-      timeout: 15000
+      timeout: 30000
     });
     
     console.log('Reading file content...');

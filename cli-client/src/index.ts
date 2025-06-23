@@ -5,13 +5,16 @@ import { Command } from "commander";
 import { TenexCLI } from "./cli.js";
 import { createProject } from "./commands/project-create.js";
 import { startProject } from "./commands/project-start.js";
+import { listProjects } from "./commands/project-list.js";
+import { sendMessage } from "./commands/message-send.js";
 
 const program = new Command();
 
 program
     .name("tenex-cli-client")
     .description("CLI client for TENEX project communication")
-    .version("1.0.0");
+    .version("1.0.0")
+    .option("--json", "Output in JSON format");
 
 program
     .command("chat")
@@ -31,7 +34,10 @@ projectCommand
     .option("--description <description>", "Project description")
     .option("--repo <url>", "Git repository URL")
     .option("--hashtags <tags>", "Comma-separated hashtags")
-    .action(createProject);
+    .action((options) => {
+        const parentOptions = program.opts();
+        createProject({ ...options, json: parentOptions.json });
+    });
 
 projectCommand
     .command("start")
@@ -39,6 +45,26 @@ projectCommand
     .requiredOption("--nsec <nsec>", "Your Nostr private key")
     .requiredOption("--project <naddr>", "Project NADDR or identifier")
     .action(startProject);
+
+projectCommand
+    .command("list")
+    .description("List all TENEX projects")
+    .requiredOption("--nsec <nsec>", "Your Nostr private key")
+    .action((options) => {
+        const parentOptions = program.opts();
+        listProjects({ ...options, json: parentOptions.json });
+    });
+
+program
+    .command("message")
+    .description("Send a message to a TENEX project")
+    .requiredOption("--nsec <nsec>", "Your Nostr private key")
+    .requiredOption("--project <naddr>", "Project NADDR")
+    .requiredOption("--message <message>", "Message content")
+    .action((options) => {
+        const parentOptions = program.opts();
+        sendMessage({ ...options, json: parentOptions.json });
+    });
 
 program
     .command("help")
@@ -51,10 +77,15 @@ Usage:
   tenex-cli-client chat                      Start a chat session
   tenex-cli-client project create            Create a new project
   tenex-cli-client project start             Send project start event
+  tenex-cli-client project list              List all projects
+  tenex-cli-client message                   Send a message to a project
 
 Environment Variables:
   NSEC            Your Nostr private key (nsec1...)
   PROJECT_NADDR   Project NADDR to connect to (optional)
+
+Options:
+  --json          Output in JSON format (for automation)
 
 Examples:
   # Interactive chat
@@ -64,6 +95,12 @@ Examples:
 
   # Create project
   tenex-cli-client project create --name "My Project" --nsec nsec1xyz...
+
+  # List projects (JSON output)
+  tenex-cli-client --json project list --nsec nsec1xyz...
+
+  # Send message
+  tenex-cli-client message --project naddr1abc... --message "Hello" --nsec nsec1xyz...
 
   # Start project
   tenex-cli-client project start --project naddr1abc... --nsec nsec1xyz...
@@ -76,6 +113,7 @@ Features:
   • Agent response listening
   • Session management
   • Project creation and management
+  • JSON output for automation
         `);
     });
 

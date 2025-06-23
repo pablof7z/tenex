@@ -1,5 +1,5 @@
 import type { MessageHandler, RoutingContext } from "../types";
-import { createProjectAgent } from "@/agents";
+import { getProjectContext } from "@/services";
 import { logger } from "@/utils/logger";
 
 export class ChatPhaseHandler implements MessageHandler {
@@ -18,7 +18,8 @@ export class ChatPhaseHandler implements MessageHandler {
     });
 
     // In chat phase, the project responds directly
-    const projectAgent = createProjectAgent();
+    const projectCtx = getProjectContext();
+    const projectAgent = projectCtx.getProjectAgent();
     
     const executionResult = await context.agentExecutor.execute(
       {

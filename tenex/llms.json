@@ -1,19 +1,14 @@
 {
   "configurations": {
-    "gemini": {
+    "openrouter-google-gemini-2-5-flash": {
       "provider": "openrouter",
-      "model": "google/gemini-2.5-flash-preview",
+      "model": "anthropic/claude-sonnet-4",
       "enableCaching": true
-    },
-    "deepseek": {
-      "provider": "openrouter",
-      "model": "deepseek/deepseek-chat-v3-0324",
-      "enableCaching": false
     }
   },
   "defaults": {
-    "default": "deepseek",
-    "teamBuilding": "gemini"
+    "agents": "openrouter-google-gemini-2-5-flash",
+    "agentRouting": "openrouter-google-gemini-2-5-flash"
   },
   "credentials": {
     "openrouter": {

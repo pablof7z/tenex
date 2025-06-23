@@ -123,6 +123,11 @@ export class ConversationRouter {
       // Add event to conversation history
       await this.conversationManager.addEvent(conversation.id, event);
 
+      // Check if this event requires a response
+      const requiresResponse = this.eventRequiresResponse(event, conversation);
+      
+      if (!requiresResponse) return;
+
       // Create routing context
       const context: RoutingContext = {
         event,
@@ -156,6 +161,52 @@ export class ConversationRouter {
       logger.conversationError("Failed to route reply", { error });
       throw error;
     }
+  }
+
+  /**
+   * Determine if an event requires a response from the system
+   */
+  private eventRequiresResponse(event: NDKEvent, conversation: Conversation): boolean {
+    // User messages always require responses
+    if (isEventFromUser(event)) {
+      return true;
+    }
+
+    // Check if this is a phase transition request
+    const hasPhaseTag = event.tags.some(tag => tag[0] === "phase");
+    if (hasPhaseTag) {
+      return true;
+    }
+
+    // In chat phase, only user messages need responses
+    // Agent messages in chat phase are typically final responses
+    if (conversation.phase === "chat") {
+      return false;
+    }
+
+    // For other phases, check if this is an agent handoff
+    // Look for a "next-agent" tag or similar handoff indicator
+    const hasHandoffTag = event.tags.some(tag => 
+      tag[0] === "next-agent" || tag[0] === "handoff"
+    );
+    
+    if (hasHandoffTag) {
+      return true;
+    }
+
+    // Check if the last event in history was from a user
+    // If so, and this is an agent response, it's likely a final response
+    const lastUserEventIndex = [...conversation.history].reverse().findIndex(e => isEventFromUser(e));
+    const lastAgentEventIndex = [...conversation.history].reverse().findIndex(e => !isEventFromUser(e));
+    
+    // If the last user message is before the last agent message,
+    // this agent response is likely addressing that user message
+    if (lastUserEventIndex > lastAgentEventIndex) {
+      return false;
+    }
+
+    // Default: agent messages don't require responses unless explicitly marked
+    return false;
   }
 
   /**

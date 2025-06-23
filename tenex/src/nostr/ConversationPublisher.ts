@@ -14,7 +14,8 @@ export class ConversationPublisher {
     content: string,
     nextAgent: string,
     signer: NDKPrivateKeySigner,
-    llmMetadata?: LLMMetadata
+    llmMetadata?: LLMMetadata,
+    additionalTags?: NDKTag[]
   ): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
@@ -45,8 +46,19 @@ export class ConversationPublisher {
       reply.tag(["llm-prompt-tokens", llmMetadata.promptTokens.toString()]);
       reply.tag(["llm-completion-tokens", llmMetadata.completionTokens.toString()]);
       reply.tag(["llm-total-tokens", llmMetadata.totalTokens.toString()]);
-      reply.tag(["llm-system-prompt", llmMetadata.systemPromptHash || ""]);
-      reply.tag(["llm-user-prompt", llmMetadata.userPromptHash || ""]);
+      if (llmMetadata.systemPrompt) {
+        reply.tag(["llm-system-prompt", llmMetadata.systemPrompt]);
+      }
+      if (llmMetadata.userPrompt) {
+        reply.tag(["llm-user-prompt", llmMetadata.userPrompt]);
+      }
+    }
+
+    // Add any additional custom tags
+    if (additionalTags && additionalTags.length > 0) {
+      for (const tag of additionalTags) {
+        reply.tag(tag);
+      }
     }
 
     reply.content = content;
@@ -55,13 +67,6 @@ export class ConversationPublisher {
     await reply.sign(signer);
 
     await reply.publish();
-
-    logger.info("Published agent response", {
-      id: reply.id,
-      nextAgent,
-      hasLLMMetadata: !!llmMetadata,
-      author: reply.pubkey,
-    });
 
     // Log the actual content being published
     logger.debug("Published agent response content", {
@@ -113,39 +118,4 @@ export class ConversationPublisher {
     return event;
   }
 
-  async publishProjectResponse(
-    eventToReply: NDKEvent,
-    content: string,
-    metadata?: Record<string, unknown>
-  ): Promise<NDKEvent> {
-    const reply = eventToReply.reply();
-
-    // Tag the project
-    const projectCtx = getProjectContext();
-    reply.tag(projectCtx.project);
-
-    // Remove existing p-tags (project is responding)
-    reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
-
-    // Add any custom metadata tags
-    if (metadata) {
-      for (const [key, value] of Object.entries(metadata)) {
-        reply.tag([key, String(value)]);
-      }
-    }
-
-    reply.content = content;
-
-    // Sign with project signer
-    await reply.sign(projectCtx.signer);
-
-    await reply.publish();
-
-    logger.info("Published project response", {
-      id: reply.id,
-      author: reply.pubkey,
-    });
-
-    return reply;
-  }
 }

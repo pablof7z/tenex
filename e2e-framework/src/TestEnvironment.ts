@@ -49,12 +49,31 @@ export class TestEnvironment {
     return path.join(this.tempDir, 'projects', projectName);
   }
   
+  getTempDir(): string {
+    return this.tempDir;
+  }
+  
   async writeConfig(config: TenexConfig): Promise<void> {
     try {
       const configPath = path.join(this.getConfigDir(), 'config.json');
       await writeFile(configPath, JSON.stringify(config, null, 2));
     } catch (error: any) {
       throw new Error(`Failed to write config: ${error.message}`);
+    }
+  }
+  
+  async writeLLMConfig(llmConfigs: any[]): Promise<void> {
+    try {
+      const llmsPath = path.join(this.getConfigDir(), 'llms.json');
+      const llmsConfig = {
+        configurations: llmConfigs.reduce((acc, config, index) => {
+          acc[config.name || `config-${index}`] = config;
+          return acc;
+        }, {})
+      };
+      await writeFile(llmsPath, JSON.stringify(llmsConfig, null, 2));
+    } catch (error: any) {
+      throw new Error(`Failed to write LLM config: ${error.message}`);
     }
   }
 }

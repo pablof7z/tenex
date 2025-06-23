@@ -5,7 +5,7 @@ import type { PhaseInitializationResult } from "@/phases/types";
 import type { ConversationPublisher } from "@/nostr";
 import type { AgentExecutor } from "@/agents";
 import type { ConversationManager } from "@/conversations";
-import { createProjectAgent } from "@/agents/agentFactoryFunctions";
+import { getProjectContext } from "@/services";
 import { logger } from "@/utils/logger";
 
 export interface PhaseInitializationContext {
@@ -29,7 +29,8 @@ export async function handlePhaseInitializationResponse(
 
   if (phase === "chat") {
     // In chat phase, project responds using LLM
-    const projectAgent = createProjectAgent();
+    const projectCtx = getProjectContext();
+    const projectAgent = projectCtx.getProjectAgent();
 
     const executionResult = await agentExecutor.execute(
       {
@@ -46,10 +47,13 @@ export async function handlePhaseInitializationResponse(
         error: executionResult.error
       });
       // Fallback to a generic message if execution fails
-      await publisher.publishProjectResponse(
+      await publisher.publishAgentResponse(
         event,
         "I'm having trouble processing your request. Could you please rephrase it?",
-        { phase, error: true }
+        "",
+        projectAgent.signer,
+        undefined,
+        [["phase", phase], ["error", "true"]]
       );
     }
   } else if (result.nextAgent) {
@@ -78,10 +82,16 @@ export async function handlePhaseInitializationResponse(
     }
   } else if (phase === "plan" && result.metadata?.claudeCodeTriggered) {
     // Plan phase with Claude Code - just publish a status message
-    await publisher.publishProjectResponse(
+    const projectCtx = getProjectContext();
+    const projectAgent = projectCtx.getProjectAgent();
+    
+    await publisher.publishAgentResponse(
       event,
       result.message || "Claude Code is working on the implementation plan.",
-      { phase, claudeCodeActive: true }
+      "",
+      projectAgent.signer,
+      undefined,
+      [["phase", phase], ["claudeCodeActive", "true"]]
     );
   }
 }

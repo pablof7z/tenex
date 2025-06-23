@@ -12,7 +12,6 @@ import { logger } from "@/utils/logger";
 import { configService, setProjectContext } from "@/services";
 import type { Agent, AgentProfile } from "@/agents/types";
 import type { TenexConfig } from "@/services/config/types";
-import { PROJECT_AGENT_SLUG } from "@/agents/projectAgentDefinition";
 import chalk from "chalk";
 
 const execAsync = promisify(exec);
@@ -61,16 +60,10 @@ export class ProjectManager implements IProjectManager {
       // Create project structure (without nsec in config)
       await this.createProjectStructure(projectPath, projectData);
 
-      // Initialize agent registry and create project agent
+      // Initialize agent registry and create boss agent
       const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
       const agentRegistry = new AgentRegistry(projectPath);
-      await agentRegistry.ensureAgent(PROJECT_AGENT_SLUG, { 
-        name: "Project",
-        role: "Project Manager", 
-        expertise: "Project coordination",
-        tools: ["phase_transition", "bash", "file-system"],
-        nsec: projectNsec 
-      });
+      await agentRegistry.createBossAgent("project-manager", projectNsec);
 
       // Fetch and save agent definitions
       await this.fetchAndSaveAgentDefinitions(projectPath, projectData, ndk);
@@ -144,14 +137,6 @@ export class ProjectManager implements IProjectManager {
       const agentRegistry = new AgentRegistry(projectPath);
       await agentRegistry.loadFromProject();
 
-      // Ensure project agent exists (will load from agents.json)
-      await agentRegistry.ensureAgent(PROJECT_AGENT_SLUG, {
-        name: "Project",
-        role: "Project Manager", 
-        expertise: "Project coordination",
-        tools: ["phase_transition", "bash", "file-system"]
-      });
-
       // Get all agents from registry
       const agentMap = agentRegistry.getAllAgentsMap();
       const loadedAgents = new Map();
@@ -162,8 +147,11 @@ export class ProjectManager implements IProjectManager {
         loadedAgents.set(slug, agent);
       }
 
-      // Initialize ProjectContext (will get project agent from loadedAgents)
-      setProjectContext(project, loadedAgents);
+      // Get the registry data for boss flag information
+      const registryData = await configService.loadProjectAgents(projectPath);
+
+      // Initialize ProjectContext (will find boss agent from registry data)
+      setProjectContext(project, loadedAgents, registryData);
 
       logger.info("ProjectContext initialized successfully", {
         projectTitle: project.tagValue("title"),

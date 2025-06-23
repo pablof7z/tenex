@@ -4,6 +4,7 @@ import {
   canTransitionPhase, 
   meetsPhaseTransitionCriteria 
 } from "@/routing/routingDomain";
+import { getProjectContext } from "@/services";
 import { logger } from "@/utils/logger";
 
 export class PhaseTransitionHandler implements MessageHandler {
@@ -29,10 +30,16 @@ export class PhaseTransitionHandler implements MessageHandler {
 
     // Validate phase transition is allowed
     if (!canTransitionPhase(currentPhase, requestedPhase)) {
-      await context.publisher.publishProjectResponse(
+      const projectCtx = getProjectContext();
+      const projectAgent = projectCtx.getProjectAgent();
+      
+      await context.publisher.publishAgentResponse(
         context.event,
         `Cannot transition from ${currentPhase} to ${requestedPhase} phase directly.`,
-        { phase: currentPhase, error: true }
+        "",
+        projectAgent.signer,
+        undefined,
+        [["phase", currentPhase], ["error", "true"]]
       );
       context.handled = true;
       return context;
@@ -51,10 +58,16 @@ export class PhaseTransitionHandler implements MessageHandler {
         reason: transitionCheck.reason
       });
       
-      await context.publisher.publishProjectResponse(
+      const projectCtx = getProjectContext();
+      const projectAgent = projectCtx.getProjectAgent();
+      
+      await context.publisher.publishAgentResponse(
         context.event,
         `Cannot transition to ${requestedPhase} phase: ${transitionCheck.reason}`,
-        { phase: currentPhase, error: true }
+        "",
+        projectAgent.signer,
+        undefined,
+        [["phase", currentPhase], ["error", "true"]]
       );
       context.handled = true;
       return context;

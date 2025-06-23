@@ -1,7 +1,6 @@
 import type { Hexpubkey, NDKProject } from "@nostr-dev-kit/ndk";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { Agent } from "@/agents/types";
-import { PROJECT_AGENT_SLUG } from "@/agents/projectAgentDefinition";
 
 
 /**
@@ -30,18 +29,25 @@ export class ProjectContext {
   public readonly pubkey: Hexpubkey;
   public readonly agents: Map<string, Agent>;
 
-  constructor(project: NDKProject, agents: Map<string, Agent>) {
+  constructor(project: NDKProject, agents: Map<string, Agent>, agentRegistry: Record<string, any>) {
     this.project = project;
     
-    // Get project agent from agents map
-    const projectAgent = agents.get(PROJECT_AGENT_SLUG);
-    if (!projectAgent) {
-      throw new Error("Project agent not found in agents registry");
+    // Find the boss agent dynamically
+    let bossAgent: Agent | undefined;
+    for (const [slug, agent] of agents) {
+      if (agentRegistry[slug]?.boss) {
+        bossAgent = agent;
+        break;
+      }
     }
     
-    // Hardwire to project agent's signer and pubkey
-    this.signer = projectAgent.signer;
-    this.pubkey = projectAgent.pubkey;
+    if (!bossAgent) {
+      throw new Error("Boss agent not found in agents registry");
+    }
+    
+    // Hardwire to boss agent's signer and pubkey
+    this.signer = bossAgent.signer;
+    this.pubkey = bossAgent.pubkey;
     this.agents = new Map(agents);
   }
 
@@ -54,11 +60,13 @@ export class ProjectContext {
   }
 
   getProjectAgent(): Agent {
-    const projectAgent = this.agents.get(PROJECT_AGENT_SLUG);
-    if (!projectAgent) {
-      throw new Error("Project agent not found");
+    // Find the boss agent dynamically
+    for (const agent of this.agents.values()) {
+      if (agent.pubkey === this.pubkey) {
+        return agent;
+      }
     }
-    return projectAgent;
+    throw new Error("Boss agent not found");
   }
 
   getAgentSlugs(): string[] {
@@ -78,9 +86,10 @@ let projectContext: ProjectContext | undefined = undefined;
  */
 export function setProjectContext(
   project: NDKProject,
-  agents: Map<string, Agent>
+  agents: Map<string, Agent>,
+  agentRegistry: Record<string, any>
 ): void {
-  projectContext = new ProjectContext(project, agents);
+  projectContext = new ProjectContext(project, agents, agentRegistry);
 }
 
 /**

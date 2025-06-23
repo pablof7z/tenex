@@ -4,6 +4,7 @@ import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import type { Conversation } from "@/conversations/types";
 import { buildAgentPrompt } from "./agent-common";
+import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
 
 // Agent system prompt fragment
 interface AgentSystemPromptArgs {
@@ -76,7 +77,7 @@ export const conversationHistoryFragment: PromptFragment<ConversationHistoryArgs
 
     const context = recentHistory
       .map((event) => {
-        const author = event.tags.find((tag) => tag[0] === "p")?.[1] || "User";
+        const author = isEventFromUser(event) ? "User" : getAgentSlugFromEvent(event) || "Assistant";
         const timestamp = new Date((event.created_at || 0) * 1000).toISOString();
         return `[${timestamp}] ${author}: ${event.content}`;
       })
@@ -118,7 +119,7 @@ export const phaseContextFragment: PromptFragment<PhaseContextArgs> = {
 - Quickly understanding the user's request
 - Taking immediate action if the request is clear
 - Only clarifying when genuinely necessary (request is ambiguous)
-- Transitioning to the appropriate phase as soon as possible`;
+- Being helpful and responsive to the user's needs`;
         break;
 
       case "plan":

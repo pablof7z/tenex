@@ -90,7 +90,7 @@ export class EventHandler {
     if (pTags.length > 0) {
       const projectCtx = getProjectContext();
       const systemPubkeys = new Set([
-        projectCtx.project.pubkey,
+        projectCtx.pubkey,  // Project agent's pubkey
         ...Array.from(projectCtx.agents.values()).map((a) => a.pubkey),
       ]);
 
@@ -157,7 +157,7 @@ export class EventHandler {
 
   private handleProjectStatus(event: NDKEvent): void {
     const projectCtx = getProjectContext();
-    if (event.author.pubkey !== projectCtx.project.pubkey) {
+    if (event.author.pubkey !== projectCtx.pubkey) {
       logInfo(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
     }
   }

@@ -6,8 +6,8 @@ export interface LLMMetadata {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
-  systemPromptHash?: string;
-  userPromptHash?: string;
+  systemPrompt?: string;
+  userPrompt?: string;
 }
 
 export interface PublishOptions {
