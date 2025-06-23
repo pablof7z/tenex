@@ -87,7 +87,7 @@ export class ConversationRouter {
         phase: routingDecision.phase,
         reasoning: routingDecision.reasoning,
         confidence: routingDecision.confidence,
-        agent: routingDecision.agent?.name,
+        agent: routingDecision.nextAgent,
       }, conversation.id, conversation.title);
 
       // Initialize the determined phase

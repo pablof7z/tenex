@@ -3,12 +3,11 @@ import { PromptBuilder } from "./core/PromptBuilder";
 /**
  * Get the system prompt for general routing decisions
  */
-export function getRoutingSystemPrompt(projectContext?: string): string {
+export function getRoutingSystemPrompt(): string {
   const builder = new PromptBuilder();
   return builder
     .add("routing-system-prompt", {
       role: "conversation routing",
-      projectContext,
     })
     .build();
 }
