@@ -28,6 +28,7 @@ program
   .option('-m, --model <model>', 'LLM model name', 'gpt-4')
   .option('-k, --api-key <key>', 'API key for LLM provider')
   .option('-r, --relays <relays>', 'Comma-separated list of relay URLs')
+  .option('-n, --nsec <nsec>', 'Nostr private key for test identity')
   .option('-d, --debug', 'Enable debug logging')
   .option('-l, --log-file <file>', 'Log output to file')
   .action(async (scenarioName, options) => {
@@ -48,6 +49,7 @@ program
       const scenarioOptions = {
         llmConfig,
         relays: options.relays?.split(','),
+        nsec: options.nsec,
         debug: options.debug,
         logFile: options.logFile
       };

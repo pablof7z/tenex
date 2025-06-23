@@ -6,7 +6,7 @@ import type { Conversation } from "@/conversations/types";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 
 // Import fragments to register them
-import "../agent-execution";
+import "../agentFragments";
 
 describe("Agent Execution Prompt Fragments", () => {
   describe("agentSystemPromptFragment", () => {

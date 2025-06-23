@@ -33,6 +33,13 @@ bun run cli run --api-key YOUR_API_KEY
 
 # Use different LLM provider
 bun run cli run --provider anthropic --model claude-3 --api-key YOUR_KEY
+
+# Use specific Nostr identity (nsec)
+bun run cli run brainstorming --nsec nsec1yourprivatekeyhere --api-key YOUR_KEY
+
+# Or via environment variable
+export TENEX_E2E_NSEC=nsec1yourprivatekeyhere
+bun run cli run simple-brainstorming --api-key YOUR_KEY
 ```
 
 ### Writing Tests
@@ -91,6 +98,9 @@ export class MyScenario extends BaseScenario {
 - **multi-agent**: Tests collaboration between architect and coder agents  
 - **build-mode**: Tests complex build mode activation and multi-file creation
 - **error-handling**: Tests agent error handling and security refusals
+- **brainstorming**: Tests realistic brainstorming with LLM-simulated user
+- **phase-transition**: Tests chat -> planning -> building phase transitions
+- **simple-brainstorming**: Tests brainstorming without external LLM APIs
 
 ## API Reference
 

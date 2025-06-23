@@ -1,4 +1,4 @@
-import type { AgentDefinition } from "./types";
+import type { StoredAgentData } from "./types";
 
 /**
  * Default boss agent definition
@@ -7,7 +7,7 @@ import type { AgentDefinition } from "./types";
  * 
  * Note: Only agents with 'boss: true' in agents.json can use the phase_transition tool
  */
-export const BOSS_AGENT_DEFINITION: AgentDefinition = {
+export const BOSS_AGENT_DEFINITION: StoredAgentData = {
   name: "Project Manager",
   role: "Project Manager",
   expertise: "Project coordination, requirements analysis, and phase management",
@@ -23,8 +23,12 @@ When in chat phase:
 - Help users articulate their needs clearly
 - Transition to planning phase when requirements are well understood
 
-You have access to the phase_transition tool to move between phases when appropriate.`,
+You have access to the phase_transition tool. Use it like this:
+- To start planning: <phase_transition>plan</phase_transition>
+- To start execution: <phase_transition>execute</phase_transition>
+- To start review: <phase_transition>review</phase_transition>
+
+IMPORTANT: Always specify the target phase inside the tags. Never use empty tags like <phase_transition/>.`,
   tools: ["phase_transition", "bash", "file-system", "web-search"],
   llmConfig: "default",
-  version: 1,
 };

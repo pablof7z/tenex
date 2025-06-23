@@ -19,6 +19,7 @@ export interface ClaudeCodeResult {
   totalCost?: number;
   messageCount?: number;
   duration?: number;
+  assistantMessages: string[];
 }
 
 /**
@@ -100,6 +101,7 @@ export class ClaudeCodeExecutor {
           totalCost: this.parser.getTotalCost(),
           messageCount: this.parser.getMessageCount(),
           duration: Date.now() - this.startTime,
+          assistantMessages: this.parser.getAssistantMessages(),
         };
 
         if (code !== 0) {

@@ -59,15 +59,26 @@ export class PlanPhaseInitializer implements PhaseInitializer {
       const claudeCodeTriggered = await this.triggerClaudeCode(conversation, chatSummary, task);
 
       if (claudeCodeTriggered) {
+        // Include any metadata that was set during triggerClaudeCode
+        const metadata: Record<string, unknown> = {
+          claudeCodeTriggered,
+          phase: "plan",
+          context: chatSummary,
+        };
+        
+        // Add plan-specific metadata if it was generated
+        if (conversation.metadata.plan_summary) {
+          metadata.plan_summary = conversation.metadata.plan_summary;
+          metadata.plan_sessionId = conversation.metadata.plan_sessionId;
+          metadata.plan_cost = conversation.metadata.plan_cost;
+          metadata.plan_generated = conversation.metadata.plan_generated;
+        }
+        
         return {
           success: true,
           message: "Plan phase initialized. Claude Code is creating the implementation plan.",
           // Don't assign a nextAgent since Claude Code is handling the response
-          metadata: {
-            claudeCodeTriggered,
-            phase: "plan",
-            context: chatSummary,
-          },
+          metadata,
         };
       }
 
@@ -147,6 +158,23 @@ export class PlanPhaseInitializer implements PhaseInitializer {
         // Store session ID in conversation metadata for tracking
         if (result.sessionId) {
           conversation.metadata.planSessionId = result.sessionId;
+        }
+        
+        // Store plan metadata to be saved by the router
+        if (result.assistantMessages && result.assistantMessages.length > 0) {
+          const fullPlan = result.assistantMessages.join("\n\n");
+          
+          // Store plan in conversation metadata for later saving
+          conversation.metadata.plan_summary = fullPlan;
+          conversation.metadata.plan_sessionId = result.sessionId;
+          conversation.metadata.plan_cost = result.totalCost;
+          conversation.metadata.plan_generated = true;
+          
+          logger.info("[PLAN Phase] Prepared plan metadata", {
+            conversationId: conversation.id,
+            planLength: fullPlan.length,
+            messageCount: result.assistantMessages.length
+          });
         }
       }
 

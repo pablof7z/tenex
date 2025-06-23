@@ -99,11 +99,8 @@ export class AgentExecutor {
                 userPrompt
             );
 
-            // 6. Determine next responder
-            const nextResponder = this.determineNextResponder(
-                context,
-                reasonActResult.finalContent
-            );
+            // 6. Currently, agents don't hand off to other agents
+            const nextResponder = undefined;
 
             // 7. Check for phase transition in tool results
             const phaseTransition = this.extractPhaseTransition(reasonActResult.allToolResults);
@@ -253,18 +250,6 @@ export class AgentExecutor {
         return { response, userPrompt };
     }
 
-    /**
-     * Determine who should respond next
-     */
-    private determineNextResponder(
-        context: AgentExecutionContext,
-        response: string
-    ): string | undefined {
-        // Currently, agents don't hand off to other agents
-        // If this is needed in the future, it should be implemented
-        // as a tool similar to phase_transition
-        return undefined;
-    }
 
     /**
      * Publish the agent's response to Nostr
@@ -298,7 +283,7 @@ export class AgentExecutor {
         );
 
         if (tracingContext && "logEventPublished" in tracingLogger) {
-            (tracingLogger as TracingLogger).logEventPublished(
+            tracingLogger.logEventPublished(
                 event.id || "unknown",
                 "agent_response",
                 {
@@ -339,6 +324,7 @@ export class AgentExecutor {
             totalTokens: response.usage.totalTokens,
             systemPrompt,
             userPrompt,
+            rawResponse: response.content,
         };
     }
 

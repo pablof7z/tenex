@@ -52,6 +52,9 @@ export class ConversationPublisher {
       if (llmMetadata.userPrompt) {
         reply.tag(["llm-user-prompt", llmMetadata.userPrompt]);
       }
+      if (llmMetadata.rawResponse) {
+        reply.tag(["llm-raw-response", llmMetadata.rawResponse]);
+      }
     }
 
     // Add any additional custom tags

@@ -4,11 +4,10 @@ import type { SystemComponents } from "@/commands/run/SystemInitializer";
 import { formatError } from "@/utils/errors";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
-const logInfo = logger.info.bind(logger);
 import { getProjectContext } from "@/services";
 import { EVENT_KINDS } from "@/llm/types";
-import { isEventFromAgent } from "@/nostr/utils";
 import chalk from "chalk";
+const logInfo = logger.info.bind(logger);
 
 export class EventHandler {
   private systemComponents!: SystemComponents;

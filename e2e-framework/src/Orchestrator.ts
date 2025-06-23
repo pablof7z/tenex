@@ -28,6 +28,8 @@ export interface OrchestratorOptions {
   debug?: boolean;
   /** Path to write debug logs */
   logFile?: string;
+  /** Optional Nostr private key (nsec) for impersonating a specific identity */
+  nsec?: string;
 }
 
 /**
@@ -77,8 +79,15 @@ export class Orchestrator {
       options.relays || config.nostr.defaultRelays
     );
     
-    // Generate test identity
-    const signer = NDKPrivateKeySigner.generate();
+    // Set up test identity: use provided private key, env var override, or generate new
+    let signer;
+    if (this.options.nsec) {
+      signer = new NDKPrivateKeySigner(this.options.nsec);
+    } else if (process.env.TENEX_E2E_NSEC) {
+      signer = new NDKPrivateKeySigner(process.env.TENEX_E2E_NSEC);
+    } else {
+      signer = NDKPrivateKeySigner.generate();
+    }
     this.nsec = signer.nsec!;
     this.npub = signer.npub!;
     

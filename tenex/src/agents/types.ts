@@ -70,12 +70,6 @@ export interface AgentConfig {
   llmConfig?: string;
 }
 
-export interface AgentProfile {
-  name: string;
-  role: string;
-  description: string;
-  capabilities: string[];
-}
 
 
 /**
@@ -86,18 +80,13 @@ export interface ConfigurationLoadOptions {
 }
 
 /**
- * Agent definition structure
+ * Agent data stored in JSON files (.tenex/agents/*.json)
  */
-export interface AgentDefinition {
-  eventId?: string;
+export interface StoredAgentData {
   name: string;
-  description?: string;
   role: string;
   expertise?: string;
   instructions?: string;
-  version?: number;
-  publishedAt?: number;
-  publisher?: string;
   llmConfig?: string;
   tools?: string[];
 }

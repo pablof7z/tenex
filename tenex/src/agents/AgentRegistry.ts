@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Agent, AgentConfig, AgentDefinition } from "@/agents/types";
+import type { Agent, AgentConfig, StoredAgentData } from "@/agents/types";
 import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
@@ -8,6 +8,8 @@ import { configService } from "@/services";
 import { AgentPublisher } from "@/agents/AgentPublisher";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import { BOSS_AGENT_DEFINITION } from "./projectAgentDefinition";
+import { getNDK } from "@/nostr";
+import { getProjectContext } from "@/services";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -54,7 +56,7 @@ export class AgentRegistry {
 
     // Check if we have it in registry
     let registryEntry = this.registry[name];
-    let agentDefinition: AgentDefinition;
+    let agentDefinition: StoredAgentData;
 
     if (!registryEntry) {
       // Generate new nsec for agent
@@ -169,29 +171,6 @@ export class AgentRegistry {
     return Array.from(this.agents.values()).find(agent => agent.name === name);
   }
 
-  async createAgent(name: string, role: string, config: Partial<AgentConfig>): Promise<Agent & { nsec: string }> {
-    // Generate new nsec for agent
-    const signer = NDKPrivateKeySigner.generate();
-    const { nsec, pubkey } = signer;
-
-    // Create Agent instance
-    const agent: Agent & { nsec: string } = {
-      name,
-      pubkey,
-      signer,
-      role,
-      expertise: config.expertise || role,
-      instructions: config.instructions || "",
-      llmConfig: config.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-      tools: config.tools || [],
-      nsec,
-      slug: name,
-      // No eventId for local agents
-    };
-
-    return agent;
-  }
-
   private async saveRegistry(): Promise<void> {
     await configService.saveProjectAgents(this.projectPath, this.registry);
   }
@@ -248,25 +227,10 @@ export class AgentRegistry {
       const projectConfig = await configService.loadTenexConfig(this.projectPath);
       const projectName = projectConfig.description || "Unknown Project";
       
-      // Get boss agent to find project pubkey
-      const bossAgent = this.getBossAgent();
-      if (!bossAgent) {
-        logger.warn("Boss agent not found, skipping agent event publishing");
-        return;
-      }
+      // Get project context for project pubkey
+      const projectCtx = getProjectContext();
       
-      const projectPubkey = bossAgent.pubkey;
-      
-      // Initialize NDK
-      const ndk = new NDK({
-        explicitRelayUrls: [
-          "wss://relay.damus.io",
-          "wss://relay.nostr.band",
-          "wss://nos.lol",
-          "wss://relay.primal.net"
-        ],
-      });
-      
+      const ndk = getNDK();
       await ndk.connect();
       
       // Create agent publisher
@@ -277,7 +241,7 @@ export class AgentRegistry {
         signer,
         config,
         projectName,
-        projectPubkey,
+        projectCtx.project.pubkey,
         ndkAgentEventId
       );
       
@@ -302,7 +266,7 @@ export class AgentRegistry {
     }
 
     const content = await readFile(definitionPath, "utf-8");
-    let agentDefinition: AgentDefinition;
+    let agentDefinition: StoredAgentData;
     try {
       agentDefinition = JSON.parse(content);
       this.validateAgentDefinition(agentDefinition);
@@ -332,7 +296,7 @@ export class AgentRegistry {
   /**
    * Validate an agent definition has all required fields
    */
-  private validateAgentDefinition(definition: any): asserts definition is AgentDefinition {
+  private validateAgentDefinition(definition: any): asserts definition is StoredAgentData {
     if (!definition || typeof definition !== 'object') {
       throw new Error('Agent definition must be an object');
     }

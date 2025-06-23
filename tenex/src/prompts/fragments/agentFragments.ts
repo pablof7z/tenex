@@ -508,6 +508,17 @@ Use Claude Code for complex tasks that require:
 - Implementing features that span multiple files
 - Any task that would benefit from Claude's advanced capabilities
 
+### Phase Transition (phase_transition tool - boss agents only)
+- Transition to plan: <phase_transition>plan</phase_transition>
+- Transition to execute: <phase_transition>execute</phase_transition>
+- Transition to review: <phase_transition>review</phase_transition>
+
+Phase transitions are only available to boss agents and follow these rules:
+- From chat → plan (when requirements are clear)
+- From plan → execute (when plan is approved) or chat (need more info)
+- From execute → review (when implementation is complete) or plan (major changes needed)
+- From review → execute (fixes needed), chat (discuss results), or chores (cleanup)
+
 Tools will be executed automatically and results will be included in your response.`;
 }
 

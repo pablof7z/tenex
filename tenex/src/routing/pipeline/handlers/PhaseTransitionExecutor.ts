@@ -61,9 +61,16 @@ export class PhaseTransitionExecutor implements MessageHandler {
     });
 
     // Update conversation metadata with initialization result
-    await context.conversationManager.updateMetadata(conversation.id, {
+    const metadataUpdate: Record<string, unknown> = {
       [`${newPhase}_init`]: result
-    });
+    };
+    
+    // Also save any metadata returned by the phase initializer
+    if (result.metadata) {
+      Object.assign(metadataUpdate, result.metadata);
+    }
+    
+    await context.conversationManager.updateMetadata(conversation.id, metadataUpdate);
 
     // Handle phase-specific initialization responses
     await handlePhaseInitializationResponse({

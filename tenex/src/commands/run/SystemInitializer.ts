@@ -75,7 +75,7 @@ export class SystemInitializer {
 
   private getRoutingConfig(llmSettings: TenexLLMs): string {
     try {
-      return llmSettings.defaults?.routing || llmSettings.defaults?.agents || "default";
+      return llmSettings.defaults?.agentRouting || llmSettings.defaults?.agents || "default";
     } catch {
       return "default";
     }

@@ -78,6 +78,15 @@ export class ToolDetector {
         rawMatch: match[0],
       }),
     },
+
+    // Empty phase transition pattern (for better error handling)
+    {
+      pattern: /<phase_transition\s*\/>/gs,
+      parser: (match: RegExpMatchArray) => {
+        logger.warn("Empty phase transition tag detected. Phase must be specified: <phase_transition>plan|execute|review</phase_transition>");
+        return null; // Don't create an invocation for invalid syntax
+      },
+    },
   ];
 
   /**

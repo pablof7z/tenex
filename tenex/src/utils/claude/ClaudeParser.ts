@@ -12,6 +12,7 @@ export class ClaudeParser {
   private totalCost = 0;
   private startTime = Date.now();
   private onMessage?: MessageHandler;
+  private assistantMessages: string[] = [];
 
   constructor(onMessage?: MessageHandler) {
     this.onMessage = onMessage;
@@ -64,6 +65,17 @@ export class ClaudeParser {
     // Count assistant messages
     if (message.type === "assistant") {
       this.messageCount++;
+      
+      // Capture assistant message content
+      if (message.message?.content) {
+        const text = message.message.content
+          .filter(c => c.type === "text")
+          .map(c => c.text)
+          .join("");
+        if (text) {
+          this.assistantMessages.push(text);
+        }
+      }
     }
   }
 
@@ -81,5 +93,9 @@ export class ClaudeParser {
 
   getDuration(): number {
     return Date.now() - this.startTime;
+  }
+
+  getAssistantMessages(): string[] {
+    return this.assistantMessages;
   }
 }

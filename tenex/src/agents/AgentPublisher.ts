@@ -1,8 +1,9 @@
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKEvent, type NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKEvent, NDKKind, type NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { NDKAgent } from "@/events/NDKAgent";
-import type { AgentConfig, AgentProfile } from "@/agents/types";
+import type { AgentConfig } from "@/agents/types";
+import { EVENT_KINDS } from "@/llm";
 
 /**
  * Service for publishing agent-related Nostr events
@@ -26,7 +27,7 @@ export class AgentPublisher {
       const seed = signer.pubkey; // Use pubkey as seed for consistent avatar
       const avatarUrl = `https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${seed}`;
 
-      const profile: AgentProfile & { picture?: string; project?: string } = {
+      const profile = {
         name: agentName,
         role: agentRole,
         description: `${agentRole} agent for ${projectName}`,
@@ -72,7 +73,7 @@ export class AgentPublisher {
   ): Promise<NDKEvent> {
     try {
       const tags: string[][] = [
-        ["p", projectPubkey, "", "project"],
+        ["p", projectPubkey],
       ];
 
       // Only add e-tag if this agent was created from an NDKAgent event
@@ -83,21 +84,11 @@ export class AgentPublisher {
       // Add agent metadata tags
       tags.push(
         ["name", agentConfig.name],
-        ["role", agentConfig.role],
-        ["expertise", agentConfig.expertise || agentConfig.role]
       );
 
       const requestEvent = new NDKEvent(this.ndk, {
-        kind: 4200, // Agent request event kind
-        pubkey: signer.pubkey,
-        content: JSON.stringify({
-          name: agentConfig.name,
-          role: agentConfig.role,
-          expertise: agentConfig.expertise,
-          instructions: agentConfig.instructions,
-          tools: agentConfig.tools || [],
-          llmConfig: agentConfig.llmConfig,
-        }),
+        kind: EVENT_KINDS.AGENT_REQUEST,
+        content: "",
         tags,
       });
 

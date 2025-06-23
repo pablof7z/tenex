@@ -8,6 +8,7 @@ export interface LLMMetadata {
   totalTokens: number;
   systemPrompt?: string;
   userPrompt?: string;
+  rawResponse?: string;
 }
 
 export interface PublishOptions {

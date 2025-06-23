@@ -10,7 +10,7 @@ import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { configService, setProjectContext } from "@/services";
-import type { Agent, AgentProfile } from "@/agents/types";
+import type { Agent } from "@/agents/types";
 import type { TenexConfig } from "@/services/config/types";
 import chalk from "chalk";
 
@@ -245,14 +245,9 @@ export class ProjectManager implements IProjectManager {
         if (agent) {
           const filePath = path.join(agentsDir, `${eventId}.json`);
           const agentData = {
-            eventId: agent.id,
             name: agent.title,
-            description: agent.description,
             role: agent.role,
             instructions: agent.instructions,
-            version: agent.version,
-            publishedAt: agent.created_at,
-            publisher: agent.pubkey,
           };
           await fs.writeFile(filePath, JSON.stringify(agentData, null, 2));
           logger.info("Saved agent definition", { eventId, name: agent.title });
@@ -280,7 +275,7 @@ export class ProjectManager implements IProjectManager {
     return signer.nsec;
   }
 
-  private buildProjectProfile(projectName: string, description?: string): AgentProfile {
+  private buildProjectProfile(projectName: string, description?: string) {
     return {
       name: toKebabCase(projectName),
       role: "Project Manager",

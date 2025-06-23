@@ -9,7 +9,7 @@ import {
   loadProcessedEvents,
 } from "@/commands/run/processedEventTracking";
 import { getNDK } from "@/nostr/ndkClient";
-import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
+import { filterAndRelaySetFromBech32, type NDKEvent, type NDKFilter, type NDKSubscription } from "@nostr-dev-kit/ndk";
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { EVENT_KINDS } from "@/llm/types";
@@ -42,14 +42,14 @@ export class SubscriptionManager {
   }
 
   private async subscribeToProjectUpdates(): Promise<void> {
+    const ndk = getNDK();
     const projectCtx = getProjectContext();
     const project = projectCtx.project;
-    const projectFilter = project.filter();
+    const { filter: projectFilter } = filterAndRelaySetFromBech32(project.encode(), ndk);
 
     logger.info(chalk.blue("  • Setting up project update subscription..."));
     logger.debug("Project update filter:", projectFilter);
 
-    const ndk = getNDK();
     const projectSubscription = ndk.subscribe(projectFilter, {
       closeOnEose: false,
       groupable: false,

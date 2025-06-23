@@ -63,18 +63,29 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
         "Implement the plan. Make all necessary code changes."
       );
 
+      // Include any metadata that was set during triggerClaudeCode
+      const metadata: Record<string, unknown> = {
+        claudeCodeTriggered,
+        gitBranch: branchName,
+        assignedAgent: executionAgent.name,
+        agentPubkey: executionAgent.pubkey,
+        phase: "execute",
+        plan,
+      };
+      
+      // Add execution-specific metadata if it was generated
+      if (conversation.metadata.execute_summary) {
+        metadata.execute_summary = conversation.metadata.execute_summary;
+        metadata.execute_sessionId = conversation.metadata.execute_sessionId;
+        metadata.execute_cost = conversation.metadata.execute_cost;
+        metadata.implementation_complete = conversation.metadata.implementation_complete;
+      }
+      
       return {
         success: true,
         message: `Execute phase initialized. Branch '${branchName}' created. Claude Code CLI triggered.`,
         nextAgent: executionAgent.pubkey,
-        metadata: {
-          claudeCodeTriggered,
-          gitBranch: branchName,
-          assignedAgent: executionAgent.name,
-          agentPubkey: executionAgent.pubkey,
-          phase: "execute",
-          plan,
-        },
+        metadata,
       };
     } catch (error) {
       return handlePhaseError("Execute", error);
@@ -125,9 +136,28 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
       },
     });
 
-    if (result.success && result.sessionId) {
+    if (result.success) {
       // Store session ID in conversation metadata for tracking
-      conversation.metadata.executeSessionId = result.sessionId;
+      if (result.sessionId) {
+        conversation.metadata.executeSessionId = result.sessionId;
+      }
+      
+      // Store execution metadata to be saved by the router
+      if (result.assistantMessages && result.assistantMessages.length > 0) {
+        const executionSummary = result.assistantMessages.join("\n\n");
+        
+        // Store execution in conversation metadata for later saving
+        conversation.metadata.execute_summary = executionSummary;
+        conversation.metadata.execute_sessionId = result.sessionId;
+        conversation.metadata.execute_cost = result.totalCost;
+        conversation.metadata.implementation_complete = true;
+        
+        logger.info("[EXECUTE Phase] Prepared execution metadata", {
+          conversationId: conversation.id,
+          summaryLength: executionSummary.length,
+          messageCount: result.assistantMessages.length
+        });
+      }
     }
 
     return result.success;

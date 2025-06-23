@@ -24,6 +24,7 @@ export interface ClaudeExecutionResult {
   messageCount?: number;
   duration?: number;
   error?: string;
+  assistantMessages: string[];
 }
 
 /**
@@ -99,12 +100,14 @@ export class ExecutionService {
         messageCount: result.messageCount,
         duration: result.duration,
         error: result.error,
+        assistantMessages: result.assistantMessages,
       };
     } catch (error) {
       logger.error("Claude Code execution failed", { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+        assistantMessages: [],
       };
     }
   }
