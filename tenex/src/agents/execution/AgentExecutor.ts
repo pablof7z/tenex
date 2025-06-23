@@ -86,6 +86,7 @@ export class AgentExecutor {
                     phase: context.phase,
                     llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
                     agent: context.agent, // Pass the full agent object
+                    conversation: context.conversation, // Pass the full conversation object
                 },
                 promptContext.systemPrompt,
                 userPrompt,

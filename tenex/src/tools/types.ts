@@ -56,6 +56,7 @@ export interface ToolInvocation {
 }
 
 import type { Agent } from "@/agents/types";
+import type { Conversation } from "@/conversations/types";
 
 export interface ToolExecutionContext {
   projectPath: string;
@@ -63,6 +64,7 @@ export interface ToolExecutionContext {
   agentName: string;
   phase: string;
   agent: Agent;
+  conversation?: Conversation;
 }
 
 export interface ToolExecutionResult {
