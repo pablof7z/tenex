@@ -1,6 +1,6 @@
 // Import from main index which loads all fragments
 import { PromptBuilder, fragmentRegistry } from '..';
-import { agentFragment } from '../fragments/agent';
+import { agentBaseFragment } from '../fragments/agentFragments';
 import { projectFragment } from '../fragments/project';
 import { toolsFragment } from '../fragments/tools';
 import { routingFragment } from '../fragments/routing';
@@ -8,7 +8,7 @@ import { routingFragment } from '../fragments/routing';
 describe('Prompt System Integration', () => {
   beforeAll(() => {
     // Ensure fragments are registered
-    fragmentRegistry.register(agentFragment);
+    fragmentRegistry.register(agentBaseFragment);
     fragmentRegistry.register(projectFragment);
     fragmentRegistry.register(toolsFragment);
     fragmentRegistry.register(routingFragment);
@@ -38,9 +38,9 @@ describe('Prompt System Integration', () => {
       .build();
 
     // Check that all parts are included
-    expect(prompt).toContain('You are Code Assistant, Senior Developer');
+    expect(prompt).toContain('You are Code Assistant, a Senior Developer');
     expect(prompt).toContain('You are an expert developer');
-    expect(prompt).toContain('Working on project: TENEX');
+    expect(prompt).toContain('## Project Context\n- Project: TENEX');
     expect(prompt).toContain('Project: TENEX');
     expect(prompt).toContain('Description: A decentralized agent orchestration system');
     expect(prompt).toContain('Tags: nostr, ai, distributed');
@@ -83,14 +83,14 @@ describe('Prompt System Integration', () => {
       .add('agent-base', { agent, project: { name: 'Project A' } })
       .build();
 
-    expect(withProject).toContain('Working on project: Project A');
+    expect(withProject).toContain('## Project Context\n- Project: Project A');
 
     // Build without project
     const withoutProject = new PromptBuilder()
       .add('agent-base', { agent })
       .build();
 
-    expect(withoutProject).not.toContain('Working on project:');
+    expect(withoutProject).not.toContain('## Project Context');
   });
 
   it('should support custom inline fragments', () => {

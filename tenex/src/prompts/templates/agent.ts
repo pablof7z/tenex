@@ -1,7 +1,7 @@
 import type { Agent, AgentContext } from "@/agents/types";
 import type { AgentSummary } from "@/routing/types";
 import { PromptBuilder } from "../core/PromptBuilder";
-import "../fragments/agent-prompts"; // Ensure fragments are registered
+import "../fragments/agentFragments"; // Ensure fragments are registered
 
 export function buildAgentPrompt(
   agent: Agent,

@@ -2,8 +2,7 @@
 import "../fragments/common";
 import "../fragments/generic";
 import "../fragments/context";
-import "../fragments/agent-specific";
-import "../fragments/agent";
+import "../fragments/agentFragments";
 import "../fragments/project";
 import "../fragments/tools";
 import "../fragments/routing";

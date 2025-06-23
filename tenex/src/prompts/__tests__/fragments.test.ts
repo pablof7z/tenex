@@ -1,24 +1,24 @@
 import { FragmentRegistry } from "../core/FragmentRegistry";
-import { agentFragment } from '../fragments/agent';
+import { agentBaseFragment } from '../fragments/agentFragments';
 import { projectFragment } from '../fragments/project';
 import { toolsFragment } from '../fragments/tools';
 import { routingFragment } from '../fragments/routing';
 
 describe('Fragment Examples', () => {
-  describe('agentFragment', () => {
+  describe('agentBaseFragment', () => {
     it('should generate basic agent prompt', () => {
-      const result = agentFragment.template({
+      const result = agentBaseFragment.template({
         agent: {
           name: 'Code Assistant',
           instructions: 'You help users write better code.'
         }
       });
 
-      expect(result).toBe('You are Code Assistant\n\nYou help users write better code.');
+      expect(result).toBe('You are Code Assistant\n\n## Your Role\nYou help users write better code.');
     });
 
     it('should include role when provided', () => {
-      const result = agentFragment.template({
+      const result = agentBaseFragment.template({
         agent: {
           name: 'Code Assistant',
           role: 'Senior Developer',
@@ -26,11 +26,11 @@ describe('Fragment Examples', () => {
         }
       });
 
-      expect(result).toBe('You are Code Assistant, Senior Developer\n\nYou help users write better code.');
+      expect(result).toBe('You are Code Assistant, a Senior Developer\n\n## Your Role\nYou help users write better code.');
     });
 
     it('should include project when provided', () => {
-      const result = agentFragment.template({
+      const result = agentBaseFragment.template({
         agent: {
           name: 'Code Assistant',
           instructions: 'You help users write better code.'
@@ -40,11 +40,11 @@ describe('Fragment Examples', () => {
         }
       });
 
-      expect(result).toContain('Working on project: My Project');
+      expect(result).toContain('## Project Context\n- Project: My Project');
     });
 
     it('should have correct priority', () => {
-      expect(agentFragment.priority).toBe(10);
+      expect(agentBaseFragment.priority).toBe(10);
     });
   });
 

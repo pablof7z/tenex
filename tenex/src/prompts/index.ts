@@ -10,10 +10,7 @@ export * from "./templates";
 export * from "./routingPrompts";
 
 // Import all fragments to ensure they're registered when the module is imported
-import "./fragments/agent";
-import "./fragments/agent-execution";
-import "./fragments/agent-prompts";
-import "./fragments/agent-specific";
+import "./fragments/agentFragments";
 import "./fragments/common";
 import "./fragments/context";
 import "./fragments/generic";
