@@ -46,7 +46,12 @@ export async function getNDK(config: NDKSetupConfig = {}): Promise<NDK> {
         }
 
         await ndkInstance.connect();
-        logger.info(`✅ Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
+        
+        // Only log if not in JSON mode (check process.argv for --json flag)
+        const isJsonMode = process.argv.includes('--json');
+        if (!isJsonMode) {
+            logger.info(`✅ Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
+        }
     }
 
     return ndkInstance;

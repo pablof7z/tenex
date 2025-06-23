@@ -1,0 +1,152 @@
+import type { NDKEvent } from '@nostr-dev-kit/ndk';
+import type { Orchestrator } from './Orchestrator';
+import type { Project } from './Project';
+import type { ReplyOptions, CompletionOptions } from './types';
+import { getConfig } from './config';
+import { NostrEventKinds } from './constants';
+
+/**
+ * Represents a conversation thread within a TENEX project.
+ * Manages message flow and provides methods to wait for agent responses.
+ * 
+ * @example
+ * ```typescript
+ * const conversation = await project.startConversation({
+ *   message: '@coder implement a fibonacci function'
+ * });
+ * 
+ * // Wait for agent to reply
+ * const reply = await conversation.waitForReply();
+ * console.log(reply.content);
+ * 
+ * // Send follow-up message
+ * await conversation.sendMessage('Add tests for the function');
+ * 
+ * // Wait for task completion
+ * await conversation.waitForCompletion();
+ * ```
+ */
+export class Conversation {
+  private messages: NDKEvent[] = [];
+  
+  /**
+   * Creates a new Conversation instance.
+   * 
+   * @param orchestrator - The orchestrator instance managing this conversation
+   * @param project - The project this conversation belongs to
+   * @param threadId - The Nostr event ID of the conversation thread
+   * @param _title - The conversation title (for future use)
+   * 
+   * @internal
+   */
+  constructor(
+    private orchestrator: Orchestrator,
+    private project: Project,
+    private threadId: string,
+    _title: string
+  ) {
+    // Title is available for future use
+  }
+  
+  /**
+   * Sends a message in the conversation.
+   * 
+   * @param content - The message content to send
+   * 
+   * @example
+   * ```typescript
+   * await conversation.sendMessage('Please add error handling');
+   * ```
+   */
+  async sendMessage(content: string): Promise<void> {
+    await this.orchestrator.client.sendMessage(
+      this.project.naddr,
+      content
+    );
+  }
+  
+  /**
+   * Waits for a reply in the conversation.
+   * 
+   * @param options - Reply wait options
+   * @param options.timeout - Maximum time to wait in milliseconds (default: 30000)
+   * @param options.validate - Optional validation function to filter replies
+   * @returns The reply event
+   * @throws {Error} If no reply is received within the timeout
+   * 
+   * @example
+   * ```typescript
+   * // Wait for any reply
+   * const reply = await conversation.waitForReply();
+   * 
+   * // Wait for reply containing specific text
+   * const reply = await conversation.waitForReply({
+   *   validate: (event) => event.content.includes('completed'),
+   *   timeout: 60000
+   * });
+   * ```
+   */
+  async waitForReply(options: ReplyOptions = {}): Promise<NDKEvent> {
+    const event = await this.orchestrator.monitor.waitForProjectEvent(
+      this.project.naddr,
+      {
+        kinds: [NostrEventKinds.NOTE],
+        '#e': [this.threadId]
+      },
+      options
+    );
+    
+    this.messages.push(event);
+    return event;
+  }
+  
+  /**
+   * Waits for the conversation to reach a completion state.
+   * Looks for common completion indicators in agent responses.
+   * 
+   * @param options - Completion wait options
+   * @param options.timeout - Maximum time to wait in milliseconds (default: 60000)
+   * @param options.indicators - Custom completion indicators (default: ['done', 'completed', 'finished', 'created', 'implemented'])
+   * @throws {Error} If no completion indicator is found within the timeout
+   * 
+   * @example
+   * ```typescript
+   * // Wait with default indicators
+   * await conversation.waitForCompletion();
+   * 
+   * // Wait with custom indicators
+   * await conversation.waitForCompletion({
+   *   indicators: ['task complete', 'all done'],
+   *   timeout: 120000
+   * });
+   * ```
+   */
+  async waitForCompletion(options: CompletionOptions = {}): Promise<void> {
+    const config = getConfig();
+    const { timeout = config.timeouts.conversationCompletion, indicators = config.conversation.completionIndicators } = options;
+    
+    await this.waitForReply({
+      timeout,
+      validate: (event) => {
+        const content = event.content.toLowerCase();
+        return indicators.some(ind => content.includes(ind.toLowerCase()));
+      }
+    });
+  }
+  
+  /**
+   * Gets all messages in this conversation.
+   * 
+   * @returns A copy of the messages array
+   * 
+   * @example
+   * ```typescript
+   * const messages = conversation.getMessages();
+   * console.log(`Total messages: ${messages.length}`);
+   * messages.forEach(msg => console.log(msg.content));
+   * ```
+   */
+  getMessages(): NDKEvent[] {
+    return [...this.messages];
+  }
+}

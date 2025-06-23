@@ -1,0 +1,32 @@
+{
+  "name": "@tenex/e2e-framework",
+  "version": "1.0.0",
+  "description": "End-to-end testing framework for TENEX",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "tenex-e2e": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "cli": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "@nostr-dev-kit/ndk": "^2.10.5",
+    "nostr-tools": "^2.10.4",
+    "@noble/hashes": "^1.5.0",
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^20.9.0",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  }
+}
