@@ -196,21 +196,10 @@ export class AgentExecutor {
         const hasInventory =
             context.phase === "chat" ? await inventoryExists(process.cwd()) : false;
 
-        // Get phase-aware tools for this agent
-        const phaseAwareTools = context.agent.isBoss 
-            ? getDefaultToolsForAgent(true, context.phase)
-            : context.agent.tools || getDefaultToolsForAgent(false);
-
-        // Create a modified agent with phase-aware tools
-        const agentWithPhaseTools = {
-            ...context.agent,
-            tools: phaseAwareTools
-        };
-
         // Build system prompt
         const systemPrompt = promptBuilder
             .add("agent-system-prompt", {
-                agent: agentWithPhaseTools,
+                agent: context.agent,
                 phase: context.phase,
                 projectTitle:
                     project.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Project",
@@ -241,7 +230,7 @@ export class AgentExecutor {
             systemPrompt,
             conversationHistory,
             phaseContext,
-            availableTools: phaseAwareTools,
+            availableTools: context.agent.tools,
             constraints: constraints,
         };
     }
