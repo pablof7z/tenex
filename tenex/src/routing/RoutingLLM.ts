@@ -11,10 +11,10 @@ import {
 } from "@/prompts";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
-import { formatProjectContextForPrompt, getProjectContext } from "@/utils/project";
+import { formatProjectContextForPrompt, getProjectContext as getFileSystemProjectContext } from "@/utils/project";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
-import { projectContext, configService } from "@/services";
+import { getProjectContext, configService } from "@/services";
 import type {
     AgentSelectionDecision,
     FallbackRoutingDecision,
@@ -37,7 +37,7 @@ export class RoutingLLM {
         }
 
         try {
-            const projectContext = await getProjectContext(this.projectPath);
+            const projectContext = await getFileSystemProjectContext(this.projectPath);
             return formatProjectContextForPrompt(projectContext);
         } catch (error) {
             logger.error("Failed to get project context", { error });
@@ -50,7 +50,8 @@ export class RoutingLLM {
      */
     private getProjectDetails() {
         try {
-            const project = projectContext.getCurrentProject();
+            const projectCtx = getProjectContext();
+            const project = projectCtx.project;
             const titleTag = project.tagValue("title");
             const repoTag = project.tagValue("repo");
             const hashtagTags = project.tags
@@ -115,14 +116,14 @@ export class RoutingLLM {
                 expertise: agent.expertise,
             }));
 
-            const projectContext = await this.getProjectContextString();
+            const projectContextString = await this.getProjectContextString();
             const projectInventory = await this.getProjectInventory();
             const projectDetails = this.getProjectDetails();
 
             const prompt = RoutingPromptBuilder.newConversation({
                 message: event.content,
                 agents: agentSummaries,
-                projectContext,
+                projectContext: projectContextString,
                 projectInventory: projectInventory || undefined,
                 projectName: projectDetails.name,
                 projectDescription: projectDetails.description,
@@ -183,7 +184,7 @@ export class RoutingLLM {
                 expertise: agent.expertise,
             }));
 
-            const projectContext = await this.getProjectContextString();
+            const projectContextString = await this.getProjectContextString();
             const projectInventory = await this.getProjectInventory();
             const projectDetails = this.getProjectDetails();
 
@@ -193,7 +194,7 @@ export class RoutingLLM {
                 phaseHistory: context.phaseHistory,
                 agents: agentSummaries,
                 conversationSummary: context.conversationSummary,
-                projectContext,
+                projectContext: projectContextString,
                 projectInventory: projectInventory || undefined,
                 projectName: projectDetails.name,
                 projectDescription: projectDetails.description,
@@ -304,14 +305,14 @@ export class RoutingLLM {
         context: RoutingContext
     ): Promise<PhaseTransitionDecision> {
         try {
-            const projectContext = await this.getProjectContextString();
+            const projectContextString = await this.getProjectContextString();
             const projectInventory = await this.getProjectInventory();
 
             const prompt = RoutingPromptBuilder.phaseTransition({
                 currentPhase: context.currentPhase,
                 phaseHistory: context.phaseHistory,
                 conversationSummary: context.conversationSummary,
-                projectContext,
+                projectContext: projectContextString,
                 projectInventory: projectInventory || undefined,
             });
 
@@ -358,14 +359,14 @@ export class RoutingLLM {
                 expertise: agent.expertise,
             }));
 
-            const projectContext = await this.getProjectContextString();
+            const projectContextString = await this.getProjectContextString();
             const projectInventory = await this.getProjectInventory();
             const projectDetails = this.getProjectDetails();
 
             const prompt = RoutingPromptBuilder.fallback({
                 message: event.content,
                 agents: agentSummaries,
-                projectContext,
+                projectContext: projectContextString,
                 projectInventory: projectInventory || undefined,
                 projectName: projectDetails.name,
                 projectDescription: projectDetails.description,

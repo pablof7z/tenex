@@ -26,6 +26,7 @@ import { configService } from "@/services";
 import { PROVIDER_ID_MAP } from "./services/LLMModelService";
 import type { TenexLLMs } from "@/services/config/types";
 import type { Agent } from "@/agents/types";
+import { LLM_DEFAULTS, DEFAULT_AGENT_LLM_CONFIG } from "./constants";
 
 const llmLogger = logger.forModule("llm");
 
@@ -190,6 +191,14 @@ export class MultiLLMService implements LLMService {
         `Received completion response - content: ${response.content}, has tool calls: ${!!response.toolCalls}`
       );
       llmLogger.debug(`Raw Response: ${JSON.stringify(response)}`);
+      
+      // Log specific warning if usage data is missing
+      if (!response.usage) {
+        llmLogger.warning(
+          `No usage data returned from ${this.config.provider}/${this.config.model}. ` +
+          `This means LLM metadata tags will not be included in the response.`
+        );
+      }
 
       return this.mapResponse(response);
     } catch (error) {
@@ -247,17 +256,23 @@ export class MultiLLMService implements LLMService {
   /**
    * Determine which LLM configuration to use based on request context
    */
-  private getConfigKey(request: CompletionRequest | string | { _context?: { agent?: { llmConfig?: string } } }): string {
+  private getConfigKey(request: CompletionRequest | string): string {
     // Handle string requests (direct config key)
     if (typeof request === "string") {
+      // Special handling for "default" or the constant - map to defaults.agents
+      if (request === "default" || request === DEFAULT_AGENT_LLM_CONFIG) {
+        return this.getDefaultConfigKey();
+      }
       return request;
     }
 
-    // Extract config from request context
-    const requestWithContext = request as { _context?: { agent?: { llmConfig?: string } } };
-    const contextConfig = requestWithContext._context?.agent?.llmConfig;
-    if (contextConfig) {
-      return contextConfig;
+    // Check if model is specified in options (clean interface approach)
+    if (request.options?.model) {
+      // Special handling for "default" or the constant - map to defaults.agents
+      if (request.options.model === "default" || request.options.model === DEFAULT_AGENT_LLM_CONFIG) {
+        return this.getDefaultConfigKey();
+      }
+      return request.options.model;
     }
 
     // Return default configuration key
@@ -273,7 +288,7 @@ export class MultiLLMService implements LLMService {
     }
 
     // Check for explicit defaults in settings
-    const explicitDefault = this.llmSettings.defaults?.agents || this.llmSettings.defaults?.routing;
+    const explicitDefault = this.llmSettings.defaults?.[LLM_DEFAULTS.AGENTS] || this.llmSettings.defaults?.[LLM_DEFAULTS.AGENT_ROUTING];
     if (explicitDefault) {
       return explicitDefault;
     }
@@ -363,7 +378,10 @@ export class MultiLLMService implements LLMService {
   }
 
   private buildCompletionOptions(request: CompletionRequest): LlmCompletionOpts {
-    const opts: LlmCompletionOpts = {};
+    const opts: LlmCompletionOpts = {
+      // Always request usage data
+      usage: true
+    };
 
     // Apply default options first
     if (this.config?.defaultOptions) {
@@ -413,16 +431,16 @@ export class MultiLLMService implements LLMService {
     };
 
     if (response.usage) {
-      // multi-llm-ts might use different property names
-      const usage = response.usage as unknown as Record<string, number>;
+      // multi-llm-ts uses underscore property names
+      const usage = response.usage as any;
       result.usage = {
-        promptTokens: usage.promptTokens || usage.prompt || 0,
-        completionTokens: usage.completionTokens || usage.completion || 0,
+        promptTokens: usage.prompt_tokens || usage.promptTokens || 0,
+        completionTokens: usage.completion_tokens || usage.completionTokens || 0,
         totalTokens:
+          usage.total_tokens ||
           usage.totalTokens ||
-          usage.total ||
-          (usage.promptTokens || usage.prompt || 0) +
-            (usage.completionTokens || usage.completion || 0),
+          (usage.prompt_tokens || usage.promptTokens || 0) +
+            (usage.completion_tokens || usage.completionTokens || 0),
       };
     }
 

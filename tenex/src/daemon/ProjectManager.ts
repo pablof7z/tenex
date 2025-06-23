@@ -9,7 +9,7 @@ import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
-import { configService, ProjectContext } from "@/services";
+import { configService, setProjectContext } from "@/services";
 import type { Agent, AgentProfile } from "@/agents/types";
 import type { TenexConfig } from "@/services/config/types";
 import chalk from "chalk";
@@ -87,13 +87,13 @@ export class ProjectManager implements IProjectManager {
         identifier: config.projectNaddr, // Use naddr as identifier temporarily
         pubkey: "", // Will be filled when fetched from Nostr
         naddr: config.projectNaddr,
-        title: config.title || "Untitled Project",
+        title: "Untitled Project", // This should come from NDKProject
         description: config.description,
         repoUrl: config.repoUrl || undefined,
-        hashtags: config.hashtags || [],
+        hashtags: [], // This should come from NDKProject
         agentEventIds: [],
-        createdAt: config.createdAt,
-        updatedAt: config.updatedAt,
+        createdAt: undefined, // This should come from NDKProject
+        updatedAt: undefined, // This should come from NDKProject
       };
     } catch (error) {
       logger.error("Failed to load project", { error, projectPath });
@@ -129,6 +129,7 @@ export class ProjectManager implements IProjectManager {
 
       // Get project nsec
       const projectNsec = config.nsec;
+      console.log("loading project with nsec", { projectNsec })
       if (!projectNsec) {
         throw new Error("Project nsec not found in configuration");
       }
@@ -151,7 +152,7 @@ export class ProjectManager implements IProjectManager {
       }
 
       // Initialize ProjectContext
-      ProjectContext.initialize(project, projectNsec, loadedAgents);
+      setProjectContext(project, projectNsec, loadedAgents);
 
       logger.info("ProjectContext initialized successfully", {
         projectTitle: project.tagValue("title"),
@@ -222,14 +223,10 @@ export class ProjectManager implements IProjectManager {
 
     // Create project config
     const projectConfig: TenexConfig = {
-      title: projectData.title,
       description: projectData.description,
       repoUrl: projectData.repoUrl || undefined,
       projectNaddr: projectData.naddr,
       nsec: projectNsec,
-      hashtags: projectData.hashtags,
-      createdAt: projectData.createdAt,
-      updatedAt: projectData.updatedAt,
     };
 
     await configService.saveProjectConfig(projectPath, projectConfig);
@@ -282,10 +279,7 @@ export class ProjectManager implements IProjectManager {
   }
 
   private async generateNsec(): Promise<string> {
-    const { stdout } = await execAsync("openssl rand -hex 32");
-    const privateKeyHex = stdout.trim();
-    // NDKPrivateKeySigner can accept hex private key directly
-    const signer = new NDKPrivateKeySigner(privateKeyHex);
+    const signer = NDKPrivateKeySigner.generate();
     return signer.nsec;
   }
 

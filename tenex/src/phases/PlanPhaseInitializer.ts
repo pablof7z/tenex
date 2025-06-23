@@ -1,5 +1,5 @@
 import type { Conversation } from "@/conversations/types";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
@@ -29,7 +29,8 @@ export class PlanPhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const project = projectContext.getCurrentProject();
+      const projectCtx = getProjectContext();
+      const project = projectCtx.project;
 
       // Find an agent suitable for planning
       const planningAgent =
@@ -94,7 +95,8 @@ export class PlanPhaseInitializer implements PhaseInitializer {
     instruction: string
   ): Promise<boolean> {
     try {
-      const project = projectContext.getCurrentProject();
+      const projectCtx = getProjectContext();
+      const project = projectCtx.project;
 
       // Prepare the prompt for Claude Code
       const prompt = new PromptBuilder()

@@ -4,7 +4,7 @@ import type { LLMService } from "@/llm/types";
 import { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
-import { configService, projectContext } from "@/services";
+import { configService, getProjectContext } from "@/services";
 import type { TenexLLMs } from "@/services/config/types";
 import { logInfo } from "@/utils/logger";
 
@@ -38,7 +38,8 @@ export class SystemInitializer {
     logInfo(`Initialized RoutingLLM with configuration: ${routingConfig}`);
 
     // Get project context
-    const project = projectContext.getCurrentProject();
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
 
     // Verify project event ID
     if (!project.id) {

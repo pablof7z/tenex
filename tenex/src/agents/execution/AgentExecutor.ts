@@ -1,7 +1,7 @@
 import type { CompletionResponse, LLMService, Message } from "@/llm/types";
 import type { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
 import { PromptBuilder } from "@/prompts";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import {
     type TracingContext,
     type TracingLogger,
@@ -16,6 +16,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { AgentExecutionContext, AgentExecutionResult, AgentPromptContext } from "./types";
 import { ReasonActLoop } from "./ReasonActLoop";
+import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 
 export class AgentExecutor {
     private reasonActLoop: ReasonActLoop;
@@ -65,14 +66,14 @@ export class AgentExecutor {
             }
 
             // 3. Generate initial response via LLM
-            tracingLogger.logLLMRequest(context.agent.llmConfig || "default");
+            tracingLogger.logLLMRequest(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
 
             const { response: initialResponse, userPrompt } = await this.generateResponse(
                 promptContext,
-                context.agent.llmConfig || "default"
+                context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG
             );
 
-            tracingLogger.logLLMResponse(context.agent.llmConfig || "default");
+            tracingLogger.logLLMResponse(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
 
             // 4. Execute the Reason-Act loop
             const reasonActResult = await this.reasonActLoop.execute(
@@ -82,7 +83,7 @@ export class AgentExecutor {
                     conversationId: context.conversation.id,
                     agentName: context.agent.name,
                     phase: context.phase,
-                    llmConfig: context.agent.llmConfig || "default",
+                    llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
                 },
                 promptContext.systemPrompt,
                 userPrompt,
@@ -168,7 +169,8 @@ export class AgentExecutor {
      * Build the complete prompt context for the agent
      */
     private async buildPromptContext(context: AgentExecutionContext): Promise<AgentPromptContext> {
-        const project = projectContext.getCurrentProject();
+        const projectCtx = getProjectContext();
+        const project = projectCtx.project;
         const promptBuilder = new PromptBuilder();
 
         // Check inventory availability for chat phase

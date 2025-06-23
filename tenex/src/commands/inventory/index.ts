@@ -1,5 +1,4 @@
 import * as path from "node:path";
-import { projectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { generateInventory, updateInventory } from "@/utils/inventory";
 import { logger } from "@/utils/logger";

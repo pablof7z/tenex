@@ -1,6 +1,6 @@
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKTask, NDKPrivateKeySigner, NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKTask, NDKEvent } from "@nostr-dev-kit/ndk";
 import type { ClaudeCodeMessage } from "@/utils/claude/ClaudeParser";
 import { logger } from "@/utils/logger";
 
@@ -29,9 +29,7 @@ export class TaskPublisher {
    * Create and publish a new NDKTask for code execution
    */
   async createTask(options: TaskCreationOptions): Promise<NDKTask> {
-    const project = projectContext.getCurrentProject();
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const signer = new NDKPrivateKeySigner(projectNsec);
+    const projectCtx = getProjectContext();
 
     // Create NDKTask event
     const task = new NDKTask(this.ndk);
@@ -39,7 +37,7 @@ export class TaskPublisher {
     task.content = `Executing: ${options.prompt}`;
     
     // Tag the project
-    task.tag(project);
+    task.tag(projectCtx.project);
     
     // Add execution metadata
     if (options.branch) {
@@ -49,7 +47,7 @@ export class TaskPublisher {
     task.tags.push(["executor", "claude-code"]);
 
     // Sign and publish
-    await task.sign(signer);
+    await task.sign(projectCtx.signer);
     await task.publish();
 
     logger.info("Published NDKTask", {
@@ -65,8 +63,6 @@ export class TaskPublisher {
    * Publish a task update event
    */
   async updateTask(task: NDKTask, update: TaskUpdateOptions): Promise<NDKEvent> {
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const signer = new NDKPrivateKeySigner(projectNsec);
 
     // Create a regular event that references the task
     const updateEvent = new NDKEvent(this.ndk);
@@ -77,8 +73,8 @@ export class TaskPublisher {
     updateEvent.tags.push(["a", task.tagAddress()]);
     
     // Tag the project
-    const project = projectContext.getCurrentProject();
-    updateEvent.tag(project);
+    const projectCtx = getProjectContext();
+    updateEvent.tag(projectCtx.project);
 
     // Add status tags
     if (update.status) {
@@ -98,7 +94,7 @@ export class TaskPublisher {
     updateEvent.content = update.message || `Task update: ${update.status || 'in-progress'}`;
 
     // Sign and publish
-    await updateEvent.sign(signer);
+    await updateEvent.sign(projectCtx.signer);
     await updateEvent.publish();
 
     logger.debug("Published task update", {
@@ -114,8 +110,6 @@ export class TaskPublisher {
    * Publish Claude Code message as task update
    */
   async publishClaudeMessage(task: NDKTask, message: ClaudeCodeMessage): Promise<void> {
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const signer = new NDKPrivateKeySigner(projectNsec);
 
     // Only publish meaningful messages
     if (message.type !== "assistant") {
@@ -130,8 +124,8 @@ export class TaskPublisher {
     updateEvent.tags.push(["a", task.tagAddress()]);
     
     // Tag the project
-    const project = projectContext.getCurrentProject();
-    updateEvent.tag(project);
+    const projectCtx = getProjectContext();
+    updateEvent.tag(projectCtx.project);
 
     // Add message metadata
     updateEvent.tags.push(["claude-message-type", message.type]);
@@ -157,7 +151,7 @@ export class TaskPublisher {
     }
 
     // Sign and publish
-    await updateEvent.sign(signer);
+    await updateEvent.sign(projectCtx.signer);
     await updateEvent.publish();
 
     logger.debug("Published Claude message as task update", {

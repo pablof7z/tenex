@@ -10,6 +10,11 @@ export class RoutingDecisionHandler implements MessageHandler {
   name = "RoutingDecisionHandler";
 
   canHandle(context: RoutingContext): boolean {
+    // Skip routing decision if already in chat phase - project should respond directly
+    if (context.conversation.phase === "chat") {
+      return false;
+    }
+    
     // Handle if no routing decision has been made yet
     return !context.handled && !context.routingDecision;
   }

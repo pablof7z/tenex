@@ -1,6 +1,7 @@
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import type { Agent } from "@/agents/types";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 
 export interface ProjectAgentOptions {
   name?: string;
@@ -15,20 +16,18 @@ export interface ProjectAgentOptions {
  * Creates a project agent configuration for the chat phase
  */
 export function createProjectAgent(options: ProjectAgentOptions = {}): Agent {
-  const projectNsec = projectContext.getCurrentProjectNsec();
-  const projectSigner = new NDKPrivateKeySigner(projectNsec);
-
+  const projectCtx = getProjectContext();
   return {
     name: options.name || "Project",
-    pubkey: projectSigner.pubkey,
-    signer: projectSigner,
+    pubkey: projectCtx.signer.pubkey,
+    signer: projectCtx.signer,
     role: options.role || "Requirements Analyst",
     expertise: options.expertise || "Understanding user needs and clarifying requirements",
     instructions:
       options.instructions ||
       "You are the project assistant helping to understand and clarify user requirements. " +
         "Ask clarifying questions when needed and help the user articulate their needs clearly.",
-    llmConfig: options.llmConfig || "default",
+    llmConfig: options.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
     tools: options.tools || [],
   };
 }
@@ -39,16 +38,14 @@ export function createProjectAgent(options: ProjectAgentOptions = {}): Agent {
 export function createMinimalProjectAgent(
   options: Omit<ProjectAgentOptions, "instructions"> = {}
 ): Omit<Agent, "instructions"> {
-  const projectNsec = projectContext.getCurrentProjectNsec();
-  const projectSigner = new NDKPrivateKeySigner(projectNsec);
-
+  const projectCtx = getProjectContext();
   return {
     name: options.name || "Project",
-    pubkey: projectSigner.pubkey,
-    signer: projectSigner,
+    pubkey: projectCtx.signer.pubkey,
+    signer: projectCtx.signer,
     role: options.role || "Requirements analyst",
     expertise: options.expertise || "Understanding user needs and clarifying requirements",
-    llmConfig: options.llmConfig || "default",
+    llmConfig: options.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
     tools: options.tools || [],
   };
 }

@@ -5,8 +5,9 @@ import { formatError } from "@/utils/errors";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { EVENT_KINDS } from "@/llm/types";
+import { isEventFromAgent } from "@/nostr/utils";
 import chalk from "chalk";
 
 export class EventHandler {
@@ -87,11 +88,10 @@ export class EventHandler {
     // Check if this message is directed to the system (project or agents)
     // If it has p-tags that don't belong to our system, skip routing
     if (pTags.length > 0) {
-      const project = projectContext.getCurrentProject();
-      const agents = projectContext.getAllAgents();
+      const projectCtx = getProjectContext();
       const systemPubkeys = new Set([
-        project.pubkey,
-        ...Array.from(agents.values()).map((a) => a.pubkey),
+        projectCtx.project.pubkey,
+        ...Array.from(projectCtx.agents.values()).map((a) => a.pubkey),
       ]);
 
       const isDirectedToSystem = mentionedPubkeys.some((pubkey) => systemPubkeys.has(pubkey));
@@ -113,7 +113,8 @@ export class EventHandler {
       // This is a new conversation - route through the routing LLM
       try {
         // Get all available agents from project context
-        const availableAgents = Array.from(projectContext.getAllAgents().values());
+        const projectCtx = getProjectContext();
+        const availableAgents = Array.from(projectCtx.agents.values());
 
         // Route the new conversation through the routing LLM
         await this.systemComponents.conversationRouter.routeNewConversation(event, availableAgents);
@@ -125,7 +126,8 @@ export class EventHandler {
     } else {
       // This is a reply within an existing conversation
       try {
-        const availableAgents = Array.from(projectContext.getAllAgents().values());
+        const projectCtx = getProjectContext();
+        const availableAgents = Array.from(projectCtx.agents.values());
         await this.systemComponents.conversationRouter.routeReply(event, availableAgents);
         logInfo(chalk.green("✅ Reply routed successfully"));
       } catch (error) {
@@ -154,7 +156,8 @@ export class EventHandler {
   }
 
   private handleProjectStatus(event: NDKEvent): void {
-    if (event.author.pubkey !== projectContext.getCurrentProject().pubkey) {
+    const projectCtx = getProjectContext();
+    if (event.author.pubkey !== projectCtx.project.pubkey) {
       logInfo(chalk.gray("Status:  ") + chalk.green("Another instance is online"));
     }
   }
@@ -193,7 +196,8 @@ export class EventHandler {
 
     try {
       // Get all available agents from project context
-      const availableAgents = Array.from(projectContext.getAllAgents().values());
+      const projectCtx = getProjectContext();
+      const availableAgents = Array.from(projectCtx.agents.values());
 
       // Route the new conversation through the routing system
       await this.systemComponents.conversationRouter.routeNewConversation(event, availableAgents);

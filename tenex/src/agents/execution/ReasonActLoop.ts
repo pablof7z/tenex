@@ -155,7 +155,10 @@ export class ReasonActLoop {
 
     tracingLogger.logLLMRequest(context.llmConfig);
 
-    const response = await this.llmService.complete({ messages });
+    const response = await this.llmService.complete({ 
+      messages,
+      options: { model: context.llmConfig }
+    });
 
     tracingLogger.logLLMResponse(context.llmConfig);
 

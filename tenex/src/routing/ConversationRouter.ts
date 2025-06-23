@@ -3,13 +3,13 @@ import type { ConversationManager } from "@/conversations";
 import type { LLMService } from "../llm/types";
 import type { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
-import { projectContext } from "@/services";
 import type { Agent } from "@/agents/types";
 import type { Phase, Conversation } from "@/conversations/types";
 import { handlePhaseInitializationResponse } from "./phase-initialization";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { RoutingLLM } from "./RoutingLLM";
+import { isEventFromUser } from "@/nostr/utils";
 import {
   applyBusinessRules,
   validateRoutingDecision,
@@ -113,8 +113,12 @@ export class ConversationRouter {
         return;
       }
 
-      // Log the user message
-      logger.userMessage(event.content || "", conversation.id, conversation.title, event.id);
+      // Log the message based on its source
+      if (isEventFromUser(event)) {
+        logger.userMessage(event.content || "", conversation.id, conversation.title, event.id);
+      } else {
+        logger.info(`Agent message received: ${event.content?.substring(0, 50)}...`, "conversation", "normal");
+      }
 
       // Add event to conversation history
       await this.conversationManager.addEvent(conversation.id, event);

@@ -9,6 +9,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { llmModelService, type OpenRouterModelWithMetadata } from "./services/LLMModelService";
 import { llmTestService } from "./services/LLMTestService";
+import { LLM_DEFAULTS } from "./constants";
 
 type LLMConfigWithName = LLMConfig & {
   name: string;
@@ -100,7 +101,7 @@ export class LLMConfigEditor {
     if (configs.length > 0) {
       logger.info(chalk.green("Current configurations:"));
       configs.forEach((config, index) => {
-        const isDefault = llmsConfig.defaults?.agents === config.name;
+        const isDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] === config.name;
         const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
         logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
         const llmConfig = llmsConfig.configurations[config.name];
@@ -111,8 +112,8 @@ export class LLMConfigEditor {
       logger.info("");
     }
 
-    const currentDefault = llmsConfig.defaults?.agents || "none";
-    const currentAgentRouting = llmsConfig.defaults?.agentRouting || "none";
+    const currentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+    const currentAgentRouting = llmsConfig.defaults?.[LLM_DEFAULTS.AGENT_ROUTING] || "none";
 
     const { action } = await inquirer.prompt([
       {
@@ -178,7 +179,7 @@ export class LLMConfigEditor {
       if (configs.length > 0) {
         logger.info(chalk.green("Current configurations:"));
         configs.forEach((config, index) => {
-          const isDefault = llmsConfig.defaults?.agents === config.name;
+          const isDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] === config.name;
           const defaultIndicator = isDefault ? chalk.yellow(" (default)") : "";
           logger.info(`  ${index + 1}. ${chalk.bold(config.name)}${defaultIndicator}`);
           const llmConfig = llmsConfig.configurations[config.name];
@@ -189,8 +190,8 @@ export class LLMConfigEditor {
         logger.info("");
       }
 
-      const currentDefault = llmsConfig.defaults?.agents || "none";
-      const currentAgentRouting = llmsConfig.defaults?.agentRouting || "none";
+      const currentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+      const currentAgentRouting = llmsConfig.defaults?.[LLM_DEFAULTS.AGENT_ROUTING] || "none";
 
       const choices = [
         { name: "Add new LLM configuration", value: "add" },
@@ -509,15 +510,15 @@ export class LLMConfigEditor {
       if (!llmsConfig.defaults) {
         llmsConfig.defaults = {};
       }
-      llmsConfig.defaults.agents = configName;
+      llmsConfig.defaults[LLM_DEFAULTS.AGENTS] = configName;
     }
 
     // If no agent routing is set and this is the first/only configuration, set it as agent routing too
     if (!llmsConfig.defaults) {
       llmsConfig.defaults = {};
     }
-    if (!llmsConfig.defaults.agentRouting && Object.keys(llmsConfig.configurations).length === 1) {
-      llmsConfig.defaults.agentRouting = configName;
+    if (!llmsConfig.defaults[LLM_DEFAULTS.AGENT_ROUTING] && Object.keys(llmsConfig.configurations).length === 1) {
+      llmsConfig.defaults[LLM_DEFAULTS.AGENT_ROUTING] = configName;
     }
 
     // If this is global config and a new API key was entered, save it to credentials
@@ -719,7 +720,7 @@ export class LLMConfigEditor {
 
   private async setDefaultConfiguration(llmsConfig: TenexLLMs): Promise<void> {
     const configs = this.getConfigList(llmsConfig);
-    const currentDefault = llmsConfig.defaults?.agents || "none";
+    const currentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
 
     logger.info(chalk.cyan("\n⚙️  Set Default Configuration"));
     logger.info(chalk.gray(`Current default: ${currentDefault}\n`));
@@ -746,7 +747,7 @@ export class LLMConfigEditor {
 
   private async setAgentRoutingConfiguration(llmsConfig: TenexLLMs): Promise<void> {
     const configs = this.getConfigList(llmsConfig);
-    const currentAgentRouting = llmsConfig.defaults?.agentRouting || "none";
+    const currentAgentRouting = llmsConfig.defaults?.[LLM_DEFAULTS.AGENT_ROUTING] || "none";
 
     logger.info(chalk.cyan("\n🚦 Set Agent Routing Configuration"));
     logger.info(chalk.gray(`Current agent routing model: ${currentAgentRouting}\n`));

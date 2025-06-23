@@ -3,8 +3,7 @@ import type { Phase, Conversation } from "@/conversations/types";
 import type { PhaseInitializationResult } from "@/phases/types";
 import type { Agent } from "@/agents/types";
 import { initializePhase } from "@/phases";
-import { projectContext } from "@/services";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { getProjectContext } from "@/services";
 import { handlePhaseInitializationResponse } from "@/routing/phase-initialization";
 import { logger } from "@/utils/logger";
 
@@ -39,14 +38,12 @@ export class PhaseTransitionExecutor implements MessageHandler {
     );
 
     // Publish phase transition event
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const projectSigner = new NDKPrivateKeySigner(projectNsec);
-    
+    const projectCtx = getProjectContext();
     await context.publisher.publishPhaseTransition(
       conversation,
       newPhase,
       compactedContext,
-      projectSigner,
+      projectCtx.signer,
       event
     );
 

@@ -1,9 +1,9 @@
 import { STATUS_INTERVAL_MS, STATUS_KIND } from "@/commands/run/constants";
 import { getNDK } from "@/nostr/ndkClient";
 import { formatError } from "@/utils/errors";
-import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logWarning } from "@/utils/logger";
-import { projectContext, configService } from "@/services";
+import { getProjectContext, isProjectContextInitialized, configService } from "@/services";
 
 export class StatusPublisher {
   private statusInterval?: NodeJS.Timeout;
@@ -32,16 +32,14 @@ export class StatusPublisher {
       event.content = "";
 
       // Tag the project event properly
-      const project = projectContext.getCurrentProject();
-      event.tag(project);
+      const projectCtx = getProjectContext();
+      event.tag(projectCtx.project);
 
       await this.addAgentPubkeys(event, projectPath);
       await this.addModelTags(event, projectPath);
 
       // Sign the event with the project's signer
-      const projectNsec = projectContext.getCurrentProjectNsec();
-      const projectSigner = new NDKPrivateKeySigner(projectNsec);
-      await event.sign(projectSigner);
+      await event.sign(projectCtx.signer);
       await event.publish();
     } catch (err) {
       const errorMessage = formatError(err);
@@ -51,9 +49,9 @@ export class StatusPublisher {
 
   private async addAgentPubkeys(event: NDKEvent, projectPath: string): Promise<void> {
     try {
-      if (projectContext.isInitialized()) {
-        const agents = projectContext.getAllAgents();
-        for (const [agentSlug, agent] of agents) {
+      if (isProjectContextInitialized()) {
+        const projectCtx = getProjectContext();
+        for (const [agentSlug, agent] of projectCtx.agents) {
           event.tags.push(["agent", agent.pubkey, agentSlug]);
         }
       } else {

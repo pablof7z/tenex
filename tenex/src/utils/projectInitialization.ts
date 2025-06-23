@@ -1,6 +1,6 @@
 import { initNDK, getNDK } from "@/nostr/ndkClient";
 import { ProjectManager } from "@/daemon/ProjectManager";
-import { projectContext } from "@/services";
+import { isProjectContextInitialized } from "@/services";
 import { logger } from "@/utils/logger";
 
 /**
@@ -14,7 +14,7 @@ import { logger } from "@/utils/logger";
  * - tenex inventory generate
  */
 export async function ensureProjectInitialized(projectPath: string): Promise<void> {
-  if (projectContext.isInitialized()) {
+  if (isProjectContextInitialized()) {
     logger.debug("Project context already initialized");
     return;
   }

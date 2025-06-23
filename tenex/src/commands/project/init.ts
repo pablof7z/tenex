@@ -31,7 +31,6 @@ export const projectInitCommand = new Command("init")
           success: true,
           projectPath: resolvedPath,
           name: projectData.identifier,
-          title: projectData.title,
           configured: true,
         })
       );

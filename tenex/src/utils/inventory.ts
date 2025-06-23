@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { logger } from "@/utils/logger";
-import { projectContext, configService } from "@/services";
+import { getProjectContext, isProjectContextInitialized, configService } from "@/services";
 import { ClaudeCodeExecutor } from "../tools/claude/ClaudeCodeExecutor";
 
 const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
@@ -109,9 +109,10 @@ async function getInventoryPath(projectPath: string): Promise<string> {
  */
 async function loadProjectConfig(projectPath: string) {
   try {
-    if (projectContext.isInitialized()) {
+    if (isProjectContextInitialized()) {
       // Get config from ProjectContext if available
-      const project = projectContext.getCurrentProject();
+      const projectCtx = getProjectContext();
+      const project = projectCtx.project;
       const titleTag = project.tags.find((tag) => tag[0] === "title");
       return {
         paths: { inventory: DEFAULT_INVENTORY_PATH },

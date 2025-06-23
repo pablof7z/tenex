@@ -1,6 +1,6 @@
 import type { EventHandler } from "@/commands/run/EventHandler";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import {
   addProcessedEvent,
   clearProcessedEvents,
@@ -42,7 +42,8 @@ export class SubscriptionManager {
   }
 
   private async subscribeToProjectUpdates(): Promise<void> {
-    const project = projectContext.getCurrentProject();
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
     const projectFilter = project.filter();
 
     logger.info(chalk.blue("  • Setting up project update subscription..."));
@@ -64,7 +65,8 @@ export class SubscriptionManager {
 
   private async subscribeToProjectEvents(): Promise<void> {
     // Filter for all events that tag this project
-    const project = projectContext.getCurrentProject();
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
     const projectTagFilter: NDKFilter = {
       ...project.filter(),
       limit: 1,

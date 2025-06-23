@@ -6,6 +6,7 @@ import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import type { TenexAgents } from "@/services/config/types";
 import { configService } from "@/services";
 import { AgentPublisher } from "@/agents/AgentPublisher";
+import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -133,7 +134,7 @@ export class AgentRegistry {
       role: agentDefinition.role,
       expertise: agentDefinition.expertise || agentDefinition.role,
       instructions: agentDefinition.instructions,
-      llmConfig: agentDefinition.llmConfig || "default",
+      llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
       tools: agentDefinition.tools || [],
       eventId: registryEntry.eventId,
     };
@@ -178,7 +179,7 @@ export class AgentRegistry {
       role,
       expertise: config.expertise || role,
       instructions: config.instructions || "",
-      llmConfig: config.llmConfig || "default",
+      llmConfig: config.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
       tools: config.tools || [],
       nsec,
       // No eventId for local agents
@@ -203,7 +204,7 @@ export class AgentRegistry {
 
       const projectSigner = new NDKPrivateKeySigner(projectConfig.nsec);
       const projectPubkey = projectSigner.pubkey;
-      const projectName = projectConfig.title || "Unknown Project";
+      const projectName = projectConfig.description || "Unknown Project";
       
       // Initialize NDK
       const ndk = new NDK({

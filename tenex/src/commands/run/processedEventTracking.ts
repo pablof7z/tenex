@@ -7,7 +7,6 @@ import { logger } from "@/utils/logger";
 const processedEventIds = new Set<string>();
 let saveDebounceTimeout: NodeJS.Timeout | null = null;
 const SAVE_DEBOUNCE_MS = 1000; // Save at most once per second
-const MAX_EVENTS_TO_KEEP = 10000; // Keep last 10k events to prevent unbounded growth
 
 function getStorePath(projectPath: string): string {
   return join(projectPath, ".tenex", "processed-events.json");
@@ -79,20 +78,8 @@ async function saveProcessedEvents(projectPath: string): Promise<void> {
       await mkdir(tenexDir, { recursive: true });
     }
 
-    // Implement LRU-style cleanup: keep only the most recent events
-    let eventIds = Array.from(processedEventIds);
-
-    if (eventIds.length > MAX_EVENTS_TO_KEEP) {
-      // Keep the last MAX_EVENTS_TO_KEEP events
-      // Since we can't sort by timestamp without additional data,
-      // we'll just keep the last added ones (Set maintains insertion order)
-      eventIds = eventIds.slice(-MAX_EVENTS_TO_KEEP);
-      processedEventIds.clear();
-      for (const id of eventIds) {
-        processedEventIds.add(id);
-      }
-      logger.info(`Cleaned up processed events list, kept ${eventIds.length} most recent`);
-    }
+    // Convert Set to Array for JSON serialization
+    const eventIds = Array.from(processedEventIds);
 
     const data = {
       eventIds,

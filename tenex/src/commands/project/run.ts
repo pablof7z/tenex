@@ -11,7 +11,7 @@ import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import chalk from "chalk";
 import { Command } from "commander";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { setupGracefulShutdown } from "@/utils/process";
 
 export const projectRunCommand = new Command("run")
@@ -40,7 +40,8 @@ export const projectRunCommand = new Command("run")
 
 async function runProjectListener(projectPath: string, _ndk: NDK) {
   try {
-    const project = projectContext.getCurrentProject();
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
     const titleTag = project.tagValue("title") || "Untitled Project";
     const dTag = project.tagValue("d") || "";
     logger.info(`Starting listener for project: ${titleTag} (${dTag})`);

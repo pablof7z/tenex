@@ -1,7 +1,6 @@
 import type { Conversation } from "@/conversations/types";
 import { getNDK } from "@/nostr/ndkClient";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { updateInventory } from "@/utils/inventory";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
@@ -29,9 +28,9 @@ export class ChoresPhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const project = projectContext.getCurrentProject();
-      const projectNsec = projectContext.getCurrentProjectNsec();
-      const signer = new NDKPrivateKeySigner(projectNsec);
+      const projectCtx = getProjectContext();
+      const project = projectCtx.project;
+      const signer = projectCtx.signer;
       const ndk = getNDK();
 
       // Get the list of changed files from the conversation metadata

@@ -2,7 +2,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
 import chalk from "chalk";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import type { LoadedAgent } from "@/services/ProjectContext";
 
 export class ProjectDisplay {
@@ -14,7 +14,8 @@ export class ProjectDisplay {
   }
 
   private displayBasicInfo(projectPath: string): void {
-    const project = projectContext.getCurrentProject();
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
     const titleTag = project.tagValue("title") || "Untitled Project";
     const repoTag = project.tagValue("repo") || "No repository";
 
@@ -30,7 +31,8 @@ export class ProjectDisplay {
   }
 
   private async displayAgentConfigurations(): Promise<void> {
-    const agents = projectContext.getAllAgents();
+    const projectCtx = getProjectContext();
+    const agents = projectCtx.agents;
     if (agents.size === 0) {
       logInfo(chalk.yellow("No agent configurations found for this project."));
       return;

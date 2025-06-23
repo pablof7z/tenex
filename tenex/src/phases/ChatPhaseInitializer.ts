@@ -1,6 +1,5 @@
 import type { Conversation } from "@/conversations/types";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";
@@ -27,7 +26,7 @@ export class ChatPhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const project = projectContext.getCurrentProject();
+      const projectCtx = getProjectContext();
 
       // In chat phase, the project responds directly
       // No specific agent is needed yet
@@ -35,7 +34,7 @@ export class ChatPhaseInitializer implements PhaseInitializer {
         success: true,
         // Don't return a message - let the ConversationRouter handle the actual response
         metadata: {
-          projectPubkey: new NDKPrivateKeySigner(projectContext.getCurrentProjectNsec()).pubkey,
+          projectPubkey: projectCtx.signer.pubkey,
           availableAgents: availableAgents.length,
           phase: "chat",
         },

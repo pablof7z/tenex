@@ -1,5 +1,4 @@
 import type { Conversation } from "@/conversations/types";
-import { projectContext } from "@/services";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import { logger } from "@/utils/logger";

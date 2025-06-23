@@ -10,16 +10,17 @@ import { ConversationPublisher } from "@/nostr/ConversationPublisher";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { MultiLLMService } from "@/llm/MultiLLMService";
 import type { LLMService } from "@/llm/types";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import path from "node:path";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import { formatError } from "@/utils/errors";
 import { logDebug, logError, logInfo } from "@/utils/logger";
-import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { v4 as uuidv4 } from "uuid";
+import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 
 interface DebugChatOptions {
   systemPrompt?: boolean;
@@ -51,9 +52,8 @@ export async function runDebugChat(
     )) as MultiLLMService;
 
     // Get project context and create signer
-    const project = projectContext.getCurrentProject();
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const projectSigner = new NDKPrivateKeySigner(projectNsec);
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
 
     // Load agent from registry or create default
     const agentRegistry = new AgentRegistry(projectPath);
@@ -75,9 +75,9 @@ export async function runDebugChat(
       agent = {
         name: "Debug Agent",
         role: "debug-agent",
-        pubkey: projectSigner.pubkey,
-        signer: projectSigner,
-        llmConfig: llmPresetOverride || "default",
+        pubkey: projectCtx.signer.pubkey,
+        signer: projectCtx.signer,
+        llmConfig: llmPresetOverride || DEFAULT_AGENT_LLM_CONFIG,
         tools: [],
         instructions: "You are a debug agent for testing purposes.",
         expertise: "Testing and debugging agent functionality",
@@ -115,7 +115,7 @@ export async function runDebugChat(
 
     // Show system prompt if requested
     if (options.systemPrompt) {
-      const projectCtx = projectContext;
+      const projectCtx = getProjectContext();
       const hasInventory = await inventoryExists(projectPath);
 
       const systemPrompt = new PromptBuilder()

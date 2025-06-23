@@ -1,4 +1,4 @@
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import type { Conversation, Phase } from "@/conversations/types";
 import type { LLMMetadata } from "@/nostr/types";
 import type NDK from "@nostr-dev-kit/ndk";
@@ -19,8 +19,8 @@ export class ConversationPublisher {
     const reply = eventToReply.reply();
 
     // Tag the project
-    const project = projectContext.getCurrentProject();
-    reply.tag(project);
+    const projectCtx = getProjectContext();
+    reply.tag(projectCtx.project);
 
     // Remove ALL existing p-tags first
     // NDK's reply() method adds p-tags automatically, so we need to clean them
@@ -84,8 +84,8 @@ export class ConversationPublisher {
     const event = triggeringEvent.reply();
 
     // Tag the project
-    const project = projectContext.getCurrentProject();
-    event.tag(project);
+    const projectCtx = getProjectContext();
+    event.tag(projectCtx.project);
 
     // Phase transition tags
     event.tag(["phase-transition", `${conversation.phase}-to-${newPhase}`]);
@@ -121,8 +121,8 @@ export class ConversationPublisher {
     const reply = eventToReply.reply();
 
     // Tag the project
-    const project = projectContext.getCurrentProject();
-    reply.tag(project);
+    const projectCtx = getProjectContext();
+    reply.tag(projectCtx.project);
 
     // Remove existing p-tags (project is responding)
     reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
@@ -137,9 +137,7 @@ export class ConversationPublisher {
     reply.content = content;
 
     // Sign with project signer
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const projectSigner = new NDKPrivateKeySigner(projectNsec);
-    await reply.sign(projectSigner);
+    await reply.sign(projectCtx.signer);
 
     await reply.publish();
 

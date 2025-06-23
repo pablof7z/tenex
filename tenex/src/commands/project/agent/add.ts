@@ -9,6 +9,7 @@ import { configService } from "@/services";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
+import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 
 export const agentAddCommand = new Command("add")
   .description("Add a local agent to the project")
@@ -63,7 +64,7 @@ export const agentAddCommand = new Command("add")
         role,
         expertise: role,
         instructions: prompt,
-        llmConfig: "default",
+        llmConfig: DEFAULT_AGENT_LLM_CONFIG,
         tools: ["bash", "file-system", "web-search"],
       };
 
@@ -85,7 +86,7 @@ export const agentAddCommand = new Command("add")
         } else {
           const projectSigner = new NDKPrivateKeySigner(projectConfig.nsec);
           const projectPubkey = projectSigner.pubkey;
-          const projectName = projectConfig.title || "Unknown Project";
+          const projectName = projectConfig.description || "Unknown Project";
           
           // Initialize NDK
           await initNDK();

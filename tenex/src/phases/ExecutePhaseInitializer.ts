@@ -1,5 +1,5 @@
 import type { Conversation } from "@/conversations/types";
-import { projectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { ExecutionService } from "@/services/ExecutionService";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
@@ -28,7 +28,8 @@ export class ExecutePhaseInitializer implements PhaseInitializer {
     });
 
     try {
-      const project = projectContext.getCurrentProject();
+      const projectCtx = getProjectContext();
+      const project = projectCtx.project;
 
       // Find an agent suitable for execution
       const executionAgent =

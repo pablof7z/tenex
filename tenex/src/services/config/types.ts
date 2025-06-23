@@ -14,14 +14,10 @@ export interface TenexConfig {
   whitelistedPubkeys?: string[];
 
   // Project fields (optional for global config)
-  title?: string;
   description?: string;
   repoUrl?: string;
   projectNaddr?: string;
   nsec?: string;
-  hashtags?: string[];
-  createdAt?: number;
-  updatedAt?: number;
   paths?: {
     inventory?: string;
   };
@@ -29,14 +25,10 @@ export interface TenexConfig {
 
 export const TenexConfigSchema = z.object({
   whitelistedPubkeys: z.array(z.string()).optional(),
-  title: z.string().optional(),
   description: z.string().optional(),
   repoUrl: z.string().optional(),
   projectNaddr: z.string().optional(),
   nsec: z.string().optional(),
-  hashtags: z.array(z.string()).optional(),
-  createdAt: z.number().optional(),
-  updatedAt: z.number().optional(),
   paths: z
     .object({
       inventory: z.string().optional(),
