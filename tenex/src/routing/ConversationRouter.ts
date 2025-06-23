@@ -1,20 +1,17 @@
-import { AgentExecutor, createMinimalProjectAgent, createProjectAgent } from "@/agents";
+import { AgentExecutor } from "@/agents";
 import type { ConversationManager } from "@/conversations";
 import type { LLMService } from "../llm/types";
-import type { ConversationPublisher } from "@/nostr";
+import type { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
 import { initializePhase } from "@/phases";
 import { projectContext } from "@/services";
 import type { Agent } from "@/agents/types";
 import type { Phase, Conversation } from "@/conversations/types";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { handlePhaseInitializationResponse } from "./phase-initialization";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { RoutingLLM } from "./RoutingLLM";
 import {
   applyBusinessRules,
-  canTransitionPhase,
-  getDefaultAgentForPhase,
-  meetsPhaseTransitionCriteria,
   validateRoutingDecision,
 } from "./routingDomain";
 import { 
@@ -36,9 +33,10 @@ export class ConversationRouter {
     private conversationManager: ConversationManager,
     private routingLLM: RoutingLLM,
     private publisher: ConversationPublisher,
-    llmService: LLMService
+    llmService: LLMService,
+    private typingIndicatorPublisher?: TypingIndicatorPublisher
   ) {
-    this.agentExecutor = new AgentExecutor(llmService, publisher);
+    this.agentExecutor = new AgentExecutor(llmService, publisher, typingIndicatorPublisher);
     
     // Initialize the routing pipeline
     this.replyPipeline = new RoutingPipeline([
@@ -187,107 +185,17 @@ export class ConversationRouter {
       [`${phase}_init`]: result,
     });
 
-    // Publish phase initialization response
-    const currentProject = projectContext.getCurrentProject();
-
-    if (phase === "chat") {
-      // In chat phase, project responds using LLM
-      const projectAgent = createProjectAgent();
-
-      // Execute using the agent executor to generate an actual response
-      const executionResult = await this.agentExecutor.execute(
-        {
-          agent: projectAgent,
-          conversation,
-          phase,
-          lastUserMessage: triggeringEvent.content,
-        },
-        triggeringEvent
-      );
-
-      if (!executionResult.success) {
-        logger.error("Project chat execution failed", {
-          error: executionResult.error,
-        });
-        // Fallback to a generic message if execution fails
-        await this.publisher.publishProjectResponse(
-          triggeringEvent,
-          "I'm having trouble processing your request. Could you please rephrase it?",
-          { phase, error: true }
-        );
-      }
-    } else if (result.nextAgent) {
-      // In other phases, assigned agent responds
-      const agent = availableAgents.find((a) => a.pubkey === result.nextAgent);
-      if (agent) {
-        await this.conversationManager.updateCurrentAgent(conversationId, agent.pubkey);
-
-        // Execute the agent to generate their initial response
-        const executionResult = await this.agentExecutor.execute(
-          {
-            agent,
-            conversation,
-            phase,
-            projectContext: result.metadata,
-          },
-          triggeringEvent
-        );
-
-        if (!executionResult.success) {
-          logger.error("Agent execution failed during phase initialization", {
-            agent: agent.name,
-            phase,
-            error: executionResult.error,
-          });
-        }
-      }
-    } else if (phase === "plan" && result.metadata?.claudeCodeTriggered) {
-      // Plan phase with Claude Code - just publish a status message
-      await this.publisher.publishProjectResponse(
-        triggeringEvent,
-        result.message || "Claude Code is working on the implementation plan.",
-        { phase, claudeCodeActive: true }
-      );
-    }
-  }
-
-  /**
-   * Transition to a new phase
-   */
-  private async transitionPhase(
-    conversationId: string,
-    newPhase: Phase,
-    availableAgents: Agent[],
-    triggeringEvent: NDKEvent
-  ): Promise<void> {
-    const conversation = this.conversationManager.getConversation(conversationId);
-    if (!conversation) {
-      throw new Error(`Conversation ${conversationId} not found`);
-    }
-
-    const oldPhase = conversation.phase;
-
-    // Compact conversation history for the new phase
-    const context = await this.conversationManager.compactHistory(conversationId, newPhase);
-
-    // Publish phase transition event
-    const projectNsec = projectContext.getCurrentProjectNsec();
-    const projectSigner = new NDKPrivateKeySigner(projectNsec);
-    await this.publisher.publishPhaseTransition(
+    // Handle phase-specific initialization responses
+    await handlePhaseInitializationResponse({
+      phase,
       conversation,
-      newPhase,
-      context,
-      projectSigner,
-      triggeringEvent
-    );
-
-    // Initialize the new phase
-    await this.initializePhase(conversationId, newPhase, availableAgents, triggeringEvent);
-
-    logger.info("Phase transition complete", {
-      conversationId,
-      from: oldPhase,
-      to: newPhase,
+      result,
+      availableAgents,
+      event: triggeringEvent,
+      publisher: this.publisher,
+      agentExecutor: this.agentExecutor,
+      conversationManager: this.conversationManager
     });
   }
+
 }

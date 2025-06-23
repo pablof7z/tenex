@@ -1,13 +1,11 @@
 import path from "node:path";
-import type { Agent, AgentConfig } from "@/agents/types";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import type { Agent, AgentConfig, AgentDefinition } from "@/agents/types";
+import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
-import type { AgentDefinition } from "@/agents/types";
 import type { TenexAgents } from "@/services/config/types";
 import { configService } from "@/services";
-import { nip19 } from "nostr-tools";
-import { generateSecretKey } from "nostr-tools";
+import { AgentPublisher } from "@/agents/AgentPublisher";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -32,6 +30,13 @@ export class AgentRegistry {
       logger.info(
         `Loaded agent registry with ${Object.keys(this.registry).length} agents via ConfigService`
       );
+      
+      // Load each agent from the registry
+      for (const [slug, registryEntry] of Object.entries(this.registry)) {
+        await this.loadAgentBySlug(slug);
+      }
+      
+      logger.info(`Loaded ${this.agents.size} agents into runtime`);
     } catch (error) {
       logger.error("Failed to load agent registry", { error });
       this.registry = {};
@@ -51,16 +56,20 @@ export class AgentRegistry {
 
     if (!registryEntry) {
       // Generate new nsec for agent
-      const privateKey = generateSecretKey();
-      const nsec = nip19.nsecEncode(privateKey);
+      const signer = NDKPrivateKeySigner.generate();
+      const { nsec } = signer;
 
       // Create new registry entry
-      const fileName = `${config.eventId || name}.json`;
+      const fileName = `${config.eventId || name.toLowerCase().replace(/[^a-z0-9]/g, "-")}.json`;
       registryEntry = {
         nsec,
         file: fileName,
-        eventId: config.eventId,
       };
+      
+      // Only add eventId if it exists
+      if (config.eventId) {
+        registryEntry.eventId = config.eventId;
+      }
 
       // Save agent definition to file
       agentDefinition = {
@@ -79,12 +88,24 @@ export class AgentRegistry {
       await this.saveRegistry();
 
       logger.info(`Created new agent "${name}" with nsec`);
+      
+      // Publish kind:0 and request events for new agent
+      await this.publishAgentEvents(signer, config, registryEntry.eventId);
     } else {
       // Load agent definition from file
       const definitionPath = path.join(this.agentsDir, registryEntry.file);
       if (await fileExists(definitionPath)) {
         const content = await readFile(definitionPath, "utf-8");
-        agentDefinition = JSON.parse(content);
+        try {
+          agentDefinition = JSON.parse(content);
+          this.validateAgentDefinition(agentDefinition);
+        } catch (error) {
+          logger.error("Failed to parse or validate agent definition", { 
+            file: registryEntry.file, 
+            error 
+          });
+          throw new Error(`Invalid agent definition in ${registryEntry.file}: ${error}`);
+        }
       } else {
         // Fallback: create definition from config if file doesn't exist
         agentDefinition = {
@@ -100,13 +121,8 @@ export class AgentRegistry {
     }
 
     // Create NDKPrivateKeySigner
-    const decoded = nip19.decode(registryEntry.nsec);
-    if (decoded.type !== "nsec") {
-      throw new Error(`Invalid nsec for agent ${name}`);
-    }
-
-    const signer = new NDKPrivateKeySigner(decoded.data);
-    const pubkey = await signer.user().then((user) => user.pubkey);
+    const signer = new NDKPrivateKeySigner(registryEntry.nsec);
+    const pubkey = signer.pubkey;
 
     // Create Agent instance
     const agent: Agent = {
@@ -144,8 +160,79 @@ export class AgentRegistry {
     return new Map(this.agents);
   }
 
+  getAgentByName(name: string): Agent | undefined {
+    return Array.from(this.agents.values()).find(agent => agent.name === name);
+  }
+
+  async createAgent(name: string, role: string, config: Partial<AgentConfig>): Promise<Agent & { nsec: string }> {
+    // Generate new nsec for agent
+    const signer = NDKPrivateKeySigner.generate();
+    const { nsec, pubkey } = signer;
+
+    // Create Agent instance
+    const agent: Agent & { nsec: string } = {
+      name,
+      pubkey,
+      signer,
+      role,
+      expertise: config.expertise || role,
+      instructions: config.instructions || "",
+      llmConfig: config.llmConfig || "default",
+      tools: config.tools || [],
+      nsec,
+      // No eventId for local agents
+    };
+
+    return agent;
+  }
+
   private async saveRegistry(): Promise<void> {
     await configService.saveProjectAgents(this.projectPath, this.registry);
+  }
+
+  private async publishAgentEvents(signer: NDKPrivateKeySigner, config: AgentConfig, ndkAgentEventId?: string): Promise<void> {
+    try {
+      // Load project config to get project info
+      const projectConfig = await configService.loadTenexConfig(this.projectPath);
+      
+      if (!projectConfig.nsec) {
+        logger.warn("Project nsec not found, skipping agent event publishing");
+        return;
+      }
+
+      const projectSigner = new NDKPrivateKeySigner(projectConfig.nsec);
+      const projectPubkey = projectSigner.pubkey;
+      const projectName = projectConfig.title || "Unknown Project";
+      
+      // Initialize NDK
+      const ndk = new NDK({
+        explicitRelayUrls: [
+          "wss://relay.damus.io",
+          "wss://relay.nostr.band",
+          "wss://nos.lol",
+          "wss://relay.primal.net"
+        ],
+      });
+      
+      await ndk.connect();
+      
+      // Create agent publisher
+      const publisher = new AgentPublisher(ndk);
+      
+      // Publish agent profile (kind:0) and request event
+      await publisher.publishAgentCreation(
+        signer,
+        config,
+        projectName,
+        projectPubkey,
+        ndkAgentEventId
+      );
+      
+      logger.info(`Published agent events for "${config.name}"`);
+    } catch (error) {
+      logger.error("Failed to publish agent events", { error });
+      // Don't throw - agent creation should succeed even if publishing fails
+    }
   }
 
   async loadAgentBySlug(slug: string): Promise<Agent | null> {
@@ -162,7 +249,17 @@ export class AgentRegistry {
     }
 
     const content = await readFile(definitionPath, "utf-8");
-    const agentDefinition: AgentDefinition = JSON.parse(content);
+    let agentDefinition: AgentDefinition;
+    try {
+      agentDefinition = JSON.parse(content);
+      this.validateAgentDefinition(agentDefinition);
+    } catch (error) {
+      logger.error("Failed to parse or validate agent definition", { 
+        file: definitionPath, 
+        error 
+      });
+      throw new Error(`Invalid agent definition in ${definitionPath}: ${error}`);
+    }
 
     // Create AgentConfig from definition
     const config: AgentConfig = {
@@ -177,5 +274,39 @@ export class AgentRegistry {
     };
 
     return this.ensureAgent(slug, config);
+  }
+
+  /**
+   * Validate an agent definition has all required fields
+   */
+  private validateAgentDefinition(definition: any): asserts definition is AgentDefinition {
+    if (!definition || typeof definition !== 'object') {
+      throw new Error('Agent definition must be an object');
+    }
+
+    if (!definition.name || typeof definition.name !== 'string') {
+      throw new Error('Agent definition must have a name property');
+    }
+
+    if (!definition.role || typeof definition.role !== 'string') {
+      throw new Error('Agent definition must have a role property');
+    }
+
+    // Optional fields with type validation
+    if (definition.expertise !== undefined && typeof definition.expertise !== 'string') {
+      throw new Error('Agent expertise must be a string');
+    }
+
+    if (definition.instructions !== undefined && typeof definition.instructions !== 'string') {
+      throw new Error('Agent instructions must be a string');
+    }
+
+    if (definition.tools !== undefined && !Array.isArray(definition.tools)) {
+      throw new Error('Agent tools must be an array');
+    }
+
+    if (definition.llmConfig !== undefined && typeof definition.llmConfig !== 'string') {
+      throw new Error('Agent llmConfig must be a string');
+    }
   }
 }

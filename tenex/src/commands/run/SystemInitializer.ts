@@ -1,7 +1,7 @@
 import { ConversationManager } from "@/conversations";
 import { MultiLLMService } from "@/llm/MultiLLMService";
 import type { LLMService } from "@/llm/types";
-import { ConversationPublisher } from "@/nostr";
+import { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
 import { getNDK } from "@/nostr/ndkClient";
 import { ConversationRouter, RoutingLLM } from "@/routing";
 import { configService, projectContext } from "@/services";
@@ -21,8 +21,6 @@ export class SystemInitializer {
   constructor(private projectPath: string) {}
 
   async initialize(): Promise<SystemComponents> {
-    const logInfo = logger.info.bind(logger);
-
     // Initialize conversation manager
     const conversationManager = new ConversationManager(this.projectPath);
     await conversationManager.initialize();
@@ -49,13 +47,17 @@ export class SystemInitializer {
 
     // Create conversation publisher
     const conversationPublisher = new ConversationPublisher(getNDK());
+    
+    // Create typing indicator publisher
+    const typingIndicatorPublisher = new TypingIndicatorPublisher(getNDK());
 
     // Create conversation router
     const conversationRouter = new ConversationRouter(
       conversationManager,
       routingLLM,
       conversationPublisher,
-      llmService
+      llmService,
+      typingIndicatorPublisher
     );
 
     logInfo("System components initialized with conversation routing support");

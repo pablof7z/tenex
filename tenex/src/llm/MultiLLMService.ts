@@ -89,11 +89,11 @@ export class MultiLLMService implements LLMService {
    * This creates a routing instance that manages multiple LLM configurations
    */
   static async createForProject(projectPath: string): Promise<LLMService> {
-    let instance = this.projectInstances.get(projectPath);
+    let instance = MultiLLMService.projectInstances.get(projectPath);
     if (!instance) {
       instance = new MultiLLMService();
       await instance.initializeForProject(projectPath);
-      this.projectInstances.set(projectPath, instance);
+      MultiLLMService.projectInstances.set(projectPath, instance);
     }
     return instance;
   }
@@ -102,7 +102,7 @@ export class MultiLLMService implements LLMService {
    * Clear cached instance for a project (useful for testing)
    */
   static clearProjectInstance(projectPath: string): void {
-    this.projectInstances.delete(projectPath);
+    MultiLLMService.projectInstances.delete(projectPath);
   }
 
   private async initializeForProject(projectPath: string): Promise<void> {
@@ -254,22 +254,36 @@ export class MultiLLMService implements LLMService {
     }
 
     // Extract config from request context
-    const context = (request as any)._context;
-    if (context?.agent?.llmConfig) {
-      return context.agent.llmConfig;
+    const requestWithContext = request as { _context?: { agent?: { llmConfig?: string } } };
+    const contextConfig = requestWithContext._context?.agent?.llmConfig;
+    if (contextConfig) {
+      return contextConfig;
     }
 
-    // Use defaults
+    // Return default configuration key
+    return this.getDefaultConfigKey();
+  }
+
+  /**
+   * Get the default configuration key based on settings and available instances
+   */
+  private getDefaultConfigKey(): string {
     if (!this.llmSettings) {
       return "default";
     }
 
-    return (
-      this.llmSettings.defaults?.agents ||
-      this.llmSettings.defaults?.routing ||
-      (this.llmInstances ? Array.from(this.llmInstances.keys())[0] : "default") ||
-      "default"
-    );
+    // Check for explicit defaults in settings
+    const explicitDefault = this.llmSettings.defaults?.agents || this.llmSettings.defaults?.routing;
+    if (explicitDefault) {
+      return explicitDefault;
+    }
+
+    // Fall back to first available instance
+    if (this.llmInstances && this.llmInstances.size > 0) {
+      return Array.from(this.llmInstances.keys())[0];
+    }
+
+    return "default";
   }
 
   /**
@@ -283,7 +297,7 @@ export class MultiLLMService implements LLMService {
     const self = this;
     return {
       async complete(request: CompletionRequest): Promise<CompletionResponse> {
-        const configKey = agent?.llmConfig || self.getConfigKey(request);
+        const configKey = agent?.llmConfig || self.getDefaultConfigKey();
         const llmInstance = self.llmInstances?.get(configKey);
         
         if (!llmInstance) {
@@ -294,7 +308,7 @@ export class MultiLLMService implements LLMService {
       },
 
       async *stream(request: CompletionRequest): AsyncIterable<StreamChunk> {
-        const configKey = agent?.llmConfig || self.getConfigKey(request);
+        const configKey = agent?.llmConfig || self.getDefaultConfigKey();
         const llmInstance = self.llmInstances?.get(configKey);
         
         if (!llmInstance) {
