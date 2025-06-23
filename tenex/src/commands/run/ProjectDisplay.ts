@@ -3,7 +3,7 @@ import { logger } from "@/utils/logger";
 const logInfo = logger.info.bind(logger);
 import chalk from "chalk";
 import { getProjectContext } from "@/services";
-import type { LoadedAgent } from "@/services/ProjectContext";
+import type { Agent } from "@/agents/types";
 
 export class ProjectDisplay {
   async displayProjectInfo(projectPath: string): Promise<void> {
@@ -49,7 +49,7 @@ export class ProjectDisplay {
     }
   }
 
-  private displayAgent(eventId: string, agents: Map<string, LoadedAgent>): void {
+  private displayAgent(eventId: string, agents: Map<string, Agent>): void {
     // Find agent by eventId
     const agentEntry = Array.from(agents.entries()).find(([, agent]) => agent.eventId === eventId);
 

@@ -7,6 +7,7 @@ import type { TenexAgents } from "@/services/config/types";
 import { configService } from "@/services";
 import { AgentPublisher } from "@/agents/AgentPublisher";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
+import { PROJECT_AGENT_DEFINITION, PROJECT_AGENT_SLUG } from "./projectAgentDefinition";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -49,6 +50,11 @@ export class AgentRegistry {
     const existingAgent = this.agents.get(name);
     if (existingAgent) {
       return existingAgent;
+    }
+
+    // Special handling for project agent
+    if (name === PROJECT_AGENT_SLUG) {
+      return this.ensureProjectAgent(config.nsec);
     }
 
     // Check if we have it in registry
@@ -137,6 +143,7 @@ export class AgentRegistry {
       llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
       tools: agentDefinition.tools || [],
       eventId: registryEntry.eventId,
+      slug: name,
     };
 
     // Store in both maps
@@ -182,6 +189,7 @@ export class AgentRegistry {
       llmConfig: config.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
       tools: config.tools || [],
       nsec,
+      slug: name,
       // No eventId for local agents
     };
 
@@ -190,6 +198,60 @@ export class AgentRegistry {
 
   private async saveRegistry(): Promise<void> {
     await configService.saveProjectAgents(this.projectPath, this.registry);
+  }
+
+  /**
+   * Ensure the project agent exists with the given nsec
+   */
+  private async ensureProjectAgent(nsec?: string): Promise<Agent> {
+    // Check if we have it in registry
+    let registryEntry = this.registry[PROJECT_AGENT_SLUG];
+    
+    if (!registryEntry) {
+      if (!nsec) {
+        throw new Error("Project agent nsec is required for initialization");
+      }
+
+      // Create new registry entry for project
+      const fileName = "project.json";
+      registryEntry = {
+        nsec,
+        file: fileName,
+      };
+
+      // Save project agent definition to file
+      const definitionPath = path.join(this.agentsDir, fileName);
+      await writeJsonFile(definitionPath, PROJECT_AGENT_DEFINITION);
+
+      this.registry[PROJECT_AGENT_SLUG] = registryEntry;
+      await this.saveRegistry();
+
+      logger.info("Created project agent in registry");
+    }
+
+    // Create NDKPrivateKeySigner
+    const signer = new NDKPrivateKeySigner(registryEntry.nsec);
+    const pubkey = signer.pubkey;
+
+    // Create Agent instance with project definition
+    const agent: Agent = {
+      name: PROJECT_AGENT_DEFINITION.name,
+      pubkey,
+      signer,
+      role: PROJECT_AGENT_DEFINITION.role,
+      expertise: PROJECT_AGENT_DEFINITION.expertise || PROJECT_AGENT_DEFINITION.role,
+      instructions: PROJECT_AGENT_DEFINITION.instructions,
+      llmConfig: PROJECT_AGENT_DEFINITION.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+      tools: PROJECT_AGENT_DEFINITION.tools || [],
+      eventId: registryEntry.eventId,
+      slug: PROJECT_AGENT_SLUG,
+    };
+
+    // Store in both maps
+    this.agents.set(PROJECT_AGENT_SLUG, agent);
+    this.agentsByPubkey.set(pubkey, agent);
+
+    return agent;
   }
 
   private async publishAgentEvents(signer: NDKPrivateKeySigner, config: Omit<AgentConfig, 'nsec'>, ndkAgentEventId?: string): Promise<void> {

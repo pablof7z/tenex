@@ -12,6 +12,7 @@ export interface Agent {
   llmConfig: string;
   tools: string[];
   eventId?: string; // NDKAgent event ID
+  slug: string; // Agent slug/key from agents.json
 }
 
 export interface AgentContext {

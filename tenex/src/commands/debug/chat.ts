@@ -81,6 +81,7 @@ export async function runDebugChat(
         tools: [],
         instructions: "You are a debug agent for testing purposes.",
         expertise: "Testing and debugging agent functionality",
+        slug: "debug",
       };
     }
 

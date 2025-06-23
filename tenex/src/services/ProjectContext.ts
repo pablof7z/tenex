@@ -1,32 +1,47 @@
 import type { Hexpubkey, NDKProject } from "@nostr-dev-kit/ndk";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { Agent } from "@/agents/types";
+import { PROJECT_AGENT_SLUG } from "@/agents/projectAgentDefinition";
 
-/**
- * Loaded agent with runtime information
- */
-export interface LoadedAgent extends Agent {
-  slug: string; // Agent slug/key from agents.json
-}
 
 /**
  * ProjectContext provides system-wide access to loaded project and agents
  * Initialized during "tenex project run" by ProjectManager
  */
 export class ProjectContext {
+  /**
+   * Event that represents this project, note that this is SIGNED
+   * by the USER, so this.project.pubkey is NOT the project's pubkey but the
+   * USER OWNER'S pubkey.
+   *
+   * - projectCtx.pubkey = The project agent's pubkey (the bot/system)
+   * - projectCtx.project.pubkey = The user's pubkey (who created the project)
+   */
   public readonly project: NDKProject;
-  public readonly signer: NDKPrivateKeySigner;
-  public readonly pubkey: Hexpubkey;
-  public readonly agents: Map<string, LoadedAgent>;
 
-  constructor(
-    project: NDKProject,
-    projectNsec: string,
-    agents: Map<string, LoadedAgent>
-  ) {
+  /**
+   * Signer the project agent uses (hardwired to project agent's signer)
+   */
+  public readonly signer: NDKPrivateKeySigner;
+
+  /**
+   * Pubkey of the project agent
+   */
+  public readonly pubkey: Hexpubkey;
+  public readonly agents: Map<string, Agent>;
+
+  constructor(project: NDKProject, agents: Map<string, Agent>) {
     this.project = project;
-    this.signer = new NDKPrivateKeySigner(projectNsec);
-    this.pubkey = this.signer.pubkey;
+    
+    // Get project agent from agents map
+    const projectAgent = agents.get(PROJECT_AGENT_SLUG);
+    if (!projectAgent) {
+      throw new Error("Project agent not found in agents registry");
+    }
+    
+    // Hardwire to project agent's signer and pubkey
+    this.signer = projectAgent.signer;
+    this.pubkey = projectAgent.pubkey;
     this.agents = new Map(agents);
   }
 
@@ -34,13 +49,16 @@ export class ProjectContext {
   // AGENT ACCESS HELPERS
   // =====================================================================================
 
-  getAgent(slug: string): LoadedAgent | undefined {
+  getAgent(slug: string): Agent | undefined {
     return this.agents.get(slug);
   }
 
-  getAgentNsec(slug: string): string | undefined {
-    const agent = this.getAgent(slug);
-    return agent?.signer?.privateKey ? agent.signer.privateKey : undefined;
+  getProjectAgent(): Agent {
+    const projectAgent = this.agents.get(PROJECT_AGENT_SLUG);
+    if (!projectAgent) {
+      throw new Error("Project agent not found");
+    }
+    return projectAgent;
   }
 
   getAgentSlugs(): string[] {
@@ -60,10 +78,9 @@ let projectContext: ProjectContext | undefined = undefined;
  */
 export function setProjectContext(
   project: NDKProject,
-  projectNsec: string,
-  agents: Map<string, LoadedAgent>
+  agents: Map<string, Agent>
 ): void {
-  projectContext = new ProjectContext(project, projectNsec, agents);
+  projectContext = new ProjectContext(project, agents);
 }
 
 /**
