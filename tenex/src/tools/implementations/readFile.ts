@@ -1,6 +1,11 @@
 import { readFile } from 'fs/promises';
+import { z } from 'zod';
 import type { Tool, ToolExecutionContext, ToolResult } from '../types';
 import { resolveAndValidatePath } from '../utils';
+
+const ReadFileArgsSchema = z.object({
+  path: z.string().min(1, 'path must be a non-empty string')
+});
 
 export const readFileTool: Tool = {
   name: "read_file",
@@ -11,12 +16,14 @@ Usage: {"tool": "read_file", "args": {"path": "path/to/file.txt"}}
 - Use this when you need to examine code, configuration files, or any text content`,
   
   async run(args: Record<string, unknown>, context: ToolExecutionContext): Promise<ToolResult> {
-    const { path } = args as { path: string };
-    try {
-      if (!path) {
-        return { success: false, error: 'Missing path parameter' };
-      }
+    const parsed = ReadFileArgsSchema.safeParse(args);
+    if (!parsed.success) {
+      return { success: false, error: `Invalid arguments: ${parsed.error.issues.map(i => i.message).join(', ')}` };
+    }
+    
+    const { path } = parsed.data;
 
+    try {
       // Resolve path and ensure it's within project
       const fullPath = resolveAndValidatePath(path, context.projectPath);
       

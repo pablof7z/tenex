@@ -4,10 +4,11 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
+import type { ToolExecutionContext } from '../types';
 
 describe('toolExecutor', () => {
   let testDir: string;
-  let context: any;
+  let context: Partial<ToolExecutionContext>;
 
   beforeEach(async () => {
     // Create a unique test directory
@@ -16,9 +17,11 @@ describe('toolExecutor', () => {
     await mkdir(testDir, { recursive: true });
 
     context = {
-      projectRoot: testDir,
+      projectPath: testDir,
       conversationId: 'test-conversation',
-    };
+      agentName: 'test-agent',
+      phase: 'test',
+    } as Partial<ToolExecutionContext>;
   });
 
   describe('JSON format', () => {
@@ -29,11 +32,11 @@ describe('toolExecutor', () => {
       await writeFile(testFilePath, testContent);
 
       const input = `Let me read this file: <tool_use>{ "tool": "read_file", "args": { "path": "test.txt" } }</tool_use>`;
-      const result = await executeTools(input, context);
+      const result = await executeTools(input, context as ToolExecutionContext);
 
-      expect(result).toContain('Let me read this file:');
-      expect(result).toContain('```');
-      expect(result).toContain(testContent);
+      expect(result.processedContent).toContain('Let me read this file:');
+      expect(result.processedContent).toContain('```');
+      expect(result.processedContent).toContain(testContent);
     });
 
     it('should execute write_file tool', async () => {

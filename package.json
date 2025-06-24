@@ -18,6 +18,6 @@
         "typescript": "^5.8.3"
     },
     "dependencies": {
-        "@nostr-dev-kit/ndk": "^2.14.30"
+        "@nostr-dev-kit/ndk": "^2.14.32"
     }
 }

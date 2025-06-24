@@ -41,7 +41,7 @@ debug
     });
 
 // Initialize NDK before parsing commands
-export async function main() {
+export async function main(): Promise<void> {
     await initNDK();
     program.parse(process.argv);
 }

@@ -2,7 +2,7 @@ import { getEventKindName } from "../commands/run/constants";
 import { AgentExecutor } from "../agents/execution/AgentExecutor";
 import { ConversationManager } from "../conversations/ConversationManager";
 import type { LLMService } from "../llm/types";
-import type { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
+import { NDKTask, type NDKEvent, type NDKKind } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "../utils/logger";
 import { EVENT_KINDS } from "../llm/types";
@@ -70,7 +70,7 @@ export class EventHandler {
                 break;
 
             case EVENT_KINDS.TASK:
-                await handleTask(event);
+                await handleTask(NDKTask.from(event));
                 break;
 
             case EVENT_KINDS.PROJECT:

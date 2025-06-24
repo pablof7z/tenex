@@ -2,7 +2,7 @@ import type { Agent } from "@/agents/types";
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 
-// Available agents fragment - shows all agents available in the project for handoffs
+// Available agents fragment - shows all agents available in the project
 interface AvailableAgentsArgs {
     agents: Agent[];
     currentAgentPubkey?: string; // To exclude current agent from handoff options
@@ -13,7 +13,7 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
     priority: 15,
     template: ({ agents, currentAgentPubkey }) => {
         if (agents.length === 0) {
-            return "## Available Agents\nNo agents are currently available for handoffs.";
+            return "## Available Agents\nNo agents are currently available.";
         }
 
         // Filter out current agent if specified
@@ -22,22 +22,22 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
             : agents;
 
         if (availableForHandoff.length === 0) {
-            return "## Available Agents\nNo other agents are available for handoffs.";
+            return "## Available Agents\nNo other agents are available.";
         }
 
         const agentList = availableForHandoff
             .map(agent => {
-                const pmIndicator = agent.isPMAgent ? " (PM)" : "";
-                return `- **${agent.name}**${pmIndicator} (${agent.slug})\n  Role: ${agent.role}\n  Pubkey: ${agent.pubkey}`;
+                const pmIndicator = agent.isPMAgent ? " (Project Manager)" : "";
+                return `- **${agent.name}**${pmIndicator} (${agent.slug})\n  Role: ${agent.role}\n`;
             })
             .join("\n\n");
 
         return `## Available Agents
-The following agents are available in this project for collaboration and handoffs:
+The following agents are available in this project for collaboration:
 
 ${agentList}
 
-**Note**: You can hand off tasks to these agents when their expertise is better suited for the current work.`;
+**Note**: You can consult these agents when their expertise aligns with part of the work you're doing.`;
     },
     validateArgs: (args): args is AvailableAgentsArgs => {
         return (

@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger';
 import { getTool } from './registry';
-import type { ToolExecutionContext, ToolExecutionResult, ToolExecutionMetadata } from './types';
+import type { ToolExecutionContext, ToolExecutionResult, ToolExecutionMetadata, ToolResult } from './types';
 
 // Tool use interface
 interface ToolUse {
@@ -42,7 +42,7 @@ function parseToolUses(content: string): { toolUses: ToolUse[], positions: { sta
 }
 
 // Execute a single tool use
-async function executeSingleTool(toolUse: ToolUse, context: ToolExecutionContext) {
+async function executeSingleTool(toolUse: ToolUse, context: ToolExecutionContext): Promise<ToolResult> {
   const { tool: toolName, args = {} } = toolUse;
   
   const tool = getTool(toolName);

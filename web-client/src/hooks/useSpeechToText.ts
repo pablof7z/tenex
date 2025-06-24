@@ -9,10 +9,10 @@ export function useSpeechToText() {
         setIsTranscribing(true);
         
         try {
-            // Check if we have an API configuration
-            const openaiConfig = config?.providers?.find((p: any) => p.provider === "openai");
+            // Check if we have speech configuration
+            const speechConfig = config?.speech;
             
-            if (!openaiConfig || !openaiConfig.apiKey) {
+            if (!speechConfig || !speechConfig.credentials.apiKey) {
                 throw new Error("OpenAI API key not configured");
             }
 
@@ -27,10 +27,10 @@ export function useSpeechToText() {
             formData.append("model", "whisper-1");
 
             // Make request to OpenAI Whisper API
-            const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+            const response = await fetch(speechConfig.credentials.baseUrl + "/audio/transcriptions", {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${openaiConfig.apiKey}`,
+                    "Authorization": `Bearer ${speechConfig.credentials.apiKey}`,
                 },
                 body: formData,
             });

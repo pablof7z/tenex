@@ -19,6 +19,8 @@ import {
     Ollama,
     OpenRouter,
     Message,
+    igniteEngine,
+    loadModels,
 } from "multi-llm-ts";
 import { LLM_DEFAULTS } from "./constants";
 
@@ -331,7 +333,7 @@ export class LLMConfigEditor {
                 return;
             }
             
-            availableModels = modelsList.chat.map((m: any) => m.id);
+            availableModels = modelsList.chat.map((m: any) => typeof m === 'string' ? m : m.id);
             logger.info(chalk.green(`✅ Found ${availableModels.length} ${provider} models`));
             
             if (provider === "openrouter") {
@@ -447,9 +449,14 @@ export class LLMConfigEditor {
             enableCaching,
         };
 
-        // Only add apiKey if it's not empty
+        // Add apiKey for testing (if provided)
         if (apiKey?.trim()) {
-            // API key will be stored in auth separately
+            newConfig.apiKey = apiKey;
+        }
+
+        // Add baseUrl for openrouter
+        if (provider === "openrouter") {
+            newConfig.baseUrl = "https://openrouter.ai/api/v1";
         }
 
         // Test the configuration BEFORE saving it
@@ -585,7 +592,7 @@ export class LLMConfigEditor {
                         return;
                     }
                     
-                    availableModels = modelsList.chat.map((m: any) => m.id);
+                    availableModels = modelsList.chat.map((m: any) => typeof m === 'string' ? m : m.id);
                     logger.info(chalk.green(`✅ Found ${availableModels.length} ${config.provider} models`));
                     
                     if (config.provider === "openrouter") {
@@ -767,39 +774,30 @@ export class LLMConfigEditor {
      */
     private async testLLMConfig(config: LLMConfig): Promise<boolean> {
         try {
-            let provider: any;
+            const llmConfig = {
+                apiKey: config.apiKey,
+                baseURL: config.baseUrl,
+            };
             
-            switch (config.provider) {
-                case "openai":
-                    provider = new OpenAI({ apiKey: config.apiKey });
-                    break;
-                case "anthropic":
-                    provider = new Anthropic({ apiKey: config.apiKey });
-                    break;
-                case "google":
-                    provider = new Google({ apiKey: config.apiKey });
-                    break;
-                case "groq":
-                    provider = new Groq({ apiKey: config.apiKey });
-                    break;
-                case "deepseek":
-                    provider = new DeepSeek({ apiKey: config.apiKey });
-                    break;
-                case "mistral":
-                    provider = new MistralAI({ apiKey: config.apiKey });
-                    break;
-                case "ollama":
-                    provider = new Ollama({ baseURL: config.baseUrl || "http://localhost:11434" });
-                    break;
-                case "openrouter":
-                    provider = new OpenRouter({ apiKey: config.apiKey });
-                    break;
-                default:
-                    throw new Error(`Unsupported provider: ${config.provider}`);
+            // Use the proper multi-llm-ts v4.0 API
+            const llm = igniteEngine(config.provider, llmConfig);
+            const models = await loadModels(config.provider, llmConfig);
+            
+            if (!models || !models.chat || models.chat.length === 0) {
+                throw new Error(`No models available for provider ${config.provider}`);
             }
-
+            
+            // Find the specific model - handle both string and ChatModel types
+            const model = models.chat.find(m => {
+                const modelId = typeof m === 'string' ? m : m.id;
+                return modelId === config.model;
+            }) || models.chat[0];
+            if (!model) {
+                throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
+            }
+            
             const testMessage = new Message("user", "Say 'Configuration test successful!' and nothing else.");
-            const response = await provider.chat([testMessage], config.model, { maxTokens: 50 });
+            const response = await llm.complete(model, [testMessage]);
             
             return (response.content || "").toLowerCase().includes("configuration test successful");
         } catch (error) {

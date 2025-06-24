@@ -71,7 +71,7 @@ export const agentAddCommand = new Command("add")
             const agent = await registry.ensureAgent(name, agentConfig);
 
             // Get the agent's nsec from the signer
-            const nsec = (agent.signer as NDKPrivateKeySigner).privateKey;
+            const nsec = agent.signer.privateKey;
             const pubkey = agent.pubkey;
             const npub = nip19.npubEncode(pubkey);
 

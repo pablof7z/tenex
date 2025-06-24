@@ -1,9 +1,10 @@
 // Import all fragments to ensure they're registered
-import "../fragments/generic";
-import "../fragments/context";
 import "../fragments/agentFragments";
 import "../fragments/project";
-import "../fragments/tools";
+import "../fragments/phase";
+import "../fragments/pm-routing";
+import "../fragments/available-agents";
+import "../fragments/execute-task-prompt";
 
 // Export all template builders
 // Note: agent templates are handled by fragments now

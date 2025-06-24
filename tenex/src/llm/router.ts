@@ -1,13 +1,7 @@
 import type { ChatModel } from "multi-llm-ts";
 import {
-    OpenAI,
-    Anthropic,
-    Google,
-    Groq,
-    DeepSeek,
-    MistralAI,
-    Ollama,
-    OpenRouter,
+    igniteEngine,
+    loadModels,
 } from "multi-llm-ts";
 import type { LLMConfig, CompletionRequest, CompletionResponse, LLMService } from "./types";
 import { logger } from "@/utils/logger";
@@ -21,36 +15,7 @@ export interface LLMRouterConfig {
  * Simple LLM router that manages multiple LLM instances
  */
 export class LLMRouter implements LLMService {
-    private instances = new Map<string, ChatModel>();
-    
     constructor(private config: LLMRouterConfig) {}
-
-    /**
-     * Get an LLM instance for the given context
-     */
-    async getLLM(context?: { agentName?: string; configName?: string }): Promise<ChatModel> {
-        const configKey = this.resolveConfigKey(context);
-        
-        // Return cached instance if available
-        if (this.instances.has(configKey)) {
-            const instance = this.instances.get(configKey);
-            if (!instance) {
-                throw new Error(`Cached instance not found for key: ${configKey}`);
-            }
-            return instance;
-        }
-
-        // Create new instance
-        const config = this.config.configs[configKey];
-        if (!config) {
-            throw new Error(`No LLM configuration found for key: ${configKey}`);
-        }
-
-        const llm = await this.createProvider(config);
-        this.instances.set(configKey, llm);
-        
-        return llm;
-    }
 
     /**
      * Resolve which configuration to use based on context
@@ -78,32 +43,6 @@ export class LLMRouter implements LLMService {
     }
 
     /**
-     * Create a provider instance based on configuration
-     */
-    private async createProvider(config: LLMConfig): Promise<ChatModel> {
-        switch (config.provider) {
-            case "openai":
-                return new OpenAI({ apiKey: config.apiKey }) as any;
-            case "anthropic":
-                return new Anthropic({ apiKey: config.apiKey }) as any;
-            case "google":
-                return new Google({ apiKey: config.apiKey }) as any;
-            case "groq":
-                return new Groq({ apiKey: config.apiKey }) as any;
-            case "deepseek":
-                return new DeepSeek({ apiKey: config.apiKey }) as any;
-            case "mistral":
-                return new MistralAI({ apiKey: config.apiKey }) as any;
-            case "ollama":
-                return new Ollama({ baseURL: config.baseUrl || "http://localhost:11434" }) as any;
-            case "openrouter":
-                return new OpenRouter({ apiKey: config.apiKey }) as any;
-            default:
-                throw new Error(`Unsupported provider: ${config.provider}`);
-        }
-    }
-
-    /**
      * Complete a request using the appropriate LLM
      */
     async complete(request: CompletionRequest): Promise<CompletionResponse> {
@@ -121,29 +60,46 @@ export class LLMRouter implements LLMService {
             throw new Error(`No LLM configuration found for key: ${configKey}`);
         }
 
-        // Get the appropriate LLM instance
-        const llm = await this.getLLM(context);
-        
-        // Merge model and other config options with request options
-        const completionOptions = {
-            model: config.model,
-            temperature: config.temperature,
-            maxTokens: config.maxTokens,
-            ...request.options,
-        };
-        
-        // Execute completion directly
-        return (llm as any).chat(request.messages, completionOptions);
+        try {
+            // Use the new multi-llm-ts v4 API
+            const llmConfig = {
+                apiKey: config.apiKey,
+                baseURL: config.baseUrl,
+            };
+            
+            const llm = igniteEngine(config.provider, llmConfig);
+            const models = await loadModels(config.provider, llmConfig);
+            
+            if (!models || !models.chat || models.chat.length === 0) {
+                throw new Error(`No models available for provider ${config.provider}`);
+            }
+            
+            // Find the specific model - handle both string and ChatModel types
+            const model = models.chat.find(m => {
+                const modelId = typeof m === 'string' ? m : m.id;
+                return modelId === config.model;
+            }) || models.chat[0];
+            if (!model) {
+                throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
+            }
+            
+            // Execute completion with new API
+            return await llm.complete(model, request.messages);
+            
+        } catch (error) {
+            logger.error(`LLM completion failed for ${configKey}:`, error);
+            throw error;
+        }
     }
 }
 
 /**
  * Load LLM router from configuration file
  */
-export async function loadLLMRouter(configPath: string): Promise<LLMRouter> {
+export async function loadLLMRouter(projectPath: string): Promise<LLMRouter> {
     try {
-        // Use configService to load LLM configuration with proper validation
-        const tenexLLMs = await configService.loadTenexLLMs(configPath);
+        // Use configService to load merged global and project-specific configuration
+        const { llms: tenexLLMs } = await configService.loadConfig(projectPath);
 
         // Transform TenexLLMs structure to LLMRouterConfig
         const configs: Record<string, LLMConfig> = {};

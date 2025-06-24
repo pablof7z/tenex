@@ -1,11 +1,11 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { logger } from "../utils/logger";
 
 const logInfo = logger.info.bind(logger);
 
-export const handleTask = async (event: NDKEvent): Promise<void> => {
-    const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled";
+export const handleTask = async (event: NDKTask): Promise<void> => {
+    const title = event.title;
     logInfo(chalk.gray("Task:    ") + chalk.yellow(title));
     logInfo(
         chalk.gray("Content: ") +

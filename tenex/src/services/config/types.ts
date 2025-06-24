@@ -86,7 +86,16 @@ export interface TenexLLMs {
 export const TenexLLMsSchema = z.object({
     configurations: z.record(
         z.object({
-            provider: z.string(),
+            provider: z.enum([
+                "anthropic",
+                "openai", 
+                "google",
+                "ollama",
+                "mistral",
+                "groq",
+                "openrouter",
+                "deepseek"
+            ]),
             model: z.string(),
             temperature: z.number().optional(),
             maxTokens: z.number().optional(),

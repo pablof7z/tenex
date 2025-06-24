@@ -1,4 +1,5 @@
-import type { CompletionResponse, LLMService, Message } from "@/llm/types";
+import type { CompletionResponse, LLMService } from "@/llm/types";
+import { Message } from "multi-llm-ts";
 import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/nostr";
 import type NDK from "@nostr-dev-kit/ndk";
 import { PromptBuilder } from "@/prompts";
@@ -256,9 +257,9 @@ export class AgentExecutor {
         systemPrompt: string,
         userPrompt: string,
     ): Promise<CompletionResponse> {
-        const messages: Message[] = [
-            { role: "system", content: systemPrompt } as Message,
-            { role: "user", content: userPrompt } as Message,
+        const messages = [
+            new Message("system", systemPrompt),
+            new Message("user", userPrompt),
         ];
 
         return await this.llmService.complete({

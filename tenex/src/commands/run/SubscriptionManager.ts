@@ -41,11 +41,6 @@ export class SubscriptionManager {
 
         // 3. Subscribe to all project-related events
         await this.subscribeToProjectEvents();
-
-        logger.info(chalk.green("✅ All subscriptions active"));
-        logger.info(
-            chalk.gray(`Monitoring events from the last ${STARTUP_FILTER_MINUTES} minutes`)
-        );
     }
 
     private async subscribeToProjectUpdates(): Promise<void> {

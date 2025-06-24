@@ -3,101 +3,9 @@ import type { PromptFragment } from "../core/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import type { Conversation } from "@/conversations/types";
-import { buildAgentPrompt, buildAgentIdentity } from "./agent-common";
+import { buildAgentPrompt } from "./agent-common";
 import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
 import { getTool } from "@/tools/registry";
-
-// ========================================================================
-// IDENTITY & PROFILE FRAGMENTS
-// ========================================================================
-
-// Basic agent identity - Used when an agent introduces itself
-interface AgentIdentityArgs {
-    name: string;
-    role: string;
-}
-
-export const agentIdentityFragment: PromptFragment<AgentIdentityArgs> = {
-    id: "agent-identity",
-    priority: 5,
-    template: ({ name, role }) => `You are ${name}, a ${role}.`,
-};
-
-// Agent profile with capabilities - More detailed agent description
-interface AgentProfileArgs {
-    profile: {
-        name: string;
-        role: string;
-        description: string;
-        capabilities?: string[];
-    };
-}
-
-export const agentProfileFragment: PromptFragment<AgentProfileArgs> = {
-    id: "agent-profile",
-    priority: 15,
-    template: ({ profile }) => {
-        let prompt = `Your identity:
-- Name: ${profile.name}
-- Role: ${profile.role}
-- Description: ${profile.description}`;
-
-        if (profile.capabilities && profile.capabilities.length > 0) {
-            prompt += `\n- Capabilities: ${profile.capabilities.join(", ")}`;
-        }
-
-        return prompt;
-    },
-};
-
-// Core agent behavior - Basic AI agent instructions
-export const agentCoreFragment: PromptFragment<Record<string, never>> = {
-    id: "agent-core",
-    priority: 5,
-    template: () => `You are an AI agent that helps users with tasks.
-You should be helpful, accurate, and follow instructions carefully.`,
-};
-
-// ========================================================================
-// CUSTOM INSTRUCTIONS & CONTEXT FRAGMENTS
-// ========================================================================
-
-// Custom instructions - Additional agent-specific instructions
-interface CustomInstructionsArgs {
-    content: string;
-}
-
-export const customInstructionsFragment: PromptFragment<CustomInstructionsArgs> = {
-    id: "custom-instructions",
-    priority: 8,
-    template: ({ content }) => `Additional instructions:\n${content}`,
-};
-
-// Agent base - Full agent configuration using helper
-interface AgentBaseArgs {
-    agent: {
-        name: string;
-        instructions: string;
-        role?: string;
-    };
-    project?: {
-        name: string;
-        description?: string;
-    };
-}
-
-export const agentBaseFragment: PromptFragment<AgentBaseArgs> = {
-    id: "agent-base",
-    priority: 10,
-    template: ({ agent, project }) => {
-        return buildAgentPrompt({
-            name: agent.name,
-            role: agent.role,
-            instructions: agent.instructions,
-            projectName: project?.name,
-        });
-    },
-};
 
 // ========================================================================
 // EXECUTION & SYSTEM PROMPT FRAGMENTS
@@ -163,32 +71,6 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
 // CONVERSATION & INTERACTION FRAGMENTS
 // ========================================================================
 
-// Agent conversation context
-interface AgentConversationContextArgs {
-    conversationTitle: string;
-    phase: string;
-    currentTask: string;
-}
-
-export const agentConversationContextFragment: PromptFragment<AgentConversationContextArgs> = {
-    id: "agent-conversation-context",
-    priority: 20,
-    template: ({ conversationTitle, phase, currentTask }) => {
-        return `Conversation: ${conversationTitle}
-Phase: ${phase}
-Current task: ${currentTask}`;
-    },
-    validateArgs: (args): args is AgentConversationContextArgs => {
-        return (
-            typeof args === "object" &&
-            args !== null &&
-            typeof (args as AgentConversationContextArgs).conversationTitle === "string" &&
-            typeof (args as AgentConversationContextArgs).phase === "string" &&
-            typeof (args as AgentConversationContextArgs).currentTask === "string"
-        );
-    },
-};
-
 // Conversation history
 interface ConversationHistoryArgs {
     history: Conversation["history"];
@@ -197,43 +79,36 @@ interface ConversationHistoryArgs {
 
 export const conversationHistoryFragment: PromptFragment<ConversationHistoryArgs> = {
     id: "conversation-history",
-    priority: 20,
-    template: ({ history, maxMessages = 10 }) => {
+    priority: 10,
+    template: ({ history, maxMessages = 20 }) => {
+        if (history.length === 0) {
+            return "## Conversation History\nNo messages yet.";
+        }
+
+        // Get last N messages
         const recentHistory = history.slice(-maxMessages);
 
-        const context = recentHistory
-            .map((event) => {
-                const author = isEventFromUser(event)
-                    ? "User"
-                    : getAgentSlugFromEvent(event) || "Assistant";
-                const timestamp = new Date((event.created_at || 0) * 1000).toISOString();
-                return `[${timestamp}] ${author}: ${event.content}`;
+        const formattedHistory = recentHistory
+            .map((event, index) => {
+                const isUser = isEventFromUser(event);
+                const author = isUser ? "User" : getAgentSlugFromEvent(event) || "Agent";
+                return `[${index + 1}] ${author}: ${event.content}`;
             })
             .join("\n\n");
 
         return `## Conversation History (Last ${recentHistory.length} messages)
-${context || "No previous messages"}`;
+${formattedHistory}`;
+    },
+    validateArgs: (args): args is ConversationHistoryArgs => {
+        return (
+            typeof args === "object" &&
+            args !== null &&
+            Array.isArray((args as ConversationHistoryArgs).history)
+        );
     },
 };
 
-// ========================================================================
-// PHASE-RELATED FRAGMENTS
-// ========================================================================
-
-// Phase instructions
-interface PhaseInstructionsArgs {
-    phase: Phase;
-}
-
-export const phaseInstructionsFragment: PromptFragment<PhaseInstructionsArgs> = {
-    id: "phase-instructions",
-    priority: 20,
-    template: ({ phase }) => {
-        return `## Phase Instructions\n${getPhaseInstructions(phase)}`;
-    },
-};
-
-// Phase context with metadata
+// Phase context
 interface PhaseContextArgs {
     phase: Phase;
     phaseMetadata?: Record<string, unknown>;
@@ -241,233 +116,38 @@ interface PhaseContextArgs {
 
 export const phaseContextFragment: PromptFragment<PhaseContextArgs> = {
     id: "phase-context",
-    priority: 25,
+    priority: 15,
     template: ({ phase, phaseMetadata }) => {
-        let context = "";
+        const parts = [`## Current Phase: ${phase.toUpperCase()}`];
 
-        switch (phase) {
-            case "chat":
-                context = `You are in the initial phase. Focus on:
-- Quickly understanding the user's request
-- Taking immediate action if the request is clear
-- Only clarifying when genuinely necessary (request is ambiguous)
-- Being helpful and responsive to the user's needs`;
-                break;
-
-            case "plan":
-                context = `You are in the planning phase. Focus on:
-- Creating a detailed technical plan
-- Breaking down the work into milestones
-- Identifying dependencies and risks
-- Estimating effort and timelines`;
-                break;
-
-            case "execute":
-                context = `You are in the execution phase. Focus on:
-- Implementing the planned features
-- Writing clean, maintainable code
-- Following best practices
-- Communicating progress and blockers`;
-                break;
-
-            case "review":
-                context = `You are in the review phase. Focus on:
-- Evaluating the implementation quality
-- Identifying bugs or issues
-- Suggesting improvements
-- Ensuring requirements are met`;
-                break;
+        // Add phase-specific context
+        const context = getPhaseContext(phase, phaseMetadata);
+        if (context) {
+            parts.push(context);
         }
 
-        // Add conversation-specific context from metadata
-        const phaseKey = `${phase}Context`;
-        if (phaseMetadata?.[phaseKey]) {
-            context += `\n\n## Additional Context for ${phase} phase:\n${phaseMetadata[phaseKey]}`;
-        }
-
-        return context;
+        return parts.join("\n\n");
     },
-};
-
-// ========================================================================
-// ACTION & RESPONSE FRAGMENTS
-// ========================================================================
-
-// Agent next action options
-interface AgentNextActionArgs {
-    availableActions: string[];
-}
-
-export const agentNextActionFragment: PromptFragment<AgentNextActionArgs> = {
-    id: "agent-next-action",
-    priority: 50,
-    template: ({ availableActions }) => {
-        if (availableActions.length === 0) return "";
-
-        return `Available next actions:
-${availableActions.map((action) => `- ${action}`).join("\n")}`;
-    },
-    validateArgs: (args): args is AgentNextActionArgs => {
+    validateArgs: (args): args is PhaseContextArgs => {
         return (
             typeof args === "object" &&
             args !== null &&
-            Array.isArray((args as any).availableActions)
+            typeof (args as PhaseContextArgs).phase === "string"
         );
     },
 };
 
-// Agent response schema
-export const agentResponseSchemaFragment: PromptFragment<Record<string, never>> = {
-    id: "agent-response-schema",
-    priority: 80,
-    template: () => `{
-  "response": "your response to the task",
-  "toolCalls": [{"tool": "name", "args": {}}], // optional
-  "nextAction": {
-    "type": "handoff|phase_transition|complete|human_input|continue",
-    "target": "pubkey or phase name", // if applicable
-    "reasoning": "why this action"
-  }
-}`,
-};
-
-// ========================================================================
-// REVIEW & FEEDBACK FRAGMENTS
-// ========================================================================
-
-// Review context - For general review scenarios
-interface ReviewContextArgs {
-    content: string;
+// Custom instructions from agent definition
+interface CustomInstructionsArgs {
+    instructions: string;
 }
 
-export const reviewContextFragment: PromptFragment<ReviewContextArgs> = {
-    id: "review-context",
-    priority: 22,
-    template: ({ content }) => content,
-};
-
-// Work to review - Content being reviewed
-interface WorkToReviewArgs {
-    content: string;
-}
-
-export const workToReviewFragment: PromptFragment<WorkToReviewArgs> = {
-    id: "work-to-review",
-    priority: 28,
-    template: ({ content }) => content,
-};
-
-// Expert feedback context
-interface ExpertFeedbackContextArgs {
-    context: string;
-    workToReview: string;
-}
-
-export const expertFeedbackContextFragment: PromptFragment<ExpertFeedbackContextArgs> = {
-    id: "expert-feedback-context",
-    priority: 25,
-    template: ({ context, workToReview }) => {
-        return `Context: ${context}
-
-Work to review:
-${workToReview}`;
-    },
-    validateArgs: (args): args is ExpertFeedbackContextArgs => {
-        return (
-            typeof args === "object" &&
-            args !== null &&
-            typeof (args as any).context === "string" &&
-            typeof (args as any).workToReview === "string"
-        );
-    },
-};
-
-// Expert feedback task instructions
-export const expertFeedbackTaskFragment: PromptFragment<Record<string, never>> = {
-    id: "expert-feedback-task",
-    priority: 30,
-    template: () => `Provide feedback focusing on:
-1. Technical correctness within your expertise
-2. Best practices and standards
-3. Potential issues or improvements
-4. Whether this meets the requirements
-
-Be constructive and specific.`,
-};
-
-// Expert feedback response schema
-export const expertFeedbackResponseFragment: PromptFragment<Record<string, never>> = {
-    id: "expert-feedback-response",
-    priority: 80,
-    template: () => `{
-  "feedback": "your detailed feedback",
-  "confidence": 0.0-1.0,
-  "issues": ["list of specific issues found"], // optional
-  "suggestions": ["list of improvements"], // optional
-  "approved": true|false
-}`,
-};
-
-// ========================================================================
-// TOOL-RELATED FRAGMENTS
-// ========================================================================
-
-// Tool context
-interface ToolContextArgs {
-    tools: string[];
-}
-
-export const toolContextFragment: PromptFragment<ToolContextArgs> = {
-    id: "tool-context",
-    priority: 30,
-    template: ({ tools }) => {
-        if (tools.length === 0) {
-            return "";
-        }
-
-        return `## Tool Usage
-You have access to the following tools: ${tools.join(", ")}
-
-Use the JSON format for tool calls:
-<tool_use>{ "tool": "tool_name", "args": { "param": "value" } }</tool_use>
-
-When you need to use a tool, format your request clearly:
-- For file operations: Specify the exact file path and operation
-- For shell commands: Provide the complete command with all arguments
-- For web searches: Use specific, relevant search terms
-
-Tool results will be automatically executed and included in your response.`;
-    },
-};
-
-// ========================================================================
-// ASSEMBLY FRAGMENTS
-// ========================================================================
-
-// Full prompt assembly
-interface FullPromptArgs {
-    conversationContent: string;
-    phaseContext: string;
-    constraints?: string[];
-    agentType?: string;
-}
-
-export const fullPromptFragment: PromptFragment<FullPromptArgs> = {
-    id: "full-prompt",
-    priority: 100, // Last to execute
-    template: ({
-        conversationContent,
-        phaseContext,
-        constraints = [],
-        agentType = "project assistant",
-    }) => {
-        return `${conversationContent}
-
-${phaseContext}
-
-${constraints.length > 0 ? `## Constraints\n${constraints.join("\n")}` : ""}
-
-Based on the above context, provide your response as the ${agentType}.`;
+export const customInstructionsFragment: PromptFragment<CustomInstructionsArgs> = {
+    id: "custom-instructions",
+    priority: 5,
+    template: ({ instructions }) => {
+        if (!instructions.trim()) return "";
+        return `## Instructions\n${instructions}`;
     },
 };
 
@@ -478,92 +158,76 @@ Based on the above context, provide your response as the ${agentType}.`;
 function getPhaseInstructions(phase: Phase): string {
     switch (phase) {
         case "chat":
-            return "Gather requirements and understand the user's needs. Ask clarifying questions to ensure you have all necessary information.";
+            return `In the CHAT phase, you should:
+- Focus on understanding the user's requirements
+- Ask clarifying questions to gather necessary information
+- Keep responses concise and conversational
+- Build rapport and ensure clear communication`;
 
         case "plan":
-            return "Create a detailed implementation plan based on the gathered requirements. Break down the work into manageable tasks.";
+            return `In the PLAN phase, you should:
+- Create detailed implementation plans based on requirements
+- Break down complex tasks into manageable steps
+- Identify potential challenges and solutions
+- Provide clear timelines and milestones`;
 
         case "execute":
-            return "Implement the features according to the plan. Write clean, well-tested code following best practices.";
+            return `In the EXECUTE phase, you should:
+- Implement the planned solutions step by step
+- Provide working code and configurations
+- Test implementations thoroughly
+- Document your progress and any deviations from the plan`;
 
         case "review":
-            return "Review the implementation for quality, security, and completeness. Provide constructive feedback and suggestions.";
+            return `In the REVIEW phase, you should:
+- Assess the quality of implementations
+- Provide constructive feedback
+- Identify areas for improvement
+- Validate that requirements have been met`;
 
         default:
-            return "Assist with the current task to the best of your ability.";
+            return "Focus on the current task and provide value to the user.";
     }
 }
 
-function getToolInstructions(availableTools: string[]): string {
-    if (availableTools.length === 0) {
-        return "";
+function getPhaseContext(phase: Phase, metadata?: Record<string, unknown>): string | null {
+    switch (phase) {
+        case "plan":
+            if (metadata?.requirements) {
+                return `### Requirements to Address\n${metadata.requirements}`;
+            }
+            break;
+        case "execute":
+            if (metadata?.plan) {
+                return `### Current Plan\n${metadata.plan}`;
+            }
+            break;
+        case "review":
+            if (metadata?.workToReview) {
+                return `### Work to Review\n${metadata.workToReview}`;
+            }
+            break;
     }
+    return null;
+}
 
-    const instructions: string[] = ["## Tool Instructions"];
-    instructions.push("When you need to perform actions, use the JSON tool syntax:");
-    instructions.push("");
-    instructions.push("**JSON Format:**");
-    instructions.push('<tool_use>{ "tool": "tool_name", "args": { "param1": "value1", "param2": "value2" } }</tool_use>');
-    instructions.push("");
-    instructions.push("Multiple tools can be used in a single message:");
-    instructions.push('Hello, I want to read a file: <tool_use>{ "tool": "read_file", "args": { "path": "./index.ts" } }</tool_use>');
-    instructions.push('I also want to see the current time: <tool_use>{ "tool": "get_time" }</tool_use>');
-    instructions.push("");
+function getToolInstructions(tools: string[]): string {
+    const toolInstructions: string[] = [];
 
-    // Get instructions directly from the tool registry
-    for (const toolName of availableTools) {
+    for (const toolName of tools) {
         const tool = getTool(toolName);
-        if (tool) {
-            instructions.push(`### ${tool.name}`);
-            instructions.push(tool.instructions);
-            instructions.push("");
+        if (tool?.instructions) {
+            toolInstructions.push(`### ${toolName}\n${tool.instructions}`);
         }
     }
 
-    instructions.push(
-        "Tools will be executed automatically and results will be included in your response."
-    );
-
-    return instructions.join("\n");
+    return toolInstructions.length > 0
+        ? "\n## Tool Instructions\n" + toolInstructions.join("\n\n")
+        : "";
 }
 
-// ========================================================================
-// REGISTER ALL FRAGMENTS
-// ========================================================================
-
-// Identity & Profile
-fragmentRegistry.register(agentIdentityFragment);
-fragmentRegistry.register(agentProfileFragment);
-fragmentRegistry.register(agentCoreFragment);
-
-// Custom Instructions & Context
-fragmentRegistry.register(customInstructionsFragment);
-fragmentRegistry.register(agentBaseFragment);
-
-// Execution & System
+// Register fragments
 fragmentRegistry.register(agentSystemPromptFragment);
-
-// Conversation & Interaction
-fragmentRegistry.register(agentConversationContextFragment);
 fragmentRegistry.register(conversationHistoryFragment);
-
-// Phase-related
-fragmentRegistry.register(phaseInstructionsFragment);
 fragmentRegistry.register(phaseContextFragment);
-
-// Action & Response
-fragmentRegistry.register(agentNextActionFragment);
-fragmentRegistry.register(agentResponseSchemaFragment);
-
-// Review & Feedback
-fragmentRegistry.register(reviewContextFragment);
-fragmentRegistry.register(workToReviewFragment);
-fragmentRegistry.register(expertFeedbackContextFragment);
-fragmentRegistry.register(expertFeedbackTaskFragment);
-fragmentRegistry.register(expertFeedbackResponseFragment);
-
-// Tool-related
-fragmentRegistry.register(toolContextFragment);
-
-// Assembly
-fragmentRegistry.register(fullPromptFragment);
+fragmentRegistry.register(customInstructionsFragment);

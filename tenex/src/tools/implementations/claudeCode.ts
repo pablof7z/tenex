@@ -1,5 +1,11 @@
+import { z } from 'zod';
 import { ClaudeCodeExecutor } from '../claude/ClaudeCodeExecutor';
 import type { Tool, ToolExecutionContext, ToolResult } from '../types';
+
+const ClaudeCodeArgsSchema = z.object({
+  prompt: z.string().min(1, 'prompt must be a non-empty string'),
+  mode: z.enum(['run', 'plan']).optional()
+});
 
 export const claudeCodeTool: Tool = {
   name: "claude_code",
@@ -11,11 +17,13 @@ Usage: {"tool": "claude_code", "args": {"prompt": "implement a fibonacci functio
 - Use this for complex multi-file changes, refactoring, or when you need another AI assistant`,
   
   async run(args: Record<string, unknown>, context: ToolExecutionContext): Promise<ToolResult> {
-    const { prompt, mode } = args as { prompt: string; mode?: 'run' | 'plan' };
     try {
-      if (!prompt) {
-        return { success: false, error: 'Missing prompt parameter' };
+      const parsed = ClaudeCodeArgsSchema.safeParse(args);
+      if (!parsed.success) {
+        return { success: false, error: `Invalid arguments: ${parsed.error.issues.map(i => i.message).join(', ')}` };
       }
+      
+      const { prompt, mode } = parsed.data;
 
       const executor = new ClaudeCodeExecutor({
         prompt,

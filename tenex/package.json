@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@inquirer/search": "^3.0.15",
-    "@nostr-dev-kit/ndk": "^2.14.29",
+    "@nostr-dev-kit/ndk": "^2.14.31",
     "@types/inquirer": "^9.0.8",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",

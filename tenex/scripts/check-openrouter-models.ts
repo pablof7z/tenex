@@ -15,7 +15,31 @@ interface LLMConfig {
   }>;
 }
 
-async function checkOpenRouterModels() {
+interface OpenRouterModel {
+  id: string;
+  name?: string;
+  description?: string;
+  context_length?: number;
+  pricing?: {
+    prompt?: string;
+    completion?: string;
+  };
+}
+
+interface OpenRouterResponse {
+  data: OpenRouterModel[];
+}
+
+interface ChatCompletionChunk {
+  choices?: Array<{
+    delta?: {
+      content?: string;
+      reasoning?: string;
+    };
+  }>;
+}
+
+async function checkOpenRouterModels(): Promise<void> {
   try {
     // Read the llms.json file
     const llmsPath = resolve(process.cwd(), "llms.json");
@@ -43,12 +67,12 @@ async function checkOpenRouterModels() {
       process.exit(1);
     }
 
-    const data = await response.json();
+    const data = await response.json() as OpenRouterResponse;
     const models = data.data || [];
 
     // Find models that might support reasoning/thinking
     const reasoningKeywords = ['reasoning', 'thinking', 'o1', 'deepseek-r1', 'claude'];
-    const reasoningModels = models.filter((model: any) => {
+    const reasoningModels = models.filter((model: OpenRouterModel) => {
       const id = model.id.toLowerCase();
       const name = (model.name || '').toLowerCase();
       const desc = (model.description || '').toLowerCase();
@@ -60,7 +84,7 @@ async function checkOpenRouterModels() {
 
     console.log(chalk.green(`Found ${reasoningModels.length} models that might support reasoning:\n`));
 
-    reasoningModels.forEach((model: any) => {
+    reasoningModels.forEach((model: OpenRouterModel) => {
       console.log(chalk.yellow(`📦 ${model.id}`));
       console.log(chalk.gray(`   Name: ${model.name || 'N/A'}`));
       if (model.description) {
@@ -128,16 +152,23 @@ async function checkOpenRouterModels() {
             if (!data) continue;
 
             try {
-              const parsed = JSON.parse(data);
+              const parsed = JSON.parse(data) as unknown;
               
-              // Check for reasoning in various places
-              if (parsed.choices?.[0]?.delta?.reasoning) {
-                hasReasoningContent = true;
-                console.log(chalk.blue("💭 Reasoning:"), parsed.choices[0].delta.reasoning);
-              }
+              // Type guard for ChatCompletionChunk
+              const isChatCompletionChunk = (obj: unknown): obj is ChatCompletionChunk => {
+                return typeof obj === 'object' && obj !== null && 'choices' in obj;
+              };
               
-              if (parsed.choices?.[0]?.delta?.content) {
-                process.stdout.write(parsed.choices[0].delta.content);
+              if (isChatCompletionChunk(parsed)) {
+                // Check for reasoning in various places
+                if (parsed.choices?.[0]?.delta?.reasoning) {
+                  hasReasoningContent = true;
+                  console.log(chalk.blue("💭 Reasoning:"), parsed.choices[0].delta.reasoning);
+                }
+                
+                if (parsed.choices?.[0]?.delta?.content) {
+                  process.stdout.write(parsed.choices[0].delta.content);
+                }
               }
               
               // Log the full structure if it contains reasoning-related fields
