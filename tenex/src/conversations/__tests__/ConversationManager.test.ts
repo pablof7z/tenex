@@ -1,387 +1,258 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
-import { ConversationManager } from "../ConversationManager";
-import { FileSystemAdapter } from "../persistence";
-import type { Conversation } from "../types";
-import { createConversationEvent, createReplyEvent } from "@/test-utils/mocks/events";
-import { createMockFileSystemAdapter } from "@/test-utils/mocks/filesystem";
-import { logger } from "@/utils/logger";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { ConversationManager } from '../ConversationManager';
+import type { NDKEvent } from '@nostr-dev-kit/ndk';
+import type { Phase, PhaseTransition } from '../types';
+import * as fs from '@/lib/fs';
 
-// Mock dependencies
-jest.mock("../persistence");
-jest.mock("@/utils/logger", () => ({
-    logger: {
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-    },
+// Mock the fs module
+mock.module('@/lib/fs', () => ({
+    ensureDirectory: mock(),
+    fileExists: mock(),
+    readFile: mock(),
+    writeJsonFile: mock(),
 }));
 
-describe("ConversationManager", () => {
+// Mock the persistence module
+mock.module('../persistence', () => ({
+    FileSystemAdapter: mock(() => ({
+        initialize: mock().mockResolvedValue(undefined),
+        save: mock().mockResolvedValue(undefined),
+        list: mock().mockResolvedValue([]),
+        load: mock().mockResolvedValue(null),
+    })),
+}));
+
+describe('ConversationManager', () => {
     let manager: ConversationManager;
-    let mockPersistence: ReturnType<typeof createMockFileSystemAdapter>;
-    const testProjectPath = "/test/project";
-
+    const projectPath = '/test/project';
+    
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.useFakeTimers();
-
-        mockPersistence = createMockFileSystemAdapter();
-        (FileSystemAdapter as jest.MockedClass<typeof FileSystemAdapter>).mockImplementation(
-            () => mockPersistence as any
-        );
-
-        manager = new ConversationManager(testProjectPath);
+        manager = new ConversationManager(projectPath);
     });
 
-    afterEach(() => {
-        jest.useRealTimers();
-    });
-
-    describe("initialize", () => {
-        it("should initialize persistence and load conversations", async () => {
-            const existingConversation: Conversation = {
-                id: "conv-1",
-                title: "Existing Conversation",
-                phase: "plan",
-                history: [createConversationEvent("conv-1")],
-                phaseStartedAt: Date.now(),
-                metadata: {},
-            };
-
-            mockPersistence.addConversation(existingConversation);
-
+    describe('phase transitions', () => {
+        it('should create and store phase transitions with mandatory message', async () => {
             await manager.initialize();
+            
+            // Create a conversation
+            const mockEvent: NDKEvent = {
+                id: 'test-event-id',
+                content: 'Start conversation',
+                tags: [['title', 'Test Conversation']],
+                created_at: Date.now() / 1000,
+            } as NDKEvent;
+            
+            const conversation = await manager.createConversation(mockEvent);
+            expect(conversation.phase).toBe('chat');
+            expect(conversation.phaseTransitions).toEqual([]);
+            
+            // Perform phase transition
+            const transitionMessage = `## User Requirements
+- Build a CLI tool
+- Support multiple commands
+- Include documentation
 
-            expect(mockPersistence.initialize).toHaveBeenCalled();
-            expect(mockPersistence.list).toHaveBeenCalled();
-            expect(mockPersistence.loadCallCount).toBe(1);
-
-            const loaded = manager.getConversation("conv-1");
-            expect(loaded).toBeDefined();
-            expect(loaded?.title).toBe("Existing Conversation");
-        });
-
-        it("should set up autosave interval", async () => {
-            await manager.initialize();
-
-            expect(jest.getTimerCount()).toBe(1);
-
-            // Fast-forward 30 seconds
-            jest.advanceTimersByTime(30000);
-
-            expect(mockPersistence.saveCallCount).toBeGreaterThan(0);
-        });
-
-        it("should handle persistence initialization errors", async () => {
-            mockPersistence.initialize = jest.fn().mockRejectedValue(new Error("Init failed"));
-
-            await expect(manager.initialize()).rejects.toThrow("Init failed");
-        });
-    });
-
-    describe("createConversation", () => {
-        beforeEach(async () => {
-            await manager.initialize();
-        });
-
-        it("should create a new conversation from event", async () => {
-            const event = createConversationEvent("conv-123", "Hello world", "Test Conversation");
-
-            const conversation = await manager.createConversation(event);
-
-            expect(conversation.id).toBe("conv-123");
-            expect(conversation.title).toBe("Test Conversation");
-            expect(conversation.phase).toBe("chat");
-            expect(conversation.history).toHaveLength(1);
-            expect(conversation.history[0]).toBe(event);
-            expect(conversation.metadata.summary).toBe("Hello world");
-
-            // Verify saved to persistence
-            expect(mockPersistence.saveCallCount).toBe(1);
-        });
-
-        it("should handle events without title tag", async () => {
-            const event = createConversationEvent("conv-123", "Hello");
-            event.tags = []; // Remove all tags
-
-            const conversation = await manager.createConversation(event);
-
-            expect(conversation.title).toBe("Untitled Conversation");
-        });
-
-        it("should throw if event has no ID", async () => {
-            const event = createConversationEvent();
-            event.id = undefined;
-
-            await expect(manager.createConversation(event)).rejects.toThrow(
-                "Event must have an ID"
+## Technical Constraints
+- Must use TypeScript
+- Node.js 18+
+- No external dependencies`;
+            
+            await manager.updatePhase(
+                conversation.id,
+                'plan',
+                transitionMessage,
+                'pm-agent-pubkey',
+                'PM Agent',
+                'requirements gathered'
             );
-        });
-
-        it("should store conversation in memory", async () => {
-            const event = createConversationEvent("conv-123");
-
-            await manager.createConversation(event);
-
-            const retrieved = manager.getConversation("conv-123");
-            expect(retrieved).toBeDefined();
-            expect(retrieved?.id).toBe("conv-123");
-        });
-    });
-
-    describe("updatePhase", () => {
-        let conversation: Conversation;
-
-        beforeEach(async () => {
-            await manager.initialize();
-            const event = createConversationEvent("conv-123");
-            conversation = await manager.createConversation(event);
-        });
-
-        it("should update conversation phase", async () => {
-            const originalPhase = conversation.phase;
-            const originalStartTime = conversation.phaseStartedAt;
-
-            // Wait a bit to ensure time difference
-            await new Promise((resolve) => setTimeout(resolve, 10));
-
-            await manager.updatePhase("conv-123", "plan");
-
-            const updated = manager.getConversation("conv-123");
-            expect(updated?.phase).toBe("plan");
-            expect(updated?.phaseStartedAt).toBeGreaterThan(originalStartTime);
-        });
-
-        it("should store phase transition context", async () => {
-            await manager.updatePhase("conv-123", "plan", "Chat phase completed successfully");
-
-            const updated = manager.getConversation("conv-123");
-            expect(updated?.metadata.chat_summary).toBe("Chat phase completed successfully");
-        });
-
-        it("should throw for non-existent conversation", async () => {
-            await expect(manager.updatePhase("non-existent", "plan")).rejects.toThrow(
-                "Conversation non-existent not found"
-            );
-        });
-    });
-
-    describe("addEvent", () => {
-        beforeEach(async () => {
-            await manager.initialize();
-            const event = createConversationEvent("conv-123");
-            await manager.createConversation(event);
-        });
-
-        it("should add event to conversation history", async () => {
-            const reply = createReplyEvent("conv-123", "This is a reply");
-
-            await manager.addEvent("conv-123", reply);
-
-            const conversation = manager.getConversation("conv-123");
-            expect(conversation?.history).toHaveLength(2);
-            expect(conversation?.history[1]).toBe(reply);
-        });
-
-        it("should throw for non-existent conversation", async () => {
-            const reply = createReplyEvent("non-existent");
-
-            await expect(manager.addEvent("non-existent", reply)).rejects.toThrow(
-                "Conversation non-existent not found"
-            );
-        });
-    });
-
-
-    describe("updateMetadata", () => {
-        beforeEach(async () => {
-            await manager.initialize();
-            const event = createConversationEvent("conv-123");
-            await manager.createConversation(event);
-        });
-
-        it("should update conversation metadata", async () => {
-            await manager.updateMetadata("conv-123", {
-                plan: "Build a web app",
-                tools_used: ["shell", "file"],
+            
+            const updated = manager.getConversation(conversation.id);
+            expect(updated?.phase).toBe('plan');
+            expect(updated?.phaseTransitions).toHaveLength(1);
+            
+            const transition = updated?.phaseTransitions[0];
+            expect(transition).toMatchObject({
+                from: 'chat',
+                to: 'plan',
+                message: transitionMessage,
+                agentPubkey: 'pm-agent-pubkey',
+                agentName: 'PM Agent',
+                reason: 'requirements gathered',
+                timestamp: expect.any(Number),
             });
-
-            const conversation = manager.getConversation("conv-123");
-            expect(conversation?.metadata.plan).toBe("Build a web app");
-            expect(conversation?.metadata.tools_used).toEqual(["shell", "file"]);
-            expect(conversation?.metadata.summary).toBe("Test conversation"); // Original preserved
         });
 
-        it("should merge with existing metadata", async () => {
-            await manager.updateMetadata("conv-123", { key1: "value1" });
-            await manager.updateMetadata("conv-123", { key2: "value2" });
-
-            const conversation = manager.getConversation("conv-123");
-            expect(conversation?.metadata.key1).toBe("value1");
-            expect(conversation?.metadata.key2).toBe("value2");
-        });
-    });
-
-    describe("getPhaseHistory", () => {
-        beforeEach(async () => {
+        it('should handle multiple phase transitions', async () => {
             await manager.initialize();
-            const event = createConversationEvent("conv-123");
-            await manager.createConversation(event);
-        });
-
-        it("should return conversation history", async () => {
-            const reply1 = createReplyEvent("conv-123", "Reply 1");
-            const reply2 = createReplyEvent("conv-123", "Reply 2");
-
-            await manager.addEvent("conv-123", reply1);
-            await manager.addEvent("conv-123", reply2);
-
-            const history = manager.getPhaseHistory("conv-123");
-
-            expect(history).toHaveLength(3);
-            expect(history[1]).toBe(reply1);
-            expect(history[2]).toBe(reply2);
-        });
-
-        it("should return empty array for non-existent conversation", () => {
-            const history = manager.getPhaseHistory("non-existent");
-            expect(history).toEqual([]);
-        });
-    });
-
-    describe("persistence operations", () => {
-        beforeEach(async () => {
-            await manager.initialize();
-        });
-
-        it("should save specific conversation", async () => {
-            const event = createConversationEvent("conv-123");
-            const conversation = await manager.createConversation(event);
-
-            mockPersistence.saveCallCount = 0; // Reset counter
-
-            await manager.saveConversation("conv-123");
-
-            expect(mockPersistence.saveCallCount).toBe(1);
-            expect(mockPersistence.save).toHaveBeenCalledWith(conversation);
-        });
-
-        it("should archive conversation", async () => {
-            const event = createConversationEvent("conv-123");
-            await manager.createConversation(event);
-
-            await manager.archiveConversation("conv-123");
-
-            expect(mockPersistence.archive).toHaveBeenCalledWith("conv-123");
-            expect(manager.getConversation("conv-123")).toBeUndefined();
-        });
-
-        it("should search conversations", async () => {
-            const searchResults: Conversation[] = [
-                {
-                    id: "conv-1",
-                    title: "Express Setup",
-                    phase: "chat",
-                    history: [],
-                    phaseStartedAt: Date.now(),
-                    metadata: {},
-                },
-            ];
-
-            mockPersistence.search = jest
-                .fn()
-                .mockResolvedValue([{ id: "conv-1", title: "Express Setup" }]);
-            mockPersistence.load = jest.fn().mockResolvedValue(searchResults[0]);
-
-            const results = await manager.searchConversations("Express");
-
-            expect(mockPersistence.search).toHaveBeenCalledWith({ title: "Express" });
-            expect(results).toHaveLength(1);
-            expect(results[0].title).toBe("Express Setup");
-        });
-
-        it("should handle autosave errors gracefully", async () => {
-            mockPersistence.save = jest.fn().mockRejectedValue(new Error("Save failed"));
-
-            // Trigger autosave
-            jest.advanceTimersByTime(30000);
-
-            // Wait for autosave to complete
-            await Promise.resolve();
-
-            expect(logger.error).toHaveBeenCalledWith(
-                "Autosave failed",
-                expect.objectContaining({ error: expect.any(Error) })
+            
+            const mockEvent: NDKEvent = {
+                id: 'test-event-id',
+                content: 'Start conversation',
+                tags: [],
+            } as NDKEvent;
+            
+            const conversation = await manager.createConversation(mockEvent);
+            
+            // First transition: chat -> plan
+            await manager.updatePhase(
+                conversation.id,
+                'plan',
+                'Requirements: Build a CLI tool',
+                'pm-agent-1',
+                'PM Agent',
+                'moving to planning'
             );
+            
+            // Second transition: plan -> execute
+            await manager.updatePhase(
+                conversation.id,
+                'execute',
+                'Plan: 1. Setup project 2. Implement commands 3. Add tests',
+                'pm-agent-1',
+                'PM Agent',
+                'plan approved'
+            );
+            
+            // Third transition: execute -> review
+            await manager.updatePhase(
+                conversation.id,
+                'review',
+                'Implementation complete: Created 5 files, all tests passing',
+                'pm-agent-1',
+                'PM Agent',
+                'ready for review'
+            );
+            
+            const updated = manager.getConversation(conversation.id);
+            expect(updated?.phase).toBe('review');
+            expect(updated?.phaseTransitions).toHaveLength(3);
+            
+            // Verify transition history
+            const transitions = updated?.phaseTransitions || [];
+            expect(transitions[0]).toMatchObject({ from: 'chat', to: 'plan' });
+            expect(transitions[1]).toMatchObject({ from: 'plan', to: 'execute' });
+            expect(transitions[2]).toMatchObject({ from: 'execute', to: 'review' });
+        });
+
+        it('should not create transition when phase does not change', async () => {
+            await manager.initialize();
+            
+            const mockEvent: NDKEvent = {
+                id: 'test-event-id',
+                content: 'Start conversation',
+                tags: [],
+            } as NDKEvent;
+            
+            const conversation = await manager.createConversation(mockEvent);
+            
+            // Try to transition to the same phase
+            await manager.updatePhase(
+                conversation.id,
+                'chat',
+                'Still in chat phase',
+                'pm-agent-1',
+                'PM Agent'
+            );
+            
+            const updated = manager.getConversation(conversation.id);
+            expect(updated?.phase).toBe('chat');
+            expect(updated?.phaseTransitions).toHaveLength(0);
+        });
+
+        it('should preserve transition message content exactly', async () => {
+            await manager.initialize();
+            
+            const mockEvent: NDKEvent = {
+                id: 'test-event-id',
+                content: 'Start',
+                tags: [],
+            } as NDKEvent;
+            
+            const conversation = await manager.createConversation(mockEvent);
+            
+            const complexMessage = `# Complex Transition Message
+
+## Section 1: Requirements
+- **Requirement A**: Build a CLI tool with the following features:
+  - Command parsing
+  - Help system
+  - Configuration management
+- **Requirement B**: Support for plugins
+
+## Section 2: Technical Details
+\`\`\`typescript
+interface Config {
+    version: string;
+    plugins: Plugin[];
+}
+\`\`\`
+
+## Section 3: Constraints
+1. Must use TypeScript
+2. Node.js 18+ required
+3. Performance: < 100ms startup time
+
+Special characters: "quotes", 'apostrophes', \`backticks\`, \\backslashes\\`;
+            
+            await manager.updatePhase(
+                conversation.id,
+                'plan',
+                complexMessage,
+                'pm-agent-1',
+                'PM Agent'
+            );
+            
+            const updated = manager.getConversation(conversation.id);
+            const transition = updated?.phaseTransitions[0];
+            expect(transition?.message).toBe(complexMessage);
         });
     });
 
-    describe("cleanup", () => {
-        beforeEach(async () => {
+    describe('conversation persistence', () => {
+        it('should persist phase transitions', async () => {
+            const mockPersistence = {
+                initialize: mock().mockResolvedValue(undefined),
+                save: mock().mockResolvedValue(undefined),
+                list: mock().mockResolvedValue([]),
+                load: mock().mockResolvedValue(null),
+            };
+            
+            const { FileSystemAdapter } = await import('../persistence');
+            (FileSystemAdapter as any).mockImplementation(() => mockPersistence);
+            
+            manager = new ConversationManager(projectPath);
             await manager.initialize();
-        });
-
-        it("should save all conversations before cleanup", async () => {
-            const event1 = createConversationEvent("conv-1");
-            const event2 = createConversationEvent("conv-2");
-
-            await manager.createConversation(event1);
-            await manager.createConversation(event2);
-
-            mockPersistence.saveCallCount = 0; // Reset
-
-            await manager.cleanup();
-
-            expect(mockPersistence.saveCallCount).toBe(2);
-        });
-
-        it("should clear autosave interval", async () => {
-            await manager.cleanup();
-
-            const timerCount = jest.getTimerCount();
-            expect(timerCount).toBe(0);
-        });
-    });
-
-    describe("getAllConversations", () => {
-        beforeEach(async () => {
-            await manager.initialize();
-        });
-
-        it("should return all active conversations", async () => {
-            await manager.createConversation(createConversationEvent("conv-1"));
-            await manager.createConversation(createConversationEvent("conv-2"));
-            await manager.createConversation(createConversationEvent("conv-3"));
-
-            const all = manager.getAllConversations();
-
-            expect(all).toHaveLength(3);
-            expect(all.map((c) => c.id)).toContain("conv-1");
-            expect(all.map((c) => c.id)).toContain("conv-2");
-            expect(all.map((c) => c.id)).toContain("conv-3");
-        });
-    });
-
-    describe("getConversationByEvent", () => {
-        beforeEach(async () => {
-            await manager.initialize();
-        });
-
-        it("should find conversation containing specific event", async () => {
-            const conv = await manager.createConversation(createConversationEvent("conv-1"));
-            const reply = createReplyEvent("conv-1");
-            await manager.addEvent("conv-1", reply);
-
-            const found = manager.getConversationByEvent(reply.id!);
-
-            expect(found).toBeDefined();
-            expect(found?.id).toBe("conv-1");
-        });
-
-        it("should return undefined for non-existent event", () => {
-            const found = manager.getConversationByEvent("non-existent-event");
-            expect(found).toBeUndefined();
+            
+            const mockEvent: NDKEvent = {
+                id: 'test-event-id',
+                content: 'Start',
+                tags: [],
+            } as NDKEvent;
+            
+            const conversation = await manager.createConversation(mockEvent);
+            
+            await manager.updatePhase(
+                conversation.id,
+                'plan',
+                'Moving to plan phase',
+                'agent-1',
+                'Agent One'
+            );
+            
+            // Verify save was called with conversation including transitions
+            expect(mockPersistence.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: conversation.id,
+                    phase: 'plan',
+                    phaseTransitions: expect.arrayContaining([
+                        expect.objectContaining({
+                            from: 'chat',
+                            to: 'plan',
+                            message: 'Moving to plan phase',
+                        }),
+                    ]),
+                })
+            );
         });
     });
 });

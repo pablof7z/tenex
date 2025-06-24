@@ -144,6 +144,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
                     ? Number(data.phaseStartedAt)
                     : undefined,
                 metadata,
+                phaseTransitions: data.phaseTransitions || [],
             };
 
             return conversation;

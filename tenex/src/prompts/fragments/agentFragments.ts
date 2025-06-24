@@ -112,16 +112,17 @@ ${formattedHistory}`;
 interface PhaseContextArgs {
     phase: Phase;
     phaseMetadata?: Record<string, unknown>;
+    conversation?: Conversation;
 }
 
 export const phaseContextFragment: PromptFragment<PhaseContextArgs> = {
     id: "phase-context",
     priority: 15,
-    template: ({ phase, phaseMetadata }) => {
+    template: ({ phase, conversation }) => {
         const parts = [`## Current Phase: ${phase.toUpperCase()}`];
 
-        // Add phase-specific context
-        const context = getPhaseContext(phase, phaseMetadata);
+        // Add phase-specific context from conversation transitions
+        const context = getPhaseContext(phase, conversation);
         if (context) {
             parts.push(context);
         }
@@ -190,24 +191,20 @@ function getPhaseInstructions(phase: Phase): string {
     }
 }
 
-function getPhaseContext(phase: Phase, metadata?: Record<string, unknown>): string | null {
-    switch (phase) {
-        case "plan":
-            if (metadata?.requirements) {
-                return `### Requirements to Address\n${metadata.requirements}`;
-            }
-            break;
-        case "execute":
-            if (metadata?.plan) {
-                return `### Current Plan\n${metadata.plan}`;
-            }
-            break;
-        case "review":
-            if (metadata?.workToReview) {
-                return `### Work to Review\n${metadata.workToReview}`;
-            }
-            break;
+function getPhaseContext(phase: Phase, conversation?: Conversation): string | null {
+    if (!conversation?.phaseTransitions?.length) {
+        return null;
     }
+    
+    // Get the most recent transition into this phase
+    const latestTransition = conversation.phaseTransitions
+        .filter(t => t.to === phase)
+        .sort((a, b) => b.timestamp - a.timestamp)[0];
+    
+    if (latestTransition) {
+        return `### Context from Previous Phase\n${latestTransition.message}`;
+    }
+    
     return null;
 }
 

@@ -5,7 +5,7 @@ import {
     createTracingContext,
     createTracingLogger,
 } from "@/tracing";
-import type { Phase } from "@/conversations/types";
+import type { Phase, PhaseTransition } from "@/conversations/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
@@ -59,6 +59,7 @@ export class ConversationManager {
             metadata: {
                 summary: event.content,
             },
+            phaseTransitions: [], // Initialize empty phase transitions array
         };
 
         this.conversations.set(id, conversation);
@@ -80,7 +81,14 @@ export class ConversationManager {
         return this.conversations.get(id);
     }
 
-    async updatePhase(id: string, phase: Phase, context?: string): Promise<void> {
+    async updatePhase(
+        id: string, 
+        phase: Phase, 
+        message: string,
+        agentPubkey: string,
+        agentName: string,
+        reason?: string
+    ): Promise<void> {
         const conversation = this.conversations.get(id);
         if (!conversation) {
             throw new Error(`Conversation ${id} not found`);
@@ -105,21 +113,30 @@ export class ConversationManager {
             tracingLogger.info(`[CONVERSATION] Staying in phase "${phase}"`, {
                 phase,
                 conversationTitle: conversation.title,
-                context,
+                message: message.substring(0, 100) + '...',
             });
             return;
         }
 
+        // Create phase transition record
+        const transition: PhaseTransition = {
+            from: previousPhase,
+            to: phase,
+            message,
+            timestamp: Date.now(),
+            agentPubkey,
+            agentName,
+            reason
+        };
+
+        // Update conversation
         conversation.phase = phase;
         conversation.phaseStartedAt = Date.now();
-
-        // Store phase transition context
-        if (context) {
-            conversation.metadata[`${previousPhase}_summary`] = context;
-        }
+        
+        conversation.phaseTransitions.push(transition);
 
         tracingLogger.logTransition(previousPhase, phase, {
-            context,
+            message: message.substring(0, 100) + '...', // Log preview
             conversationTitle: conversation.title,
         });
 

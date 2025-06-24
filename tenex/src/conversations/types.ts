@@ -9,6 +9,7 @@ export interface Conversation {
     history: NDKEvent[];
     phaseStartedAt?: number;
     metadata: ConversationMetadata;
+    phaseTransitions: PhaseTransition[];  // First-class phase transition history
 }
 
 export interface ConversationMetadata {
@@ -29,7 +30,9 @@ export interface PhaseContext {
 export interface PhaseTransition {
     from: Phase;
     to: Phase;
-    context: string; // Compacted context for the new phase
+    message: string;        // Comprehensive context from the transition
     timestamp: number;
-    reason?: string;
+    agentPubkey: string;    // Track which agent initiated
+    agentName: string;      // Human-readable agent name
+    reason?: string;        // Brief description (optional)
 }

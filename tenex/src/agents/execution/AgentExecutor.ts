@@ -19,10 +19,12 @@ import { logger } from "@/utils/logger";
 import type { AgentExecutionContext, AgentExecutionResult } from "./types";
 import { ReasonActLoop } from "./ReasonActLoop";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import type { ToolExecutionResult } from "@/tools/types";
+import type { ToolExecutionResult, ToolResult } from "@/tools/types";
 import { getDefaultToolsForAgent } from "@/agents/constants";
 import type { ConversationManager } from "@/conversations/ConversationManager";
 import { openRouterPricing } from "@/llm/pricing";
+import { getTool } from "@/tools/registry";
+import { executeTools } from "@/tools/toolExecutor";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/pm-routing";
 
@@ -121,6 +123,10 @@ export class AgentExecutor {
             );
 
             // 6. Process 'next_action' tool results for handoffs and phase transitions
+            // Ensure projectPath is set in context
+            if (!context.projectPath) {
+                context.projectPath = process.cwd();
+            }
             const { nextResponder, phaseTransition } = await this.processNextActionResults(
                 reasonActResult.allToolResults || [],
                 context
@@ -228,6 +234,15 @@ export class AgentExecutor {
             systemPromptBuilder
                 .add("pm-routing-instructions", {})
                 .add("pm-handoff-guidance", {});
+            
+            // Add Claude Code report fragment if we have one
+            if (context.additionalContext?.claudeCodeReport) {
+                systemPromptBuilder.add("claude-code-report", {
+                    phase: context.phase,
+                    previousPhase: context.previousPhase,
+                    claudeCodeReport: context.additionalContext.claudeCodeReport
+                });
+            }
         }
 
         const systemPrompt = systemPromptBuilder.build();
@@ -240,6 +255,7 @@ export class AgentExecutor {
             .add("phase-context", {
                 phase: context.phase,
                 phaseMetadata: context.conversation.metadata,
+                conversation: context.conversation,
             })
             .add("phase-constraints", {
                 phase: context.phase,
@@ -408,6 +424,7 @@ export class AgentExecutor {
         } else if (actionType === "phase_transition") {
             // Process phase transition
             const requestedPhase = metadata.requestedPhase as string;
+            const transitionMessage = metadata.transitionMessage as string;
             phaseTransition = requestedPhase;
             
             // Update conversation phase if ConversationManager is available
@@ -416,6 +433,9 @@ export class AgentExecutor {
                     await this.conversationManager.updatePhase(
                         context.conversation.id,
                         requestedPhase as Phase,
+                        transitionMessage,
+                        context.agent.pubkey,
+                        context.agent.name,
                         metadata.reason as string
                     );
                     
@@ -423,9 +443,29 @@ export class AgentExecutor {
                         conversationId: context.conversation.id,
                         fromPhase: context.phase,
                         toPhase: requestedPhase,
-                        reason: metadata.reason,
-                        agentName: context.agent.name,
+                        directClaudeCode: requestedPhase === 'plan' || requestedPhase === 'execute'
                     });
+                    
+                    // Direct Claude Code invocation for plan/execute phases
+                    if (requestedPhase === 'plan' || requestedPhase === 'execute') {
+                        // Add safeguards to prevent infinite loops or unexpected behavior
+                        const shouldAutoInvoke = this.shouldAutoInvokeClaudeCode(context, requestedPhase);
+                        
+                        if (shouldAutoInvoke) {
+                            const claudeResult = await this.invokeClaudeCodeDirectly(
+                                transitionMessage,
+                                requestedPhase,
+                                context
+                            );
+                            
+                            // Store result for PM agent to process
+                            context.additionalContext = {
+                                claudeCodeReport: claudeResult.output,
+                                claudeCodeSuccess: claudeResult.success,
+                                directExecution: true
+                            };
+                        }
+                    }
                 } catch (error) {
                     logger.error("Failed to update conversation phase", {
                         conversationId: context.conversation.id,
@@ -444,5 +484,52 @@ export class AgentExecutor {
         return { nextResponder, phaseTransition };
     }
 
+    /**
+     * Invoke Claude Code directly for plan/execute phases
+     */
+    private async invokeClaudeCodeDirectly(
+        message: string,
+        phase: string,
+        context: AgentExecutionContext
+    ): Promise<ToolResult> {
+        const claudeCodeTool = getTool('claude_code');
+        if (!claudeCodeTool) {
+            return { success: false, error: 'Claude Code tool not available' };
+        }
+        
+        try {
+            const result = await claudeCodeTool.run(
+                {
+                    prompt: message,
+                    mode: phase === 'plan' ? 'plan' : 'run'
+                },
+                {
+                    projectPath: context.projectPath || process.cwd(),
+                    conversationId: context.conversation.id,
+                    phase: context.phase,
+                    agent: context.agent,
+                    agentName: context.agent.name
+                }
+            );
+            
+            return result;
+        } catch (error) {
+            return { 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Claude Code execution failed' 
+            };
+        }
+    }
+
+    /**
+     * Safeguard method to determine if automatic invocation should occur
+     */
+    private shouldAutoInvokeClaudeCode(
+        context: AgentExecutionContext, 
+        phase: string
+    ): boolean {
+        // Prevent auto-invocation if already in a claude_code execution context
+        return !context.additionalContext?.directExecution;
+    }
 
 }

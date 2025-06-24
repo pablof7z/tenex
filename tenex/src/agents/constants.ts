@@ -12,17 +12,24 @@ export const PM_ONLY_TOOLS = ["next_action", "get_current_requirements"];
  * Get the default tools for an agent based on their role and phase
  */
 export function getDefaultToolsForAgent(isPMAgent: boolean, phase?: string): string[] {
-    const tools = [...DEFAULT_AGENT_TOOLS];
-
+    const baseTools = ['file', 'shell'];
+    
     if (isPMAgent) {
-        // PM always gets next_action
-        tools.push("next_action");
-
-        // PM only gets get_current_requirements in chat phase
-        if (phase === "chat") {
-            tools.push("get_current_requirements");
+        const pmTools = [...baseTools, 'next_action'];
+        
+        // Add claude_code tool for plan and execute phases (explicit for clarity)
+        if (phase === 'plan' || phase === 'execute') {
+            pmTools.push('claude_code');
         }
+        
+        // Add requirements tool only for chat phase
+        if (phase === 'chat') {
+            pmTools.push('get_current_requirements');
+        }
+        
+        return pmTools;
     }
-
-    return tools;
+    
+    // Non-PM agents get default tools
+    return [...DEFAULT_AGENT_TOOLS];
 }

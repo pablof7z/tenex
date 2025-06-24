@@ -1,5 +1,7 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
+import { getPhaseTransitionInstructions } from "./phase";
+import type { Phase } from "@/conversations/types";
 
 // Project inventory context fragment
 interface InventoryContextArgs {
@@ -29,5 +31,52 @@ No project inventory is available yet. An inventory can be generated to provide 
     },
 };
 
+// Claude Code report processing fragment for PM agents
+interface ClaudeCodeReportArgs {
+    phase: Phase;
+    previousPhase?: Phase;
+    claudeCodeReport?: string;
+}
+
+export const claudeCodeReportFragment: PromptFragment<ClaudeCodeReportArgs> = {
+    id: "claude-code-report",
+    priority: 30,
+    template: ({ phase, previousPhase, claudeCodeReport }) => {
+        const parts = [];
+        
+        // If we have a Claude Code report from direct invocation
+        if (claudeCodeReport && (phase === 'plan' || phase === 'execute')) {
+            parts.push(`
+## Claude Code Report
+
+Claude Code has completed the following work:
+
+${claudeCodeReport}
+
+Your role now is to:
+1. Review the work completed
+2. Identify any gaps or issues
+3. Coordinate with other agents as needed
+4. Determine next steps
+`);
+        }
+        
+        // Add phase transition instructions if we have previousPhase
+        if (previousPhase && previousPhase !== phase) {
+            parts.push(getPhaseTransitionInstructions(previousPhase, phase));
+        }
+        
+        return parts.join('\n\n');
+    },
+    validateArgs: (args): args is ClaudeCodeReportArgs => {
+        return (
+            typeof args === "object" &&
+            args !== null &&
+            typeof (args as ClaudeCodeReportArgs).phase === "string"
+        );
+    },
+};
+
 // Register fragments
 fragmentRegistry.register(inventoryContextFragment);
+fragmentRegistry.register(claudeCodeReportFragment);

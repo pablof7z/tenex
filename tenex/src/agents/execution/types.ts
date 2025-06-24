@@ -9,8 +9,15 @@ export interface AgentExecutionContext {
     agent: Agent;
     conversation: Conversation;
     phase: Phase;
+    previousPhase?: Phase;
     lastUserMessage?: string;
     projectContext?: Record<string, unknown>;
+    projectPath?: string;
+    additionalContext?: {
+        claudeCodeReport?: string;
+        claudeCodeSuccess?: boolean;
+        directExecution?: boolean;
+    };
 }
 
 export interface AgentExecutionResult {
