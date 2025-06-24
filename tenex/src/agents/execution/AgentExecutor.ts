@@ -1,5 +1,6 @@
 import type { CompletionResponse, LLMService, Message } from "@/llm/types";
-import type { ConversationPublisher, TypingIndicatorPublisher } from "@/nostr";
+import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/nostr";
+import type NDK from "@nostr-dev-kit/ndk";
 import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
 import {
@@ -19,14 +20,18 @@ import { ReasonActLoop } from "./ReasonActLoop";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { ToolExecutionResult } from "@/tools/types";
 import { getDefaultToolsForAgent } from "@/agents/constants";
+import type { ConversationManager } from "@/conversations/ConversationManager";
+import { openRouterPricing } from "@/llm/pricing";
+import "@/prompts/fragments/available-agents";
+import "@/prompts/fragments/pm-routing";
 
 export class AgentExecutor {
     private reasonActLoop: ReasonActLoop;
 
     constructor(
         private llmService: LLMService,
-        private conversationPublisher: ConversationPublisher,
-        private typingIndicatorPublisher?: TypingIndicatorPublisher
+        private ndk: NDK,
+        private conversationManager?: ConversationManager
     ) {
         this.reasonActLoop = new ReasonActLoop(llmService);
     }
@@ -57,29 +62,28 @@ export class AgentExecutor {
 
         try {
             // 1. Get phase-aware tools for this agent
-            const phaseAwareTools = context.agent.isBoss 
+            const phaseAwareTools = context.agent.isPMAgent
                 ? getDefaultToolsForAgent(true, context.phase)
                 : context.agent.tools || getDefaultToolsForAgent(false);
 
             // Create a modified agent with phase-aware tools
             const agentWithPhaseTools = {
                 ...context.agent,
-                tools: phaseAwareTools
+                tools: phaseAwareTools,
             };
 
             // 2. Build the agent's prompt with phase-aware agent
             const promptContext = await this.buildPromptContext({
                 ...context,
-                agent: agentWithPhaseTools
+                agent: agentWithPhaseTools,
             });
 
             // 3. Publish typing indicator start
-            if (this.typingIndicatorPublisher) {
-                await this.typingIndicatorPublisher.publishTypingStart(
-                    triggeringEvent,
-                    context.agent.signer
-                );
-            }
+            await publishTypingStart(
+                this.ndk,
+                triggeringEvent,
+                context.agent.signer
+            );
 
             // 4. Generate initial response via LLM
             tracingLogger.logLLMRequest(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
@@ -109,18 +113,18 @@ export class AgentExecutor {
             );
 
             // 5. Build metadata with final response
-            const llmMetadata = this.buildLLMMetadata(
+            const llmMetadata = await this.buildLLMMetadata(
                 reasonActResult.finalResponse,
                 promptContext.systemPrompt,
                 userPrompt
             );
 
-            // 6. Currently, agents don't hand off to other agents
-            const nextResponder = undefined;
+            // 6. Process 'next_action' tool results for handoffs and phase transitions
+            const { nextResponder, phaseTransition } = await this.processNextActionResults(
+                reasonActResult.allToolResults || [],
+                context
+            );
 
-            // 7. Check for phase transition in tool results
-            const phaseTransition = this.extractPhaseTransition(reasonActResult.allToolResults);
-            
             // 8. Publish response to Nostr
             const publishedEvent = await this.publishResponse(
                 context,
@@ -142,17 +146,16 @@ export class AgentExecutor {
             );
 
             // 9. Publish typing indicator stop
-            if (this.typingIndicatorPublisher) {
-                await this.typingIndicatorPublisher.publishTypingStop(
-                    triggeringEvent,
-                    context.agent.signer
-                );
-            }
+            await publishTypingStop(
+                this.ndk,
+                triggeringEvent,
+                context.agent.signer
+            );
 
             tracingLogger.completeOperation("agent_execution", {
                 agentName: context.agent.name,
                 responseLength: reasonActResult.finalContent.length,
-                toolExecutions: reasonActResult.allToolResults.length,
+                toolExecutions: reasonActResult.toolExecutions,
                 nextAgent: nextResponder,
             });
 
@@ -166,12 +169,11 @@ export class AgentExecutor {
             };
         } catch (error) {
             // Ensure typing indicator is stopped even on error
-            if (this.typingIndicatorPublisher) {
-                await this.typingIndicatorPublisher.publishTypingStop(
-                    triggeringEvent,
-                    context.agent.signer
-                );
-            }
+            await publishTypingStop(
+                this.ndk,
+                triggeringEvent,
+                context.agent.signer
+            );
 
             tracingLogger.failOperation("agent_execution", error, {
                 agentName: context.agent.name,
@@ -196,8 +198,11 @@ export class AgentExecutor {
         const hasInventory =
             context.phase === "chat" ? await inventoryExists(process.cwd()) : false;
 
-        // Build system prompt
-        const systemPrompt = promptBuilder
+        // Get all available agents for handoffs
+        const availableAgents = Array.from(projectCtx.agents.values());
+
+        // Build system prompt with available agents fragment for all agents
+        let systemPromptBuilder = promptBuilder
             .add("agent-system-prompt", {
                 agent: context.agent,
                 phase: context.phase,
@@ -206,8 +211,20 @@ export class AgentExecutor {
                 projectRepository:
                     project.tags.find((tag) => tag[0] === "repo")?.[1] || "No repository",
             })
-            .add("project-inventory-context", { hasInventory })
-            .build();
+            .add("available-agents", {
+                agents: availableAgents,
+                currentAgentPubkey: context.agent.pubkey,
+            })
+            .add("project-inventory-context", { hasInventory });
+
+        // Add PM-specific routing instructions for PM agents
+        if (context.agent.isPMAgent) {
+            systemPromptBuilder = systemPromptBuilder
+                .add("pm-routing-instructions", {})
+                .add("pm-handoff-guidance", {});
+        }
+
+        const systemPrompt = systemPromptBuilder.build();
 
         // Build conversation history
         const conversationHistory = new PromptBuilder()
@@ -255,17 +272,16 @@ export class AgentExecutor {
             .build();
 
         const messages: Message[] = [
-            { role: "system", content: promptContext.systemPrompt },
-            { role: "user", content: userPrompt },
+            { role: "system", content: promptContext.systemPrompt } as Message,
+            { role: "user", content: userPrompt } as Message,
         ];
 
-        const response = await this.llmService.complete({ 
+        const response = await this.llmService.complete({
             messages,
-            options: { model: llmConfig }
+            options: {},
         });
         return { response, userPrompt };
     }
-
 
     /**
      * Publish the agent's response to Nostr
@@ -282,14 +298,14 @@ export class AgentExecutor {
         const tracingLogger = tracingContext
             ? createTracingLogger(tracingContext, "nostr")
             : logger.forModule("nostr");
-        
+
         // Check if this is a phase transition request
         const additionalTags: NDKTag[] = [];
         if (phaseTransition) {
             additionalTags.push(["phase", phaseTransition]);
         }
-        
-        const event = await this.conversationPublisher.publishAgentResponse(
+
+        const event = await publishAgentResponse(
             triggeringEvent,
             content,
             nextResponder || "",
@@ -299,15 +315,11 @@ export class AgentExecutor {
         );
 
         if (tracingContext && "logEventPublished" in tracingLogger) {
-            tracingLogger.logEventPublished(
-                event.id || "unknown",
-                "agent_response",
-                {
-                    agentName: context.agent.name,
-                    nextResponder,
-                    hasLLMMetadata: !!llmMetadata,
-                }
-            );
+            tracingLogger.logEventPublished(event.id || "unknown", "agent_response", {
+                agentName: context.agent.name,
+                nextResponder,
+                hasLLMMetadata: !!llmMetadata,
+            });
         }
 
         return event;
@@ -316,28 +328,29 @@ export class AgentExecutor {
     /**
      * Build LLM metadata for response tracking
      */
-    private buildLLMMetadata(
+    private async buildLLMMetadata(
         response: CompletionResponse,
         systemPrompt: string,
         userPrompt: string
-    ): LLMMetadata | undefined {
+    ): Promise<LLMMetadata | undefined> {
         if (!response.usage) {
             return undefined;
         }
 
         // Calculate cost based on model and token usage
-        const cost = this.calculateCost(
-            response.model || "unknown",
-            response.usage.promptTokens,
-            response.usage.completionTokens
+        const responseWithModel = response as CompletionResponse & { model?: string };
+        const cost = await this.calculateCost(
+            responseWithModel.model || "unknown",
+            response.usage.prompt_tokens,
+            response.usage.completion_tokens
         );
 
         return {
-            model: response.model || "unknown",
+            model: responseWithModel.model || "unknown",
             cost,
-            promptTokens: response.usage.promptTokens,
-            completionTokens: response.usage.completionTokens,
-            totalTokens: response.usage.totalTokens,
+            promptTokens: response.usage.prompt_tokens,
+            completionTokens: response.usage.completion_tokens,
+            totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
             systemPrompt,
             userPrompt,
             rawResponse: response.content,
@@ -345,53 +358,107 @@ export class AgentExecutor {
     }
 
     /**
-     * Calculate cost based on model and token usage
+     * Calculate cost based on model and token usage using OpenRouter pricing
      */
-    private calculateCost(model: string, promptTokens: number, completionTokens: number): number {
-        // Cost per 1M tokens (rough estimates, should be updated with actual pricing)
-        const costPerMillion: Record<string, { prompt: number; completion: number }> = {
-            "gpt-4": { prompt: 30, completion: 60 },
-            "gpt-4-turbo": { prompt: 10, completion: 30 },
-            "gpt-3.5-turbo": { prompt: 0.5, completion: 1.5 },
-            "claude-3-opus": { prompt: 15, completion: 75 },
-            "claude-3-sonnet": { prompt: 3, completion: 15 },
-            "claude-3-haiku": { prompt: 0.25, completion: 1.25 },
-            "gemini-2.5-flash": { prompt: 0.075, completion: 0.3 },
-            "gemini-1.5-pro": { prompt: 3.5, completion: 10.5 },
-            "gemini-1.5-flash": { prompt: 0.35, completion: 1.05 },
-            "mistral-large": { prompt: 8, completion: 24 },
-            "mixtral-8x7b": { prompt: 0.7, completion: 0.7 },
-        };
-
-        // Find the model in our pricing table
-        const modelLower = model.toLowerCase();
-        let pricing = { prompt: 1, completion: 1 }; // Default pricing if model not found
-
-        for (const [key, value] of Object.entries(costPerMillion)) {
-            if (modelLower.includes(key)) {
-                pricing = value;
-                break;
+    private async calculateCost(model: string, promptTokens: number, completionTokens: number): Promise<number> {
+        try {
+            // Try to find exact model match first
+            let modelId = await openRouterPricing.findModelId(model);
+            
+            // If no exact match, use the model name as-is
+            if (!modelId) {
+                modelId = model;
             }
+            
+            return await openRouterPricing.calculateCost(modelId, promptTokens, completionTokens);
+        } catch (error) {
+            logger.error("Failed to calculate cost using OpenRouter pricing", {
+                model,
+                promptTokens,
+                completionTokens,
+                error: error instanceof Error ? error.message : String(error),
+            });
+            
+            // Fallback to minimal default cost calculation
+            return (promptTokens + completionTokens) / 1_000_000 * 1.0; // $1 per 1M tokens
         }
-
-        // Calculate cost in USD
-        const promptCost = (promptTokens / 1_000_000) * pricing.prompt;
-        const completionCost = (completionTokens / 1_000_000) * pricing.completion;
-
-        return promptCost + completionCost;
     }
+
 
     /**
-     * Extract phase transition from tool results
+     * Process NextActionExecutor tool results for agent handoffs and phase transitions
      */
-    private extractPhaseTransition(toolResults: ToolExecutionResult[]): string | undefined {
-        for (const result of toolResults) {
-            if (result.toolName === "phase_transition" && result.success && result.metadata?.requestedPhase) {
-                return result.metadata.requestedPhase as string;
+    private async processNextActionResults(
+        toolResults: ToolExecutionResult[],
+        context: AgentExecutionContext
+    ): Promise<{ nextResponder: string | undefined; phaseTransition: string | undefined }> {
+        let nextResponder: string | undefined = undefined;
+        let phaseTransition: string | undefined = undefined;
+
+        // Look for NextActionExecutor tool results
+        const nextActionResult = toolResults.find(
+            (result) => result.toolName === "next_action" && result.success && result.metadata
+        );
+
+        if (!nextActionResult?.metadata) {
+            return { nextResponder, phaseTransition };
+        }
+
+        const metadata = nextActionResult.metadata;
+        const actionType = metadata.actionType;
+
+        if (actionType === "handoff") {
+            // Extract target agent pubkey for handoffs
+            nextResponder = metadata.targetAgentPubkey as string;
+            
+            logger.info("Agent handoff processed", {
+                fromAgent: context.agent.name,
+                fromPubkey: context.agent.pubkey,
+                toAgent: metadata.targetAgentName,
+                toPubkey: metadata.targetAgentPubkey,
+                reason: metadata.reason,
+                phase: context.phase,
+            });
+            
+        } else if (actionType === "phase_transition") {
+            // Process phase transition
+            const requestedPhase = metadata.requestedPhase as string;
+            phaseTransition = requestedPhase;
+            
+            // Update conversation phase if ConversationManager is available
+            if (this.conversationManager) {
+                try {
+                    await this.conversationManager.updatePhase(
+                        context.conversation.id,
+                        requestedPhase as Phase,
+                        metadata.reason as string
+                    );
+                    
+                    logger.info("Phase transition processed", {
+                        conversationId: context.conversation.id,
+                        fromPhase: context.phase,
+                        toPhase: requestedPhase,
+                        reason: metadata.reason,
+                        agentName: context.agent.name,
+                    });
+                } catch (error) {
+                    logger.error("Failed to update conversation phase", {
+                        conversationId: context.conversation.id,
+                        requestedPhase,
+                        error: error instanceof Error ? error.message : String(error),
+                    });
+                }
+            } else {
+                logger.warn("ConversationManager not available for phase transition", {
+                    conversationId: context.conversation.id,
+                    requestedPhase,
+                });
             }
         }
-        return undefined;
+
+        return { nextResponder, phaseTransition };
     }
+
 
     /**
      * Get phase-specific constraints
