@@ -4,7 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { LLMConfigEditor } from "@/llm/LLMConfigEditor";
 import { toKebabCase } from "@/utils/string";
-import { ensureTenexInGitignore, initializeGitRepository, isGitRepository } from "@/utils/git";
+import { ensureTenexInGitignore, initializeGitRepository } from "@/utils/git";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -53,15 +53,10 @@ export class ProjectManager implements IProjectManager {
             if (projectData.repoUrl) {
                 await this.cloneRepository(projectData.repoUrl, projectPath);
             } else {
-                // Create project directory
+                // Create project directory and initialize git
                 await fs.mkdir(projectPath, { recursive: true });
-                
-                // Initialize git repository
-                const isGitRepo = await isGitRepository(projectPath);
-                if (!isGitRepo) {
-                    await initializeGitRepository(projectPath);
-                    logger.info("Initialized git repository for new project", { projectPath });
-                }
+                await initializeGitRepository(projectPath);
+                logger.info("Created new project directory and initialized git repository", { projectPath });
             }
 
             // Ensure .tenex is in .gitignore

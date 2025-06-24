@@ -1,17 +1,18 @@
 import { exec } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { promisify } from "node:util";
 import { logger } from "@/utils/logger";
 
 const execAsync = promisify(exec);
 
 /**
- * Check if a directory is a git repository
+ * Check if a directory is a git repository (has its own .git directory)
  */
 export async function isGitRepository(projectPath: string): Promise<boolean> {
     try {
-        await execAsync("git status", {
-            cwd: projectPath,
-        });
+        const gitPath = path.join(projectPath, ".git");
+        await fs.access(gitPath);
         return true;
     } catch {
         return false;
