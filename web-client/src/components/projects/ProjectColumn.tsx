@@ -2,7 +2,7 @@ import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
 import { Circle, Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { EVENT_KINDS } from "../../lib/constants";
 import { onlineProjectsAtom } from "../../lib/store";
 import { ThreadOverview } from "../tasks/ThreadOverview";
@@ -13,6 +13,7 @@ interface ProjectColumnProps {
     project: NDKProject;
     onProjectClick?: (project: NDKProject) => void;
     onTaskCreate?: (project: NDKProject) => void;
+    onVoiceRecord?: (project: NDKProject) => void;
     onThreadClick?: (thread: NDKEvent) => void;
 }
 
@@ -20,15 +21,61 @@ export function ProjectColumn({
     project,
     onProjectClick,
     onTaskCreate,
+    onVoiceRecord,
     onThreadClick,
 }: ProjectColumnProps) {
     const { ndk } = useNDK();
     const title = project.title || project.tagValue("title") || "Untitled Project";
     const onlineProjects = useAtomValue(onlineProjectsAtom);
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const [isLongPressing, setIsLongPressing] = useState(false);
 
     // Get project directory name from d tag
     const projectDir = project.tagValue("d") || "";
     const isOnline = onlineProjects.has(projectDir);
+
+    // Long-press handlers
+    const handlePointerDown = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        setIsLongPressing(true);
+        
+        // Start long-press timer (500ms)
+        longPressTimerRef.current = setTimeout(() => {
+            // Long press triggered - clear the timer to indicate it fired
+            longPressTimerRef.current = null;
+            setIsLongPressing(false);
+            onVoiceRecord?.(project);
+        }, 500);
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        setIsLongPressing(false);
+        
+        // Check if timer is still active (means long-press didn't fire)
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+            
+            // Timer was still active, so this was a regular click
+            onTaskCreate?.(project);
+        }
+        // If timer is null, long-press already fired, so don't do regular click
+    };
+
+    const handlePointerLeave = () => {
+        setIsLongPressing(false);
+        
+        // Clear timer if pointer leaves the button (cancels both long-press and click)
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
 
     // Subscribe to threads (kind 11) for this project
     const { events: projectThreads } = useSubscribe(
@@ -172,12 +219,13 @@ export function ProjectColumn({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onTaskCreate?.(project);
-                            }}
-                            title="Create new content"
+                            className={`w-8 h-8 text-muted-foreground hover:text-foreground transition-all ${
+                                isLongPressing ? "bg-green-100 text-green-600 scale-110" : ""
+                            }`}
+                            onPointerDown={handlePointerDown}
+                            onPointerUp={handlePointerUp}
+                            onPointerLeave={handlePointerLeave}
+                            title="Click to create thread, hold to record voice"
                         >
                             <Plus className="w-4 h-4" />
                         </Button>
