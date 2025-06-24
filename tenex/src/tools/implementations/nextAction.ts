@@ -33,7 +33,6 @@ You MUST use the next_action tool to specify what happens next:
 - Only PM agents can use this tool
 - For handoffs: target can be agent pubkey, name, or slug
 - For phase transitions: target must be a valid phase (plan, execute, review, chat, chores)
-- Valid phase transitions: chat→plan, plan→execute/chat, execute→review/plan, review→execute/chat/chores, chores→chat
 
 CRITICAL: You MUST call next_action at the end of every response, otherwise the conversation stops.`,
   
@@ -156,22 +155,7 @@ async function handlePhaseTransition(args: NextActionArgs, context: NextActionCo
     };
   }
 
-  // Validate phase transition is allowed
-  const validTransitions: Record<string, string[]> = {
-    chat: ["plan"],
-    plan: ["execute", "chat"],
-    execute: ["review", "plan"],
-    review: ["execute", "chat", "chores"],
-    chores: ["chat"],
-  };
-
   const currentPhase = context.phase || 'chat';
-  if (!validTransitions[currentPhase]?.includes(args.target)) {
-    return {
-      success: false,
-      error: `Cannot transition from ${currentPhase} to ${args.target}. Valid transitions: ${validTransitions[currentPhase]?.join(", ") || "none"}`,
-    };
-  }
 
   // Log the phase transition
   logger.info("Phase transition requested", {
