@@ -15,7 +15,7 @@ import type { LLMMetadata } from "@/nostr/types";
 import { inventoryExists } from "@/utils/inventory";
 import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
-import type { AgentExecutionContext, AgentExecutionResult, AgentPromptContext } from "./types";
+import type { AgentExecutionContext, AgentExecutionResult } from "./types";
 import { ReasonActLoop } from "./ReasonActLoop";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { ToolExecutionResult } from "@/tools/types";
@@ -72,8 +72,8 @@ export class AgentExecutor {
                 tools: phaseAwareTools,
             };
 
-            // 2. Build the agent's prompt with phase-aware agent
-            const promptContext = await this.buildPromptContext({
+            // 2. Build the agent's prompts
+            const { systemPrompt, userPrompt } = await this.buildPrompts({
                 ...context,
                 agent: agentWithPhaseTools,
             });
@@ -88,9 +88,9 @@ export class AgentExecutor {
             // 4. Generate initial response via LLM
             tracingLogger.logLLMRequest(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
 
-            const { response: initialResponse, userPrompt } = await this.generateResponse(
-                promptContext,
-                context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG
+            const initialResponse = await this.generateResponse(
+                systemPrompt,
+                userPrompt,
             );
 
             tracingLogger.logLLMResponse(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
@@ -107,7 +107,7 @@ export class AgentExecutor {
                     agent: agentWithPhaseTools, // Pass agent with phase-aware tools
                     conversation: context.conversation, // Pass the full conversation object
                 },
-                promptContext.systemPrompt,
+                systemPrompt,
                 userPrompt,
                 tracingContext
             );
@@ -115,7 +115,7 @@ export class AgentExecutor {
             // 5. Build metadata with final response
             const llmMetadata = await this.buildLLMMetadata(
                 reasonActResult.finalResponse,
-                promptContext.systemPrompt,
+                systemPrompt,
                 userPrompt
             );
 
@@ -187,13 +187,20 @@ export class AgentExecutor {
     }
 
     /**
-     * Build the complete prompt context for the agent
+     * Build the system and user prompts for the agent
      */
-    private async buildPromptContext(context: AgentExecutionContext): Promise<AgentPromptContext> {
+    private async buildPrompts(context: AgentExecutionContext): Promise<{ systemPrompt: string; userPrompt: string }> {
         const projectCtx = getProjectContext();
         const project = projectCtx.project;
-        const promptBuilder = new PromptBuilder();
-
+        
+        // Create tag map for efficient lookup
+        const tagMap = new Map<string, string>();
+        for (const tag of project.tags) {
+            if (tag.length >= 2 && tag[0] && tag[1]) {
+                tagMap.set(tag[0], tag[1]);
+            }
+        }
+        
         // Check inventory availability for chat phase
         const hasInventory =
             context.phase === "chat" ? await inventoryExists(process.cwd()) : false;
@@ -201,15 +208,13 @@ export class AgentExecutor {
         // Get all available agents for handoffs
         const availableAgents = Array.from(projectCtx.agents.values());
 
-        // Build system prompt with available agents fragment for all agents
-        let systemPromptBuilder = promptBuilder
+        // Build system prompt
+        const systemPromptBuilder = new PromptBuilder()
             .add("agent-system-prompt", {
                 agent: context.agent,
                 phase: context.phase,
-                projectTitle:
-                    project.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Project",
-                projectRepository:
-                    project.tags.find((tag) => tag[0] === "repo")?.[1] || "No repository",
+                projectTitle: tagMap.get("title") || "Untitled Project",
+                projectRepository: tagMap.get("repo") || "No repository",
             })
             .add("available-agents", {
                 agents: availableAgents,
@@ -219,68 +224,47 @@ export class AgentExecutor {
 
         // Add PM-specific routing instructions for PM agents
         if (context.agent.isPMAgent) {
-            systemPromptBuilder = systemPromptBuilder
+            systemPromptBuilder
                 .add("pm-routing-instructions", {})
                 .add("pm-handoff-guidance", {});
         }
 
         const systemPrompt = systemPromptBuilder.build();
 
-        // Build conversation history
-        const conversationHistory = new PromptBuilder()
+        // Build user prompt with all context
+        const userPromptBuilder = new PromptBuilder()
             .add("conversation-history", {
                 history: context.conversation.history,
             })
-            .build();
-
-        // Build phase context
-        const phaseContext = new PromptBuilder()
             .add("phase-context", {
                 phase: context.phase,
                 phaseMetadata: context.conversation.metadata,
             })
-            .build();
+            .add("phase-constraints", {
+                phase: context.phase,
+            });
 
-        const constraints = this.getPhaseConstraints(context.phase);
+        const userPrompt = userPromptBuilder.build();
 
-        return {
-            systemPrompt,
-            conversationHistory,
-            phaseContext,
-            availableTools: context.agent.tools,
-            constraints: constraints,
-        };
+        return { systemPrompt, userPrompt };
     }
 
     /**
      * Generate initial response from LLM
      */
     private async generateResponse(
-        promptContext: AgentPromptContext,
-        llmConfig: string
-    ): Promise<{ response: CompletionResponse; userPrompt: string }> {
-        // Build full user prompt
-        const userPrompt = new PromptBuilder()
-            .add("full-prompt", {
-                conversationContent: promptContext.conversationHistory || "",
-                phaseContext: promptContext.phaseContext,
-                constraints: promptContext.constraints,
-                agentType: promptContext.phaseContext.includes("Phase:")
-                    ? "assigned expert"
-                    : "project assistant",
-            })
-            .build();
-
+        systemPrompt: string,
+        userPrompt: string,
+    ): Promise<CompletionResponse> {
         const messages: Message[] = [
-            { role: "system", content: promptContext.systemPrompt } as Message,
+            { role: "system", content: systemPrompt } as Message,
             { role: "user", content: userPrompt } as Message,
         ];
 
-        const response = await this.llmService.complete({
+        return await this.llmService.complete({
             messages,
             options: {},
         });
-        return { response, userPrompt };
     }
 
     /**
@@ -460,41 +444,4 @@ export class AgentExecutor {
     }
 
 
-    /**
-     * Get phase-specific constraints
-     */
-    private getPhaseConstraints(phase: Phase): string[] {
-        switch (phase) {
-            case "chat":
-                return [
-                    "Focus on understanding requirements",
-                    "Ask one or two clarifying questions at most",
-                    "Keep responses concise and friendly",
-                ];
-
-            case "plan":
-                return [
-                    "Create a structured plan with clear milestones",
-                    "Include time estimates when possible",
-                    "Identify potential risks or challenges",
-                ];
-
-            case "execute":
-                return [
-                    "Focus on implementation details",
-                    "Provide code examples when relevant",
-                    "Explain technical decisions",
-                ];
-
-            case "review":
-                return [
-                    "Provide constructive feedback",
-                    "Highlight both strengths and areas for improvement",
-                    "Suggest specific improvements",
-                ];
-
-            default:
-                return [];
-        }
-    }
 }

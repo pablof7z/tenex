@@ -10,28 +10,28 @@ import { z } from "zod";
 // =====================================================================================
 
 export interface TenexConfig {
-  // Global fields
-  whitelistedPubkeys?: string[];
+    // Global fields
+    whitelistedPubkeys?: string[];
 
-  // Project fields (optional for global config)
-  description?: string;
-  repoUrl?: string;
-  projectNaddr?: string;
-  paths?: {
-    inventory?: string;
-  };
+    // Project fields (optional for global config)
+    description?: string;
+    repoUrl?: string;
+    projectNaddr?: string;
+    paths?: {
+        inventory?: string;
+    };
 }
 
 export const TenexConfigSchema = z.object({
-  whitelistedPubkeys: z.array(z.string()).optional(),
-  description: z.string().optional(),
-  repoUrl: z.string().optional(),
-  projectNaddr: z.string().optional(),
-  paths: z
-    .object({
-      inventory: z.string().optional(),
-    })
-    .optional(),
+    whitelistedPubkeys: z.array(z.string()).optional(),
+    description: z.string().optional(),
+    repoUrl: z.string().optional(),
+    projectNaddr: z.string().optional(),
+    paths: z
+        .object({
+            inventory: z.string().optional(),
+        })
+        .optional(),
 });
 
 // =====================================================================================
@@ -39,21 +39,21 @@ export const TenexConfigSchema = z.object({
 // =====================================================================================
 
 export interface TenexAgents {
-  [agentSlug: string]: {
-    nsec: string;
-    file: string;
-    eventId?: string;
-    boss?: boolean;
-  };
+    [agentSlug: string]: {
+        nsec: string;
+        file: string;
+        eventId?: string;
+        pmAgent?: boolean;
+    };
 }
 
 export const TenexAgentsSchema = z.record(
-  z.object({
-    nsec: z.string(),
-    file: z.string(),
-    eventId: z.string().optional(),
-    boss: z.boolean().optional(),
-  })
+    z.object({
+        nsec: z.string(),
+        file: z.string(),
+        eventId: z.string().optional(),
+        pmAgent: z.boolean().optional(),
+    })
 );
 
 // =====================================================================================
@@ -61,47 +61,46 @@ export const TenexAgentsSchema = z.record(
 // =====================================================================================
 
 export interface TenexLLMs {
-  configurations: {
-    [namedConfig: string]: {
-      provider: string;
-      model: string;
-      temperature?: number;
-      maxTokens?: number;
-      enableCaching?: boolean;
+    configurations: {
+        [namedConfig: string]: {
+            provider: string;
+            model: string;
+            temperature?: number;
+            maxTokens?: number;
+            enableCaching?: boolean;
+        };
     };
-  };
-  defaults?: {
-    agents?: string;
-    routing?: string;
-    [agentSlug: string]: string | undefined;
-  };
-  credentials: {
-    [namedCredential: string]: {
-      apiKey?: string;
-      baseUrl?: string;
-      headers?: Record<string, string>;
+    defaults?: {
+        agents?: string;
+        [agentSlug: string]: string | undefined;
     };
-  };
+    credentials: {
+        [namedCredential: string]: {
+            apiKey?: string;
+            baseUrl?: string;
+            headers?: Record<string, string>;
+        };
+    };
 }
 
 export const TenexLLMsSchema = z.object({
-  configurations: z.record(
-    z.object({
-      provider: z.string(),
-      model: z.string(),
-      temperature: z.number().optional(),
-      maxTokens: z.number().optional(),
-      enableCaching: z.boolean().optional(),
-    })
-  ),
-  defaults: z.record(z.string()).optional().default({}),
-  credentials: z.record(
-    z.object({
-      apiKey: z.string().optional(),
-      baseUrl: z.string().optional(),
-      headers: z.record(z.string()).optional(),
-    })
-  ),
+    configurations: z.record(
+        z.object({
+            provider: z.string(),
+            model: z.string(),
+            temperature: z.number().optional(),
+            maxTokens: z.number().optional(),
+            enableCaching: z.boolean().optional(),
+        })
+    ),
+    defaults: z.record(z.string()).optional().default({}),
+    credentials: z.record(
+        z.object({
+            apiKey: z.string().optional(),
+            baseUrl: z.string().optional(),
+            headers: z.record(z.string()).optional(),
+        })
+    ),
 });
 
 // =====================================================================================
@@ -109,9 +108,9 @@ export const TenexLLMsSchema = z.object({
 // =====================================================================================
 
 export interface LoadedConfig {
-  config: TenexConfig;
-  agents: TenexAgents;
-  llms: TenexLLMs;
+    config: TenexConfig;
+    agents: TenexAgents;
+    llms: TenexLLMs;
 }
 
 // =====================================================================================
@@ -121,6 +120,6 @@ export interface LoadedConfig {
 export type ConfigFile = "config.json" | "agents.json" | "llms.json";
 
 export interface ConfigPaths {
-  global: string;
-  project?: string;
+    global: string;
+    project?: string;
 }

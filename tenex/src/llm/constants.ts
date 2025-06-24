@@ -4,8 +4,7 @@
 
 // Default configuration keys used in llms.json
 export const LLM_DEFAULTS = {
-  AGENTS: "agents",
-  AGENT_ROUTING: "agentRouting"
+    AGENTS: "agents",
 } as const;
 
 // Default fallback key for agents when no llmConfig is specified

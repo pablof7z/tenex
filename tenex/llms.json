@@ -7,8 +7,7 @@
     }
   },
   "defaults": {
-    "agents": "openrouter-google-gemini-2-5-flash",
-    "agentRouting": "openrouter-google-gemini-2-5-flash"
+    "agents": "openrouter-google-gemini-2-5-flash"
   },
   "credentials": {
     "openrouter": {

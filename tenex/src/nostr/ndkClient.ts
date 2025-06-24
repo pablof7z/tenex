@@ -8,43 +8,43 @@ import { getRelayUrls } from "@/utils/relays";
 let ndk: NDK | undefined;
 
 export async function initNDK(): Promise<void> {
-  if (ndk) {
-    // Disconnect existing instance
-    if (ndk.pool?.relays) {
-      for (const relay of ndk.pool.relays.values()) {
-        relay.disconnect();
-      }
+    if (ndk) {
+        // Disconnect existing instance
+        if (ndk.pool?.relays) {
+            for (const relay of ndk.pool.relays.values()) {
+                relay.disconnect();
+            }
+        }
     }
-  }
 
-  const relays = getRelayUrls();
-  const useExplicitRelays = process.env.RELAYS !== undefined;
-  
-  ndk = new NDK({
-    explicitRelayUrls: [...relays],
-    enableOutboxModel: !useExplicitRelays,
-    autoConnectUserRelays: true,
-    autoFetchUserMutelist: true,
-  });
+    const relays = getRelayUrls();
+    const useExplicitRelays = process.env.RELAYS !== undefined;
 
-  await ndk.connect();
+    ndk = new NDK({
+        explicitRelayUrls: [...relays],
+        enableOutboxModel: !useExplicitRelays,
+        autoConnectUserRelays: true,
+        autoFetchUserMutelist: true,
+    });
+
+    await ndk.connect();
 }
 
 export function getNDK(): NDK {
-  if (!ndk) {
-    throw new Error("NDK not initialized. Call initNDK() first.");
-  }
-  return ndk;
+    if (!ndk) {
+        throw new Error("NDK not initialized. Call initNDK() first.");
+    }
+    return ndk;
 }
 
 export async function shutdownNDK(): Promise<void> {
-  if (ndk) {
-    // Disconnect all relays
-    if (ndk.pool?.relays) {
-      for (const relay of ndk.pool.relays.values()) {
-        relay.disconnect();
-      }
+    if (ndk) {
+        // Disconnect all relays
+        if (ndk.pool?.relays) {
+            for (const relay of ndk.pool.relays.values()) {
+                relay.disconnect();
+            }
+        }
+        ndk = undefined;
     }
-    ndk = undefined;
-  }
 }

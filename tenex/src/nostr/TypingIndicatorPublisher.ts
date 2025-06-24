@@ -4,71 +4,65 @@ import { EVENT_KINDS } from "@/llm/types";
 import { logger } from "@/utils/logger";
 
 /**
- * Handles publishing typing indicators to Nostr
- * Single Responsibility: Only manages typing indicator events
+ * Publish a typing indicator start event
  */
-export class TypingIndicatorPublisher {
-  constructor(private ndk: NDK) {}
-
-  /**
-   * Publish a typing indicator start event
-   */
-  async publishTypingStart(
+export async function publishTypingStart(
+    ndk: NDK,
     conversationEvent: NDKEvent,
     signer: NDKPrivateKeySigner
-  ): Promise<NDKEvent> {
-    const typingEvent = new NDKEvent(this.ndk);
-    
+): Promise<NDKEvent> {
+    const typingEvent = new NDKEvent(ndk);
+
     typingEvent.kind = EVENT_KINDS.TYPING_INDICATOR;
     typingEvent.content = "";
-    
+
     // Reference the conversation
     typingEvent.tag(["E", conversationEvent.id]);
-    
+
     // Reference the message being replied to
     if (conversationEvent.id) {
-      typingEvent.tag(["e", conversationEvent.id]);
+        typingEvent.tag(["e", conversationEvent.id]);
     }
-    
+
     await typingEvent.sign(signer);
     await typingEvent.publish();
-    
-    logger.debug("Published typing indicator start", {
-      conversationId: conversationEvent.id,
-      author: typingEvent.pubkey,
-    });
-    
-    return typingEvent;
-  }
 
-  /**
-   * Publish a typing indicator stop event
-   */
-  async publishTypingStop(
+    logger.debug("Published typing indicator start", {
+        conversationId: conversationEvent.id,
+        author: typingEvent.pubkey,
+    });
+
+    return typingEvent;
+}
+
+/**
+ * Publish a typing indicator stop event
+ */
+export async function publishTypingStop(
+    ndk: NDK,
     conversationEvent: NDKEvent,
     signer: NDKPrivateKeySigner
-  ): Promise<NDKEvent> {
-    const typingEvent = new NDKEvent(this.ndk);
-    
+): Promise<NDKEvent> {
+    const typingEvent = new NDKEvent(ndk);
+
     typingEvent.kind = EVENT_KINDS.TYPING_INDICATOR_STOP;
     typingEvent.content = "";
-    
+
     // Reference the conversation
     typingEvent.tag(["E", conversationEvent.id]);
-    
+
     // Reference the message being replied to
     if (conversationEvent.id) {
-      typingEvent.tag(["e", conversationEvent.id]);
+        typingEvent.tag(["e", conversationEvent.id]);
     }
-    
+
     await typingEvent.sign(signer);
     await typingEvent.publish();
-    
+
     logger.debug("Published typing indicator stop", {
-      conversationId: conversationEvent.id,
-      author: typingEvent.pubkey,
+        conversationId: conversationEvent.id,
+        author: typingEvent.pubkey,
     });
-    
+
     return typingEvent;
-  }
 }

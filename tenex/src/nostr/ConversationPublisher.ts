@@ -2,21 +2,18 @@ import { getProjectContext } from "@/services";
 import type { Conversation, Phase } from "@/conversations/types";
 import type { LLMMetadata } from "@/nostr/types";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 
-export class ConversationPublisher {
-  constructor(private ndk: NDK) {}
-
-  async publishAgentResponse(
+export async function publishAgentResponse(
     eventToReply: NDKEvent,
     content: string,
     nextAgent: string,
     signer: NDKPrivateKeySigner,
     llmMetadata?: LLMMetadata,
     additionalTags?: NDKTag[]
-  ): Promise<NDKEvent> {
+): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
     // Tag the project
@@ -30,38 +27,33 @@ export class ConversationPublisher {
     // Only add p-tag if nextAgent is specified (non-empty)
     // This prevents tagging loops in chat mode
     if (nextAgent && nextAgent.trim() !== "") {
-      reply.tag(["p", nextAgent]);
+        reply.tag(["p", nextAgent]);
     }
 
-    console.log("Replying to event", {
-      eventPubkey: eventToReply.pubkey,
-      myPubkey: signer.pubkey,
-      nextAgent,
-    });
 
     // Add LLM metadata if present
     if (llmMetadata) {
-      reply.tag(["llm-model", llmMetadata.model]);
-      reply.tag(["llm-cost-usd", llmMetadata.cost.toString()]);
-      reply.tag(["llm-prompt-tokens", llmMetadata.promptTokens.toString()]);
-      reply.tag(["llm-completion-tokens", llmMetadata.completionTokens.toString()]);
-      reply.tag(["llm-total-tokens", llmMetadata.totalTokens.toString()]);
-      if (llmMetadata.systemPrompt) {
-        reply.tag(["llm-system-prompt", llmMetadata.systemPrompt]);
-      }
-      if (llmMetadata.userPrompt) {
-        reply.tag(["llm-user-prompt", llmMetadata.userPrompt]);
-      }
-      if (llmMetadata.rawResponse) {
-        reply.tag(["llm-raw-response", llmMetadata.rawResponse]);
-      }
+        reply.tag(["llm-model", llmMetadata.model]);
+        reply.tag(["llm-cost-usd", llmMetadata.cost.toString()]);
+        reply.tag(["llm-prompt-tokens", llmMetadata.promptTokens.toString()]);
+        reply.tag(["llm-completion-tokens", llmMetadata.completionTokens.toString()]);
+        reply.tag(["llm-total-tokens", llmMetadata.totalTokens.toString()]);
+        if (llmMetadata.systemPrompt) {
+            reply.tag(["llm-system-prompt", llmMetadata.systemPrompt]);
+        }
+        if (llmMetadata.userPrompt) {
+            reply.tag(["llm-user-prompt", llmMetadata.userPrompt]);
+        }
+        if (llmMetadata.rawResponse) {
+            reply.tag(["llm-raw-response", llmMetadata.rawResponse]);
+        }
     }
 
     // Add any additional custom tags
     if (additionalTags && additionalTags.length > 0) {
-      for (const tag of additionalTags) {
-        reply.tag(tag);
-      }
+        for (const tag of additionalTags) {
+            reply.tag(tag);
+        }
     }
 
     reply.content = content;
@@ -73,52 +65,11 @@ export class ConversationPublisher {
 
     // Log the actual content being published
     logger.debug("Published agent response content", {
-      eventId: reply.id,
-      contentLength: content.length,
-      content,
+        eventId: reply.id,
+        contentLength: content.length,
+        content,
     });
 
     return reply;
-  }
-
-  async publishPhaseTransition(
-    conversation: Conversation,
-    newPhase: Phase,
-    context: string,
-    signer: NDKPrivateKeySigner,
-    triggeringEvent: NDKEvent,
-    nextResponder?: string
-  ): Promise<NDKEvent> {
-    const event = triggeringEvent.reply();
-
-    // Tag the project
-    const projectCtx = getProjectContext();
-    event.tag(projectCtx.project);
-
-    // Phase transition tags
-    event.tag(["phase-transition", `${conversation.phase}-to-${newPhase}`]);
-    event.tag(["phase", newPhase]);
-
-    // P-tag next responder if specified
-    if (nextResponder) {
-      event.tag(["p", nextResponder]);
-    }
-
-    event.content = `Phase transition: Moving from ${conversation.phase} to ${newPhase}\n\n${context}`;
-
-    // Sign with the provided signer
-    await event.sign(signer);
-
-    await event.publish();
-
-    logger.info("Published phase transition", {
-      id: event.id,
-      from: conversation.phase,
-      to: newPhase,
-      author: event.pubkey,
-    });
-
-    return event;
-  }
-
 }
+

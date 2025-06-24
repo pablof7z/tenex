@@ -3,47 +3,47 @@ import type { PromptFragment } from "../core/types";
 
 // Execute phase prompt fragment
 interface ExecutePhasePromptArgs {
-  plan: string;
-  instruction: string;
+    plan: string;
+    instruction: string;
 }
 
 export const executePhasePromptFragment: PromptFragment<ExecutePhasePromptArgs> = {
-  id: "execute-phase-prompt",
-  priority: 10,
-  template: ({ plan, instruction }) => {
-    return `Current Plan:
+    id: "execute-phase-prompt",
+    priority: 10,
+    template: ({ plan, instruction }) => {
+        return `Current Plan:
 ${plan}
 
 Instruction: ${instruction}`;
-  },
+    },
 };
 
 // Plan phase prompt fragment
 interface PlanPhasePromptArgs {
-  context: string;
-  instruction: string;
+    context: string;
+    instruction: string;
 }
 
 export const planPhasePromptFragment: PromptFragment<PlanPhasePromptArgs> = {
-  id: "plan-phase-prompt",
-  priority: 10,
-  template: ({ context, instruction }) => {
-    return `${context}
+    id: "plan-phase-prompt",
+    priority: 10,
+    template: ({ context, instruction }) => {
+        return `${context}
 
 ${instruction}`;
-  },
+    },
 };
 
 // Plan task description fragment
 interface PlanTaskDescriptionArgs {
-  recentRequests: string;
+    recentRequests: string;
 }
 
 export const planTaskDescriptionFragment: PromptFragment<PlanTaskDescriptionArgs> = {
-  id: "plan-task-description",
-  priority: 10,
-  template: ({ recentRequests }) => {
-    return `Based on the user's request: "${recentRequests}"
+    id: "plan-task-description",
+    priority: 10,
+    template: ({ recentRequests }) => {
+        return `Based on the user's request: "${recentRequests}"
 
 Create a detailed implementation plan that:
 1. Addresses the specific requirements mentioned
@@ -53,47 +53,101 @@ Create a detailed implementation plan that:
 5. Considers testing and quality assurance
 
 Focus on being actionable and specific rather than asking questions.`;
-  },
+    },
 };
 
 // Tool continuation prompt fragment
 interface ToolContinuationPromptArgs {
-  toolResults: Array<{
-    toolName: string;
-    success: boolean;
-    output?: unknown;
-    error?: string;
-  }>;
+    toolResults: Array<{
+        toolName: string;
+        success: boolean;
+        output?: unknown;
+        error?: string;
+    }>;
 }
 
 export const toolContinuationPromptFragment: PromptFragment<ToolContinuationPromptArgs> = {
-  id: "tool-continuation-prompt",
-  priority: 10,
-  template: ({ toolResults }) => {
-    let prompt = "Based on the tool execution results:\n\n";
+    id: "tool-continuation-prompt",
+    priority: 10,
+    template: ({ toolResults }) => {
+        let prompt = "Based on the tool execution results:\n\n";
 
-    for (const result of toolResults) {
-      prompt += `**${result.toolName}**: `;
-      if (result.success) {
-        prompt += typeof result.output === "string"
-          ? result.output
-          : JSON.stringify(result.output, null, 2);
-      } else {
-        prompt += `Error: ${result.error}`;
-      }
-      prompt += "\n\n";
-    }
+        for (const result of toolResults) {
+            prompt += `**${result.toolName}**: `;
+            if (result.success) {
+                prompt +=
+                    typeof result.output === "string"
+                        ? result.output
+                        : JSON.stringify(result.output, null, 2);
+            } else {
+                prompt += `Error: ${result.error}`;
+            }
+            prompt += "\n\n";
+        }
 
-    prompt += "\nPlease continue with your analysis or provide a final response. ";
-    prompt += "If you need to use more tools, you can do so. ";
-    prompt += "If you have all the information needed, provide your complete response.";
+        prompt += "\nPlease continue with your analysis or provide a final response. ";
+        prompt += "If you need to use more tools, you can do so. ";
+        prompt += "If you have all the information needed, provide your complete response.";
 
-    return prompt;
-  },
+        return prompt;
+    },
 };
+
+// Phase constraints fragment
+interface PhaseConstraintsArgs {
+    phase: string;
+}
+
+export const phaseConstraintsFragment: PromptFragment<PhaseConstraintsArgs> = {
+    id: "phase-constraints",
+    priority: 20,
+    template: ({ phase }) => {
+        const constraints = getPhaseConstraints(phase);
+        if (constraints.length === 0) return "";
+        
+        return `## Phase Constraints
+${constraints.map(c => `- ${c}`).join("\n")}`;
+    },
+};
+
+function getPhaseConstraints(phase: string): string[] {
+    switch (phase) {
+        case "chat":
+            return [
+                "Focus on understanding requirements",
+                "Ask one or two clarifying questions at most",
+                "Keep responses concise and friendly",
+            ];
+
+        case "plan":
+            return [
+                "Create a structured plan with clear milestones",
+                "Include time estimates when possible",
+                "Identify potential risks or challenges",
+            ];
+
+        case "execute":
+            return [
+                "Focus on implementation details",
+                "Provide code examples when relevant",
+                "Explain technical decisions",
+            ];
+
+        case "review":
+            return [
+                "Provide constructive feedback",
+                "Highlight both strengths and areas for improvement",
+                "Suggest specific improvements",
+            ];
+
+        default:
+            return [];
+    }
+}
 
 // Register all fragments
 fragmentRegistry.register(executePhasePromptFragment);
 fragmentRegistry.register(planPhasePromptFragment);
 fragmentRegistry.register(planTaskDescriptionFragment);
 fragmentRegistry.register(toolContinuationPromptFragment);
+fragmentRegistry.register(phaseConstraintsFragment);

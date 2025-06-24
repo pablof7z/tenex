@@ -6,19 +6,14 @@ export type { PromptFragment, FragmentConfig } from "./core/types";
 // Export template builders
 export * from "./templates";
 
-// Export routing prompt functions
-export * from "./routingPrompts";
-
 // Import all fragments to ensure they're registered when the module is imported
 import "./fragments/agentFragments";
-import "./fragments/common";
+import "./fragments/available-agents";
 import "./fragments/context";
 import "./fragments/execute-task-prompt";
 import "./fragments/generic";
 import "./fragments/phase";
 import "./fragments/phase-prompts";
+import "./fragments/pm-routing";
 import "./fragments/project";
-import "./fragments/routing";
-import "./fragments/routing-prompts";
-import "./fragments/routing-system";
 import "./fragments/tools";

@@ -3,15 +3,15 @@ import type { PromptFragment } from "../core/types";
 
 // Task execution prompt fragment
 interface TaskExecutionArgs {
-  taskId: string;
-  instruction: string;
+    taskId: string;
+    instruction: string;
 }
 
 export const executeTaskPromptFragment: PromptFragment<TaskExecutionArgs> = {
-  id: "execute-task-prompt",
-  priority: 10,
-  template: ({ taskId, instruction }) => {
-    return `# Task Execution Request
+    id: "execute-task-prompt",
+    priority: 10,
+    template: ({ taskId, instruction }) => {
+        return `# Task Execution Request
 
 You are being asked to execute a standalone task. This is not part of a conversation - it's a direct execution request.
 
@@ -29,7 +29,7 @@ ${instruction}
 5. Report any errors or blockers you encounter
 
 Begin execution now.`;
-  },
+    },
 };
 
 // Register the fragment

@@ -16,5 +16,8 @@
     "devDependencies": {
         "@biomejs/biome": "^1.9.4",
         "typescript": "^5.8.3"
+    },
+    "dependencies": {
+        "@nostr-dev-kit/ndk": "^2.14.30"
     }
 }
