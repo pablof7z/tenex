@@ -34,6 +34,8 @@ export class ClaudeParser {
                     // Track state
                     this.trackMessage(message);
 
+                    console.log('claude code', message);
+
                     // Fire callback if provided
                     if (this.onMessage) {
                         Promise.resolve(this.onMessage(message)).catch((error) => {

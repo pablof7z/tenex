@@ -10,7 +10,6 @@ export const projectExecuteCommand = new Command("execute")
     .description("Execute a standalone task using Claude Code")
     .argument("<prompt>", "The task instruction to execute")
     .option("--no-branch", "Skip creating a git branch for execution")
-    .option("-t, --timeout <ms>", "Execution timeout in milliseconds", "600000")
     .action(async (prompt: string, options) => {
         const spinner = ora("Initializing task execution...").start();
 
@@ -27,7 +26,6 @@ export const projectExecuteCommand = new Command("execute")
             const result = await executor.execute({
                 prompt,
                 createBranch: options.branch !== false,
-                timeout: Number.parseInt(options.timeout, 10),
             });
 
             spinner.stop();

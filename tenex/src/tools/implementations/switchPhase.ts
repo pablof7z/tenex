@@ -72,12 +72,15 @@ Use this tool when you need to move the conversation to a different phase:
     const currentPhase = context.phase || 'chat';
 
     // Log the phase transition
-    logger.info("Phase transition requested", {
+    logger.info("🔄 Phase transition requested", {
+      tool: "switch_phase",
       fromPhase: currentPhase,
       toPhase: switchPhaseArgs.phase,
       agentName: context.agentName,
+      agentPubkey: context.agent.pubkey,
       reason: switchPhaseArgs.reason,
-      messagePreview: switchPhaseArgs.message.substring(0, 100) + '...'
+      messagePreview: switchPhaseArgs.message.substring(0, 100) + '...',
+      conversationId: context.conversationId
     });
 
     const metadata: PhaseTransitionMetadata = {

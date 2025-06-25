@@ -22,7 +22,7 @@ export function buildAgentPrompt(args: {
 
     // Project context
     if (args.projectName) {
-        parts.push(`## Project Context\n- Project: ${args.projectName}`);
+        parts.push(`## Project Context\n- Project Name: "${args.projectName}"`);
     }
 
     return parts.join("\n\n");

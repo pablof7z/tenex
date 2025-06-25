@@ -62,11 +62,13 @@ Use this tool when:
     
     // Handle handoff to user
     if (handoffArgs.target.toLowerCase() === 'user') {
-      logger.info("Handoff to user requested", {
+      logger.info("🤝 Handoff to user requested", {
+        tool: "handoff",
         fromAgent: context.agent.name,
         fromPubkey: context.agent.pubkey,
         phase: context.phase,
         message: handoffArgs.message,
+        conversationId: context.conversationId
       });
 
       const metadata: HandoffMetadata = {
@@ -125,13 +127,15 @@ Use this tool when:
     }
 
     // Log the handoff
-    logger.info("Agent handoff requested", {
+    logger.info("🤝 Agent handoff requested", {
+      tool: "handoff",
       fromAgent: context.agent.name,
       fromPubkey: context.agent.pubkey,
       toAgent: foundAgent.name,
       toPubkey: foundAgent.pubkey,
       phase: context.phase,
       message: handoffArgs.message,
+      conversationId: context.conversationId
     });
 
     const metadata: HandoffMetadata = {

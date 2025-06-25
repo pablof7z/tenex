@@ -33,9 +33,6 @@ export interface ToolCallArguments {
     // Common tool arguments
     command?: string; // For shell tools
     path?: string; // For file tools
-    content?: string; // For file write/edit
-    oldContent?: string; // For file edit
-    newContent?: string; // For file edit
     mode?: string; // For claude_code tool
     prompt?: string; // For claude_code tool
 

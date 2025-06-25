@@ -70,7 +70,7 @@ describe('AgentExecutor - Claude Code Integration', () => {
             role: 'Project Manager',
             pubkey: 'pm-pubkey',
             isPMAgent: true,
-            tools: ['next_action', 'claude_code'],
+            tools: ['switch_phase', 'handoff', 'claude_code'],
             signer: {} as any,
         };
 
@@ -129,22 +129,23 @@ describe('AgentExecutor - Claude Code Integration', () => {
                 return null;
             });
 
-            // Mock ReasonActLoop to return a next_action result
+            // Mock ReasonActLoop to return a switch_phase result
             const mockReasonActLoop = {
                 execute: mock().mockResolvedValue({
                     finalResponse: { content: 'Transitioning to plan phase' },
                     finalContent: 'Transitioning to plan phase',
                     toolExecutions: 1,
                     allToolResults: [{
-                        toolName: 'next_action',
+                        toolName: 'switch_phase',
                         success: true,
                         output: 'Phase transition requested',
                         metadata: {
-                            actionType: 'phase_transition',
-                            requestedPhase: 'plan',
-                            transitionMessage: '## Requirements\n- Build CLI tool\n- Support TypeScript',
-                            fromAgentPubkey: 'pm-pubkey',
-                            fromAgentName: 'PM Agent',
+                            phaseTransition: {
+                                from: 'chat',
+                                to: 'plan',
+                                message: '## Requirements\n- Build CLI tool\n- Support TypeScript',
+                                reason: 'Requirements are clear'
+                            }
                         },
                     }],
                 }),
@@ -208,15 +209,16 @@ describe('AgentExecutor - Claude Code Integration', () => {
                     finalContent: 'Moving to execute',
                     toolExecutions: 1,
                     allToolResults: [{
-                        toolName: 'next_action',
+                        toolName: 'switch_phase',
                         success: true,
-                        output: 'Phase transition requested',
+                        output: 'Phase transition to execute requested',
                         metadata: {
-                            actionType: 'phase_transition',
-                            requestedPhase: 'execute',
-                            transitionMessage: '## Plan\n1. Create files\n2. Add tests',
-                            fromAgentPubkey: 'pm-pubkey',
-                            fromAgentName: 'PM Agent',
+                            phaseTransition: {
+                                from: 'plan',
+                                to: 'execute',
+                                message: '## Plan\n1. Create files\n2. Add tests',
+                                reason: 'Plan approved'
+                            }
                         },
                     }],
                 }),
@@ -264,15 +266,16 @@ describe('AgentExecutor - Claude Code Integration', () => {
                     finalContent: 'Response',
                     toolExecutions: 1,
                     allToolResults: [{
-                        toolName: 'next_action',
+                        toolName: 'switch_phase',
                         success: true,
-                        output: 'Phase transition requested',
+                        output: 'Phase transition to plan requested',
                         metadata: {
-                            actionType: 'phase_transition',
-                            requestedPhase: 'plan',
-                            transitionMessage: 'Transition message',
-                            fromAgentPubkey: 'pm-pubkey',
-                            fromAgentName: 'PM Agent',
+                            phaseTransition: {
+                                from: 'chat',
+                                to: 'plan',
+                                message: 'Transition message',
+                                reason: 'Requirements gathered'
+                            }
                         },
                     }],
                 }),
@@ -300,15 +303,16 @@ describe('AgentExecutor - Claude Code Integration', () => {
                     finalContent: 'Response',
                     toolExecutions: 1,
                     allToolResults: [{
-                        toolName: 'next_action',
+                        toolName: 'switch_phase',
                         success: true,
-                        output: 'Phase transition requested',
+                        output: 'Phase transition to plan requested',
                         metadata: {
-                            actionType: 'phase_transition',
-                            requestedPhase: 'plan',
-                            transitionMessage: 'Transition message',
-                            fromAgentPubkey: 'pm-pubkey',
-                            fromAgentName: 'PM Agent',
+                            phaseTransition: {
+                                from: 'chat',
+                                to: 'plan',
+                                message: 'Transition message',
+                                reason: 'Requirements gathered'
+                            }
                         },
                     }],
                 }),
@@ -347,15 +351,16 @@ describe('AgentExecutor - Claude Code Integration', () => {
                     finalContent: 'Response',
                     toolExecutions: 1,
                     allToolResults: [{
-                        toolName: 'next_action',
+                        toolName: 'switch_phase',
                         success: true,
-                        output: 'Phase transition requested',
+                        output: 'Phase transition to plan requested',
                         metadata: {
-                            actionType: 'phase_transition',
-                            requestedPhase: 'plan',
-                            transitionMessage: 'Transition message',
-                            fromAgentPubkey: 'pm-pubkey',
-                            fromAgentName: 'PM Agent',
+                            phaseTransition: {
+                                from: 'chat',
+                                to: 'plan',
+                                message: 'Transition message',
+                                reason: 'Requirements gathered'
+                            }
                         },
                     }],
                 }),
@@ -393,15 +398,16 @@ describe('AgentExecutor - Claude Code Integration', () => {
                     finalContent: 'Response',
                     toolExecutions: 1,
                     allToolResults: [{
-                        toolName: 'next_action',
+                        toolName: 'switch_phase',
                         success: true,
-                        output: 'Phase transition requested',
+                        output: 'Phase transition to review requested',
                         metadata: {
-                            actionType: 'phase_transition',
-                            requestedPhase: 'review', // Not plan or execute
-                            transitionMessage: 'Moving to review',
-                            fromAgentPubkey: 'pm-pubkey',
-                            fromAgentName: 'PM Agent',
+                            phaseTransition: {
+                                from: 'execute',
+                                to: 'review',
+                                message: 'Moving to review',
+                                reason: 'Implementation complete'
+                            }
                         },
                     }],
                 }),

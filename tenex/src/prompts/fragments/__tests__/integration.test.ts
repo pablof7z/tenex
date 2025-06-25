@@ -13,7 +13,7 @@ describe("Agent Routing Integration", () => {
             isPMAgent: true,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["next_action"],
+            tools: ["switch_phase", "handoff"],
         },
         {
             name: "Frontend Developer", 
@@ -23,7 +23,7 @@ describe("Agent Routing Integration", () => {
             isPMAgent: false,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["file", "shell"],
+            tools: ["read_file", "shell"],
         },
     ];
 
@@ -36,7 +36,7 @@ describe("Agent Routing Integration", () => {
             .build();
 
         expect(prompt).toContain("## Available Agents");
-        expect(prompt).toContain("Project Manager (PM)");
+        expect(prompt).toContain("**Project Manager** (Project Manager) (pm)");
         expect(prompt).not.toContain("Frontend Developer");
         expect(prompt).toContain("collaboration and handoffs");
     });
@@ -58,7 +58,7 @@ describe("Agent Routing Integration", () => {
         
         // Should have PM routing instructions
         expect(prompt).toContain("## PM Agent Routing Instructions");
-        expect(prompt).toContain("Agent Handoffs");
+        expect(prompt).toContain("### 1. Handoff Tool");
         expect(prompt).toContain("Phase Transitions");
         
         // Should have handoff guidance

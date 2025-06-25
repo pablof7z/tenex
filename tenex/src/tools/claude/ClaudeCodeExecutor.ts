@@ -52,15 +52,19 @@ export class ClaudeCodeExecutor {
             const args = [
                 "-p",
                 "--dangerously-skip-permissions",
+                "--model",
+                "sonnet",
                 "--output-format",
                 "stream-json",
                 "--verbose",
                 this.options.prompt,
             ];
 
-            logger.info("Spawning Claude Code process", {
+            logger.info("🚀 Spawning Claude Code process", {
                 cwd: this.options.projectPath,
-                prompt: this.options.prompt,
+                prompt: this.options.prompt.substring(0, 100) + (this.options.prompt.length > 100 ? "..." : ""),
+                timeout: this.options.timeout || "none",
+                model: "sonnet"
             });
 
             this.process = spawn("claude", args, {
@@ -93,6 +97,7 @@ export class ClaudeCodeExecutor {
 
             // Handle process completion
             this.process.on("close", (code) => {
+                const duration = Date.now() - this.startTime;
                 const result: ClaudeCodeResult = {
                     success: code === 0,
                     output: this.stdout,
@@ -100,9 +105,18 @@ export class ClaudeCodeExecutor {
                     sessionId: this.parser.getSessionId(),
                     totalCost: this.parser.getTotalCost(),
                     messageCount: this.parser.getMessageCount(),
-                    duration: Date.now() - this.startTime,
+                    duration,
                     assistantMessages: this.parser.getAssistantMessages(),
                 };
+
+                logger.info(code === 0 ? "✅ Claude Code completed" : "❌ Claude Code failed", {
+                    exitCode: code,
+                    duration,
+                    sessionId: result.sessionId,
+                    totalCost: result.totalCost,
+                    messageCount: result.messageCount,
+                    assistantMessagesCount: result.assistantMessages.length
+                });
 
                 if (code !== 0) {
                     const error = new Error(`Claude Code exited with code ${code}`);

@@ -9,7 +9,7 @@ import { AgentPublisher } from "@/agents/AgentPublisher";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import { PM_AGENT_DEFINITION } from "./projectAgentDefinition";
 import { getNDK } from "@/nostr";
-import { getProjectContext } from "@/services";
+import { getProjectContext, isProjectContextInitialized } from "@/services";
 import { getDefaultToolsForAgent } from "./constants";
 
 export class AgentRegistry {
@@ -248,6 +248,12 @@ export class AgentRegistry {
             // Load project config to get project info
             const projectConfig = await configService.loadTenexConfig(this.projectPath);
             const projectName = projectConfig.description || "Unknown Project";
+
+            // Check if project context is initialized
+            if (!isProjectContextInitialized()) {
+                logger.warn("ProjectContext not initialized, skipping agent event publishing");
+                return;
+            }
 
             // Get project context for project pubkey
             const projectCtx = getProjectContext();

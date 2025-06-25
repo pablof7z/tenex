@@ -10,6 +10,8 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
+import { readFileTool } from "@/tools/implementations/readFile";
+import { shellTool } from "@/tools/implementations/shell";
 
 export const agentAddCommand = new Command("add")
     .description("Add a local agent to the project")
@@ -64,7 +66,10 @@ export const agentAddCommand = new Command("add")
                 role,
                 instructions: prompt,
                 llmConfig: DEFAULT_AGENT_LLM_CONFIG,
-                tools: ["bash", "file-system", "web-search"],
+                tools: [
+                    readFileTool.name,
+                    shellTool.name
+                ],
             };
 
             // Use AgentRegistry to ensure agent (this handles all file operations)

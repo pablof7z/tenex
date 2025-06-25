@@ -1,23 +1,21 @@
 import type { Tool } from './types';
 import { readFileTool } from './implementations/readFile';
-import { writeFileTool } from './implementations/writeFile';
-import { editFileTool } from './implementations/editFile';
 import { shellTool } from './implementations/shell';
 import { claudeCodeTool } from './implementations/claudeCode';
-import { getCurrentRequirementsTool } from './implementations/getCurrentRequirements';
 import { getTimeTool } from './implementations/getTime';
-import { nextActionTool } from './implementations/nextAction';
+import { switchPhaseTool } from './implementations/switchPhase';
+import { handoffTool } from './implementations/handoff';
+import { analyze } from './implementations/analyze';
 
 // Registry of all available tools
 const toolsMap = new Map<string, Tool>([
   ['read_file', readFileTool],
-  ['write_file', writeFileTool],
-  ['edit_file', editFileTool],
   ['shell', shellTool],
   ['claude_code', claudeCodeTool],
-  ['get_current_requirements', getCurrentRequirementsTool],
   ['get_time', getTimeTool],
-  ['next_action', nextActionTool],
+  ['switch_phase', switchPhaseTool],
+  ['handoff', handoffTool],
+  ['analyze', analyze],
 ]);
 
 export function getTool(name: string): Tool | undefined {

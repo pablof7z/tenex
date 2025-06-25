@@ -8,3 +8,4 @@ export {
     getAgentSlugFromEvent,
     isEventFromProject,
 } from "./utils";
+export * from "./tags";

@@ -11,6 +11,7 @@ import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { configService, setProjectContext } from "@/services";
+import { initializeToolLogger } from "@/tools/toolLogger";
 import type { Agent } from "@/agents/types";
 import type { TenexConfig } from "@/services/config/types";
 import chalk from "chalk";
@@ -158,11 +159,9 @@ export class ProjectManager implements IProjectManager {
 
             // Initialize ProjectContext
             setProjectContext(project, loadedAgents);
-
-            logger.info("ProjectContext initialized successfully", {
-                projectTitle: project.tagValue("title"),
-                agentCount: loadedAgents.size,
-            });
+            
+            // Initialize tool logger for tracing tool executions
+            initializeToolLogger(projectPath);
         } catch (error) {
             logger.error("Failed to initialize ProjectContext", { error, projectPath });
             throw error;

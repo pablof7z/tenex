@@ -21,7 +21,7 @@ interface AgentSystemPromptArgs {
 
 export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = {
     id: "agent-system-prompt",
-    priority: 10,
+    priority: 1,
     template: ({ agent, phase, projectTitle, projectRepository }) => {
         const parts: string[] = [];
 
@@ -38,17 +38,12 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
         // Phase info
         parts.push(`## Current Phase: ${phase.toUpperCase()}\n${getPhaseInstructions(phase)}`);
 
-        // Repository if available
-        if (projectRepository) {
-            parts.push(`Repository: ${projectRepository}`);
-        }
-
         // Communication style
         parts.push(`## Communication Style
 - Be concise and focused on the task at hand
-- Provide actionable insights and clear next steps
-- When suggesting code changes, be specific about what to change
-- Ask clarifying questions when requirements are unclear`);
+- Default to action rather than asking questions
+- Make reasonable technical decisions without consultation
+- Only ask questions when the ambiguity would cause fundamentally different implementations`);
 
         // Tools section
         parts.push("## Available Tools");
@@ -160,17 +155,18 @@ function getPhaseInstructions(phase: Phase): string {
     switch (phase) {
         case "chat":
             return `In the CHAT phase, you should:
-- Focus on understanding the user's requirements
-- Ask clarifying questions to gather necessary information
-- Keep responses concise and conversational
-- Build rapport and ensure clear communication`;
+- Quickly understand the user's requirements and proceed to execution
+- Skip to execute phase for most tasks unless they're architecturally complex
+- Only ask questions if the answer would fundamentally change the implementation
+- Treat implementation as the default response to most requests`;
 
         case "plan":
             return `In the PLAN phase, you should:
-- Create detailed implementation plans based on requirements
-- Break down complex tasks into manageable steps
-- Identify potential challenges and solutions
-- Provide clear timelines and milestones`;
+- Focus on complex tasks that have ambiguous implementation paths
+- Break down multi-component features into manageable steps
+- Identify architectural decisions and trade-offs
+- Map out dependencies and integration points
+- Only create plans when the implementation approach is genuinely unclear`;
 
         case "execute":
             return `In the EXECUTE phase, you should:

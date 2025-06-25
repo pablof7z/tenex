@@ -15,7 +15,7 @@ describe("Agent Execution Prompt Fragments", () => {
                 name: "TestAgent",
                 role: "Developer",
                 instructions: "Test instructions",
-                tools: ["file", "shell"],
+                tools: ["read_file", "shell"],
                 pubkey: "test-pubkey",
                 signer: {} as any,
                 llmConfig: "test-config",
@@ -34,10 +34,10 @@ describe("Agent Execution Prompt Fragments", () => {
             expect(prompt).toContain("You are TestAgent, a Developer");
             expect(prompt).toContain("Test instructions");
             expect(prompt).toContain("Current Phase: CHAT");
-            expect(prompt).toContain("Project: Test Project");
-            expect(prompt).toContain("Repository: https://github.com/test/repo");
+            expect(prompt).toContain("Project Name: \"Test Project\"");
             expect(prompt).toContain("Available Tools");
-            expect(prompt).toContain("file, shell");
+            expect(prompt).toContain("read_file");
+            expect(prompt).toContain("shell");
         });
     });
 
@@ -88,7 +88,7 @@ describe("Agent Execution Prompt Fragments", () => {
                     })
                     .build();
 
-                expect(prompt).toContain("You are in the");
+                expect(prompt).toContain("Current Phase:");
                 expect(prompt).toContain("Focus on:");
             });
         });

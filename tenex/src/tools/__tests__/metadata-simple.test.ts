@@ -54,11 +54,12 @@ fromAgentName: PM Agent`,
       success: true,
       output: "Phase transition to 'plan' requested",
       metadata: {
-        actionType: 'phase_transition',
-        requestedPhase: 'plan',
-        currentPhase: 'chat',
-        fromAgentPubkey: 'pm-pubkey',
-        fromAgentName: 'PM Agent'
+        phaseTransition: {
+          from: 'chat',
+          to: 'plan',
+          message: 'Phase transition message',
+          reason: 'Requirements gathered'
+        }
       }
     };
 
@@ -68,14 +69,14 @@ fromAgentName: PM Agent`,
       output: toolResult.output,
       error: toolResult.error,
       duration: 100,
-      toolName: 'next_action',
+      toolName: 'switch_phase',
       metadata: toolResult.metadata // Direct assignment, no parsing!
     };
 
     // Verify metadata is passed through cleanly
     expect(toolExecutionResult.metadata).toBe(toolResult.metadata);
-    expect(toolExecutionResult.metadata?.actionType).toBe('phase_transition');
-    expect(toolExecutionResult.metadata?.requestedPhase).toBe('plan');
+    expect(toolExecutionResult.metadata?.phaseTransition).toBeDefined();
+    expect(toolExecutionResult.metadata?.phaseTransition?.to).toBe('plan');
   });
 
   it('should show AgentExecutor can access metadata directly', () => {
@@ -85,25 +86,26 @@ fromAgentName: PM Agent`,
       output: "Handing off to Agent Two",
       error: undefined,
       duration: 50,
-      toolName: 'next_action',
+      toolName: 'handoff',
       metadata: {
-        actionType: 'handoff',
-        targetAgentPubkey: 'agent2-pubkey',
-        targetAgentName: 'Agent Two',
-        fromAgentPubkey: 'pm-pubkey'
+        handoff: {
+          to: 'agent2-pubkey',
+          toName: 'Agent Two',
+          message: 'Handoff to Agent Two'
+        }
       } as ToolExecutionMetadata
     }];
 
-    // Find next_action result (as done in AgentExecutor)
-    const nextActionResult = toolResults.find(
-      (result) => result.toolName === "next_action" && result.success && result.metadata
+    // Find handoff result (as done in AgentExecutor)
+    const handoffResult = toolResults.find(
+      (result) => result.toolName === "handoff" && result.success && result.metadata
     );
 
-    expect(nextActionResult).toBeDefined();
-    expect(nextActionResult?.metadata?.actionType).toBe('handoff');
+    expect(handoffResult).toBeDefined();
+    expect(handoffResult?.metadata?.handoff).toBeDefined();
     
     // Extract target agent directly from metadata
-    const nextResponder = nextActionResult?.metadata?.targetAgentPubkey as string;
+    const nextResponder = handoffResult?.metadata?.handoff?.to as string;
     expect(nextResponder).toBe('agent2-pubkey');
   });
 });

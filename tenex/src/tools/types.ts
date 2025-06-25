@@ -7,18 +7,7 @@ export type FileReadParameters = {
     path: string;
 };
 
-export type FileWriteParameters = {
-    path: string;
-    content: string;
-};
-
-export type FileEditParameters = {
-    path: string;
-    oldContent: string;
-    newContent: string;
-};
-
-export type FileToolParameters = FileReadParameters | FileWriteParameters | FileEditParameters;
+export type FileToolParameters = FileReadParameters;
 
 export type ClaudeCodeToolParameters = {
     mode: "run" | "plan";

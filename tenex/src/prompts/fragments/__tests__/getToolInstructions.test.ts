@@ -19,20 +19,22 @@ describe("getToolInstructions", () => {
         expect(claudeCodeTool).toBeDefined();
         expect(claudeCodeTool?.instructions).toContain("Use Claude Code");
         
-        const nextActionTool = getTool("next_action");
-        expect(nextActionTool).toBeDefined();
-        expect(nextActionTool?.instructions).toContain("Specify the next action");
+        const switchPhaseTool = getTool("switch_phase");
+        expect(switchPhaseTool).toBeDefined();
+        expect(switchPhaseTool?.instructions).toContain("Transition to a different workflow phase");
+        
+        const handoffTool = getTool("handoff");
+        expect(handoffTool).toBeDefined();
+        expect(handoffTool?.instructions).toContain("Hand off the conversation to another agent");
     });
     
     test("tool registry should have all expected tools", () => {
         const expectedTools = [
             "read_file",
-            "write_file", 
-            "edit_file",
             "shell",
             "claude_code",
-            "next_action",
-            "get_current_requirements",
+            "switch_phase",
+            "handoff",
             "get_time"
         ];
         

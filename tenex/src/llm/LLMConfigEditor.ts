@@ -10,17 +10,8 @@ import inquirer from "inquirer";
 import { getModelsForProvider, getAllModels } from "./models";
 import type { ModelsList } from "multi-llm-ts";
 import {
-    OpenAI,
-    Anthropic,
-    Google,
-    Groq,
-    DeepSeek,
-    MistralAI,
-    Ollama,
-    OpenRouter,
     Message,
     igniteEngine,
-    loadModels,
 } from "multi-llm-ts";
 import { LLM_DEFAULTS } from "./constants";
 
@@ -115,7 +106,8 @@ export class LLMConfigEditor {
             logger.info("");
         }
 
-        const currentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+        const currentAgentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+        const currentAnalyzeDefault = llmsConfig.defaults?.[LLM_DEFAULTS.ANALYZE] || "none";
 
         const { action } = await inquirer.prompt([
             {
@@ -129,7 +121,8 @@ export class LLMConfigEditor {
                               { name: "Test existing configuration", value: "test" },
                               { name: "Edit existing configuration", value: "edit" },
                               { name: "Remove configuration", value: "remove" },
-                              { name: `Set agent's default [${currentDefault}]`, value: "default" },
+                              { name: `Set agent's default [${currentAgentDefault}]`, value: "default-agents" },
+                              { name: `Set analyze tool's default [${currentAnalyzeDefault}]`, value: "default-analyze" },
                           ]
                         : []),
                     { name: "Exit", value: "exit" },
@@ -150,8 +143,11 @@ export class LLMConfigEditor {
             case "remove":
                 await this.removeConfiguration(llmsConfig);
                 break;
-            case "default":
-                await this.setDefaultConfiguration(llmsConfig);
+            case "default-agents":
+                await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.AGENTS);
+                break;
+            case "default-analyze":
+                await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.ANALYZE);
                 break;
             case "exit":
                 logger.info(chalk.green("\n✅ Configuration saved!"));
@@ -185,7 +181,8 @@ export class LLMConfigEditor {
                 logger.info("");
             }
 
-            const currentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+            const currentAgentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+            const currentAnalyzeDefault = llmsConfig.defaults?.[LLM_DEFAULTS.ANALYZE] || "none";
 
             const choices = [
                 { name: "Add new LLM configuration", value: "add" },
@@ -193,7 +190,8 @@ export class LLMConfigEditor {
                     ? [
                           { name: "Edit existing configuration", value: "edit" },
                           { name: "Remove configuration", value: "remove" },
-                          { name: `Agent's default: [${currentDefault}]`, value: "default" },
+                          { name: `Agent's default: [${currentAgentDefault}]`, value: "default-agents" },
+                          { name: `Analyze tool's default: [${currentAnalyzeDefault}]`, value: "default-analyze" },
                       ]
                     : []),
             ];
@@ -222,8 +220,11 @@ export class LLMConfigEditor {
                 case "remove":
                     await this.removeConfiguration(llmsConfig);
                     break;
-                case "default":
-                    await this.setDefaultConfiguration(llmsConfig);
+                case "default-agents":
+                    await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.AGENTS);
+                    break;
+                case "default-analyze":
+                    await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.ANALYZE);
                     break;
                 case "continue":
                     logger.info(chalk.green("\n✅ LLM configuration complete!"));
@@ -714,18 +715,19 @@ export class LLMConfigEditor {
         }
     }
 
-    private async setDefaultConfiguration(llmsConfig: TenexLLMs): Promise<void> {
+    private async setDefaultConfiguration(llmsConfig: TenexLLMs, defaultType: string): Promise<void> {
         const configs = this.getConfigList(llmsConfig);
-        const currentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
+        const currentDefault = llmsConfig.defaults?.[defaultType] || "none";
+        const typeLabel = defaultType === LLM_DEFAULTS.AGENTS ? "agent" : "analyze tool";
 
-        logger.info(chalk.cyan("\n⚙️  Set Default Configuration"));
+        logger.info(chalk.cyan(`\n⚙️  Set Default Configuration for ${typeLabel}`));
         logger.info(chalk.gray(`Current default: ${currentDefault}\n`));
 
         const { configName } = await inquirer.prompt([
             {
                 type: "list",
                 name: "configName",
-                message: "Select configuration to set as default:",
+                message: `Select configuration to set as ${typeLabel} default:`,
                 choices: configs.map((c) => ({
                     name: c.name === currentDefault ? `${c.name} (current)` : c.name,
                     value: c.name,
@@ -736,9 +738,9 @@ export class LLMConfigEditor {
         if (!llmsConfig.defaults) {
             llmsConfig.defaults = {};
         }
-        llmsConfig.defaults.agents = configName;
+        llmsConfig.defaults[defaultType] = configName;
         await this.saveConfig(llmsConfig);
-        logger.info(chalk.green(`\n✅ Configuration "${configName}" set as default!`));
+        logger.info(chalk.green(`\n✅ Configuration "${configName}" set as ${typeLabel} default!`));
     }
 
 
@@ -781,7 +783,7 @@ export class LLMConfigEditor {
             
             // Use the proper multi-llm-ts v4.0 API
             const llm = igniteEngine(config.provider, llmConfig);
-            const models = await loadModels(config.provider, llmConfig);
+            const models = await getModelsForProvider(config.provider as LLMProvider, config.apiKey);
             
             if (!models || !models.chat || models.chat.length === 0) {
                 throw new Error(`No models available for provider ${config.provider}`);

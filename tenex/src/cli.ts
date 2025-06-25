@@ -26,6 +26,7 @@ debug
     .command("system-prompt")
     .description("Show the system prompt for an agent")
     .option("--agent <name>", "Agent name", "default")
+    .option("--phase <phase>", "Phase to show prompt for (chat, plan, execute, review)", "chat")
     .action((options) => runDebugSystemPrompt(options));
 debug
     .command("chat [agent]")

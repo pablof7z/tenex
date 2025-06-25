@@ -59,7 +59,7 @@ describe("AgentRegistry", () => {
                 role: "Software Developer",
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
-                tools: ["shell", "file"],
+                tools: ["shell", "read_file"],
                 llmConfig: "default",
             };
 
@@ -68,7 +68,7 @@ describe("AgentRegistry", () => {
                 role: "Code Reviewer",
                 expertise: "Code quality",
                 instructions: "Review code thoroughly",
-                tools: ["file"],
+                tools: ["read_file"],
                 llmConfig: "fast",
             };
 
@@ -95,14 +95,14 @@ describe("AgentRegistry", () => {
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
                 nsec: "",
-                tools: ["shell", "file"],
+                tools: ["shell", "read_file"],
                 llmConfig: "default",
             });
 
             expect(developer).toBeDefined();
             expect(developer?.name).toBe("Developer");
             expect(developer?.role).toBe("Software Developer");
-            expect(developer?.tools).toEqual(["shell", "file"]);
+            expect(developer?.tools).toEqual(["shell", "read_file"]);
 
             // Ensure agent reviewer
             const reviewer = await registry.ensureAgent("reviewer", {
@@ -111,7 +111,7 @@ describe("AgentRegistry", () => {
                 expertise: "Code quality",
                 instructions: "Review code thoroughly",
                 nsec: "",
-                tools: ["file"],
+                tools: ["read_file"],
                 llmConfig: "fast",
             });
 
@@ -247,7 +247,7 @@ describe("AgentRegistry", () => {
                 expertise: "Testing",
                 instructions: "Test everything",
                 nsec: "",
-                tools: ["shell", "file"],
+                tools: ["shell", "read_file"],
                 llmConfig: "fast",
             };
 
@@ -260,7 +260,7 @@ describe("AgentRegistry", () => {
                     role: "Tester",
                     expertise: "Testing",
                     instructions: "Test everything",
-                    tools: ["shell", "file"],
+                    tools: ["shell", "read_file"],
                     llmConfig: "fast",
                 })
             );
@@ -405,7 +405,7 @@ describe("AgentRegistry", () => {
                 role: "Software Developer",
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
-                tools: ["shell", "file"],
+                tools: ["shell", "read_file"],
                 llmConfig: "default",
             };
 

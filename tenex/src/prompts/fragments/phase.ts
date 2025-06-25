@@ -34,16 +34,16 @@ function getPhaseConstraints(phase: string): string[] {
     switch (phase) {
         case "chat":
             return [
-                "Focus on understanding requirements",
-                "Ask clarifying questions",
-                "Keep responses concise and friendly",
+                "Default to action - most tasks can go directly to execution",
+                "Only clarify when ambiguity would lead to fundamentally different implementations",
+                "Assume reasonable defaults for common development tasks",
             ];
 
         case "plan":
             return [
-                "Create a structured plan with clear milestones",
-                "Include time estimates when possible",
-                "Identify potential risks or challenges",
+                "Reserved for genuinely complex architectural decisions",
+                "Only plan when multiple competing technical approaches exist",
+                "Focus on system design, not implementation details",
             ];
 
         case "execute":
@@ -71,15 +71,29 @@ export function getPhaseTransitionInstructions(fromPhase: Phase, toPhase: Phase)
         return `
 ## Transitioning to PLAN Phase
 
-You are moving from requirements gathering to planning. In your transition message, include:
+You are moving to planning because the task is complex and requires strategic thinking. In your transition message, include:
 
-1. **Project Overview**: Clear description of what the user wants to build
-2. **Functional Requirements**: All features requested (explicit and inferred)
-3. **Technical Constraints**: Language, framework, performance requirements
-4. **Success Criteria**: How we'll know the project meets expectations
-5. **Priorities**: If multiple features, their relative importance
+1. **Complexity Justification**: Why this task needs planning (e.g., multiple components, unclear approach, architectural decisions)
+2. **Ambiguities to Resolve**: What implementation questions need answering
+3. **Technical Challenges**: Complex integrations or design patterns needed
+4. **Alternative Approaches**: Different ways to implement this feature
+5. **Risk Areas**: Potential pitfalls or difficult aspects
 
-Format this as a comprehensive brief that Claude Code can use to create a detailed plan.`;
+Remember: Only use planning for genuinely complex tasks. Simple tasks should go directly to execution.`;
+    }
+    
+    if (fromPhase === 'chat' && toPhase === 'execute') {
+        return `
+## Transitioning to EXECUTE Phase (Skipping Planning)
+
+You are moving directly to execution because this task is straightforward. In your transition message, include:
+
+1. **Task Summary**: Clear description of what needs to be done
+2. **Implementation Approach**: The obvious way to implement this
+3. **Specific Requirements**: Any constraints or specifics from the user
+4. **Expected Outcome**: What the result should look like
+
+This is a simple task that doesn't require planning - proceed directly to implementation.`;
     }
     
     if (fromPhase === 'plan' && toPhase === 'execute') {
