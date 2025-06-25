@@ -4,6 +4,7 @@ import { claudeCodeTool } from '../tools/implementations/claudeCode';
 import { switchPhaseTool } from '../tools/implementations/switchPhase';
 import { handoffTool } from '../tools/implementations/handoff';
 import { analyze } from '../tools/implementations/analyze';
+import { generateInventoryTool } from '../tools/implementations/generateInventory';
 
 /**
  * Default tools available to all agents (except PM-specific tools)
@@ -20,7 +21,8 @@ export const DEFAULT_AGENT_TOOLS = [
  */
 export const PM_ONLY_TOOLS = [
     switchPhaseTool.name,
-    handoffTool.name
+    handoffTool.name,
+    generateInventoryTool.name
 ];
 
 /**
@@ -34,13 +36,12 @@ export function getDefaultToolsForAgent(isPMAgent: boolean, phase?: string): str
     ];
     
     if (isPMAgent) {
-        const pmTools = [...baseTools, switchPhaseTool.name, handoffTool.name];
+        const pmTools = [...baseTools, switchPhaseTool.name, handoffTool.name, generateInventoryTool.name];
         
         // Add claude_code tool for plan and execute phases (explicit for clarity)
         if (phase === 'plan' || phase === 'execute') {
             pmTools.push(claudeCodeTool.name);
         }
-        
         
         return pmTools;
     }

@@ -114,6 +114,14 @@ export class TaskPublisher {
                 updateEvent.tags.push([LLM_TAGS.PROMPT_TOKENS, llmMetadata.promptTokens.toString()]);
                 updateEvent.tags.push([LLM_TAGS.COMPLETION_TOKENS, llmMetadata.completionTokens.toString()]);
                 updateEvent.tags.push([LLM_TAGS.TOTAL_TOKENS, llmMetadata.totalTokens.toString()]);
+                
+                // Add context window metadata if available
+                if (llmMetadata.contextWindow) {
+                    updateEvent.tags.push([LLM_TAGS.CONTEXT_WINDOW, llmMetadata.contextWindow.toString()]);
+                }
+                if (llmMetadata.maxCompletionTokens) {
+                    updateEvent.tags.push([LLM_TAGS.MAX_COMPLETION_TOKENS, llmMetadata.maxCompletionTokens.toString()]);
+                }
             }
 
             // Add Claude-specific metadata (for backwards compatibility)

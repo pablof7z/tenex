@@ -10,7 +10,12 @@ const ReadFileArgsSchema = z.object({
 export const readFileTool: Tool = {
   name: "read_file",
   instructions: `Read a file from the filesystem.
-Usage: {"tool": "read_file", "args": {"path": "path/to/file.txt"}}
+
+Usage example:
+<tool_use>
+{"tool": "read_file", "args": {"path": "path/to/file.txt"}}
+</tool_use>
+
 - The path can be absolute or relative to the project root
 - Returns the file contents as a string
 - Use this when you need to examine code, configuration files, or any text content`,

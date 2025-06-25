@@ -53,6 +53,15 @@ function getPhaseConstraints(phase: string): string[] {
                 "Explain technical decisions",
             ];
 
+        case "brainstorm":
+            return [
+                "Focus on exploration and ideation rather than concrete requirements",
+                "Encourage creative thinking and alternative perspectives",
+                "Don't rush to converge on solutions - embrace open-ended discussion",
+                "Only transition out when user explicitly requests it",
+                "Ask probing questions to deepen understanding",
+            ];
+
         case "review":
             return [
                 "Provide constructive feedback",
@@ -80,6 +89,21 @@ You are moving to planning because the task is complex and requires strategic th
 5. **Risk Areas**: Potential pitfalls or difficult aspects
 
 Remember: Only use planning for genuinely complex tasks. Simple tasks should go directly to execution.`;
+    }
+    
+    if (fromPhase === 'chat' && toPhase === 'brainstorm') {
+        return `
+## Transitioning to BRAINSTORM Phase
+
+You are moving to brainstorm mode because the user's request is broad, conceptual, or abstract. In your transition message, include:
+
+1. **Why Brainstorming**: Explain why this topic benefits from open exploration
+2. **Key Themes**: Identify the main concepts to explore
+3. **Potential Directions**: Suggest multiple angles to consider
+4. **Questions to Explore**: Pose thought-provoking questions
+5. **Creative Possibilities**: Encourage imaginative solutions
+
+Focus on exploration rather than arriving at concrete requirements. Stay in brainstorm mode until the user explicitly asks to transition out.`;
     }
     
     if (fromPhase === 'chat' && toPhase === 'execute') {
@@ -122,6 +146,34 @@ You are moving from implementation to review. In your transition message, includ
 3. **Tests Written**: Testing coverage
 4. **Known Issues**: Any problems or limitations
 5. **Review Focus**: Areas needing special attention`;
+    }
+    
+    if (toPhase === 'brainstorm') {
+        return `
+## Transitioning to BRAINSTORM Phase
+
+You are moving to brainstorm mode for open exploration. In your transition message, include:
+
+1. **Context from Previous Phase**: What led to this brainstorming session
+2. **Exploration Focus**: What topics or concepts to explore
+3. **Creative Scope**: Encourage wide-ranging discussion
+4. **Questions to Consider**: Thought-provoking questions to guide exploration
+
+Embrace open-ended discussion and creative thinking. Don't rush to concrete solutions.`;
+    }
+    
+    if (fromPhase === 'brainstorm') {
+        return `
+## Transitioning from BRAINSTORM Phase
+
+You are moving from brainstorm mode to ${toPhase}. In your transition message, include:
+
+1. **Key Insights**: Main ideas and concepts that emerged
+2. **Promising Directions**: Most valuable paths explored
+3. **Converged Understanding**: How the brainstorming refined the approach
+4. **Next Steps**: Clear direction for the ${toPhase} phase
+
+Transition the creative exploration into focused action.`;
     }
     
     // Default for other transitions

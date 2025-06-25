@@ -48,10 +48,9 @@ export interface LLMCallLogEntry {
         content?: string;
         contentLength?: number;
         toolCalls?: Array<{
-            id: string;
             name: string;
-            args: Record<string, any>;
-            argsLength: number;
+            params: any;
+            paramsLength: number;
         }>;
         toolCallCount: number;
         usage?: {
@@ -195,13 +194,17 @@ export class LLMCallLogger {
                     content: result.response.content,
                     contentLength: result.response.content?.length || 0,
                     toolCalls: result.response.toolCalls?.map(tc => ({
-                        id: tc.id,
                         name: tc.name,
-                        args: tc.args,
-                        argsLength: JSON.stringify(tc.args).length,
+                        params: tc.params,
+                        paramsLength: JSON.stringify(tc.params).length,
                     })),
                     toolCallCount: result.response.toolCalls?.length || 0,
-                    usage: result.response.usage,
+                    usage: result.response.usage ? {
+                        promptTokens: result.response.usage.prompt_tokens,
+                        completionTokens: result.response.usage.completion_tokens,
+                        totalTokens: (result.response.usage.prompt_tokens || 0) + (result.response.usage.completion_tokens || 0),
+                        cost: undefined // Cost calculation would need to be implemented based on model pricing
+                    } : undefined,
                 };
             }
             

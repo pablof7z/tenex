@@ -195,6 +195,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
             "llm-model",
             "llm-provider",
             "llm-prompt-tokens",
+            "llm-context-window",
             "llm-completion-tokens",
             "llm-total-tokens",
             "llm-cache-creation-tokens",

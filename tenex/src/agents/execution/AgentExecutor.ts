@@ -12,7 +12,7 @@ import {
     createAgentExecutionContext,
     createTracingLogger,
 } from "@/tracing";
-import type { Phase } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 import type { LLMMetadata } from "@/nostr/types";
 import { inventoryExists } from "@/utils/inventory";
 import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
@@ -24,7 +24,7 @@ import type { ToolExecutionResult, ToolResult, HandoffMetadata, PhaseTransitionM
 import { isHandoffMetadata, isPhaseTransitionMetadata } from "@/tools/types";
 import { getDefaultToolsForAgent } from "@/agents/constants";
 import type { ConversationManager } from "@/conversations/ConversationManager";
-import { openRouterPricing } from "@/llm/pricing";
+import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import { getTool } from "@/tools/registry";
 import { executeTools } from "@/tools/toolExecutor";
 import "@/prompts/fragments/available-agents";
@@ -150,9 +150,6 @@ export class AgentExecutor {
                     responseLength: finalContent.length
                 });
             }
-
-            console.log(finalResponse);
-            console.log({llmMetadata})
 
             // 6. Process 'next_action' tool results for handoffs and phase transitions
             // Ensure projectPath is set in context
@@ -367,6 +364,7 @@ export class AgentExecutor {
         if (tracingContext && "logEventPublished" in tracingLogger) {
             tracingLogger.logEventPublished(event.id || "unknown", "agent_response", {
                 agentName: context.agent.name,
+                preview: content.substring(0, 60),
                 nextResponder,
                 hasLLMMetadata: !!llmMetadata,
             });
@@ -382,61 +380,41 @@ export class AgentExecutor {
         response: CompletionResponse,
         messages: Message[]
     ): Promise<LLMMetadata | undefined> {
-        if (!response.usage) {
+        const responseWithUsage = {
+            usage: response.usage ? {
+                promptTokens: response.usage.prompt_tokens,
+                completionTokens: response.usage.completion_tokens,
+                totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens
+            } : undefined,
+            model: (response as any).model,
+            experimental_providerMetadata: (response as any).experimental_providerMetadata
+        };
+
+        const metadata = await buildLLMMetadata(
+            responseWithUsage,
+            (response as any).model || "unknown",
+            messages
+        );
+
+        if (!metadata) {
             return undefined;
         }
 
-        // Calculate cost based on model and token usage
-        const responseWithModel = response as CompletionResponse & { model?: string };
-        const cost = await this.calculateCost(
-            responseWithModel.model || "unknown",
-            response.usage.prompt_tokens,
-            response.usage.completion_tokens
-        );
+        // Add additional metadata specific to AgentExecutor
+        const responseWithModel = response as CompletionResponse & { 
+            contextWindow?: number;
+            maxCompletionTokens?: number;
+        };
 
-        // Extract system and user prompts from messages for metadata
-        const systemPrompt = messages.find(m => m.role === "system")?.content || "";
-        const userMessages = messages.filter(m => m.role === "user");
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        const userPrompt = lastUserMessage?.content || "";
-        
         return {
-            model: responseWithModel.model || "unknown",
-            cost,
-            promptTokens: response.usage.prompt_tokens,
-            completionTokens: response.usage.completion_tokens,
-            totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
-            systemPrompt,
-            userPrompt,
+            ...metadata,
+            promptTokens: metadata.usage.prompt_tokens,
+            completionTokens: metadata.usage.completion_tokens,
+            totalTokens: metadata.usage.total_tokens,
+            contextWindow: responseWithModel.contextWindow,
+            maxCompletionTokens: responseWithModel.maxCompletionTokens,
             rawResponse: response.content,
         };
-    }
-
-    /**
-     * Calculate cost based on model and token usage using OpenRouter pricing
-     */
-    private async calculateCost(model: string, promptTokens: number, completionTokens: number): Promise<number> {
-        try {
-            // Try to find exact model match first
-            let modelId = await openRouterPricing.findModelId(model);
-            
-            // If no exact match, use the model name as-is
-            if (!modelId) {
-                modelId = model;
-            }
-            
-            return await openRouterPricing.calculateCost(modelId, promptTokens, completionTokens);
-        } catch (error) {
-            logger.error("Failed to calculate cost using OpenRouter pricing", {
-                model,
-                promptTokens,
-                completionTokens,
-                error: error instanceof Error ? error.message : String(error),
-            });
-            
-            // Fallback to minimal default cost calculation
-            return (promptTokens + completionTokens) / 1_000_000 * 1.0; // $1 per 1M tokens
-        }
     }
 
 

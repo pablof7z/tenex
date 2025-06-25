@@ -7,7 +7,12 @@ const execAsync = promisify(exec);
 export const shellTool: Tool = {
   name: "shell",
   instructions: `Execute a shell command in the project directory.
-Usage: {"tool": "shell", "args": {"command": "npm install"}}
+
+Usage example:
+<tool_use>
+{"tool": "shell", "args": {"command": "npm install"}}
+</tool_use>
+
 - Commands are executed in the project root directory
 - Environment includes NO_COLOR=1 to avoid ANSI escape codes
 - Use this for running build commands, tests, git operations, etc.

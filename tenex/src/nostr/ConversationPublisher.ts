@@ -38,6 +38,12 @@ export async function publishAgentResponse(
         reply.tag(["llm-prompt-tokens", llmMetadata.promptTokens.toString()]);
         reply.tag(["llm-completion-tokens", llmMetadata.completionTokens.toString()]);
         reply.tag(["llm-total-tokens", llmMetadata.totalTokens.toString()]);
+        if (llmMetadata.contextWindow) {
+            reply.tag(["llm-context-window", llmMetadata.contextWindow.toString()]);
+        }
+        if (llmMetadata.maxCompletionTokens) {
+            reply.tag(["llm-max-completion-tokens", llmMetadata.maxCompletionTokens.toString()]);
+        }
         if (llmMetadata.systemPrompt) {
             reply.tag(["llm-system-prompt", llmMetadata.systemPrompt]);
         }

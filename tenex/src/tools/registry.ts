@@ -6,6 +6,7 @@ import { getTimeTool } from './implementations/getTime';
 import { switchPhaseTool } from './implementations/switchPhase';
 import { handoffTool } from './implementations/handoff';
 import { analyze } from './implementations/analyze';
+import { generateInventoryTool } from './implementations/generateInventory';
 
 // Registry of all available tools
 const toolsMap = new Map<string, Tool>([
@@ -16,6 +17,7 @@ const toolsMap = new Map<string, Tool>([
   ['switch_phase', switchPhaseTool],
   ['handoff', handoffTool],
   ['analyze', analyze],
+  ['generate_inventory', generateInventoryTool],
 ]);
 
 export function getTool(name: string): Tool | undefined {

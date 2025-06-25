@@ -15,6 +15,8 @@ export const LLM_TAGS = {
     PROMPT_TOKENS: "llm-prompt-tokens",
     COMPLETION_TOKENS: "llm-completion-tokens",
     TOTAL_TOKENS: "llm-total-tokens",
+    CONTEXT_WINDOW: "llm-context-window",
+    MAX_COMPLETION_TOKENS: "llm-max-completion-tokens",
 } as const;
 
 // Session and execution tags

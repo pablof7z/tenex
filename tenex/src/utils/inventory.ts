@@ -5,6 +5,8 @@ import { getProjectContext, isProjectContextInitialized, configService } from "@
 import { loadLLMRouter } from "@/llm";
 import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "./repomix.js";
+import { TaskPublisher, getNDK } from "@/nostr";
+import type { NDKTask, NDKEvent } from "@nostr-dev-kit/ndk";
 
 const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
 
@@ -24,16 +26,46 @@ interface InventoryResult {
   complexModules: ComplexModule[];
 }
 
+interface InventoryGenerationOptions {
+  conversationRootEventId?: string;
+  agentSigner?: any;
+}
+
 /**
  * Generate comprehensive inventory using repomix + LLM
  */
-export async function generateInventory(projectPath: string): Promise<void> {
+export async function generateInventory(projectPath: string, options?: InventoryGenerationOptions): Promise<void> {
   logger.info("Generating project inventory with repomix + LLM", { projectPath });
 
   const inventoryPath = await getInventoryPath(projectPath);
   
   // Ensure context directory exists
   await fs.mkdir(path.dirname(inventoryPath), { recursive: true });
+
+  // Create NDK task if context is available
+  let task: NDKTask | undefined;
+  let taskPublisher: TaskPublisher | undefined;
+  
+  if (options?.agentSigner) {
+    const ndk = getNDK();
+    if (ndk) {
+      taskPublisher = new TaskPublisher(ndk);
+      
+      task = await taskPublisher.createTask({
+        title: "Generating Project Inventory",
+        prompt: "Analyzing the codebase structure to create a comprehensive inventory with repomix + LLM",
+        conversationRootEventId: options.conversationRootEventId,
+      });
+
+      // Initial status update
+      await publishAgentUpdate(
+        task,
+        taskPublisher,
+        options.agentSigner,
+        "🔍 Getting a general sense of the project structure and architecture..."
+      );
+    }
+  }
 
   // Step 1: Generate repomix content once for efficiency
   const repomixResult = await generateRepomixOutput(projectPath);
@@ -46,18 +78,63 @@ export async function generateInventory(projectPath: string): Promise<void> {
     await fs.writeFile(inventoryPath, inventoryResult.content, "utf-8");
     logger.info("Main inventory saved", { inventoryPath });
 
+    if (task && taskPublisher) {
+      await taskPublisher.updateTask(task, {
+        status: "in-progress",
+        progress: 50,
+        message: "Main inventory generated, analyzing complex modules...",
+      });
+    }
+
     // Step 4: Generate individual module guides for complex modules (max 10)
     const modulesToProcess = inventoryResult.complexModules.slice(0, 10);
     
-    for (const module of modulesToProcess) {
+    for (let i = 0; i < modulesToProcess.length; i++) {
+      const module = modulesToProcess[i];
+      if (!module) continue; // Skip if module is undefined
+      
       try {
+        if (task && taskPublisher && options?.agentSigner) {
+          await publishAgentUpdate(
+            task,
+            taskPublisher,
+            options.agentSigner,
+            `🔬 Inspecting complex module: ${module.name} at ${module.path}`
+          );
+        }
+
         await generateModuleGuide(projectPath, module, repomixResult.content);
+
+        if (task && taskPublisher) {
+          const progress = 50 + Math.floor((i + 1) / modulesToProcess.length * 40);
+          await taskPublisher.updateTask(task, {
+            status: "in-progress",
+            progress,
+            message: `Generated guide for ${module.name}`,
+          });
+        }
       } catch (error) {
         logger.warn("Failed to generate module guide", { 
           module: module.name, 
           error: error instanceof Error ? error.message : String(error) 
         });
       }
+    }
+
+    // Final completion update
+    if (task && taskPublisher && options?.agentSigner) {
+      await taskPublisher.updateTask(task, {
+        status: "completed",
+        progress: 100,
+        message: `Inventory generation completed with ${modulesToProcess.length} complex module guides`,
+      });
+
+      await publishAgentUpdate(
+        task,
+        taskPublisher,
+        options.agentSigner,
+        `✅ Project inventory generation completed!\n\n📋 Main inventory: ${inventoryPath}\n📚 Complex module guides: ${modulesToProcess.length} generated\n\nThe codebase is now thoroughly documented and ready for analysis.`
+      );
     }
 
     logger.info("Inventory generation completed", { 
@@ -67,6 +144,29 @@ export async function generateInventory(projectPath: string): Promise<void> {
   } finally {
     repomixResult.cleanup();
   }
+}
+
+/**
+ * Publish an agent update as a reply to the task
+ */
+async function publishAgentUpdate(
+  task: NDKTask,
+  taskPublisher: TaskPublisher,
+  agentSigner: any,
+  message: string
+): Promise<NDKEvent> {
+  const reply = task.reply();
+  reply.content = message;
+  reply.tags.push(["t", "agent-update"]);
+  
+  // Tag the project
+  const projectCtx = getProjectContext();
+  reply.tag(projectCtx.project);
+  
+  await reply.sign(agentSigner);
+  await reply.publish();
+  
+  return reply;
 }
 
 /**

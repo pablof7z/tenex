@@ -3,12 +3,12 @@ import { Message } from "multi-llm-ts";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import { executeTools, parseToolUses } from "@/tools/toolExecutor";
-import type { Phase } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 import type { ToolExecutionResult } from "@/tools/types";
 import { publishAgentResponse } from "@/nostr/ConversationPublisher";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import type { LLMMetadata } from "@/nostr/types";
-import { openRouterPricing } from "@/llm/pricing";
+import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
@@ -52,54 +52,41 @@ export class ReasonActLoop {
         response: CompletionResponse,
         messages: Message[]
     ): Promise<LLMMetadata | undefined> {
-        if (!response.usage) {
+        const responseWithUsage = {
+            usage: response.usage ? {
+                promptTokens: response.usage.prompt_tokens,
+                completionTokens: response.usage.completion_tokens,
+                totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens
+            } : undefined,
+            model: (response as any).model,
+            experimental_providerMetadata: (response as any).experimental_providerMetadata
+        };
+
+        const metadata = await buildLLMMetadata(
+            responseWithUsage,
+            (response as any).model || "unknown",
+            messages
+        );
+
+        if (!metadata) {
             return undefined;
         }
 
-        // Calculate cost based on model and token usage
-        const responseWithModel = response as CompletionResponse & { model?: string };
-        const cost = await this.calculateCost(
-            responseWithModel.model || "unknown",
-            response.usage.prompt_tokens,
-            response.usage.completion_tokens
-        );
+        // Add additional metadata specific to ReasonActLoop
+        const responseWithModel = response as CompletionResponse & { 
+            contextWindow?: number;
+            maxCompletionTokens?: number;
+        };
 
-        // Extract system and user prompts from messages for metadata
-        const systemPrompt = messages.find(m => m.role === "system")?.content || "";
-        const userMessages = messages.filter(m => m.role === "user");
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        const userPrompt = lastUserMessage?.content || "";
-        
         return {
-            model: responseWithModel.model || "unknown",
-            cost,
-            promptTokens: response.usage.prompt_tokens,
-            completionTokens: response.usage.completion_tokens,
-            totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
-            systemPrompt,
-            userPrompt,
+            ...metadata,
+            promptTokens: metadata.usage.prompt_tokens,
+            completionTokens: metadata.usage.completion_tokens,
+            totalTokens: metadata.usage.total_tokens,
+            contextWindow: responseWithModel.contextWindow,
+            maxCompletionTokens: responseWithModel.maxCompletionTokens,
             rawResponse: response.content,
         };
-    }
-
-    /**
-     * Calculate cost based on model and token usage using OpenRouter pricing
-     */
-    private async calculateCost(model: string, promptTokens: number, completionTokens: number): Promise<number> {
-        try {
-            // Try to find exact model match first
-            let modelId = await openRouterPricing.findModelId(model);
-            
-            // If no exact match, use the model name as-is
-            if (!modelId) {
-                modelId = model;
-            }
-            
-            return await openRouterPricing.calculateCost(modelId, promptTokens, completionTokens);
-        } catch (error) {
-            // Fallback to minimal default cost calculation
-            return (promptTokens + completionTokens) / 1_000_000 * 1.0; // $1 per 1M tokens
-        }
     }
 
     async execute(
@@ -168,6 +155,8 @@ export class ReasonActLoop {
                 phase: context.phase,
                 agent: context.agent,
                 conversation: context.conversation,
+                agentSigner: context.agent.signer,
+                conversationRootEventId: context.eventToReply?.id,
             });
             
             // Collect all tool results
@@ -228,14 +217,6 @@ export class ReasonActLoop {
                     tracingLogger
                 );
             }
-        } else if (context.eventToReply) {
-            // Publish successful completion
-            await this.publishPhaseUpdate(
-                context.eventToReply,
-                `🎯 Reasoning loop completed successfully after ${iteration} iterations`,
-                context,
-                tracingLogger
-            );
         }
 
         return {

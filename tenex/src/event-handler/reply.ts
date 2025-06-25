@@ -61,7 +61,6 @@ export const handleChatMessage = async (
     // This is a reply within an existing conversation
     try {
         await handleReplyLogic(event, context);
-        logInfo(chalk.green("✅ Reply routed successfully"));
     } catch (error) {
         logInfo(chalk.red(`❌ Failed to route reply: ${formatError(error)}`));
     }
@@ -86,6 +85,7 @@ async function handleReplyLogic(
 
     // Only respond to user messages
     if (!isEventFromUser(event)) {
+        logger.info("Event is not from user, not sending to any agent")
         return;
     }
 

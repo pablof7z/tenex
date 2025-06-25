@@ -175,12 +175,72 @@ function getToolInstructions(tools: string[]): string {
         }
     }
 
-    return toolInstructions.length > 0
-        ? "\n## Tool Instructions\n" + toolInstructions.join("\n\n")
-        : "";
+    if (toolInstructions.length === 0) {
+        return "";
+    }
+
+    return `
+## Tool Instructions
+
+🚨 **CRITICAL: DO NOT HALLUCINATE TOOL RESULTS** 🚨
+- You ONLY write <tool_use> blocks with JSON: <tool_use>{"tool": "name", "args": {...}}</tool_use>
+- You NEVER write <tool_result> blocks or fake outputs  
+- The system executes tools and provides real results
+- ANY fake results will break the system
+
+${toolInstructions.join("\n\n")}`;
+}
+
+// Tool use guidelines fragment - comprehensive guidance on proper tool usage
+export const toolUseGuidelinesFragment: PromptFragment<{}> = {
+    id: "tool-use-guidelines",
+    priority: 0, // Highest priority - appears first
+    template: () => {
+        return `# Tool Use Guidelines
+
+🚨 **CRITICAL: NEVER FABRICATE TOOL RESULTS** 🚨
+
+1. **Think Before Using Tools**: Assess what information you already have and what you need to proceed with the task.
+
+2. **Choose Appropriate Tools**: Select the most effective tool for each step. Consider all available tools and choose the one that best fits the current need.
+
+3. **One Tool Per Message**: Use one tool at a time per message to accomplish tasks iteratively. Each tool use must be informed by the result of the previous tool use.
+
+4. **Use Correct Format**: Write tool uses as JSON wrapped in XML tags:
+   \`\`\`
+   <tool_use>
+   {"tool": "tool_name", "args": {"param": "value"}}
+   </tool_use>
+   \`\`\`
+
+5. **Wait for Real Results**: After each tool use, the system will automatically execute it and provide real results. This response will include:
+   - Success or failure status with reasons
+   - Actual output or error messages  
+   - Any relevant feedback or information
+
+6. **NEVER Assume Outcomes**: Do not assume the success of any tool use. Do not fabricate or guess tool results. Always wait for the actual system response.
+
+7. **Proceed Step-by-Step**: Build each action on the results of previous ones. Address any issues or errors immediately before proceeding.
+
+8. **Tool Use Placement**: When using a tool, MUST place the tool_use block at the very end of that message. Complete all natural language explanation first, then conclude with a single tool_use block.
+
+**FORBIDDEN**: 
+- Writing fake tool_result blocks
+- Guessing or assuming tool outputs
+- Proceeding without actual results
+- Placing tool_use blocks anywhere except at the very end of your output
+
+This iterative approach ensures accuracy and allows you to adapt based on real results at each step.`;
+    },
+};
+
+// Utility function to get standalone tool use guidelines
+export function getToolUseGuidelinesSection(): string {
+    return toolUseGuidelinesFragment.template({});
 }
 
 // Register fragments
+fragmentRegistry.register(toolUseGuidelinesFragment);
 fragmentRegistry.register(agentSystemPromptFragment);
 fragmentRegistry.register(phaseContextFragment);
 fragmentRegistry.register(customInstructionsFragment);

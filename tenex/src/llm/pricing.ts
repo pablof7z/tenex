@@ -99,12 +99,6 @@ export class OpenRouterPricingService {
             }
             
             this.cacheExpiry = Date.now() + this.cacheValidityMs;
-            
-            logger.info("OpenRouter pricing cache refreshed", {
-                modelCount: this.pricingCache.size,
-                cacheExpiresIn: this.cacheValidityMs / 1000 / 60, // minutes
-            });
-            
         } catch (error) {
             logger.error("Failed to refresh OpenRouter pricing cache", {
                 error: error instanceof Error ? error.message : String(error),

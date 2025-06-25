@@ -6,6 +6,8 @@ export interface LLMMetadata {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    contextWindow?: number;
+    maxCompletionTokens?: number;
     systemPrompt?: string;
     userPrompt?: string;
     rawResponse?: string;

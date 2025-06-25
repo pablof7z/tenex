@@ -29,11 +29,20 @@ Use the 'handoff' tool to delegate tasks to specialist agents or return control 
 Use the 'switch_phase' tool to transition between workflow phases:
 
 **Phase transition rules:**
+- **chat → brainstorm**: When requests are broad, conceptual, abstract, or need creative exploration
 - **chat → plan**: ONLY for architectural decisions where a developer would need pen-and-paper to design
 - **chat → execute**: DEFAULT for most tasks - if you understand what to build, skip planning
+- **brainstorm → any**: ONLY when user explicitly requests to move forward with specific ideas
 - **plan → execute**: When the architectural design is complete
 - **execute → review**: When implementation is complete and needs validation
 - **review → chat**: When results need discussion or new requirements emerge
+
+**When to use brainstorming phase:**
+- User asks broad, open-ended questions without clear requirements
+- Requests involve exploring possibilities or "what if" scenarios
+- Need to ideate on creative solutions or innovative approaches
+- Discussion is conceptual/abstract rather than concrete implementation
+- User uses exploratory language like "imagine," "explore," "possibilities"
 
 **When to use planning phase (rare):**
 - Designing new system architectures or major subsystems

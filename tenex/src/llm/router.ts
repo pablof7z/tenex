@@ -127,6 +127,16 @@ export class LLMRouter implements LLMService {
                 caching: true
             });
             
+            // Extract context window information from model metadata
+            if (typeof model === 'object' && model !== null && 'meta' in model) {
+                const modelMeta = (model as any).meta;
+                if (modelMeta) {
+                    // Add context window information to response
+                    (response as any).contextWindow = modelMeta.context_length;
+                    (response as any).maxCompletionTokens = modelMeta.top_provider?.max_completion_tokens;
+                }
+            }
+            
             const endTime = Date.now();
             const duration = endTime - startTime;
             
@@ -156,9 +166,8 @@ export class LLMRouter implements LLMService {
                 logger.debug(`[LLM] Tool calls`, {
                     configKey,
                     toolCalls: response.toolCalls.map(tc => ({
-                        id: tc.id,
                         name: tc.name,
-                        argsLength: JSON.stringify(tc.args).length
+                        paramsLength: JSON.stringify(tc.params).length
                     }))
                 });
             }

@@ -86,7 +86,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
             function isValidPhase(value: unknown): value is Phase {
                 return (
                     typeof value === "string" &&
-                    ["chat", "plan", "execute", "review", "chores"].includes(value)
+                    ["chat", "brainstorm", "plan", "execute", "review", "chores"].includes(value)
                 );
             }
 
@@ -144,7 +144,9 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
                     ? Number(data.phaseStartedAt)
                     : undefined,
                 metadata,
-                phaseTransitions: data.phaseTransitions || [],
+                phaseTransitions: hasProperty(data, "phaseTransitions") && Array.isArray(data.phaseTransitions)
+                    ? data.phaseTransitions
+                    : [],
             };
 
             return conversation;

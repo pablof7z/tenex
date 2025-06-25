@@ -91,8 +91,6 @@ export class ProcessManager implements IProcessManager {
             return;
         }
 
-        logger.info("Stopping project", { projectId });
-
         // Try graceful shutdown first
         if (processInfo.process.pid) {
             process.kill(processInfo.process.pid, "SIGTERM");
@@ -116,19 +114,14 @@ export class ProcessManager implements IProcessManager {
         }
 
         this.processes.delete(projectId);
-        logger.info("Project stopped", { projectId });
     }
 
     async stopAll(): Promise<void> {
-        logger.info("Stopping all projects", { count: this.processes.size });
-
         const stopPromises = Array.from(this.processes.keys()).map((projectId) =>
             this.stopProject(projectId)
         );
 
         await Promise.all(stopPromises);
-
-        logger.info("All projects stopped");
     }
 
     getRunningProjects(): Array<{ id: string; path: string; startedAt: Date }> {

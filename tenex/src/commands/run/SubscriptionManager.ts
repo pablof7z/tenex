@@ -107,9 +107,6 @@ export class SubscriptionManager {
 
         // Log receipt
         if (event.kind !== EVENT_KINDS.PROJECT_STATUS) {
-            logger.info(chalk.gray(`\n📥 Received ${source}: ${event.kind}`));
-            logger.debug(`Event kind: ${event.kind}, author: ${event.author.npub}`);
-
             // Pass to event handler
             try {
                 await this.eventHandler.handleEvent(event);

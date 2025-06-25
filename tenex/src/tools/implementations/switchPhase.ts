@@ -12,29 +12,25 @@ export const switchPhaseTool: Tool = {
   name: "switch_phase",
   instructions: `Transition to a different workflow phase.
 
-Use this tool when you need to move the conversation to a different phase:
-
-<tool_use>{ 
-  "tool": "switch_phase", 
-  "args": { 
-    "phase": "plan", 
-    "reason": "requirements are clear",
-    "message": "## User Requirements\\n- Build a CLI tool...\\n## Constraints\\n- Must be Python 3.8+..."
-  }
-}</tool_use>
+Usage example:
+<tool_use>
+{"tool": "switch_phase", "args": {"phase": "plan", "reason": "requirements are clear", "message": "## User Requirements\\n- Build a CLI tool...\\n## Constraints\\n- Must be Python 3.8+..."}}
+</tool_use>
 
 **Valid Phases:**
 - chat: Requirements gathering and discussion
+- brainstorm: Creative exploration and ideation
 - plan: Planning implementation
 - execute: Implementation phase  
 - review: Review and validation
 - chores: Cleanup tasks
 
 **Message Content Guidelines:**
-- Chat → Plan: Include user objectives, functional requirements, technical constraints, success criteria
-- Plan → Execute: Include approved plan, technical decisions, implementation steps, acceptance criteria
-- Execute → Review: Include components implemented, files created/modified, tests written, known issues
-- Review → Chores: Include cleanup tasks, documentation needs, deployment steps
+- To "brainstorm": Leave empty unless you already know what the user wants to discuss
+- To "plan": Include user objectives, functional requirements, technical constraints, success criteria
+- To 'execute': Include plans, technical decisions, implementation steps, acceptance criteria
+- To 'review': Include components implemented, files created/modified, tests written, known issues
+- To 'chores': Include cleanup tasks, documentation needs, deployment steps
 
 **Important:**
 - Only PM agents can use this tool
@@ -61,7 +57,7 @@ Use this tool when you need to move the conversation to a different phase:
     }
     
     // Validate phase
-    const validPhases: Phase[] = ["chat", "plan", "execute", "review", "chores"];
+    const validPhases: Phase[] = ["chat", "brainstorm", "plan", "execute", "review", "chores"];
     if (!validPhases.includes(switchPhaseArgs.phase)) {
       return {
         success: false,

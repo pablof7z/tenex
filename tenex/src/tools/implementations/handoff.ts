@@ -16,21 +16,14 @@ Use this tool when:
 1. A task requires expertise outside your capabilities
 2. You need input from the user before proceeding
 
-<tool_use>{ 
-  "tool": "handoff", 
-  "args": { 
-    "target": "frontend-dev",
-    "message": "Please implement the React components we discussed"
-  }
-}</tool_use>
+Usage examples:
+<tool_use>
+{"tool": "handoff", "args": {"target": "frontend-dev", "message": "Please implement the React components we discussed"}}
+</tool_use>
 
-<tool_use>{ 
-  "tool": "handoff", 
-  "args": { 
-    "target": "user",
-    "message": "I need more information about the database requirements"
-  }
-}</tool_use>
+<tool_use>
+{"tool": "handoff", "args": {"target": "user", "message": "I need more information about the database requirements"}}
+</tool_use>
 
 **Target Options:**
 - Agent slug (e.g., "frontend-dev")

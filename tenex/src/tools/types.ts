@@ -105,6 +105,8 @@ export interface ToolExecutionContext {
     phase: string;
     agent: Agent;
     conversation?: Conversation;
+    agentSigner?: any; // NDK signer for the agent
+    conversationRootEventId?: string; // Root event ID for task tagging
 }
 
 export interface ToolExecutionResult {

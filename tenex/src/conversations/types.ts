@@ -1,6 +1,5 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-
-export type Phase = "chat" | "plan" | "execute" | "review" | "chores";
+import type { Phase } from "./phases";
 
 export interface Conversation {
     id: string;
