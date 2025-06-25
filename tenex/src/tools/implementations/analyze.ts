@@ -16,17 +16,9 @@ export const analyze: Tool = {
 
 This tool uses repomix to create a compact representation of the entire codebase and sends it to an LLM along with your prompt for analysis. This is useful when you need a broad view of the system to answer specific questions.
 
-Examples:
+Usage example:
 <tool_use>
 {"tool": "analyze", "args": {"prompt": "What are the main architectural patterns used in this codebase?"}}
-</tool_use>
-
-<tool_use>
-{"tool": "analyze", "args": {"prompt": "How does authentication work throughout the system?"}}
-</tool_use>
-
-<tool_use>
-{"tool": "analyze", "args": {"prompt": "What are the key data flows in this application?"}}
 </tool_use>`,
 
   async run(

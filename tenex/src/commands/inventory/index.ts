@@ -12,7 +12,7 @@ export const inventoryCommand = new Command("inventory")
 
 inventoryCommand
     .command("generate")
-    .description("Generate or update the project inventory using Claude Code")
+    .description("Generate or update the project inventory using repomix + LLM analysis")
     .option("--path <path>", "Project path (defaults to current directory)")
     .action(async (options) => {
         try {
@@ -25,8 +25,9 @@ inventoryCommand
 
             await generateInventory(projectPath);
 
-            console.log("\nInventory generation started with Claude Code.");
-            console.log("Claude will analyze your project and create a comprehensive inventory.");
+            console.log("\n✅ Inventory generation completed successfully!");
+            console.log("📋 Main inventory saved to context/INVENTORY.md");
+            console.log("📚 Complex module guides (if any) saved to context/ directory");
         } catch (error) {
             logger.error("Failed to generate inventory", { error });
             process.exit(1);
@@ -35,7 +36,7 @@ inventoryCommand
 
 inventoryCommand
     .command("update")
-    .description("Update inventory for specific files using Claude Code")
+    .description("Update inventory for specific files using repomix + LLM analysis")
     .argument("<files...>", "Files to update in the inventory")
     .option("--path <path>", "Project path (defaults to current directory)")
     .action(async (files, options) => {
@@ -49,8 +50,9 @@ inventoryCommand
 
             await updateInventory(projectPath, files);
 
-            console.log("\nInventory update started with Claude Code.");
-            console.log(`Claude will update the inventory for ${files.length} file(s).`);
+            console.log("\n✅ Inventory update completed successfully!");
+            console.log(`📝 Updated inventory for ${files.length} file(s)`);
+            console.log("📋 Updated inventory saved to context/INVENTORY.md");
         } catch (error) {
             logger.error("Failed to update inventory", { error });
             process.exit(1);
