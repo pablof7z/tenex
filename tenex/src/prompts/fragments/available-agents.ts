@@ -25,6 +25,12 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
             return "## Available Agents\nNo other agents are available.";
         }
 
+        // Find current agent to determine if PM
+        const currentAgent = currentAgentPubkey 
+            ? agents.find(agent => agent.pubkey === currentAgentPubkey)
+            : null;
+        const isCurrentAgentPM = currentAgent?.isPMAgent || false;
+
         const agentList = availableForHandoff
             .map(agent => {
                 const pmIndicator = agent.isPMAgent ? " (Project Manager)" : "";
@@ -32,12 +38,17 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
             })
             .join("\n\n");
 
+        // Provide different guidance based on agent type
+        const guidance = isCurrentAgentPM 
+            ? `**As Project Manager**: When tasks fall within a specialist's area of expertise, delegate to them using the handoff tool. Let specialists handle implementation details within their domain.`
+            : `**As a Specialist**: Focus on your area of expertise. If you receive feedback or tasks that fall outside your specialization, defer to other specialists or the PM agent rather than attempting to handle them yourself.`;
+
         return `## Available Agents
-The following agents are available in this project for collaboration:
+The following agents are available in this project:
 
 ${agentList}
 
-**Note**: You can consult these agents when their expertise aligns with part of the work you're doing.`;
+${guidance}`;
     },
     validateArgs: (args): args is AvailableAgentsArgs => {
         return (

@@ -8,12 +8,14 @@ describe("PM Routing Fragments", () => {
             .build();
 
         expect(prompt).toContain("## PM Agent Routing Instructions");
-        expect(prompt).toContain("Agent Handoffs");
-        expect(prompt).toContain("Phase Transitions");
-        expect(prompt).toContain("next_action");
+        expect(prompt).toContain("Handoff Tool");
+        expect(prompt).toContain("Switch Phase Tool");
+        expect(prompt).toContain("switch_phase");
         expect(prompt).toContain("chat → plan");
         expect(prompt).toContain("plan → execute");
         expect(prompt).toContain("execute → review");
+        expect(prompt).toContain("IMPORTANT");
+        expect(prompt).toContain("you MUST delegate to them rather than attempting it yourself");
     });
 
     it("should generate PM handoff guidance", () => {
@@ -26,6 +28,9 @@ describe("PM Routing Fragments", () => {
         expect(prompt).toContain("Developer agents");
         expect(prompt).toContain("Reviewer/Expert agents");
         expect(prompt).toContain("Specialist agents");
+        expect(prompt).toContain("Key Principle");
+        expect(prompt).toContain("Each specialist excels in their domain");
+        expect(prompt).toContain("delegate immediately");
     });
 
     it("should combine both PM fragments", () => {

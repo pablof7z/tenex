@@ -29,6 +29,7 @@ import { executeTools } from "@/tools/toolExecutor";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/pm-routing";
 import "@/prompts/fragments/default-to-action";
+import "@/prompts/fragments/expertise-boundaries";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
 
 export class AgentExecutor {
@@ -104,8 +105,6 @@ export class AgentExecutor {
                 systemPrompt,
                 userPrompt
             );
-
-            console.log({ initialResponse, initialLLMMetadata });
 
             // Check if response contains tool invocations
             const hasTools = this.containsTools(initialResponse.content || "");
@@ -282,6 +281,12 @@ export class AgentExecutor {
                     claudeCodeReport: context.additionalContext.claudeCodeReport
                 });
             }
+        } else {
+            // Add expertise boundaries for specialist agents
+            systemPromptBuilder.add("expertise-boundaries", {
+                agentRole: context.agent.role || "specialist",
+                isPMAgent: false
+            });
         }
 
         const systemPrompt = systemPromptBuilder.build();
@@ -443,6 +448,12 @@ export class AgentExecutor {
         let nextResponder: string | undefined = undefined;
         let phaseTransition: string | undefined = undefined;
 
+        logger.info('🔍 Processing special tool results', {
+            agent: context.agent.name,
+            totalResults: toolResults.length,
+            tools: toolResults.map(r => r.toolName)
+        });
+
         // Look for handoff tool results
         const handoffResult = toolResults.find(
             (result) => result.toolName === "handoff" && result.success
@@ -453,7 +464,7 @@ export class AgentExecutor {
             
             // Handle handoff to user (no next responder needed)
             if (handoffData.to === 'user') {
-                logger.info("Handoff to user processed", {
+                logger.info("🤝 Handoff to user processed", {
                     fromAgent: context.agent.name,
                     fromPubkey: context.agent.pubkey,
                     message: handoffData.message,
@@ -464,7 +475,7 @@ export class AgentExecutor {
                 // Handle handoff to agent
                 nextResponder = handoffData.to;
                 
-                logger.info("Agent handoff processed", {
+                logger.info("🤝 Agent handoff processed", {
                     fromAgent: context.agent.name,
                     fromPubkey: context.agent.pubkey,
                     toAgent: handoffData.toName,
@@ -486,6 +497,14 @@ export class AgentExecutor {
             const transitionMessage = phaseData.message;
             phaseTransition = requestedPhase;
             
+            logger.info("🔄 Phase transition requested", {
+                agent: context.agent.name,
+                fromPhase: context.phase,
+                toPhase: requestedPhase,
+                reason: phaseData.reason,
+                message: transitionMessage
+            });
+            
             // Update conversation phase if ConversationManager is available
             if (this.conversationManager) {
                 try {
@@ -498,7 +517,7 @@ export class AgentExecutor {
                         phaseData.reason
                     );
                     
-                    logger.info("Phase transition processed", {
+                    logger.info("✅ Phase transition processed", {
                         conversationId: context.conversation.id,
                         fromPhase: context.phase,
                         toPhase: requestedPhase,

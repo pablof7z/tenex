@@ -12,7 +12,7 @@ describe("Available Agents Fragment", () => {
             isPMAgent: true,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["next_action"],
+            tools: ["switch_phase", "handoff"],
         },
         {
             name: "Frontend Developer",
@@ -22,7 +22,7 @@ describe("Available Agents Fragment", () => {
             isPMAgent: false,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["file", "shell"],
+            tools: ["read_file", "shell"],
         },
         {
             name: "Backend Developer",
@@ -31,7 +31,7 @@ describe("Available Agents Fragment", () => {
             slug: "backend-dev",
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["file", "shell", "claude_code"],
+            tools: ["read_file", "shell", "claude_code"],
         },
     ];
 
@@ -43,12 +43,9 @@ describe("Available Agents Fragment", () => {
             .build();
 
         expect(prompt).toContain("## Available Agents");
-        expect(prompt).toContain("Project Manager (PM)");
+        expect(prompt).toContain("**Project Manager** (Project Manager)");
         expect(prompt).toContain("Frontend Developer");
         expect(prompt).toContain("Backend Developer");
-        expect(prompt).toContain("pm123");
-        expect(prompt).toContain("dev456");
-        expect(prompt).toContain("backend789");
     });
 
     it("should exclude current agent from handoff options", () => {
@@ -60,12 +57,9 @@ describe("Available Agents Fragment", () => {
             .build();
 
         expect(prompt).toContain("## Available Agents");
-        expect(prompt).toContain("Project Manager (PM)");
+        expect(prompt).toContain("**Project Manager** (Project Manager)");
         expect(prompt).not.toContain("Frontend Developer");
         expect(prompt).toContain("Backend Developer");
-        expect(prompt).toContain("pm123");
-        expect(prompt).not.toContain("dev456");
-        expect(prompt).toContain("backend789");
     });
 
     it("should handle empty agents list", () => {
@@ -75,7 +69,7 @@ describe("Available Agents Fragment", () => {
             })
             .build();
 
-        expect(prompt).toContain("No agents are currently available for handoffs");
+        expect(prompt).toContain("No agents are currently available");
     });
 
     it("should handle case where only current agent exists", () => {
@@ -86,6 +80,32 @@ describe("Available Agents Fragment", () => {
             })
             .build();
 
-        expect(prompt).toContain("No other agents are available for handoffs");
+        expect(prompt).toContain("No other agents are available");
+    });
+
+    it("should provide PM-specific guidance for PM agents", () => {
+        const prompt = new PromptBuilder()
+            .add("available-agents", {
+                agents: mockAgents,
+                currentAgentPubkey: "pm123", // PM agent
+            })
+            .build();
+
+        expect(prompt).toContain("As Project Manager");
+        expect(prompt).toContain("delegate to them using the handoff tool");
+        expect(prompt).toContain("Let specialists handle implementation details");
+    });
+
+    it("should provide specialist-specific guidance for non-PM agents", () => {
+        const prompt = new PromptBuilder()
+            .add("available-agents", {
+                agents: mockAgents,
+                currentAgentPubkey: "dev456", // Specialist agent
+            })
+            .build();
+
+        expect(prompt).toContain("As a Specialist");
+        expect(prompt).toContain("Focus on your area of expertise");
+        expect(prompt).toContain("defer to other specialists or the PM agent");
     });
 });
