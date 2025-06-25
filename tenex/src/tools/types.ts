@@ -39,13 +39,48 @@ export type ToolOutput =
     | object // Structured data
     | null;
 
+
+// Specific metadata for handoff tool
+export interface HandoffMetadata {
+    handoff: {
+        to: 'user' | string; // 'user' or agent pubkey
+        toName: string;
+        message?: string;
+    }
+}
+
+// Specific metadata for phase transition tool
+export interface PhaseTransitionMetadata {
+    phaseTransition: {
+        from: Phase;
+        to: Phase;
+        message: string;
+        reason?: string;
+    }
+}
+
+// Type guard functions
+export function isHandoffMetadata(metadata: any): metadata is HandoffMetadata {
+    return metadata?.handoff && 
+           typeof metadata.handoff.to === 'string' &&
+           typeof metadata.handoff.toName === 'string';
+}
+
+export function isPhaseTransitionMetadata(metadata: any): metadata is PhaseTransitionMetadata {
+    return metadata?.phaseTransition &&
+           typeof metadata.phaseTransition.from === 'string' &&
+           typeof metadata.phaseTransition.to === 'string' &&
+           typeof metadata.phaseTransition.message === 'string';
+}
+
+// Generic metadata interface for other tools
 export interface ToolExecutionMetadata {
     exitCode?: number;
     fileSize?: number;
     encoding?: string;
     mimeType?: string;
     duration?: number;
-    [key: string]: string | number | boolean | undefined;
+    [key: string]: string | number | boolean | undefined | object;
 }
 
 export interface ToolInvocation {
@@ -61,7 +96,7 @@ export interface ToolResult {
     success: boolean;
     output?: string;
     error?: string;
-    metadata?: ToolExecutionMetadata;
+    metadata?: ToolExecutionMetadata | HandoffMetadata | PhaseTransitionMetadata;
 }
 
 // Tool definition
@@ -72,7 +107,7 @@ export interface Tool {
 }
 
 import type { Agent } from "@/agents/types";
-import type { Conversation } from "@/conversations/types";
+import type { Conversation, Phase } from "@/conversations/types";
 
 export interface ToolExecutionContext {
     projectPath: string;
@@ -88,7 +123,7 @@ export interface ToolExecutionResult {
     output?: ToolOutput;
     error?: string;
     duration: number;
-    metadata?: ToolExecutionMetadata;
+    metadata?: ToolExecutionMetadata | HandoffMetadata | PhaseTransitionMetadata;
     toolName?: string;
 }
 

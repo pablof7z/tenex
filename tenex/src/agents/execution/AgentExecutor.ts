@@ -19,7 +19,8 @@ import { logger } from "@/utils/logger";
 import type { AgentExecutionContext, AgentExecutionResult } from "./types";
 import { ReasonActLoop } from "./ReasonActLoop";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import type { ToolExecutionResult, ToolResult } from "@/tools/types";
+import type { ToolExecutionResult, ToolResult, HandoffMetadata, PhaseTransitionMetadata } from "@/tools/types";
+import { isHandoffMetadata, isPhaseTransitionMetadata } from "@/tools/types";
 import { getDefaultToolsForAgent } from "@/agents/constants";
 import type { ConversationManager } from "@/conversations/ConversationManager";
 import { openRouterPricing } from "@/llm/pricing";
@@ -27,9 +28,12 @@ import { getTool } from "@/tools/registry";
 import { executeTools } from "@/tools/toolExecutor";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/pm-routing";
+import "@/prompts/fragments/default-to-action";
+import { TaskPublisher } from "@/nostr/TaskPublisher";
 
 export class AgentExecutor {
     private reasonActLoop: ReasonActLoop;
+    private taskPublisher: TaskPublisher;
 
     constructor(
         private llmService: LLMService,
@@ -37,6 +41,7 @@ export class AgentExecutor {
         private conversationManager?: ConversationManager
     ) {
         this.reasonActLoop = new ReasonActLoop(llmService);
+        this.taskPublisher = new TaskPublisher(this.ndk);
     }
 
     /**
@@ -88,39 +93,72 @@ export class AgentExecutor {
                 context.agent.signer
             );
 
-            // 4. Generate initial response via LLM
-            tracingLogger.logLLMRequest(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
-
             const initialResponse = await this.generateResponse(
                 systemPrompt,
                 userPrompt,
             );
 
-            tracingLogger.logLLMResponse(context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG);
-
-            // 5. Execute the Reason-Act loop with phase-aware agent
-            const reasonActResult = await this.reasonActLoop.execute(
+            // Build initial LLM metadata
+            const initialLLMMetadata = await this.buildLLMMetadata(
                 initialResponse,
-                {
-                    projectPath: process.cwd(),
-                    conversationId: context.conversation.id,
-                    agentName: context.agent.name,
-                    phase: context.phase,
-                    llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-                    agent: agentWithPhaseTools, // Pass agent with phase-aware tools
-                    conversation: context.conversation, // Pass the full conversation object
-                },
-                systemPrompt,
-                userPrompt,
-                tracingContext
-            );
-
-            // 5. Build metadata with final response
-            const llmMetadata = await this.buildLLMMetadata(
-                reasonActResult.finalResponse,
                 systemPrompt,
                 userPrompt
             );
+
+            console.log({ initialResponse, initialLLMMetadata });
+
+            // Check if response contains tool invocations
+            const hasTools = this.containsTools(initialResponse.content || "");
+            
+            let finalResponse: CompletionResponse;
+            let finalContent: string;
+            let allToolResults: ToolExecutionResult[] = [];
+            let llmMetadata: LLMMetadata | undefined;
+
+            if (hasTools) {
+                // Execute the Reason-Act loop only if there are tools
+                const reasonActResult = await this.reasonActLoop.execute(
+                    initialResponse,
+                    {
+                        projectPath: process.cwd(),
+                        conversationId: context.conversation.id,
+                        agentName: context.agent.name,
+                        phase: context.phase,
+                        llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+                        agent: agentWithPhaseTools, // Pass agent with phase-aware tools
+                        conversation: context.conversation, // Pass the full conversation object
+                        eventToReply: triggeringEvent, // Pass the triggering event for phase updates
+                    },
+                    systemPrompt,
+                    userPrompt,
+                    tracingContext,
+                    initialLLMMetadata
+                );
+                
+                finalResponse = reasonActResult.finalResponse;
+                finalContent = reasonActResult.finalContent;
+                allToolResults = reasonActResult.allToolResults || [];
+                
+                // Build metadata with final response from ReasonActLoop
+                llmMetadata = await this.buildLLMMetadata(
+                    finalResponse,
+                    systemPrompt,
+                    userPrompt
+                );
+            } else {
+                // No tools, use initial response directly
+                finalResponse = initialResponse;
+                finalContent = initialResponse.content || "";
+                llmMetadata = initialLLMMetadata;
+                
+                tracingLogger.debug("No tools detected, skipping Reason-Act loop", {
+                    agent: context.agent.name,
+                    responseLength: finalContent.length
+                });
+            }
+
+            console.log(finalResponse);
+            console.log({llmMetadata})
 
             // 6. Process 'next_action' tool results for handoffs and phase transitions
             // Ensure projectPath is set in context
@@ -128,7 +166,7 @@ export class AgentExecutor {
                 context.projectPath = process.cwd();
             }
             const { nextResponder, phaseTransition } = await this.processNextActionResults(
-                reasonActResult.allToolResults || [],
+                allToolResults,
                 context
             );
 
@@ -136,7 +174,7 @@ export class AgentExecutor {
             const publishedEvent = await this.publishResponse(
                 context,
                 triggeringEvent,
-                reasonActResult.finalContent,
+                finalContent,
                 nextResponder,
                 llmMetadata,
                 tracingContext,
@@ -146,7 +184,7 @@ export class AgentExecutor {
             // Log the agent response in human-readable format
             logger.agentResponse(
                 context.agent.name,
-                reasonActResult.finalContent,
+                finalContent,
                 context.conversation.id,
                 context.conversation.title,
                 publishedEvent.id
@@ -161,16 +199,16 @@ export class AgentExecutor {
 
             tracingLogger.completeOperation("agent_execution", {
                 agentName: context.agent.name,
-                responseLength: reasonActResult.finalContent.length,
-                toolExecutions: reasonActResult.toolExecutions,
+                responseLength: finalContent.length,
+                toolExecutions: allToolResults.length,
                 nextAgent: nextResponder,
             });
 
             return {
                 success: true,
-                response: reasonActResult.finalContent,
+                response: finalContent,
                 llmMetadata,
-                toolExecutions: reasonActResult.allToolResults,
+                toolExecutions: allToolResults,
                 nextAgent: nextResponder,
                 publishedEvent,
             };
@@ -232,6 +270,7 @@ export class AgentExecutor {
         // Add PM-specific routing instructions for PM agents
         if (context.agent.isPMAgent) {
             systemPromptBuilder
+                .add("default-to-action", {})
                 .add("pm-routing-instructions", {})
                 .add("pm-handoff-guidance", {});
             
@@ -282,6 +321,14 @@ export class AgentExecutor {
             messages,
             options: {},
         });
+    }
+
+    /**
+     * Check if content contains tool invocations
+     */
+    private containsTools(content: string): boolean {
+        // Only check for modern JSON tool format
+        return /<tool_use>/.test(content);
     }
 
     /**
@@ -387,7 +434,7 @@ export class AgentExecutor {
 
 
     /**
-     * Process NextActionExecutor tool results for agent handoffs and phase transitions
+     * Process switch_phase and handoff tool results
      */
     private async processNextActionResults(
         toolResults: ToolExecutionResult[],
@@ -396,35 +443,47 @@ export class AgentExecutor {
         let nextResponder: string | undefined = undefined;
         let phaseTransition: string | undefined = undefined;
 
-        // Look for NextActionExecutor tool results
-        const nextActionResult = toolResults.find(
-            (result) => result.toolName === "next_action" && result.success && result.metadata
+        // Look for handoff tool results
+        const handoffResult = toolResults.find(
+            (result) => result.toolName === "handoff" && result.success
         );
 
-        if (!nextActionResult?.metadata) {
-            return { nextResponder, phaseTransition };
+        if (handoffResult?.metadata && isHandoffMetadata(handoffResult.metadata)) {
+            const handoffData = handoffResult.metadata.handoff;
+            
+            // Handle handoff to user (no next responder needed)
+            if (handoffData.to === 'user') {
+                logger.info("Handoff to user processed", {
+                    fromAgent: context.agent.name,
+                    fromPubkey: context.agent.pubkey,
+                    message: handoffData.message,
+                    phase: context.phase,
+                });
+                // Don't set nextResponder for user handoffs
+            } else {
+                // Handle handoff to agent
+                nextResponder = handoffData.to;
+                
+                logger.info("Agent handoff processed", {
+                    fromAgent: context.agent.name,
+                    fromPubkey: context.agent.pubkey,
+                    toAgent: handoffData.toName,
+                    toPubkey: handoffData.to,
+                    message: handoffData.message,
+                    phase: context.phase,
+                });
+            }
         }
 
-        const metadata = nextActionResult.metadata;
-        const actionType = metadata.actionType;
+        // Look for switch_phase tool results
+        const switchPhaseResult = toolResults.find(
+            (result) => result.toolName === "switch_phase" && result.success
+        );
 
-        if (actionType === "handoff") {
-            // Extract target agent pubkey for handoffs
-            nextResponder = metadata.targetAgentPubkey as string;
-            
-            logger.info("Agent handoff processed", {
-                fromAgent: context.agent.name,
-                fromPubkey: context.agent.pubkey,
-                toAgent: metadata.targetAgentName,
-                toPubkey: metadata.targetAgentPubkey,
-                reason: metadata.reason,
-                phase: context.phase,
-            });
-            
-        } else if (actionType === "phase_transition") {
-            // Process phase transition
-            const requestedPhase = metadata.requestedPhase as string;
-            const transitionMessage = metadata.transitionMessage as string;
+        if (switchPhaseResult?.metadata && isPhaseTransitionMetadata(switchPhaseResult.metadata)) {
+            const phaseData = switchPhaseResult.metadata.phaseTransition;
+            const requestedPhase = phaseData.to;
+            const transitionMessage = phaseData.message;
             phaseTransition = requestedPhase;
             
             // Update conversation phase if ConversationManager is available
@@ -436,7 +495,7 @@ export class AgentExecutor {
                         transitionMessage,
                         context.agent.pubkey,
                         context.agent.name,
-                        metadata.reason as string
+                        phaseData.reason
                     );
                     
                     logger.info("Phase transition processed", {
@@ -485,34 +544,40 @@ export class AgentExecutor {
     }
 
     /**
-     * Invoke Claude Code directly for plan/execute phases
+     * Invoke Claude Code directly for plan/execute phases with NDK task publishing
      */
     private async invokeClaudeCodeDirectly(
         message: string,
         phase: string,
         context: AgentExecutionContext
     ): Promise<ToolResult> {
-        const claudeCodeTool = getTool('claude_code');
-        if (!claudeCodeTool) {
-            return { success: false, error: 'Claude Code tool not available' };
-        }
-        
         try {
-            const result = await claudeCodeTool.run(
-                {
-                    prompt: message,
-                    mode: phase === 'plan' ? 'plan' : 'run'
-                },
-                {
-                    projectPath: context.projectPath || process.cwd(),
-                    conversationId: context.conversation.id,
-                    phase: context.phase,
-                    agent: context.agent,
-                    agentName: context.agent.name
-                }
-            );
+            // Get conversation root event ID (first event in history)
+            const conversationRootEventId = context.conversation.history[0]?.id;
             
-            return result;
+            // Execute Claude Code with full task tracking
+            const { task, result } = await this.taskPublisher.executeWithTask({
+                prompt: message,
+                projectPath: context.projectPath || process.cwd(),
+                title: `Claude Code ${phase === 'plan' ? 'Planning' : 'Execution'}`,
+                branch: context.conversation.metadata.branch,
+                conversationRootEventId
+            });
+            
+            // Return assistant messages as output, with metadata including task ID
+            return {
+                success: result.success,
+                output: result.assistantMessages.join('\n\n'),
+                error: result.error,
+                metadata: {
+                    taskId: task.id,
+                    rawOutput: result.output,
+                    sessionId: result.sessionId,
+                    totalCost: result.totalCost,
+                    messageCount: result.messageCount,
+                    duration: result.duration
+                }
+            };
         } catch (error) {
             return { 
                 success: false, 
