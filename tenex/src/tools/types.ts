@@ -96,7 +96,8 @@ export interface Tool {
 }
 
 import type { Agent } from "@/agents/types";
-import type { Conversation, Phase } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 
 export interface ToolExecutionContext {
     projectPath: string;

@@ -1,7 +1,7 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 import type { Agent } from "@/agents/types";
-import type { Phase } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 import type { Conversation } from "@/conversations/types";
 import { buildAgentPrompt } from "./agent-common";
 import { getTool } from "@/tools/registry";

@@ -1,5 +1,6 @@
 import type { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
-import type { Conversation, Phase } from "@/conversations/types";
+import type { Conversation } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 
 export interface AgentSummary {
     name: string;

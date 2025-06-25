@@ -3,7 +3,7 @@ import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { inventoryExists } from "@/utils/inventory";
-import type { Phase } from "@/conversations/types";
+import { type Phase, ALL_PHASES } from "@/conversations/phases";
 import { formatError } from "@/utils/errors";
 import { logError, logInfo } from "@/utils/logger";
 import chalk from "chalk";
@@ -98,8 +98,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
             const availableAgents = Array.from(projectCtx.agents.values());
             
             // Validate phase
-            const validPhases: Phase[] = ["chat", "plan", "execute", "review"];
-            const phase = (validPhases.includes(options.phase as Phase) ? options.phase : "chat") as Phase;
+            const phase = (ALL_PHASES.includes(options.phase as Phase) ? options.phase : "chat") as Phase;
             
             // Check inventory availability for chat phase only
             const hasInventory = phase === "chat" ? await inventoryExists(process.cwd()) : false;

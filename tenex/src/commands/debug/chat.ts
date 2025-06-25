@@ -13,7 +13,7 @@ import { getProjectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import path from "node:path";
 import type { Agent } from "@/agents/types";
-import type { Phase } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 import { formatError } from "@/utils/errors";
 import { logDebug, logError, logInfo } from "@/utils/logger";
 import { NDKEvent } from "@nostr-dev-kit/ndk";

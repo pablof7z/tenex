@@ -5,7 +5,8 @@ import {
     createTracingContext,
     createTracingLogger,
 } from "@/tracing";
-import type { Phase, PhaseTransition } from "@/conversations/types";
+import type { PhaseTransition } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";

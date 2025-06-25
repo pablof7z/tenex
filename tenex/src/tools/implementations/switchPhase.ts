@@ -1,6 +1,6 @@
 import type { Tool, ToolExecutionContext, ToolResult, PhaseTransitionMetadata } from '../types';
 import { logger } from '@/utils/logger';
-import type { Phase } from '@/conversations/types';
+import { type Phase, ALL_PHASES, isValidPhase, PHASE_DESCRIPTIONS } from '@/conversations/phases';
 
 interface SwitchPhaseArgs {
   phase: Phase;
@@ -18,12 +18,7 @@ Usage example:
 </tool_use>
 
 **Valid Phases:**
-- chat: Requirements gathering and discussion
-- brainstorm: Creative exploration and ideation
-- plan: Planning implementation
-- execute: Implementation phase  
-- review: Review and validation
-- chores: Cleanup tasks
+${ALL_PHASES.map(phase => `- ${phase}: ${PHASE_DESCRIPTIONS[phase]}`).join('\\n')}
 
 **Message Content Guidelines:**
 - To "brainstorm": Leave empty unless you already know what the user wants to discuss
@@ -57,11 +52,10 @@ Usage example:
     }
     
     // Validate phase
-    const validPhases: Phase[] = ["chat", "brainstorm", "plan", "execute", "review", "chores"];
-    if (!validPhases.includes(switchPhaseArgs.phase)) {
+    if (!isValidPhase(switchPhaseArgs.phase)) {
       return {
         success: false,
-        error: `Invalid phase: ${switchPhaseArgs.phase}. Valid phases are: ${validPhases.join(", ")}`,
+        error: `Invalid phase: ${switchPhaseArgs.phase}. Valid phases are: ${ALL_PHASES.join(", ")}`,
       };
     }
 

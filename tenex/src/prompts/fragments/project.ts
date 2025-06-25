@@ -1,37 +1,45 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 import { getPhaseTransitionInstructions } from "./phase";
-import type { Phase } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 
 // Project inventory context fragment
 interface InventoryContextArgs {
     hasInventory: boolean;
     inventoryContent?: string;
+    contextFiles?: string[];
 }
 
 export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
     id: "project-inventory-context",
     priority: 25,
-    template: ({ hasInventory, inventoryContent }) => {
+    template: ({ hasInventory, inventoryContent, contextFiles }) => {
+        const parts: string[] = [];
+        
         if (hasInventory && inventoryContent) {
-            return `## Project Context
+            parts.push(`## Project Context
 
 The project inventory provides comprehensive information about this codebase:
 
 ${inventoryContent}
 
-This inventory helps you understand the project structure, significant files, and architectural patterns when working with the codebase.`;
+This inventory helps you understand the project structure, significant files, and architectural patterns when working with the codebase.`);
+        } else if (hasInventory) {
+            parts.push(`## Project Context
+A project inventory exists but could not be loaded. The inventory contains detailed information about the project structure, files, and dependencies that can help you understand the codebase better.`);
+        } else {
+            parts.push(`## Project Context
+No project inventory is available yet. An inventory can be generated to provide detailed information about the project structure, files, and dependencies.`);
         }
-
-        if (hasInventory) {
-            return `## Project Context
-A project inventory is available for this project. The inventory contains detailed information about the project structure, files, and dependencies that can help you understand the codebase better.
-
-You can use the 'project-inventory' tool to access this information when needed.`;
+        
+        // Add context files listing if available
+        if (contextFiles && contextFiles.length > 0) {
+            parts.push(`### Additional Context Files
+The following documentation files are available in the context/ directory and can be read using the read_file tool:
+${contextFiles.map(f => `- context/${f}`).join('\n')}`);
         }
-
-        return `## Project Context
-No project inventory is available yet. An inventory can be generated to provide detailed information about the project structure, files, and dependencies.`;
+        
+        return parts.join('\n\n');
     },
     validateArgs: (args): args is InventoryContextArgs => {
         return (

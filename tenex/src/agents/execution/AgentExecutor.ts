@@ -1,6 +1,8 @@
 import type { CompletionResponse, LLMService } from "@/llm/types";
 import { Message } from "multi-llm-ts";
 import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/nostr";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import type NDK from "@nostr-dev-kit/ndk";
 import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
@@ -14,7 +16,7 @@ import {
 } from "@/tracing";
 import type { Phase } from "@/conversations/phases";
 import type { LLMMetadata } from "@/nostr/types";
-import { inventoryExists } from "@/utils/inventory";
+import { inventoryExists, loadInventoryContent } from "@/utils/inventory";
 import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { AgentExecutionContext, AgentExecutionResult } from "./types";
@@ -151,12 +153,12 @@ export class AgentExecutor {
                 });
             }
 
-            // 6. Process 'next_action' tool results for handoffs and phase transitions
+            // 6. Process handoff and phase transition tool results
             // Ensure projectPath is set in context
             if (!context.projectPath) {
                 context.projectPath = process.cwd();
             }
-            const { nextResponder, phaseTransition } = await this.processNextActionResults(
+            const { nextResponder, phaseTransition } = await this.processFlowControlResults(
                 allToolResults,
                 context
             );
@@ -240,6 +242,23 @@ export class AgentExecutor {
         // Check inventory availability for chat phase
         const hasInventory =
             context.phase === "chat" ? await inventoryExists(process.cwd()) : false;
+        
+        // Load inventory content if available
+        let inventoryContent: string | null = null;
+        if (hasInventory) {
+            inventoryContent = await loadInventoryContent(process.cwd());
+        }
+        
+        // Get list of context files
+        let contextFiles: string[] = [];
+        try {
+            const contextDir = path.join(process.cwd(), "context");
+            const files = await fs.readdir(contextDir);
+            contextFiles = files.filter(f => f.endsWith(".md"));
+        } catch (error) {
+            // Context directory may not exist
+            logger.debug("Could not read context directory", { error });
+        }
 
         // Get all available agents for handoffs
         const availableAgents = Array.from(projectCtx.agents.values());
@@ -258,7 +277,11 @@ export class AgentExecutor {
                 agents: availableAgents,
                 currentAgentPubkey: context.agent.pubkey,
             })
-            .add("project-inventory-context", { hasInventory })
+            .add("project-inventory-context", { 
+                hasInventory, 
+                inventoryContent: inventoryContent || undefined,
+                contextFiles 
+            })
             // Move phase context and constraints to system prompt
             .add("phase-context", {
                 phase: context.phase,
@@ -386,13 +409,13 @@ export class AgentExecutor {
                 completionTokens: response.usage.completion_tokens,
                 totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens
             } : undefined,
-            model: (response as any).model,
-            experimental_providerMetadata: (response as any).experimental_providerMetadata
+            model: 'model' in response && typeof response.model === 'string' ? response.model : undefined,
+            experimental_providerMetadata: 'experimental_providerMetadata' in response ? response.experimental_providerMetadata : undefined
         };
 
         const metadata = await buildLLMMetadata(
             responseWithUsage,
-            (response as any).model || "unknown",
+            responseWithUsage.model || "unknown",
             messages
         );
 
@@ -421,7 +444,7 @@ export class AgentExecutor {
     /**
      * Process switch_phase and handoff tool results
      */
-    private async processNextActionResults(
+    private async processFlowControlResults(
         toolResults: ToolExecutionResult[],
         context: AgentExecutionContext
     ): Promise<{ nextResponder: string | undefined; phaseTransition: string | undefined }> {

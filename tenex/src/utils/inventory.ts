@@ -93,29 +93,32 @@ export async function generateInventory(projectPath: string, options?: Inventory
       const module = modulesToProcess[i];
       if (!module) continue; // Skip if module is undefined
       
+      // TypeScript now knows module is defined
+      const definedModule: ComplexModule = module;
+      
       try {
         if (task && taskPublisher && options?.agentSigner) {
           await publishAgentUpdate(
             task,
             taskPublisher,
             options.agentSigner,
-            `🔬 Inspecting complex module: ${module.name} at ${module.path}`
+            `🔬 Inspecting complex module: ${definedModule.name} at ${definedModule.path}`
           );
         }
 
-        await generateModuleGuide(projectPath, module, repomixResult.content);
+        await generateModuleGuide(projectPath, definedModule, repomixResult.content);
 
         if (task && taskPublisher) {
           const progress = 50 + Math.floor((i + 1) / modulesToProcess.length * 40);
           await taskPublisher.updateTask(task, {
             status: "in-progress",
             progress,
-            message: `Generated guide for ${module.name}`,
+            message: `Generated guide for ${definedModule.name}`,
           });
         }
       } catch (error) {
         logger.warn("Failed to generate module guide", { 
-          module: module.name, 
+          module: definedModule.name, 
           error: error instanceof Error ? error.message : String(error) 
         });
       }

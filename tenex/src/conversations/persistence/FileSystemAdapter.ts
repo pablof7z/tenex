@@ -5,7 +5,7 @@ import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@/lib/fs";
 import { getNDK } from "@/nostr/ndkClient";
 import type { Conversation, ConversationMetadata as ConvMetadata } from "../types";
-import type { Phase } from "@/conversations/types";
+import { type Phase, isValidPhase } from "@/conversations/phases";
 import type {
     ConversationPersistenceAdapter,
     ConversationSearchCriteria,
@@ -82,13 +82,6 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
                 return key in obj;
             }
 
-            // Type guard for Phase
-            function isValidPhase(value: unknown): value is Phase {
-                return (
-                    typeof value === "string" &&
-                    ["chat", "brainstorm", "plan", "execute", "review", "chores"].includes(value)
-                );
-            }
 
             // Validate required properties
             if (
@@ -104,7 +97,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
             }
 
             // Validate phase
-            if (!isValidPhase(data.phase)) {
+            if (typeof data.phase !== "string" || !isValidPhase(data.phase)) {
                 logger.error("Invalid phase", { id: conversationId, phase: data.phase });
                 return null;
             }

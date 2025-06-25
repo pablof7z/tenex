@@ -1,6 +1,6 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
-import type { Phase } from "@/conversations/types";
+import type { Phase } from "@/conversations/phases";
 
 // Tool continuation prompt fragment - used by ReasonActLoop
 interface ToolContinuationPromptArgs {

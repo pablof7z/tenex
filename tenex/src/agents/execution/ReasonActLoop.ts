@@ -58,13 +58,13 @@ export class ReasonActLoop {
                 completionTokens: response.usage.completion_tokens,
                 totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens
             } : undefined,
-            model: (response as any).model,
-            experimental_providerMetadata: (response as any).experimental_providerMetadata
+            model: 'model' in response && typeof response.model === 'string' ? response.model : undefined,
+            experimental_providerMetadata: 'experimental_providerMetadata' in response ? response.experimental_providerMetadata : undefined
         };
 
         const metadata = await buildLLMMetadata(
             responseWithUsage,
-            (response as any).model || "unknown",
+            responseWithUsage.model || "unknown",
             messages
         );
 
@@ -104,7 +104,7 @@ export class ReasonActLoop {
         const allToolResults: ToolExecutionResult[] = [];
         
         // Work with a mutable copy of messages
-        let workingMessages = [...messages];
+        const workingMessages = [...messages];
 
         while (iteration < ReasonActLoop.MAX_ITERATIONS) {
             // Check if response contains tool invocations

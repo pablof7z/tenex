@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getPhaseTransitionInstructions } from '../phase';
-import type { Phase } from '@/conversations/types';
+import type { Phase } from '@/conversations/phases';
 
 describe('getPhaseTransitionInstructions', () => {
     it('should provide detailed instructions for chat -> plan transition', () => {

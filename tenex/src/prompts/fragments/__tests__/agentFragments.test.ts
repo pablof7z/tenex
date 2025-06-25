@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { phaseContextFragment } from '../agentFragments';
-import type { Conversation, Phase, PhaseTransition } from '@/conversations/types';
+import type { Conversation, PhaseTransition } from '@/conversations/types';
+import type { Phase } from '@/conversations/phases';
 
 describe('phaseContextFragment', () => {
     let mockConversation: Conversation;
