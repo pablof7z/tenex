@@ -1,6 +1,6 @@
 import { Message } from "multi-llm-ts";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
+import { isEventFromUser } from "@/nostr/utils";
 import type { Conversation } from "@/conversations/types";
 
 /**

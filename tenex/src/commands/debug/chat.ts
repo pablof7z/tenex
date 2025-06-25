@@ -137,7 +137,6 @@ export async function runDebugChat(
                 agent,
                 conversation,
                 phase: "chat" as Phase,
-                lastUserMessage: options.message,
                 projectContext: { projectPath },
             };
 
@@ -255,7 +254,6 @@ export async function runDebugChat(
                     agent,
                     conversation,
                     phase: "chat" as Phase,
-                    lastUserMessage: input,
                     projectContext: { projectPath },
                 };
 

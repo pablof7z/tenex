@@ -10,7 +10,6 @@ export interface AgentExecutionContext {
     conversation: Conversation;
     phase: Phase;
     previousPhase?: Phase;
-    lastUserMessage?: string;
     projectContext?: Record<string, unknown>;
     projectPath?: string;
     additionalContext?: {

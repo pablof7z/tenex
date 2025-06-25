@@ -31,46 +31,49 @@ export async function generateInventory(projectPath: string): Promise<void> {
   // Ensure context directory exists
   await fs.mkdir(path.dirname(inventoryPath), { recursive: true });
 
-  // Step 1: Generate main inventory with complex module identification
-  const inventoryResult = await generateMainInventory(projectPath);
+  // Step 1: Generate repomix content once for efficiency
+  const repomixResult = await generateRepomixOutput(projectPath);
   
-  // Step 2: Save main inventory
-  await fs.writeFile(inventoryPath, inventoryResult.content, "utf-8");
-  logger.info("Main inventory saved", { inventoryPath });
+  try {
+    // Step 2: Generate main inventory with complex module identification
+    const inventoryResult = await generateMainInventory(projectPath, repomixResult.content);
+    
+    // Step 3: Save main inventory
+    await fs.writeFile(inventoryPath, inventoryResult.content, "utf-8");
+    logger.info("Main inventory saved", { inventoryPath });
 
-  // Step 3: Generate individual module guides for complex modules (max 10)
-  const modulesToProcess = inventoryResult.complexModules.slice(0, 10);
-  
-  for (const module of modulesToProcess) {
-    try {
-      await generateModuleGuide(projectPath, module);
-    } catch (error) {
-      logger.warn("Failed to generate module guide", { 
-        module: module.name, 
-        error: error instanceof Error ? error.message : String(error) 
-      });
+    // Step 4: Generate individual module guides for complex modules (max 10)
+    const modulesToProcess = inventoryResult.complexModules.slice(0, 10);
+    
+    for (const module of modulesToProcess) {
+      try {
+        await generateModuleGuide(projectPath, module, repomixResult.content);
+      } catch (error) {
+        logger.warn("Failed to generate module guide", { 
+          module: module.name, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+      }
     }
-  }
 
-  logger.info("Inventory generation completed", { 
-    inventoryPath,
-    complexModules: modulesToProcess.length 
-  });
+    logger.info("Inventory generation completed", { 
+      inventoryPath,
+      complexModules: modulesToProcess.length 
+    });
+  } finally {
+    repomixResult.cleanup();
+  }
 }
 
 /**
  * Generate main inventory and identify complex modules
  */
-async function generateMainInventory(projectPath: string): Promise<InventoryResult> {
+async function generateMainInventory(projectPath: string, repomixContent: string): Promise<InventoryResult> {
   logger.debug("Generating main inventory");
-  
-  const repomixResult = await generateRepomixOutput(projectPath);
-  
-  try {
-    const prompt = `You are analyzing a codebase to create a comprehensive inventory. Here is the complete repository content in XML format from repomix:
+  const prompt = `You are analyzing a codebase to create a comprehensive inventory. Here is the complete repository content in XML format from repomix:
 
 <repository>
-${repomixResult.content}
+${repomixContent}
 </repository>
 
 Please generate a comprehensive inventory in markdown format that includes:

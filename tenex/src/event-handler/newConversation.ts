@@ -35,7 +35,6 @@ export const handleNewConversation = async (
                 agent: pmAgent,
                 conversation,
                 phase: conversation.phase,
-                lastUserMessage: event.content,
             },
             event
         );
