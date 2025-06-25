@@ -14,23 +14,32 @@ interface InventoryContextArgs {
 export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
     id: "project-inventory-context",
     priority: 25,
-    template: ({ hasInventory, inventoryContent, contextFiles }) => {
+    template: async ({ phase, projectPath, contextFiles }) => {
         const parts: string[] = [];
         
-        if (hasInventory && inventoryContent) {
-            parts.push(`## Project Context
+        // Only load inventory for chat phase
+        if (phase === "chat") {
+            const hasInventory = await inventoryExists(projectPath);
+            
+            if (hasInventory) {
+                const inventoryContent = await loadInventoryContent(projectPath);
+                
+                if (inventoryContent) {
+                    parts.push(`## Project Context
 
 The project inventory provides comprehensive information about this codebase:
 
 ${inventoryContent}
 
 This inventory helps you understand the project structure, significant files, and architectural patterns when working with the codebase.`);
-        } else if (hasInventory) {
-            parts.push(`## Project Context
+                } else {
+                    parts.push(`## Project Context
 A project inventory exists but could not be loaded. The inventory contains detailed information about the project structure, files, and dependencies that can help you understand the codebase better.`);
-        } else {
-            parts.push(`## Project Context
+                }
+            } else {
+                parts.push(`## Project Context
 No project inventory is available yet. An inventory can be generated to provide detailed information about the project structure, files, and dependencies.`);
+            }
         }
         
         // Add context files listing if available
@@ -46,7 +55,8 @@ ${contextFiles.map(f => `- context/${f}`).join('\n')}`);
         return (
             typeof args === "object" &&
             args !== null &&
-            typeof (args as InventoryContextArgs).hasInventory === "boolean"
+            typeof (args as InventoryContextArgs).phase === "string" &&
+            typeof (args as InventoryContextArgs).projectPath === "string"
         );
     },
 };
