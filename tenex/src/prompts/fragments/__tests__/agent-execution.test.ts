@@ -27,7 +27,6 @@ describe("Agent Execution Prompt Fragments", () => {
                     agent: mockAgent,
                     phase: "chat" as Phase,
                     projectTitle: "Test Project",
-                    projectRepository: "https://github.com/test/repo",
                 })
                 .build();
 

@@ -6,12 +6,23 @@ import type { Phase } from "@/conversations/types";
 // Project inventory context fragment
 interface InventoryContextArgs {
     hasInventory: boolean;
+    inventoryContent?: string;
 }
 
 export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
     id: "project-inventory-context",
     priority: 25,
-    template: ({ hasInventory }) => {
+    template: ({ hasInventory, inventoryContent }) => {
+        if (hasInventory && inventoryContent) {
+            return `## Project Context
+
+The project inventory provides comprehensive information about this codebase:
+
+${inventoryContent}
+
+This inventory helps you understand the project structure, significant files, and architectural patterns when working with the codebase.`;
+        }
+
         if (hasInventory) {
             return `## Project Context
 A project inventory is available for this project. The inventory contains detailed information about the project structure, files, and dependencies that can help you understand the codebase better.

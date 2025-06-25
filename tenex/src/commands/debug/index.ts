@@ -110,7 +110,6 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
                     agent,
                     phase: phase,
                     projectTitle: titleTag?.[1] || "Untitled Project",
-                    projectRepository: repoTag?.[1] || "No repository",
                 })
                 .add("available-agents", {
                     agents: availableAgents,

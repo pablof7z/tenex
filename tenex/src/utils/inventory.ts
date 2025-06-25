@@ -2,165 +2,302 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { logger } from "@/utils/logger";
 import { getProjectContext, isProjectContextInitialized, configService } from "@/services";
-import { ClaudeCodeExecutor } from "../tools/claude/ClaudeCodeExecutor";
+import { loadLLMRouter } from "@/llm";
+import { Message } from "multi-llm-ts";
+import { generateRepomixOutput } from "./repomix.js";
 
 const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
 
-/**
- * Generate inventory using Claude Code
- */
-export async function generateInventory(projectPath: string): Promise<void> {
-    logger.info("Generating project inventory with Claude Code", { projectPath });
+interface ComplexModule {
+  name: string;
+  path: string;
+  reason: string;
+  suggestedFilename: string;
+}
 
-    const inventoryPath = await getInventoryPath(projectPath);
-    const prompt = buildGenerateInventoryPrompt(projectPath, inventoryPath);
-
-    const executor = new ClaudeCodeExecutor({
-        prompt,
-        projectPath,
-        timeout: 300000,
-        onMessage: (message) => {
-            if (message.type === "assistant") {
-                logger.debug("Inventory generation message", {
-                    messageId: message.message_id || message.messageId,
-                });
-            }
-        },
-        onError: (error) => {
-            logger.error("Inventory generation error", { error });
-        },
-        onComplete: (result) => {
-            logger.info("Inventory generation completed", {
-                sessionId: result.sessionId,
-                success: result.success,
-            });
-        },
-    });
-
-    const result = await executor.execute();
-
-    if (!result.success) {
-        throw new Error(`Inventory generation failed: ${result.error}`);
-    }
+interface InventoryResult {
+  content: string;
+  complexModules: ComplexModule[];
 }
 
 /**
- * Update inventory for specific files using Claude Code
+ * Generate comprehensive inventory using repomix + LLM
  */
-export async function updateInventory(projectPath: string, files: string[]): Promise<void> {
-    logger.info("Updating inventory with Claude Code", { projectPath, files });
+export async function generateInventory(projectPath: string): Promise<void> {
+  logger.info("Generating project inventory with repomix + LLM", { projectPath });
 
-    const inventoryPath = await getInventoryPath(projectPath);
-    const prompt = buildUpdateInventoryPrompt(inventoryPath, files);
+  const inventoryPath = await getInventoryPath(projectPath);
+  
+  // Ensure context directory exists
+  await fs.mkdir(path.dirname(inventoryPath), { recursive: true });
 
-    const executor = new ClaudeCodeExecutor({
-        prompt,
-        projectPath,
-        timeout: 300000,
-        onMessage: (message) => {
-            if (message.type === "assistant") {
-                logger.debug("Inventory update message", {
-                    messageId: message.message_id || message.messageId,
-                });
-            }
-        },
-        onError: (error) => {
-            logger.error("Inventory update error", { error });
-        },
-        onComplete: (result) => {
-            logger.info("Inventory update completed", {
-                sessionId: result.sessionId,
-                success: result.success,
-            });
-        },
+  // Step 1: Generate main inventory with complex module identification
+  const inventoryResult = await generateMainInventory(projectPath);
+  
+  // Step 2: Save main inventory
+  await fs.writeFile(inventoryPath, inventoryResult.content, "utf-8");
+  logger.info("Main inventory saved", { inventoryPath });
+
+  // Step 3: Generate individual module guides for complex modules (max 10)
+  const modulesToProcess = inventoryResult.complexModules.slice(0, 10);
+  
+  for (const module of modulesToProcess) {
+    try {
+      await generateModuleGuide(projectPath, module);
+    } catch (error) {
+      logger.warn("Failed to generate module guide", { 
+        module: module.name, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  }
+
+  logger.info("Inventory generation completed", { 
+    inventoryPath,
+    complexModules: modulesToProcess.length 
+  });
+}
+
+/**
+ * Generate main inventory and identify complex modules
+ */
+async function generateMainInventory(projectPath: string): Promise<InventoryResult> {
+  logger.debug("Generating main inventory");
+  
+  const repomixResult = await generateRepomixOutput(projectPath);
+  
+  try {
+    const prompt = `You are analyzing a codebase to create a comprehensive inventory. Here is the complete repository content in XML format from repomix:
+
+<repository>
+${repomixResult.content}
+</repository>
+
+Please generate a comprehensive inventory in markdown format that includes:
+
+1. **Project Overview**
+   - Brief description of what the project does
+   - Main technologies and frameworks used
+   - Architecture style (if identifiable)
+
+2. **Directory Structure**
+   - High-level directory breakdown with purpose of each
+   - Key organizational patterns
+
+3. **Significant Files**
+   - List of important files with one-line value propositions
+   - Focus on entry points, core business logic, configurations
+   - Include file paths and brief descriptions
+
+4. **Architectural Insights**
+   - Key patterns used in the codebase
+   - Data flow and integration points
+   - Notable design decisions
+
+5. **High-Complexity Modules** (if any)
+   - Identify modules/components that are particularly complex
+   - For each complex module, provide: name, file path, reason for complexity
+
+At the end, if you identified any high-complexity modules, provide them in this JSON format:
+\`\`\`json
+{
+  "complexModules": [
+    {
+      "name": "Module Name",
+      "path": "src/path/to/module",
+      "reason": "Brief explanation of complexity",
+      "suggestedFilename": "MODULE_NAME_GUIDE.md"
+    }
+  ]
+}
+\`\`\`
+
+Make the inventory comprehensive but readable, focusing on helping developers quickly understand the codebase structure and purpose.`;
+
+    const llmRouter = await loadLLMRouter(projectPath);
+    const userMessage = new Message("user", prompt);
+    const response = await llmRouter.complete({
+      messages: [userMessage],
+      options: {
+        temperature: 0.3,
+        maxTokens: 4000,
+        configName: "defaults.analyze",
+      },
     });
 
-    const result = await executor.execute();
+    const content = response.content || "";
+    
+    // Extract complex modules from JSON at the end
+    const complexModules = extractComplexModules(content);
+    
+    return {
+      content,
+      complexModules
+    };
+  } finally {
+    repomixResult.cleanup();
+  }
+}
 
-    if (!result.success) {
-        throw new Error(`Inventory update failed: ${result.error}`);
+/**
+ * Generate detailed guide for a specific complex module
+ */
+async function generateModuleGuide(projectPath: string, module: ComplexModule): Promise<void> {
+  logger.debug("Generating module guide", { module: module.name });
+  
+  const repomixResult = await generateRepomixOutput(projectPath);
+  
+  try {
+    const prompt = `You are analyzing a specific complex module in a codebase. Here is the complete repository content in XML format from repomix:
+
+<repository>
+${repomixResult.content}
+</repository>
+
+Focus specifically on the module: **${module.name}** at path: \`${module.path}\`
+
+This module was identified as complex because: ${module.reason}
+
+Please generate a comprehensive technical guide for this module that includes:
+
+1. **Module Overview**
+   - Purpose and responsibilities
+   - Key interfaces and entry points
+   - Dependencies and relationships
+
+2. **Technical Architecture**
+   - Internal structure and organization
+   - Key classes/functions and their roles
+   - Data flow within the module
+
+3. **Implementation Details**
+   - Core algorithms or business logic
+   - Important patterns or design decisions
+   - Configuration and customization points
+
+4. **Integration Points**
+   - How other parts of the system interact with this module
+   - External dependencies
+   - Event flows or communication patterns
+
+5. **Complexity Analysis**
+   - What makes this module complex
+   - Potential areas for improvement
+   - Common pitfalls or gotchas
+
+Focus on technical depth while keeping it accessible to developers who need to work with or modify this module.`;
+
+    const llmRouter = await loadLLMRouter(projectPath);
+    const userMessage = new Message("user", prompt);
+    const response = await llmRouter.complete({
+      messages: [userMessage],
+      options: {
+        temperature: 0.3,
+        maxTokens: 6000,
+        configName: "defaults.analyze",
+      },
+    });
+
+    // Save module guide
+    const inventoryPath = await getInventoryPath(projectPath);
+    const contextDir = path.dirname(inventoryPath);
+    const guideFilePath = path.join(contextDir, module.suggestedFilename);
+    
+    await fs.writeFile(guideFilePath, response.content || "", "utf-8");
+    logger.info("Module guide saved", { 
+      module: module.name, 
+      guideFilePath 
+    });
+  } finally {
+    repomixResult.cleanup();
+  }
+}
+
+/**
+ * Extract complex modules from LLM response
+ */
+function extractComplexModules(content: string): ComplexModule[] {
+  try {
+    // Look for JSON block at the end
+    const jsonMatch = content.match(/```json\s*\n([\s\S]*?)\n```/);
+    if (!jsonMatch) {
+      return [];
     }
+
+    const jsonData = JSON.parse(jsonMatch[1]);
+    return jsonData.complexModules || [];
+  } catch (error) {
+    logger.warn("Failed to extract complex modules from response", { error });
+    return [];
+  }
+}
+
+/**
+ * Update inventory for specific files (placeholder for future implementation)
+ */
+export async function updateInventory(projectPath: string, files: string[]): Promise<void> {
+  logger.info("Updating inventory", { projectPath, files });
+  // For now, just regenerate the full inventory
+  // Future optimization: implement partial updates
+  await generateInventory(projectPath);
 }
 
 /**
  * Check if inventory exists
  */
 export async function inventoryExists(projectPath: string): Promise<boolean> {
-    try {
-        const inventoryPath = await getInventoryPath(projectPath);
-        await fs.access(inventoryPath);
-        return true;
-    } catch {
-        return false;
-    }
+  try {
+    const inventoryPath = await getInventoryPath(projectPath);
+    await fs.access(inventoryPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Load inventory content for system prompts
+ */
+export async function loadInventoryContent(projectPath: string): Promise<string | null> {
+  try {
+    const inventoryPath = await getInventoryPath(projectPath);
+    const content = await fs.readFile(inventoryPath, "utf-8");
+    return content;
+  } catch (error) {
+    logger.debug("Failed to load inventory content", { error });
+    return null;
+  }
 }
 
 /**
  * Get the inventory file path
  */
 async function getInventoryPath(projectPath: string): Promise<string> {
-    const projectConfig = await loadProjectConfig(projectPath);
-    const inventoryPath = projectConfig?.paths?.inventory || DEFAULT_INVENTORY_PATH;
-    return path.join(projectPath, inventoryPath);
+  const projectConfig = await loadProjectConfig(projectPath);
+  const inventoryPath = projectConfig?.paths?.inventory || DEFAULT_INVENTORY_PATH;
+  return path.join(projectPath, inventoryPath);
 }
 
 /**
  * Load project configuration
  */
 async function loadProjectConfig(projectPath: string) {
-    try {
-        if (isProjectContextInitialized()) {
-            // Get config from ProjectContext if available
-            const projectCtx = getProjectContext();
-            const project = projectCtx.project;
-            const titleTag = project.tags.find((tag) => tag[0] === "title");
-            return {
-                paths: { inventory: DEFAULT_INVENTORY_PATH },
-                title: titleTag?.[1] || "Untitled Project",
-            };
-        }
-        // Fallback: try to load config directly
-        const { config } = await configService.loadConfig(projectPath);
-        return config;
-    } catch (error) {
-        logger.debug("Failed to load project config", { error });
-        return { paths: { inventory: DEFAULT_INVENTORY_PATH } };
+  try {
+    if (isProjectContextInitialized()) {
+      // Get config from ProjectContext if available
+      const projectCtx = getProjectContext();
+      const project = projectCtx.project;
+      const titleTag = project.tags.find((tag) => tag[0] === "title");
+      return {
+        paths: { inventory: DEFAULT_INVENTORY_PATH },
+        title: titleTag?.[1] || "Untitled Project",
+      };
     }
-}
-
-/**
- * Build prompt for generating inventory
- */
-function buildGenerateInventoryPrompt(projectPath: string, inventoryPath: string): string {
-    return `Generate a comprehensive inventory for the project at ${projectPath}.
-
-The inventory should be saved to: ${inventoryPath}
-
-Please analyze the entire project structure and create a detailed inventory in markdown format that includes:
-
-1. Project overview with description and detected technologies
-3. Directory structure with descriptions
-4. File listings with meaningful descriptions (one-liner value prop)
-5. Any important patterns or architectural insights
-
-Focus on providing value to developers who need to quickly understand the codebase.`;
-}
-
-/**
- * Build prompt for updating inventory
- */
-function buildUpdateInventoryPrompt(inventoryPath: string, files: string[]): string {
-    return `Update the existing inventory at ${inventoryPath} for the following changed files:
-
-${files.map((f) => `- ${f}`).join("\n")}
-
-Please:
-1. Read the existing inventory
-2. Update entries for the specified files
-3. Add new files if they don't exist
-4. Remove entries for deleted files
-5. Update any affected statistics
-6. Save the updated inventory
-
-Maintain the existing format and structure of the inventory.`;
+    // Fallback: try to load config directly
+    const { config } = await configService.loadConfig(projectPath);
+    return config;
+  } catch (error) {
+    logger.debug("Failed to load project config", { error });
+    return { paths: { inventory: DEFAULT_INVENTORY_PATH } };
+  }
 }

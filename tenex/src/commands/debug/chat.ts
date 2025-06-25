@@ -111,7 +111,6 @@ export async function runDebugChat(
 
         // Show system prompt if requested
         if (options.systemPrompt) {
-            const projectCtx = getProjectContext();
             const hasInventory = await inventoryExists(projectPath);
 
             const systemPrompt = new PromptBuilder()

@@ -15,13 +15,12 @@ interface AgentSystemPromptArgs {
     agent: Agent;
     phase: Phase;
     projectTitle: string;
-    projectRepository?: string;
 }
 
 export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = {
     id: "agent-system-prompt",
     priority: 1,
-    template: ({ agent, phase, projectTitle, projectRepository }) => {
+    template: ({ agent, phase, projectTitle }) => {
         const parts: string[] = [];
 
         // Use shared agent prompt builder

@@ -1,13 +1,9 @@
 import { Tool, ToolExecutionContext, ToolResult } from "../types.js";
 import { z } from "zod";
-import { execSync } from "child_process";
-import { tmpdir } from "os";
-import { join } from "path";
-import { readFileSync, unlinkSync } from "fs";
-import { randomUUID } from "crypto";
 import { logger } from "@/utils/logger";
 import { loadLLMRouter } from "@/llm";
 import { Message } from "multi-llm-ts";
+import { generateRepomixOutput } from "@/utils/repomix.js";
 
 
 const analyzeSchema = z.object({
@@ -43,29 +39,15 @@ Examples:
 
       logger.info("Running analyze tool", { prompt });
 
-      // Generate temporary output file path
-      const outputPath = join(tmpdir(), `repomix-${randomUUID()}.xml`);
+      const repomixResult = await generateRepomixOutput(context.projectPath);
 
       try {
-        // Run repomix to generate the XML output
-        logger.debug("Running repomix", { outputPath });
-        execSync(`npx repomix --output "${outputPath}" --style xml`, {
-          cwd: context.projectPath,
-          stdio: "pipe",
-        });
-
-        // Read the generated XML
-        const repoContent = readFileSync(outputPath, "utf-8");
-        logger.debug("Repomix output generated", { 
-          size: repoContent.length,
-          lines: repoContent.split("\n").length 
-        });
 
         // Prepare the prompt for the LLM
         const analysisPrompt = `You are analyzing a codebase. Here is the complete repository content in XML format from repomix:
 
 <repository>
-${repoContent}
+${repomixResult.content}
 </repository>
 
 Based on this codebase, please answer the following:
@@ -92,16 +74,11 @@ Provide a clear, structured response focused on the specific question asked.`;
           success: true,
           output: response.content || "",
           metadata: {
-            repoSize: repoContent.length,
+            repoSize: repomixResult.size,
           },
         };
       } finally {
-        // Clean up temporary file
-        try {
-          unlinkSync(outputPath);
-        } catch (e) {
-          logger.warn("Failed to clean up temporary file", { outputPath, error: e });
-        }
+        repomixResult.cleanup();
       }
     } catch (error) {
       logger.error("Analyze tool failed", { error });
