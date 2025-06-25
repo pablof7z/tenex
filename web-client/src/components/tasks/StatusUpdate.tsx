@@ -50,6 +50,15 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 
     // Custom components for ReactMarkdown
     const markdownComponents: Components = {
+        h1({ children }) {
+            return <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>;
+        },
+        h2({ children }) {
+            return <h2 className="text-2xl font-semibold mt-5 mb-3">{children}</h2>;
+        },
+        h3({ children }) {
+            return <h3 className="text-xl font-semibold mt-4 mb-2">{children}</h3>;
+        },
         code({ className, children }) {
             const match = /language-(\w+)/.exec(className || "");
             const isInline = !match;
