@@ -1,5 +1,5 @@
-import { promises as fs } from "fs";
-import { join } from "path";
+import { promises as fs } from "node:fs";
+import { join } from "node:path";
 import type { CompletionRequest, CompletionResponse, LLMConfig } from "./types";
 
 export interface LLMCallLogEntry {
@@ -34,7 +34,7 @@ export interface LLMCallLogEntry {
             content: string;
             contentLength: number;
         }>;
-        options?: Record<string, any>;
+        options?: Record<string, unknown>;
         messageCount: number;
         totalRequestLength: number;
         systemPrompt?: {
@@ -49,7 +49,7 @@ export interface LLMCallLogEntry {
         contentLength?: number;
         toolCalls?: Array<{
             name: string;
-            params: any;
+            params: unknown;
             paramsLength: number;
         }>;
         toolCallCount: number;
@@ -111,7 +111,7 @@ export class LLMCallLogger {
         return `${configKey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
     
-    private calculateTokensPerSecond(usage?: any, durationMs?: number): number | undefined {
+    private calculateTokensPerSecond(usage?: { completionTokens?: number }, durationMs?: number): number | undefined {
         if (!usage?.completionTokens || !durationMs || durationMs === 0) {
             return undefined;
         }

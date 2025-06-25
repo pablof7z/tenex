@@ -34,15 +34,15 @@ function colorizeJSON(json: string): string {
 }
 
 // Format content with enhancements
-function formatContentWithEnhancements(content: string, isSystemPrompt: boolean = false): string {
-    content = content.replace(/\\n/g, '\n');
+function formatContentWithEnhancements(content: string, isSystemPrompt = false): string {
+    let formattedContent = content.replace(/\\n/g, '\n');
     
     if (isSystemPrompt) {
-        content = formatMarkdown(content);
+        formattedContent = formatMarkdown(formattedContent);
     }
     
     // Handle <tool_use> blocks
-    content = content.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (match, jsonContent) => {
+    formattedContent = formattedContent.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (match, jsonContent) => {
         try {
             const parsed = JSON.parse(jsonContent.trim());
             const formatted = JSON.stringify(parsed, null, 2);
@@ -52,7 +52,7 @@ function formatContentWithEnhancements(content: string, isSystemPrompt: boolean 
         }
     });
     
-    return content;
+    return formattedContent;
 }
 
 interface DebugSystemPromptOptions {

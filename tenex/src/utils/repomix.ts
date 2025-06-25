@@ -1,8 +1,8 @@
-import { execSync } from "child_process";
-import { tmpdir } from "os";
-import { join } from "path";
-import { readFileSync, unlinkSync } from "fs";
-import { randomUUID } from "crypto";
+import { execSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { readFileSync, unlinkSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { logger } from "@/utils/logger";
 
 export interface RepomixResult {

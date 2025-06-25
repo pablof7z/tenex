@@ -2,11 +2,12 @@ import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 import { getPhaseTransitionInstructions } from "./phase";
 import type { Phase } from "@/conversations/phases";
+import { inventoryExists, loadInventoryContent } from "@/utils/inventory";
 
 // Project inventory context fragment
 interface InventoryContextArgs {
-    hasInventory: boolean;
-    inventoryContent?: string;
+    phase: Phase;
+    projectPath: string;
     contextFiles?: string[];
 }
 

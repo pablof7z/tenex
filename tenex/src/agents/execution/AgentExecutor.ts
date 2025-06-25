@@ -16,7 +16,6 @@ import {
 } from "@/tracing";
 import type { Phase } from "@/conversations/phases";
 import type { LLMMetadata } from "@/nostr/types";
-import { inventoryExists, loadInventoryContent } from "@/utils/inventory";
 import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { AgentExecutionContext, AgentExecutionResult } from "./types";
@@ -239,16 +238,6 @@ export class AgentExecutor {
             }
         }
         
-        // Check inventory availability for chat phase
-        const hasInventory =
-            context.phase === "chat" ? await inventoryExists(process.cwd()) : false;
-        
-        // Load inventory content if available
-        let inventoryContent: string | null = null;
-        if (hasInventory) {
-            inventoryContent = await loadInventoryContent(process.cwd());
-        }
-        
         // Get list of context files
         let contextFiles: string[] = [];
         try {
@@ -278,8 +267,8 @@ export class AgentExecutor {
                 currentAgentPubkey: context.agent.pubkey,
             })
             .add("project-inventory-context", { 
-                hasInventory, 
-                inventoryContent: inventoryContent || undefined,
+                phase: context.phase,
+                projectPath: process.cwd(),
                 contextFiles 
             })
             // Move phase context and constraints to system prompt
