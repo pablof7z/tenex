@@ -41,41 +41,6 @@ describe("Agent Execution Prompt Fragments", () => {
         });
     });
 
-    describe("conversationHistoryFragment", () => {
-        it("should format conversation history correctly", () => {
-            const mockHistory: Conversation["history"] = [
-                {
-                    id: "event1",
-                    content: "Hello from user",
-                    created_at: 1000,
-                    tags: [["p", "user-pubkey"]],
-                    pubkey: "user-pubkey",
-                    kind: 1,
-                    sig: "sig1",
-                } as NDKEvent,
-                {
-                    id: "event2",
-                    content: "Response from agent",
-                    created_at: 2000,
-                    tags: [["p", "agent-pubkey"]],
-                    pubkey: "agent-pubkey",
-                    kind: 1,
-                    sig: "sig2",
-                } as NDKEvent,
-            ];
-
-            const prompt = new PromptBuilder()
-                .add("conversation-history", {
-                    history: mockHistory,
-                    maxMessages: 5,
-                })
-                .build();
-
-            expect(prompt).toContain("Conversation History (Last 2 messages)");
-            expect(prompt).toContain("user-pubkey: Hello from user");
-            expect(prompt).toContain("agent-pubkey: Response from agent");
-        });
-    });
 
     describe("phaseContextFragment", () => {
         it("should generate correct phase context for each phase", () => {
@@ -127,11 +92,7 @@ describe("Agent Execution Prompt Fragments", () => {
                 })
                 .build();
 
-            const conversationHistory = new PromptBuilder()
-                .add("conversation-history", {
-                    history: mockHistory,
-                })
-                .build();
+            // Conversation history is now handled as message array
 
             const phaseContext = new PromptBuilder()
                 .add("phase-context", {
@@ -141,7 +102,7 @@ describe("Agent Execution Prompt Fragments", () => {
 
             const fullPrompt = new PromptBuilder()
                 .add("full-prompt", {
-                    conversationContent: conversationHistory,
+                    conversationContent: "Messages handled separately now",
                     phaseContext: phaseContext,
                     constraints: ["Write clean code", "Add tests"],
                 })
@@ -152,12 +113,8 @@ describe("Agent Execution Prompt Fragments", () => {
             expect(systemPrompt).toContain("Full Stack Developer");
             expect(systemPrompt).toContain("Current Phase: EXECUTE");
 
-            expect(conversationHistory).toContain("Build a new feature");
-
             expect(phaseContext).toContain("execution phase");
             expect(phaseContext).toContain("Implementing the planned features");
-
-            expect(fullPrompt).toContain(conversationHistory);
             expect(fullPrompt).toContain(phaseContext);
             expect(fullPrompt).toContain("Write clean code");
             expect(fullPrompt).toContain("Add tests");

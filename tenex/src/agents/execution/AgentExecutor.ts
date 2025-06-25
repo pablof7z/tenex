@@ -4,6 +4,7 @@ import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/n
 import type NDK from "@nostr-dev-kit/ndk";
 import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
+import { buildHistoryMessages, needsCurrentUserMessage, getLatestUserMessage } from "@/prompts/utils/messageBuilder";
 import {
     type TracingContext,
     type TracingLogger,
@@ -81,8 +82,8 @@ export class AgentExecutor {
                 tools: phaseAwareTools,
             };
 
-            // 2. Build the agent's prompts
-            const { systemPrompt, userPrompt } = await this.buildPrompts({
+            // 2. Build the agent's messages
+            const messages = await this.buildMessages({
                 ...context,
                 agent: agentWithPhaseTools,
             });
@@ -94,16 +95,12 @@ export class AgentExecutor {
                 context.agent.signer
             );
 
-            const initialResponse = await this.generateResponse(
-                systemPrompt,
-                userPrompt,
-            );
+            const initialResponse = await this.generateResponse(messages);
 
             // Build initial LLM metadata
             const initialLLMMetadata = await this.buildLLMMetadata(
                 initialResponse,
-                systemPrompt,
-                userPrompt
+                messages
             );
 
             // Check if response contains tool invocations
@@ -128,8 +125,7 @@ export class AgentExecutor {
                         conversation: context.conversation, // Pass the full conversation object
                         eventToReply: triggeringEvent, // Pass the triggering event for phase updates
                     },
-                    systemPrompt,
-                    userPrompt,
+                    messages,
                     tracingContext,
                     initialLLMMetadata
                 );
@@ -141,8 +137,7 @@ export class AgentExecutor {
                 // Build metadata with final response from ReasonActLoop
                 llmMetadata = await this.buildLLMMetadata(
                     finalResponse,
-                    systemPrompt,
-                    userPrompt
+                    messages
                 );
             } else {
                 // No tools, use initial response directly
@@ -231,9 +226,9 @@ export class AgentExecutor {
     }
 
     /**
-     * Build the system and user prompts for the agent
+     * Build the messages array for the agent execution
      */
-    private async buildPrompts(context: AgentExecutionContext): Promise<{ systemPrompt: string; userPrompt: string }> {
+    private async buildMessages(context: AgentExecutionContext): Promise<Message[]> {
         const projectCtx = getProjectContext();
         const project = projectCtx.project;
         
@@ -252,7 +247,9 @@ export class AgentExecutor {
         // Get all available agents for handoffs
         const availableAgents = Array.from(projectCtx.agents.values());
 
-        // Build system prompt
+        const messages: Message[] = [];
+        
+        // Build system prompt with all agent and phase context
         const systemPromptBuilder = new PromptBuilder()
             .add("agent-system-prompt", {
                 agent: context.agent,
@@ -264,7 +261,16 @@ export class AgentExecutor {
                 agents: availableAgents,
                 currentAgentPubkey: context.agent.pubkey,
             })
-            .add("project-inventory-context", { hasInventory });
+            .add("project-inventory-context", { hasInventory })
+            // Move phase context and constraints to system prompt
+            .add("phase-context", {
+                phase: context.phase,
+                phaseMetadata: context.conversation.metadata,
+                conversation: context.conversation,
+            })
+            .add("phase-constraints", {
+                phase: context.phase,
+            });
 
         // Add PM-specific routing instructions for PM agents
         if (context.agent.isPMAgent) {
@@ -290,38 +296,29 @@ export class AgentExecutor {
         }
 
         const systemPrompt = systemPromptBuilder.build();
-
-        // Build user prompt with all context
-        const userPromptBuilder = new PromptBuilder()
-            .add("conversation-history", {
-                history: context.conversation.history,
-            })
-            .add("phase-context", {
-                phase: context.phase,
-                phaseMetadata: context.conversation.metadata,
-                conversation: context.conversation,
-            })
-            .add("phase-constraints", {
-                phase: context.phase,
-            });
-
-        const userPrompt = userPromptBuilder.build();
-
-        return { systemPrompt, userPrompt };
+        messages.push(new Message("system", systemPrompt));
+        
+        // Add conversation history as proper messages
+        const historyMessages = buildHistoryMessages(context.conversation.history);
+        messages.push(...historyMessages);
+        
+        // Add current user message if needed
+        if (needsCurrentUserMessage(context.conversation)) {
+            const latestUserMessage = getLatestUserMessage(context.conversation);
+            if (latestUserMessage) {
+                messages.push(new Message("user", latestUserMessage));
+            }
+        }
+        
+        return messages;
     }
 
     /**
      * Generate initial response from LLM
      */
     private async generateResponse(
-        systemPrompt: string,
-        userPrompt: string,
+        messages: Message[]
     ): Promise<CompletionResponse> {
-        const messages = [
-            new Message("system", systemPrompt),
-            new Message("user", userPrompt),
-        ];
-
         return await this.llmService.complete({
             messages,
             options: {},
@@ -383,8 +380,7 @@ export class AgentExecutor {
      */
     private async buildLLMMetadata(
         response: CompletionResponse,
-        systemPrompt: string,
-        userPrompt: string
+        messages: Message[]
     ): Promise<LLMMetadata | undefined> {
         if (!response.usage) {
             return undefined;
@@ -398,6 +394,12 @@ export class AgentExecutor {
             response.usage.completion_tokens
         );
 
+        // Extract system and user prompts from messages for metadata
+        const systemPrompt = messages.find(m => m.role === "system")?.content || "";
+        const userMessages = messages.filter(m => m.role === "user");
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        const userPrompt = lastUserMessage?.content || "";
+        
         return {
             model: responseWithModel.model || "unknown",
             cost,

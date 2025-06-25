@@ -3,6 +3,7 @@ import { shellTool } from '../tools/implementations/shell';
 import { claudeCodeTool } from '../tools/implementations/claudeCode';
 import { switchPhaseTool } from '../tools/implementations/switchPhase';
 import { handoffTool } from '../tools/implementations/handoff';
+import { analyze } from '../tools/implementations/analyze';
 
 /**
  * Default tools available to all agents (except PM-specific tools)
@@ -10,7 +11,8 @@ import { handoffTool } from '../tools/implementations/handoff';
 export const DEFAULT_AGENT_TOOLS = [
     readFileTool.name,
     shellTool.name,
-    claudeCodeTool.name
+    claudeCodeTool.name,
+    analyze.name
 ];
 
 /**
@@ -27,7 +29,8 @@ export const PM_ONLY_TOOLS = [
 export function getDefaultToolsForAgent(isPMAgent: boolean, phase?: string): string[] {
     const baseTools = [
         readFileTool.name,
-        shellTool.name
+        shellTool.name,
+        analyze.name
     ];
     
     if (isPMAgent) {

@@ -4,7 +4,6 @@ import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/types";
 import type { Conversation } from "@/conversations/types";
 import { buildAgentPrompt } from "./agent-common";
-import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
 import { getTool } from "@/tools/registry";
 
 // ========================================================================
@@ -65,43 +64,6 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
 // ========================================================================
 // CONVERSATION & INTERACTION FRAGMENTS
 // ========================================================================
-
-// Conversation history
-interface ConversationHistoryArgs {
-    history: Conversation["history"];
-    maxMessages?: number;
-}
-
-export const conversationHistoryFragment: PromptFragment<ConversationHistoryArgs> = {
-    id: "conversation-history",
-    priority: 10,
-    template: ({ history, maxMessages = 20 }) => {
-        if (history.length === 0) {
-            return "## Conversation History\nNo messages yet.";
-        }
-
-        // Get last N messages
-        const recentHistory = history.slice(-maxMessages);
-
-        const formattedHistory = recentHistory
-            .map((event, index) => {
-                const isUser = isEventFromUser(event);
-                const author = isUser ? "User" : getAgentSlugFromEvent(event) || "Agent";
-                return `[${index + 1}] ${author}: ${event.content}`;
-            })
-            .join("\n\n");
-
-        return `## Conversation History (Last ${recentHistory.length} messages)
-${formattedHistory}`;
-    },
-    validateArgs: (args): args is ConversationHistoryArgs => {
-        return (
-            typeof args === "object" &&
-            args !== null &&
-            Array.isArray((args as ConversationHistoryArgs).history)
-        );
-    },
-};
 
 // Phase context
 interface PhaseContextArgs {
@@ -221,6 +183,5 @@ function getToolInstructions(tools: string[]): string {
 
 // Register fragments
 fragmentRegistry.register(agentSystemPromptFragment);
-fragmentRegistry.register(conversationHistoryFragment);
 fragmentRegistry.register(phaseContextFragment);
 fragmentRegistry.register(customInstructionsFragment);

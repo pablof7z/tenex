@@ -4,7 +4,6 @@ import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import { executeTools, parseToolUses } from "@/tools/toolExecutor";
 import type { Phase } from "@/conversations/types";
-import { PromptBuilder } from "@/prompts";
 import type { ToolExecutionResult } from "@/tools/types";
 import { publishAgentResponse } from "@/nostr/ConversationPublisher";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -51,8 +50,7 @@ export class ReasonActLoop {
      */
     private async buildLLMMetadata(
         response: CompletionResponse,
-        systemPrompt: string,
-        userPrompt: string
+        messages: Message[]
     ): Promise<LLMMetadata | undefined> {
         if (!response.usage) {
             return undefined;
@@ -66,6 +64,12 @@ export class ReasonActLoop {
             response.usage.completion_tokens
         );
 
+        // Extract system and user prompts from messages for metadata
+        const systemPrompt = messages.find(m => m.role === "system")?.content || "";
+        const userMessages = messages.filter(m => m.role === "user");
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        const userPrompt = lastUserMessage?.content || "";
+        
         return {
             model: responseWithModel.model || "unknown",
             cost,
@@ -101,8 +105,7 @@ export class ReasonActLoop {
     async execute(
         initialResponse: CompletionResponse,
         context: ReasonActContext,
-        systemPrompt: string,
-        userPrompt: string,
+        messages: Message[],
         tracingContext: TracingContext,
         initialLLMMetadata?: LLMMetadata
     ): Promise<ReasonActResult> {
@@ -112,6 +115,9 @@ export class ReasonActLoop {
         let totalToolExecutions = 0;
         let iteration = 0;
         const allToolResults: ToolExecutionResult[] = [];
+        
+        // Work with a mutable copy of messages
+        let workingMessages = [...messages];
 
         while (iteration < ReasonActLoop.MAX_ITERATIONS) {
             // Check if response contains tool invocations
@@ -191,12 +197,15 @@ export class ReasonActLoop {
                 tools: toolSummary
             });
             
-            currentResponse = await this.continueWithProcessedContent(
+            // Append assistant response with tool calls
+            workingMessages.push(new Message("assistant", currentResponse.content || ""));
+            
+            // Append tool results as user message
+            workingMessages.push(new Message("user", processedContent));
+            
+            currentResponse = await this.continueWithMessages(
                 context,
-                systemPrompt,
-                userPrompt,
-                currentResponse,
-                processedContent,
+                workingMessages,
                 tracingLogger
             );
 
@@ -248,24 +257,11 @@ export class ReasonActLoop {
         return matches ? matches.length : 0;
     }
 
-    private async continueWithProcessedContent(
+    private async continueWithMessages(
         context: ReasonActContext,
-        systemPrompt: string,
-        userPrompt: string,
-        currentResponse: CompletionResponse,
-        processedContent: string,
+        messages: Message[],
         tracingLogger: TracingLogger
     ): Promise<CompletionResponse> {
-        const continuationPrompt = new PromptBuilder()
-            .add("tool-continuation-prompt", { processedContent })
-            .build();
-
-        const messages: Message[] = [
-            new Message("system", systemPrompt),
-            new Message("user", userPrompt),
-            new Message("assistant", currentResponse.content || ""),
-            new Message("user", continuationPrompt),
-        ];
 
         const response = await this.llmService.complete({
             messages,
@@ -277,8 +273,7 @@ export class ReasonActLoop {
             try {
                 const llmMetadata = await this.buildLLMMetadata(
                     response,
-                    systemPrompt,
-                    continuationPrompt // Use the continuation prompt for this response
+                    messages
                 );
 
                 if (llmMetadata) {

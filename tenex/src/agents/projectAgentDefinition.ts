@@ -5,8 +5,6 @@ import { getDefaultToolsForAgent } from "./constants";
  * Default PM agent definition
  * This agent represents the project manager and has special capabilities
  * like phase transitions and project coordination.
- *
- * Note: Only agents with 'pmAgent: true' in agents.json can use the next_action tool for routing
  */
 export const PM_AGENT_DEFINITION: StoredAgentData = {
     name: "Project Manager",
@@ -16,12 +14,7 @@ export const PM_AGENT_DEFINITION: StoredAgentData = {
 - Coordinating work between different agents
 - Managing phase transitions when appropriate
 - Providing helpful responses to guide the conversation
-
-When in chat phase:
-- Focus on understanding what the user wants to accomplish
-- Ask clarifying questions when requirements are unclear
-- Help users articulate their needs clearly
-- Transition to planning phase when requirements are well understood`,
+`,
     tools: getDefaultToolsForAgent(true), // PM agent gets PM tools
-    llmConfig: "default",
+    llmConfig: "agents",
 };
