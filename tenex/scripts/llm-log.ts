@@ -10,13 +10,14 @@ import type { LLMCallLogEntry } from "../src/llm/callLogger";
 const isInteractive = process.stdout.isTTY && !process.env.CI && !process.argv.includes('--no-interactive');
 
 if (isInteractive) {
-    // Use the new tree viewer for interactive mode
-    import('./llm-log-tree.ts').then(() => {
-        // Tree viewer handles everything
-    }).catch(error => {
-        console.error(chalk.red('Failed to load tree viewer, falling back to simple viewer'), error);
-        runInteractiveMode().catch(console.error);
-    });
+    // Temporarily disable tree viewer to test full screen mode
+    // import('./llm-log-tree.ts').then(() => {
+    //     // Tree viewer handles everything
+    // }).catch(error => {
+    //     console.error(chalk.red('Failed to load tree viewer, falling back to simple viewer'), error);
+    //     runInteractiveMode().catch(console.error);
+    // });
+    runInteractiveMode().catch(console.error);
 } else {
     // Run static viewer
     runStaticViewer().catch(console.error);
@@ -56,6 +57,9 @@ interface NavigationState {
     searchQuery: string;
     searchResults: SearchResult[];
     currentSearchResult: number;
+    fullScreenMode: boolean;
+    fullScreenContent: string[];
+    fullScreenScrollOffset: number;
 }
 
 // Clear screen
@@ -341,8 +345,48 @@ function getTerminalHeight(): number {
     return process.stdout.rows || 30; // Default to 30 if not available
 }
 
+// Display full screen view (like less)
+function displayFullScreen(state: NavigationState) {
+    clearScreen();
+    
+    const terminalHeight = getTerminalHeight();
+    const headerHeight = 3; // Status bar at top
+    const footerHeight = 2; // Help bar at bottom
+    const contentHeight = terminalHeight - headerHeight - footerHeight;
+    
+    // Header
+    console.log(chalk.inverse.bold(` Full Screen View - Entry ${state.currentEntry + 1} of ${state.entries.length} `.padEnd(80, ' ')));
+    console.log(chalk.gray('─'.repeat(80)));
+    console.log('');
+    
+    // Show content with scrolling
+    const startLine = state.fullScreenScrollOffset;
+    const endLine = Math.min(startLine + contentHeight, state.fullScreenContent.length);
+    
+    for (let i = startLine; i < endLine; i++) {
+        console.log(state.fullScreenContent[i]);
+    }
+    
+    // Fill remaining space
+    for (let i = endLine - startLine; i < contentHeight; i++) {
+        console.log('');
+    }
+    
+    // Footer
+    console.log(chalk.gray('─'.repeat(80)));
+    const scrollInfo = state.fullScreenContent.length > contentHeight 
+        ? ` (${Math.round((startLine / Math.max(1, state.fullScreenContent.length - contentHeight)) * 100)}%) `
+        : '';
+    console.log(chalk.gray(`↑/↓/j/k: Scroll | PgUp/PgDn: Page | Home/End: Top/Bottom | q/Esc: Exit${scrollInfo}`));
+}
+
 // Display current state
 function display(state: NavigationState) {
+    if (state.fullScreenMode) {
+        displayFullScreen(state);
+        return;
+    }
+    
     if (state.searchMode && state.searchResults.length > 0) {
         displaySearchResults(state);
         return;
@@ -350,98 +394,22 @@ function display(state: NavigationState) {
     
     clearScreen();
     
-    const terminalHeight = getTerminalHeight();
-    const headerHeight = 5; // Header lines
-    const footerHeight = 3; // Footer lines
-    const availableHeight = terminalHeight - headerHeight - footerHeight;
-    
     console.log(chalk.bold.blue('🔍 LLM Log Viewer'));
-    console.log(chalk.gray(`Showing entries starting from ${state.currentEntry + 1} of ${state.entries.length} | Verbosity: ${VerbosityLevel[state.verbosity]}`));
-    console.log(chalk.gray('Use ↑/↓ to navigate, ←/→ to change verbosity, / to search, q to quit'));
+    console.log(chalk.gray(`Entry ${state.currentEntry + 1} of ${state.entries.length} | Verbosity: ${VerbosityLevel[state.verbosity]}`));
+    console.log(chalk.gray('Use ↑/↓ to navigate entries, ←/→ to change verbosity, / to search, q to quit'));
     console.log(chalk.gray('═'.repeat(80)));
     console.log('');
     
-    let currentHeight = 0;
-    let entriesShown = 0;
+    // Show only the current entry
+    const entry = state.entries[state.currentEntry];
+    const entryLines = formatEntry(entry, state.verbosity, true);
     
-    // Calculate the start index to ensure selected entry is visible
-    let startIndex = state.currentEntry;
+    // Display all lines of the current entry
+    entryLines.forEach(line => console.log(line));
     
-    // If possible, show some context before the selected entry
-    const contextBefore = 2; // Show 2 entries before selected if possible
-    startIndex = Math.max(0, state.currentEntry - contextBefore);
-    
-    // Make sure we show as many entries as possible
-    let testHeight = 0;
-    let testIndex = startIndex;
-    const entryHeights: number[] = [];
-    
-    // Calculate heights for entries starting from our start position
-    while (testIndex < state.entries.length && testHeight < availableHeight) {
-        const entry = state.entries[testIndex];
-        const isSelected = testIndex === state.currentEntry;
-        const entryLines = formatEntry(entry, state.verbosity, isSelected);
-        const entryHeight = entryLines.length + (testIndex > startIndex ? 3 : 0); // Include separator
-        
-        if (testHeight + entryHeight <= availableHeight || testIndex === state.currentEntry) {
-            entryHeights.push(entryHeight);
-            testHeight += entryHeight;
-            testIndex++;
-        } else {
-            break;
-        }
-    }
-    
-    // If selected entry is not visible, adjust start index
-    if (state.currentEntry >= testIndex) {
-        startIndex = state.currentEntry;
-        entryHeights.length = 0; // Clear and recalculate
-    }
-    
-    let entryIndex = startIndex;
-    
-    // Show as many entries as fit on screen
-    while (entryIndex < state.entries.length && currentHeight < availableHeight) {
-        const entry = state.entries[entryIndex];
-        const isSelected = entryIndex === state.currentEntry;
-        const entryLines = formatEntry(entry, state.verbosity, isSelected);
-        
-        // Check if this entry would fit
-        if (currentHeight + entryLines.length + 2 > availableHeight && entriesShown > 0) {
-            // Don't show partial entries (unless it's the only one)
-            break;
-        }
-        
-        // Show separator between entries (except for the first one)
-        if (entriesShown > 0) {
-            console.log('');
-            console.log(chalk.gray('─'.repeat(80)));
-            console.log('');
-            currentHeight += 3;
-        }
-        
-        // Show the entry
-        entryLines.forEach(line => console.log(line));
-        currentHeight += entryLines.length;
-        entriesShown++;
-        entryIndex++;
-    }
-    
-    // Fill remaining space to keep footer at bottom
-    while (currentHeight < availableHeight) {
-        console.log('');
-        currentHeight++;
-    }
-    
+    console.log('');
     console.log(chalk.gray('═'.repeat(80)));
-    if (startIndex > 0 || entryIndex < state.entries.length) {
-        const moreAbove = startIndex > 0 ? `↑ ${startIndex} more` : '';
-        const moreBelow = entryIndex < state.entries.length ? `↓ ${state.entries.length - entryIndex} more` : '';
-        const separator = moreAbove && moreBelow ? ' | ' : '';
-        console.log(chalk.gray(`${moreAbove}${separator}${moreBelow} | ← Less detail | → More detail | / Search | q Quit`));
-    } else {
-        console.log(chalk.gray(`← Less detail | → More detail | ↑ Previous | ↓ Next | / Search | q Quit`));
-    }
+    console.log(chalk.gray(`← Less detail | → More detail | ↑ Previous | ↓ Next | Enter Full screen | / Search | q Quit`))
 }
 
 // Run interactive mode
@@ -478,7 +446,10 @@ async function runInteractiveMode() {
             searchMode: false,
             searchQuery: '',
             searchResults: [],
-            currentSearchResult: 0
+            currentSearchResult: 0,
+            fullScreenMode: false,
+            fullScreenContent: [],
+            fullScreenScrollOffset: 0
         };
         
         enableRawMode();
@@ -506,6 +477,7 @@ async function runInteractiveMode() {
         
         process.stdin.on('keypress', (str, key) => {
             if (!key) return;
+            
             
             // Handle search typing mode
             if (isTypingSearch) {
@@ -543,6 +515,65 @@ async function runInteractiveMode() {
                 return;
             }
             
+            
+            // Full screen mode navigation
+            if (state.fullScreenMode) {
+                if (key.name === 'q' || key.name === 'escape') {
+                    // Exit full screen mode
+                    state.fullScreenMode = false;
+                    state.fullScreenContent = [];
+                    state.fullScreenScrollOffset = 0;
+                    display(state);
+                } else if (key.name === 'up' || key.name === 'k') {
+                    // Scroll up one line
+                    if (state.fullScreenScrollOffset > 0) {
+                        state.fullScreenScrollOffset--;
+                        display(state);
+                    }
+                } else if (key.name === 'down' || key.name === 'j') {
+                    // Scroll down one line
+                    const terminalHeight = getTerminalHeight() - 5; // Account for header/footer
+                    if (state.fullScreenScrollOffset < state.fullScreenContent.length - terminalHeight) {
+                        state.fullScreenScrollOffset++;
+                        display(state);
+                    }
+                } else if (key.name === 'pageup') {
+                    // Scroll up one page
+                    const pageSize = getTerminalHeight() - 5;
+                    state.fullScreenScrollOffset = Math.max(0, state.fullScreenScrollOffset - pageSize);
+                    display(state);
+                } else if (key.name === 'pagedown') {
+                    // Scroll down one page
+                    const terminalHeight = getTerminalHeight() - 5;
+                    const pageSize = terminalHeight;
+                    const maxScroll = Math.max(0, state.fullScreenContent.length - terminalHeight);
+                    state.fullScreenScrollOffset = Math.min(maxScroll, state.fullScreenScrollOffset + pageSize);
+                    display(state);
+                } else if (key.name === 'home') {
+                    // Go to top
+                    state.fullScreenScrollOffset = 0;
+                    display(state);
+                } else if (key.name === 'end') {
+                    // Go to bottom
+                    const terminalHeight = getTerminalHeight() - 5;
+                    state.fullScreenScrollOffset = Math.max(0, state.fullScreenContent.length - terminalHeight);
+                    display(state);
+                }
+                return;
+            }
+            
+            // Check for Enter key to trigger full screen mode (before other navigation)
+            if (key.name === 'return' && !state.searchMode) {
+                // Enter full screen mode - works at any verbosity level
+                const entry = state.entries[state.currentEntry];
+                // Force FULL verbosity for full screen mode
+                const entryLines = formatEntry(entry, VerbosityLevel.FULL, true);
+                state.fullScreenContent = entryLines;
+                state.fullScreenScrollOffset = 0;
+                state.fullScreenMode = true;
+                display(state);
+                return;
+            }
             
             // Normal navigation
             if (key.name === 'q' || (key.ctrl && key.name === 'c')) {

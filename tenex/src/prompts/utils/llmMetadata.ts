@@ -1,5 +1,5 @@
 import { openRouterPricing } from "@/llm/pricing";
-import { Message } from "multi-llm-ts";
+import type { Message } from "multi-llm-ts";
 
 export interface LLMMetadata {
   model: string;

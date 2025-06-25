@@ -1,4 +1,4 @@
-export { publishAgentResponse } from "./ConversationPublisher";
+export { publishAgentResponse, publishErrorNotification } from "./ConversationPublisher";
 export { publishTypingStart, publishTypingStop } from "./TypingIndicatorPublisher";
 export { TaskPublisher } from "./TaskPublisher";
 export { getNDK } from "./ndkClient";

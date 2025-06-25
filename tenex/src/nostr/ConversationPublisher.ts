@@ -80,3 +80,36 @@ export async function publishAgentResponse(
     return reply;
 }
 
+export async function publishErrorNotification(
+    eventToReply: NDKEvent,
+    errorMessage: string,
+    signer: NDKPrivateKeySigner
+): Promise<NDKEvent> {
+    const reply = eventToReply.reply();
+    
+    // Tag the project
+    const projectCtx = getProjectContext();
+    reply.tag(projectCtx.project);
+    
+    // Remove ALL existing p-tags
+    reply.tags = reply.tags.filter((tag) => tag[0] !== "p");
+    
+    // Add error indicator tag
+    reply.tag(["error", "system"]);
+    
+    // Set error message content
+    reply.content = errorMessage;
+    
+    // Sign with the provided signer
+    await reply.sign(signer);
+    
+    await reply.publish();
+    
+    logger.debug("Published error notification", {
+        eventId: reply.id,
+        error: errorMessage,
+    });
+    
+    return reply;
+}
+

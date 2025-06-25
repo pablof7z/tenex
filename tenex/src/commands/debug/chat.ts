@@ -3,7 +3,6 @@ import { AgentRegistry } from "@/agents/AgentRegistry";
 import { AgentExecutor } from "@/agents/execution/AgentExecutor";
 import type { AgentExecutionContext } from "@/agents/execution/types";
 import { PromptBuilder } from "@/prompts";
-import { inventoryExists } from "@/utils/inventory";
 import { ConversationManager } from "@/conversations/ConversationManager";
 import type { Conversation } from "@/conversations/types";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
@@ -111,8 +110,6 @@ export async function runDebugChat(
 
         // Show system prompt if requested
         if (options.systemPrompt) {
-            const hasInventory = await inventoryExists(projectPath);
-
             const systemPrompt = new PromptBuilder()
                 .add("agent-system-prompt", {
                     agent,
@@ -120,7 +117,9 @@ export async function runDebugChat(
                     projectTitle: project.tagValue("title") || "Untitled Project",
                     projectRepository: project.tagValue("repo") || undefined,
                 })
-                .add("project-inventory-context", { hasInventory })
+                .add("project-inventory-context", {
+                    phase: "chat" as Phase
+                })
                 .build();
 
             console.log(chalk.cyan("\n=== System Prompt ==="));
@@ -217,7 +216,6 @@ export async function runDebugChat(
             }
 
             if (input.toLowerCase() === "prompt") {
-                const hasInventory = await inventoryExists(projectPath);
 
                 const systemPrompt = new PromptBuilder()
                     .add("agent-system-prompt", {
@@ -226,7 +224,9 @@ export async function runDebugChat(
                         projectTitle: project.tagValue("title") || "Untitled Project",
                         projectRepository: project.tagValue("repo") || undefined,
                     })
-                    .add("project-inventory-context", { hasInventory })
+                    .add("project-inventory-context", {
+                        phase: "chat" as Phase
+                    })
                     .build();
 
                 console.log(chalk.cyan("\n=== System Prompt ==="));

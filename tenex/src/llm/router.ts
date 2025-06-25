@@ -10,6 +10,10 @@ import { getLLMLogger, initializeLLMLogger } from "./callLogger";
 
 export interface LLMRouterConfig {
     configs: Record<string, LLMConfig>;
+    defaults: {
+        agents?: string;
+        analyze?: string;
+    };
 }
 
 /**
@@ -27,13 +31,17 @@ export class LLMRouter implements LLMService {
             return context.configName;
         }
 
+        const key =
+            this.config.defaults.agents ??
+            this.config.defaults.analyze ??
+            Object.keys(this.config.configs)[0];
+
         // Fallback to first available config
-        const firstKey = Object.keys(this.config.configs)[0];
-        if (!firstKey) {
+        if (!key) {
             throw new Error("No LLM configurations available");
         }
 
-        return firstKey;
+        return key;
     }
 
     /**
@@ -243,6 +251,7 @@ export async function loadLLMRouter(projectPath: string): Promise<LLMRouter> {
 
         const routerConfig: LLMRouterConfig = {
             configs,
+            defaults: tenexLLMs.defaults,
         };
 
         return new LLMRouter(routerConfig);

@@ -2,7 +2,6 @@ import { AgentRegistry } from "@/agents/AgentRegistry";
 import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
-import { inventoryExists } from "@/utils/inventory";
 import { type Phase, ALL_PHASES } from "@/conversations/phases";
 import { formatError } from "@/utils/errors";
 import { logError, logInfo } from "@/utils/logger";
@@ -100,8 +99,8 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
             // Validate phase
             const phase = (ALL_PHASES.includes(options.phase as Phase) ? options.phase : "chat") as Phase;
             
-            // Check inventory availability for chat phase only
-            const hasInventory = phase === "chat" ? await inventoryExists(process.cwd()) : false;
+            // No need to load inventory or context files here anymore
+            // The fragment handles this internally
             
             // Build system prompt to match production
             const systemPromptBuilder = new PromptBuilder()
@@ -109,20 +108,38 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
                     agent,
                     phase: phase,
                     projectTitle: titleTag?.[1] || "Untitled Project",
+                    projectRepository: repoTag?.[1] || "No repository",
                 })
                 .add("available-agents", {
                     agents: availableAgents,
                     currentAgentPubkey: agent.pubkey,
                 })
-                .add("project-inventory-context", { hasInventory });
+                .add("project-inventory-context", {
+                    phase
+                })
+                .add("phase-context", {
+                    phase: phase,
+                    phaseMetadata: undefined, // No conversation metadata in debug mode
+                    conversation: undefined, // No conversation context in debug mode
+                })
+                .add("phase-constraints", {
+                    phase: phase,
+                });
+                
+            // Add expertise boundaries for non-PM agents
+            if (!agent.isPMAgent) {
+                systemPromptBuilder.add("expertise-boundaries", {});
+            }
                 
             // Add PM-specific fragments if it's a PM agent
             if (agent.isPMAgent) {
                 systemPromptBuilder
-                    .add("default-to-action", {})
                     .add("pm-routing-instructions", {})
                     .add("pm-handoff-guidance", {});
             }
+            
+            // Note: claude-code-report fragment is only added in production when 
+            // Claude Code has been invoked directly, which requires conversation context
             
             const systemPrompt = systemPromptBuilder.build();
 

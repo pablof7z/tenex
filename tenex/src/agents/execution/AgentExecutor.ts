@@ -1,8 +1,6 @@
 import type { CompletionResponse, LLMService } from "@/llm/types";
 import { Message } from "multi-llm-ts";
 import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/nostr";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import type NDK from "@nostr-dev-kit/ndk";
 import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
@@ -238,16 +236,8 @@ export class AgentExecutor {
             }
         }
         
-        // Get list of context files
-        let contextFiles: string[] = [];
-        try {
-            const contextDir = path.join(process.cwd(), "context");
-            const files = await fs.readdir(contextDir);
-            contextFiles = files.filter(f => f.endsWith(".md"));
-        } catch (error) {
-            // Context directory may not exist
-            logger.debug("Could not read context directory", { error });
-        }
+        // No need to load inventory or context files here anymore
+        // The fragment handles this internally
 
         // Get all available agents for handoffs
         const availableAgents = Array.from(projectCtx.agents.values());
@@ -267,9 +257,7 @@ export class AgentExecutor {
                 currentAgentPubkey: context.agent.pubkey,
             })
             .add("project-inventory-context", { 
-                phase: context.phase,
-                projectPath: process.cwd(),
-                contextFiles 
+                phase: context.phase
             })
             // Move phase context and constraints to system prompt
             .add("phase-context", {
@@ -284,7 +272,6 @@ export class AgentExecutor {
         // Add PM-specific routing instructions for PM agents
         if (context.agent.isPMAgent) {
             systemPromptBuilder
-                .add("default-to-action", {})
                 .add("pm-routing-instructions", {})
                 .add("pm-handoff-guidance", {});
             

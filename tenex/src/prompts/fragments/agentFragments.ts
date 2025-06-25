@@ -33,29 +33,6 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
             })
         );
 
-        // Phase info
-        parts.push(`## Current Phase: ${phase.toUpperCase()}\n${getPhaseInstructions(phase)}`);
-
-        // Communication style
-        parts.push(`## Communication Style
-- Be concise and focused on the task at hand
-- Default to action rather than asking questions
-- Make reasonable technical decisions without consultation
-- Only ask questions when the ambiguity would cause fundamentally different implementations`);
-
-        // Tools section
-        parts.push("## Available Tools");
-        if (agent.tools && agent.tools.length > 0) {
-            parts.push(agent.tools.join(", "));
-            parts.push(getToolInstructions(agent.tools));
-        } else {
-            parts.push("No tools assigned");
-        }
-
-        parts.push(
-            `Remember: You are currently in the ${phase} phase. Focus your responses accordingly.`
-        );
-
         return parts.join("\n\n");
     },
 };

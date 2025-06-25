@@ -6,6 +6,7 @@ import type { AgentExecutor } from "../agents/execution/AgentExecutor";
 import { formatError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { isEventFromUser } from "../nostr/utils";
+import { publishErrorNotification } from "../nostr";
 
 const logInfo = logger.info.bind(logger);
 
@@ -94,7 +95,7 @@ async function handleReplyLogic(
     const pmAgent = projectCtx.getProjectAgent();
 
     // Execute with PM agent to handle routing
-    await agentExecutor.execute(
+    const result = await agentExecutor.execute(
         {
             agent: pmAgent,
             conversation,
@@ -102,4 +103,41 @@ async function handleReplyLogic(
         },
         event
     );
+    
+    // Check if execution failed and notify user
+    if (!result.success && result.error) {
+        // Check if it's an insufficient credits error
+        const isCreditsError = result.error.includes("Insufficient credits") || 
+                             result.error.includes("402");
+        
+        if (isCreditsError) {
+            const errorMessage = "⚠️ Unable to process your request: Insufficient credits. Please add more credits at https://openrouter.ai/settings/credits to continue.";
+            
+            // Publish error notification to user
+            await publishErrorNotification(
+                event,
+                errorMessage,
+                pmAgent.signer
+            );
+            
+            logger.error("Agent execution failed due to insufficient credits", {
+                error: result.error,
+                conversation: conversation.id,
+            });
+        } else {
+            // For other errors, publish a generic error message
+            const errorMessage = `⚠️ Unable to process your request due to an error. Please try again later.`;
+            
+            await publishErrorNotification(
+                event,
+                errorMessage,
+                pmAgent.signer
+            );
+            
+            logger.error("Agent execution failed", {
+                error: result.error,
+                conversation: conversation.id,
+            });
+        }
+    }
 }
