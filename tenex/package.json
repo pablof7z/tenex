@@ -17,7 +17,10 @@
   "bin": {
     "tenex": "src/cli.ts"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "start": "bun run ./src/cli.ts",
     "build": "bun scripts/build-bundled.js",
@@ -31,7 +34,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "clean": "rm -rf dist node_modules bun.lockb coverage"
+    "clean": "rm -rf dist node_modules bun.lockb coverage",
+    "llm-log": "bun run scripts/llm-log.ts"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -51,7 +55,8 @@
     "js-base64": "^3.7.7",
     "jwt-js-decode": "^1.9.0",
     "multi-llm-ts": "^4.0.2",
-    "nostr-tools": "^2.15.0"
+    "nostr-tools": "^2.15.0",
+    "repomix": "^0.3.9"
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",

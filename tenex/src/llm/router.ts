@@ -6,6 +6,7 @@ import {
 import type { LLMConfig, CompletionRequest, CompletionResponse, LLMService } from "./types";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
+import { getLLMLogger, initializeLLMLogger } from "./callLogger";
 
 export interface LLMRouterConfig {
     configs: Record<string, LLMConfig>;
@@ -46,6 +47,8 @@ export class LLMRouter implements LLMService {
      * Complete a request using the appropriate LLM
      */
     async complete(request: CompletionRequest): Promise<CompletionResponse> {
+        const startTime = Date.now();
+        
         // Extract context from request options
         const context = {
             configName: request.options?.configName,
@@ -59,6 +62,41 @@ export class LLMRouter implements LLMService {
         if (!config) {
             throw new Error(`No LLM configuration found for key: ${configKey}`);
         }
+
+        // Trace request details
+        logger.info(`[LLM] Starting completion request`, {
+            configKey,
+            provider: config.provider,
+            model: config.model,
+            agentName: context.agentName,
+            messageCount: request.messages.length,
+            lastMessage: request.messages[request.messages.length-1],
+            requestId: `${configKey}-${Date.now()}`
+        });
+
+        // Trace system prompt if present
+        const systemMessage = request.messages.find(m => m.role === 'system');
+        if (systemMessage) {
+            logger.debug(`[LLM] System prompt`, {
+                configKey,
+                systemPrompt: systemMessage.content,
+                length: systemMessage.content.length
+            });
+        }
+
+        // Trace all messages
+        logger.debug(`[LLM] Request messages`, {
+            configKey,
+            messages: request.messages.map((msg, index) => ({
+                index,
+                role: msg.role,
+                contentLength: msg.content.length,
+                contentPreview: msg.content.substring(0, 200) + (msg.content.length > 200 ? '...' : '')
+            }))
+        });
+
+        let response: CompletionResponse | undefined;
+        let error: Error | undefined;
 
         try {
             // Use the new multi-llm-ts v4 API
@@ -82,12 +120,87 @@ export class LLMRouter implements LLMService {
             if (!model) {
                 throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
             }
-            
+
             // Execute completion with new API
-            return await llm.complete(model, request.messages);
+            response = await llm.complete(model, request.messages, {
+                usage: true,
+                caching: true
+            });
             
-        } catch (error) {
-            logger.error(`LLM completion failed for ${configKey}:`, error);
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            
+            // Trace response details
+            logger.info(`[LLM] Completion response received`, {
+                configKey,
+                duration: `${duration}ms`,
+                responseType: typeof response,
+                content: response.content,
+                contentLength: response.content?.length || 0,
+                hasToolCalls: !!response.toolCalls?.length,
+                toolCallCount: response.toolCalls?.length || 0,
+                usage: response.usage
+            });
+
+            // Trace response content
+            if (response.content) {
+                logger.debug(`[LLM] Response content`, {
+                    configKey,
+                    content: response.content,
+                    contentLength: response.content.length
+                });
+            }
+
+            // Trace tool calls if present
+            if (response.toolCalls?.length) {
+                logger.debug(`[LLM] Tool calls`, {
+                    configKey,
+                    toolCalls: response.toolCalls.map(tc => ({
+                        id: tc.id,
+                        name: tc.name,
+                        argsLength: JSON.stringify(tc.args).length
+                    }))
+                });
+            }
+
+            // Log to comprehensive JSONL logger
+            const llmLogger = getLLMLogger();
+            if (llmLogger) {
+                await llmLogger.logLLMCall(
+                    configKey,
+                    config,
+                    request,
+                    { response },
+                    { startTime, endTime }
+                );
+            }
+            
+            return response;
+            
+        } catch (caughtError) {
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            error = caughtError instanceof Error ? caughtError : new Error(String(caughtError));
+            
+            logger.error(`[LLM] Completion failed`, {
+                configKey,
+                duration: `${duration}ms`,
+                error: error.message,
+                stack: error.stack
+            });
+
+            // Log to comprehensive JSONL logger
+            const llmLogger = getLLMLogger();
+            if (llmLogger) {
+                await llmLogger.logLLMCall(
+                    configKey,
+                    config,
+                    request,
+                    { error },
+                    { startTime, endTime }
+                );
+            }
+            
             throw error;
         }
     }
@@ -98,6 +211,9 @@ export class LLMRouter implements LLMService {
  */
 export async function loadLLMRouter(projectPath: string): Promise<LLMRouter> {
     try {
+        // Initialize comprehensive LLM logger
+        initializeLLMLogger(projectPath);
+        
         // Use configService to load merged global and project-specific configuration
         const { llms: tenexLLMs } = await configService.loadConfig(projectPath);
 
