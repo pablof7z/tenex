@@ -1,5 +1,10 @@
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS, logger } from "@tenex/shared";
+import { logger } from "../logger.js";
+
+// TENEX-specific event kinds
+const EVENT_KINDS = {
+  TYPING_INDICATOR: 24111 as const,
+} as const;
 import chalk from "chalk";
 import { getNDK } from "../ndk-setup.js";
 
@@ -36,6 +41,12 @@ export async function startProject(options: StartProjectOptions): Promise<void> 
         await event.publish();
 
         logger.info(chalk.green("✅ Project start event sent successfully!"));
+        
+        // In JSON mode, output success
+        const parentOptions = (options as any).json;
+        if (parentOptions) {
+            console.log(JSON.stringify({ success: true, eventId: event.id }));
+        }
 
         process.exit(0);
     } catch (error) {

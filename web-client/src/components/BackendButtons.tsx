@@ -2,7 +2,7 @@ import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom } from "jotai";
 import { Check, Play } from "lucide-react";
 import { useState } from "react";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/constants";
 import { onlineBackendsAtom } from "../lib/store";
 import { Button } from "./ui/button";
 
@@ -53,7 +53,7 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
                 {Array.from(onlineBackends.entries()).map(([backendPubkey, backendInfo]) => (
                     <BackendButton
                         key={backendPubkey}
-                        backendName={backendInfo.hostname}
+                        backendName={backendInfo.hostname || backendInfo.name || `Backend ${backendPubkey.slice(0, 8)}`}
                         onStart={() => handleStartTask(backendPubkey)}
                         isTriggered={triggeredBackends.has(backendPubkey)}
                     />

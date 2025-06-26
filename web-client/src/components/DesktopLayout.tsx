@@ -5,7 +5,7 @@ import {
     type NDKProject,
     useNDKCurrentUser,
 } from "@nostr-dev-kit/ndk-hooks";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../contexts/NavigationContext";
 import type { ProjectAgent } from "../hooks/useProjectAgents";
@@ -16,24 +16,29 @@ import {
     selectedTaskAtom,
     selectedThreadAtom,
     themeAtom,
+    toggleThemeAtom,
 } from "../lib/store";
 import { LayoutDialogs } from "./layout/LayoutDialogs";
 import { LayoutDrawers } from "./layout/LayoutDrawers";
 import { ProjectDashboard } from "./layout/ProjectDashboard";
 import { ProjectSidebar } from "./layout/ProjectSidebar";
+import { VoiceRecorderDialog } from "./dialogs/VoiceRecorderDialog";
 
 export function DesktopLayout() {
     const { goToProjectSettings } = useNavigation();
     const currentUser = useNDKCurrentUser();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
+    const [showVoiceRecorderDialog, setShowVoiceRecorderDialog] = useState(false);
+    const [voiceRecorderProject, setVoiceRecorderProject] = useState<NDKProject | null>(null);
     const [manuallyToggled, setManuallyToggled] = useState<Map<string, boolean>>(new Map());
     const [selectedTask, setSelectedTask] = useAtom(selectedTaskAtom);
     const [selectedThread, setSelectedThread] = useAtom(selectedThreadAtom);
     const [selectedProject, setSelectedProject] = useAtom(selectedProjectAtom);
     const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null);
     const onlineProjects = useAtomValue(onlineProjectsAtom);
-    const [theme, setTheme] = useAtom(themeAtom);
+    const theme = useAtomValue(themeAtom);
+    const toggleTheme = useSetAtom(toggleThemeAtom);
 
     // Only fetch projects at this level
     const projects = useUserProjects();
@@ -92,6 +97,11 @@ export function DesktopLayout() {
         setSelectedThread(tempThread);
     };
 
+    const handleVoiceRecording = (project: NDKProject) => {
+        setVoiceRecorderProject(project);
+        setShowVoiceRecorderDialog(true);
+    };
+
     if (!currentUser) {
         return (
             <div className="h-screen bg-background flex items-center justify-center">
@@ -110,7 +120,7 @@ export function DesktopLayout() {
                 filteredProjects={filteredProjects}
                 onlineProjects={onlineProjects}
                 theme={theme}
-                onThemeChange={(newTheme) => setTheme(newTheme as "light" | "dark")}
+                onThemeChange={() => toggleTheme()}
                 onProjectToggle={toggleProjectActivation}
                 onCreateProject={() => setShowCreateDialog(true)}
                 onSearch={() => setShowSearchDialog(true)}
@@ -122,6 +132,7 @@ export function DesktopLayout() {
                 filteredProjects={filteredProjects}
                 onProjectClick={setSelectedProject}
                 onTaskCreate={handleCreateAction}
+                onVoiceRecord={handleVoiceRecording}
                 onThreadClick={handleThreadClick}
                 onCreateProject={() => setShowCreateDialog(true)}
             />
@@ -133,6 +144,15 @@ export function DesktopLayout() {
                 onCreateDialogChange={setShowCreateDialog}
                 onSearchDialogChange={setShowSearchDialog}
             />
+
+            {/* Voice Recorder Dialog */}
+            {showVoiceRecorderDialog && voiceRecorderProject && (
+                <VoiceRecorderDialog
+                    open={showVoiceRecorderDialog}
+                    onOpenChange={setShowVoiceRecorderDialog}
+                    project={voiceRecorderProject}
+                />
+            )}
 
             {/* Drawers */}
             <LayoutDrawers

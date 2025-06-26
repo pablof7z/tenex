@@ -8,9 +8,7 @@ export default defineConfig({
 	resolve: {
 		alias: [
 			{ find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
-			{ find: "@tenex/types/events", replacement: fileURLToPath(new URL("../packages/types/src/events", import.meta.url)) },
-			{ find: "@tenex/types", replacement: fileURLToPath(new URL("../packages/types/src", import.meta.url)) },
-			{ find: "@tenex/shared", replacement: fileURLToPath(new URL("../shared/src", import.meta.url)) },
+			{ find: "buffer", replacement: "buffer" },
 		],
 	},
 	optimizeDeps: {
@@ -20,5 +18,8 @@ export default defineConfig({
 		fs: {
 			allow: [".."],
 		},
+	},
+	define: {
+		global: "globalThis",
 	},
 });

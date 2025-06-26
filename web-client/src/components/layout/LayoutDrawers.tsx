@@ -53,7 +53,7 @@ export function LayoutDrawers({
         <>
             {/* Task Detail Drawer */}
             <Sheet open={!!selectedTask} onOpenChange={(open) => !open && onTaskClose()}>
-                <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+                <SheetContent side="right" className="p-0">
                     {selectedTask &&
                         (() => {
                             // Find the project for this task if it's a real task with tags
@@ -91,7 +91,7 @@ export function LayoutDrawers({
             <Sheet open={!!selectedThread} onOpenChange={(open) => !open && onThreadClose()}>
                 <SheetContent
                     side="right"
-                    className="w-full sm:max-w-2xl p-0 flex flex-col overflow-hidden"
+                    className="p-0 flex flex-col overflow-hidden"
                 >
                     {selectedThread &&
                         (() => {
@@ -149,7 +149,7 @@ export function LayoutDrawers({
 
             {/* Project Detail Drawer */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && onProjectClose()}>
-                <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+                <SheetContent side="right" className="p-0">
                     {selectedProject && (
                         <ProjectDetail
                             project={selectedProject}
@@ -166,7 +166,7 @@ export function LayoutDrawers({
 
             {/* Documentation Drawer */}
             <Sheet open={!!selectedArticle} onOpenChange={(open) => !open && onArticleClose()}>
-                <SheetContent side="right" className="w-full sm:max-w-4xl p-0">
+                <SheetContent side="right" className="p-0">
                     {selectedArticle && selectedProject && (
                         <DocumentationView
                             project={selectedProject}

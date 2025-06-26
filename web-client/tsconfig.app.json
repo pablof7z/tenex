@@ -7,13 +7,10 @@
         "useDefineForClassFields": true,
         "allowImportingTsExtensions": true,
         "noEmit": true,
+        "moduleResolution": "bundler",
         "baseUrl": ".",
         "paths": {
             "@/*": ["./src/*"],
-            "@tenex/types": ["../packages/types/src/index.ts"],
-            "@tenex/types/*": ["../packages/types/src/*"],
-            "@tenex/shared": ["../shared/src/index.ts"],
-            "@tenex/shared/*": ["../shared/src/*"]
         }
     },
     "include": ["src"]

@@ -1,49 +1,161 @@
+import { AgentRegistry } from "@/agents/AgentRegistry";
+import { PromptBuilder } from "@/prompts";
+import { getProjectContext } from "@/services";
+import { ensureProjectInitialized } from "@/utils/projectInitialization";
+import { type Phase, ALL_PHASES } from "@/conversations/phases";
 import { formatError } from "@/utils/errors";
-import { logError, logInfo } from "@tenex/shared/logger";
+import { logError, logInfo } from "@/utils/logger";
 import chalk from "chalk";
-import { createDebugAgentSystem } from "../../debug/createDebugAgentSystem";
+
+// Format markdown
+function formatMarkdown(text: string): string {
+    return text
+        .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, content) => chalk.bold.blue(`${hashes} ${content}`))
+        .replace(/\*\*([^*]+)\*\*/g, chalk.bold('$1'))
+        .replace(/\*([^*]+)\*/g, chalk.italic('$1'))
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+            return `${chalk.gray(`\`\`\`${lang || ''}`)}\n${chalk.green(code)}${chalk.gray('```')}`;
+        })
+        .replace(/`([^`]+)`/g, chalk.yellow('`$1`'))
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, chalk.cyan('[$1]') + chalk.gray('($2)'))
+        .replace(/^(\s*)([-*+])\s+(.+)$/gm, (_, spaces, bullet, content) => `${spaces}${chalk.yellow(bullet)} ${content}`)
+        .replace(/^(\s*)(\d+\.)\s+(.+)$/gm, (_, spaces, num, content) => `${spaces}${chalk.yellow(num)} ${content}`);
+}
+
+// Format JSON
+function colorizeJSON(json: string): string {
+    return json
+        .replace(/"([^"]+)":/g, chalk.cyan('"$1":'))
+        .replace(/: "([^"]+)"/g, `: ${chalk.green('"$1"')}`)
+        .replace(/: (\d+)/g, `: ${chalk.yellow('$1')}`)
+        .replace(/: (true|false)/g, `: ${chalk.magenta('$1')}`)
+        .replace(/: null/g, `: ${chalk.gray('null')}`);
+}
+
+// Format content with enhancements
+function formatContentWithEnhancements(content: string, isSystemPrompt = false): string {
+    let formattedContent = content.replace(/\\n/g, '\n');
+    
+    if (isSystemPrompt) {
+        formattedContent = formatMarkdown(formattedContent);
+    }
+    
+    // Handle <tool_use> blocks
+    formattedContent = formattedContent.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (match, jsonContent) => {
+        try {
+            const parsed = JSON.parse(jsonContent.trim());
+            const formatted = JSON.stringify(parsed, null, 2);
+            return chalk.gray('<tool_use>\n') + colorizeJSON(formatted) + chalk.gray('\n</tool_use>');
+        } catch {
+            return chalk.gray('<tool_use>') + jsonContent + chalk.gray('</tool_use>');
+        }
+    });
+    
+    return formattedContent;
+}
 
 interface DebugSystemPromptOptions {
-  agent: string;
+    agent: string;
+    phase: string;
 }
 
 export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
-  try {
-    const projectPath = process.cwd();
+    try {
+        const projectPath = process.cwd();
 
-    logInfo(`🔍 Debug: Loading system prompt for agent '${options.agent}'`);
+        logInfo(`🔍 Debug: Loading system prompt for agent '${options.agent}'`);
 
-    // Create debug agent system to get the prompt
-    const { agent, agentRegistry } = await createDebugAgentSystem({
-      projectPath,
-      agentName: options.agent,
-    });
+        // Initialize project context if needed
+        await ensureProjectInitialized(projectPath);
 
-    // Get agent info from registry
-    const agentProfile = agentRegistry.getAgent(options.agent);
+        // Load agent from registry
+        const agentRegistry = new AgentRegistry(projectPath);
+        await agentRegistry.loadFromProject();
+        const agent = agentRegistry.getAgent(options.agent);
 
-    console.log(chalk.cyan("\n=== Agent Information ==="));
-    if (agentProfile) {
-      console.log(chalk.white("Name:"), agentProfile.name);
-      console.log(chalk.white("Role:"), agentProfile.role);
-      console.log(chalk.white("Description:"), agentProfile.description);
-      if (agentProfile.capabilities && agentProfile.capabilities.length > 0) {
-        console.log(chalk.white("Capabilities:"), agentProfile.capabilities.join(", "));
-      }
-    } else {
-      console.log(
-        chalk.yellow(`Note: Agent '${options.agent}' not found in registry, using default profile`)
-      );
+        console.log(chalk.cyan("\n=== Agent Information ==="));
+        if (agent) {
+            console.log(chalk.white("Name:"), agent.name);
+            console.log(chalk.white("Role:"), agent.role);
+            console.log(chalk.white("Phase:"), options.phase);
+            if (agent.tools && agent.tools.length > 0) {
+                console.log(chalk.white("Tools:"), agent.tools.join(", "));
+            }
+        } else {
+            console.log(chalk.yellow(`Note: Agent '${options.agent}' not found in registry`));
+        }
+
+        console.log(chalk.cyan("\n=== System Prompt ==="));
+
+        if (agent) {
+            const projectCtx = getProjectContext();
+            const project = projectCtx.project;
+            const titleTag = project.tags.find((tag) => tag[0] === "title");
+            const repoTag = project.tags.find((tag) => tag[0] === "repo");
+
+            // Get all available agents for handoffs
+            const availableAgents = Array.from(projectCtx.agents.values());
+            
+            // Validate phase
+            const phase = (ALL_PHASES.includes(options.phase as Phase) ? options.phase : "chat") as Phase;
+            
+            // No need to load inventory or context files here anymore
+            // The fragment handles this internally
+            
+            // Build system prompt to match production
+            const systemPromptBuilder = new PromptBuilder()
+                .add("agent-system-prompt", {
+                    agent,
+                    phase: phase,
+                    projectTitle: titleTag?.[1] || "Untitled Project",
+                    projectRepository: repoTag?.[1] || "No repository",
+                })
+                .add("available-agents", {
+                    agents: availableAgents,
+                    currentAgentPubkey: agent.pubkey,
+                })
+                .add("project-inventory-context", {
+                    phase
+                })
+                .add("phase-context", {
+                    phase: phase,
+                    phaseMetadata: undefined, // No conversation metadata in debug mode
+                    conversation: undefined, // No conversation context in debug mode
+                })
+                .add("phase-constraints", {
+                    phase: phase,
+                });
+                
+            // Add expertise boundaries for non-PM agents
+            if (!agent.isPMAgent) {
+                systemPromptBuilder.add("expertise-boundaries", {});
+            }
+                
+            // Add PM-specific fragments if it's a PM agent
+            if (agent.isPMAgent) {
+                systemPromptBuilder
+                    .add("pm-routing-instructions", {})
+                    .add("pm-handoff-guidance", {});
+            }
+            
+            // Note: claude-code-report fragment is only added in production when 
+            // Claude Code has been invoked directly, which requires conversation context
+            
+            const systemPrompt = systemPromptBuilder.build();
+
+            // Format and display the system prompt with enhancements
+            const formattedPrompt = formatContentWithEnhancements(systemPrompt, true);
+            console.log(formattedPrompt);
+        } else {
+            console.log(chalk.yellow(`Agent '${options.agent}' not found in registry`));
+        }
+
+        console.log(chalk.cyan("===================\n"));
+
+        logInfo("System prompt displayed successfully");
+    } catch (err) {
+        const errorMessage = formatError(err);
+        logError(`Failed to generate system prompt: ${errorMessage}`);
+        process.exit(1);
     }
-
-    console.log(chalk.cyan("\n=== System Prompt ==="));
-    console.log(agent.getSystemPrompt());
-    console.log(chalk.cyan("===================\n"));
-
-    logInfo("System prompt displayed successfully");
-  } catch (err) {
-    const errorMessage = formatError(err);
-    logError(`Failed to generate system prompt: ${errorMessage}`);
-    process.exit(1);
-  }
 }

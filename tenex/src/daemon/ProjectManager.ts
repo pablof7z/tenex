@@ -2,361 +2,389 @@ import { exec } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { toKebabCase } from "@/utils/agents";
+import { LLMConfigEditor } from "@/llm/LLMConfigEditor";
+import { toKebabCase } from "@/utils/string";
+import { ensureTenexInGitignore, initializeGitRepository } from "@/utils/git";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
-import { configurationService } from "@tenex/shared/services";
-import type { AgentProfile } from "@tenex/types/agents";
-import type { GlobalConfig, ProjectConfig, TenexConfiguration } from "@tenex/types/config";
-import type { Agent, ProjectData } from "@tenex/types/projects";
+import { logger } from "@/utils/logger";
+import { configService, setProjectContext } from "@/services";
+import { initializeToolLogger } from "@/tools/toolLogger";
+import type { Agent } from "@/agents/types";
+import type { TenexConfig } from "@/services/config/types";
+import chalk from "chalk";
 
 const execAsync = promisify(exec);
 
+export interface ProjectData {
+    identifier: string;
+    pubkey: string;
+    naddr: string;
+    title: string;
+    description?: string;
+    repoUrl?: string;
+    hashtags: string[];
+    agentEventIds: string[];
+    createdAt?: number;
+    updatedAt?: number;
+}
+
 export interface IProjectManager {
-  initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData>;
-  loadProject(projectPath: string): Promise<ProjectData>;
-  ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string>;
+    initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData>;
+    loadProject(projectPath: string): Promise<ProjectData>;
+    ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string>;
+    loadAndInitializeProjectContext(projectPath: string, ndk: NDK): Promise<void>;
 }
 
 export class ProjectManager implements IProjectManager {
-  private projectsPath: string;
+    private projectsPath: string;
 
-  constructor(projectsPath?: string) {
-    this.projectsPath = projectsPath || path.join(process.cwd(), "projects");
-  }
-  async initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData> {
-    try {
-      // Fetch project from Nostr
-      const project = await this.fetchProject(naddr, ndk);
-      const projectData = this.projectToProjectData(project);
-
-      // Clone repository if provided
-      if (projectData.repoUrl) {
-        await this.cloneRepository(projectData.repoUrl, projectPath);
-      }
-
-      // Generate project nsec and create profile
-      const projectNsec = await this.generateNsec();
-      await this.createProjectProfile(projectNsec, projectData, ndk);
-
-      // Create project structure
-      await this.createProjectStructure(projectPath, projectData, projectNsec);
-
-      // Fetch and save agent definitions
-      await this.fetchAndSaveAgentDefinitions(projectPath, projectData, ndk);
-
-      // Initialize agents.json with default agent
-      await this.initializeAgents(projectPath, projectData);
-
-      return projectData;
-    } catch (error) {
-      logger.error("Failed to initialize project", { error });
-      throw error;
+    constructor(projectsPath?: string) {
+        this.projectsPath = projectsPath || path.join(process.cwd(), "projects");
     }
-  }
+    async initializeProject(projectPath: string, naddr: string, ndk: NDK): Promise<ProjectData> {
+        try {
+            // Fetch project from Nostr
+            const project = await this.fetchProject(naddr, ndk);
+            const projectData = this.projectToProjectData(project);
 
-  async loadProject(projectPath: string): Promise<ProjectData> {
-    try {
-      const configuration = await configurationService.loadConfiguration(projectPath);
-      const config = configuration.config as ProjectConfig;
+            // Clone repository if provided, otherwise create directory and init git
+            if (projectData.repoUrl) {
+                await this.cloneRepository(projectData.repoUrl, projectPath);
+            } else {
+                // Create project directory and initialize git
+                await fs.mkdir(projectPath, { recursive: true });
+                await initializeGitRepository(projectPath);
+                logger.info("Created new project directory and initialized git repository", { projectPath });
+            }
 
-      if (!config.projectNaddr) {
-        throw new Error("Project configuration missing projectNaddr");
-      }
+            // Ensure .tenex is in .gitignore
+            await ensureTenexInGitignore(projectPath);
 
-      // For now, return a simplified version without decoding naddr
-      // The identifier and pubkey will be filled when the project is fetched from Nostr
-      return {
-        identifier: config.projectNaddr, // Use naddr as identifier temporarily
-        pubkey: "", // Will be filled when fetched from Nostr
-        naddr: config.projectNaddr,
-        title: config.title || "Untitled Project",
-        description: config.description,
-        repoUrl: config.repoUrl || undefined,
-        hashtags: config.hashtags || [],
-        agentEventIds: [],
-        createdAt: config.createdAt,
-        updatedAt: config.updatedAt,
-      };
-    } catch (error) {
-      logger.error("Failed to load project", { error, projectPath });
-      throw new Error(`Failed to load project from ${projectPath}`);
-    }
-  }
+            // Generate project nsec and create profile
+            const projectNsec = await this.generateNsec();
+            await this.createProjectProfile(projectNsec, projectData, ndk);
 
-  async ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string> {
-    const projectPath = path.join(this.projectsPath, identifier);
+            // Create project structure (without nsec in config)
+            await this.createProjectStructure(projectPath, projectData);
 
-    // Check if project already exists
-    if (await this.projectExists(projectPath)) {
-      return projectPath;
-    }
+            // Initialize agent registry and create PM agent
+            const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
+            const agentRegistry = new AgentRegistry(projectPath);
+            await agentRegistry.createPMAgent("project-manager", projectNsec);
 
-    // Initialize the project
-    await this.initializeProject(projectPath, naddr, ndk);
+            // Fetch and save agent definitions
+            await this.fetchAndSaveAgentDefinitions(projectPath, projectData, ndk);
 
-    return projectPath;
-  }
+            // Check if LLM configuration is needed
+            await this.checkAndRunLLMConfigWizard(projectPath);
 
-  private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
-    // Fetch the project event directly using NDK
-    const event = await ndk.fetchEvent(naddr);
-
-    if (!event) {
-      throw new Error("Project not found on Nostr");
-    }
-
-    return event as NDKProject;
-  }
-
-  private projectToProjectData(project: NDKProject): ProjectData {
-    const repoTag = project.tagValue("repo");
-    const hashtagTags = project.tags
-      .filter((t) => t[0] === "t")
-      .map((t) => t[1])
-      .filter(Boolean) as string[];
-
-    const agentTags = project.tags
-      .filter((t) => t[0] === "agent")
-      .map((t) => t[1])
-      .filter(Boolean) as string[];
-
-    return {
-      identifier: project.dTag || "",
-      pubkey: project.pubkey,
-      naddr: project.encode(),
-      title: project.title || "Untitled Project",
-      description: project.description,
-      repoUrl: repoTag,
-      hashtags: hashtagTags,
-      agentEventIds: agentTags,
-      createdAt: project.created_at,
-      updatedAt: project.created_at,
-    };
-  }
-
-  private async cloneRepository(repoUrl: string, projectPath: string): Promise<void> {
-    try {
-      await fs.mkdir(path.dirname(projectPath), { recursive: true });
-      const { stdout, stderr } = await execAsync(`git clone "${repoUrl}" "${projectPath}"`);
-      if (stderr) {
-        logger.warn("Git clone warning", { stderr });
-      }
-      logger.info("Cloned repository", { repoUrl, projectPath, stdout });
-    } catch (error) {
-      logger.error("Failed to clone repository", { error, repoUrl });
-      throw error;
-    }
-  }
-
-  private async createProjectStructure(
-    projectPath: string,
-    projectData: ProjectData,
-    projectNsec: string
-  ): Promise<void> {
-    const tenexPath = path.join(projectPath, ".tenex");
-    await fs.mkdir(tenexPath, { recursive: true });
-
-    // Create project config
-    const projectConfig: ProjectConfig = {
-      title: projectData.title,
-      description: projectData.description,
-      repoUrl: projectData.repoUrl || undefined,
-      projectNaddr: projectData.naddr,
-      nsec: projectNsec,
-      hashtags: projectData.hashtags,
-      createdAt: projectData.createdAt,
-      updatedAt: projectData.updatedAt,
-    };
-
-    const config: TenexConfiguration = {
-      config: projectConfig,
-      agents: {},
-      llms: {
-        configurations: {},
-        defaults: {},
-      },
-    };
-
-    await configurationService.saveConfiguration(projectPath, config);
-
-    logger.info("Created project structure with config", { projectPath });
-  }
-
-  private async fetchAndSaveAgentDefinitions(
-    projectPath: string,
-    project: ProjectData,
-    ndk: NDK
-  ): Promise<void> {
-    const agentsDir = path.join(projectPath, ".tenex", "agents");
-    await fs.mkdir(agentsDir, { recursive: true });
-
-    for (const eventId of project.agentEventIds) {
-      try {
-        const agent = await this.fetchAgentDefinition(eventId, ndk);
-        if (agent) {
-          const filePath = path.join(agentsDir, `${eventId}.json`);
-          const agentData = {
-            eventId: agent.id,
-            name: agent.title,
-            description: agent.description,
-            role: agent.role,
-            instructions: agent.instructions,
-            version: agent.version,
-            publishedAt: agent.created_at,
-            publisher: agent.pubkey,
-          };
-          await fs.writeFile(filePath, JSON.stringify(agentData, null, 2));
-          logger.info("Saved agent definition", { eventId, name: agent.title });
+            return projectData;
+        } catch (error) {
+            logger.error("Failed to initialize project", { error });
+            throw error;
         }
-      } catch (error) {
-        logger.error("Failed to fetch agent definition", { error, eventId });
-      }
-    }
-  }
-
-  private async initializeAgents(projectPath: string, project: ProjectData): Promise<void> {
-    const configuration = await configurationService.loadConfiguration(projectPath);
-    const _agents = configuration.agents || {};
-
-    // Create agents from agent event IDs
-    for (const eventId of project.agentEventIds) {
-      const agentFile = path.join(projectPath, ".tenex", "agents", `${eventId}.json`);
-      try {
-        const agentData = JSON.parse(await fs.readFile(agentFile, "utf-8"));
-        const agentName = agentData.name || "agent";
-
-        // Agent creation now handled by AgentRegistry during EventHandler initialization
-        logger.info("Agent will be created by AgentRegistry", { agentName, eventId });
-      } catch (error) {
-        logger.warn("Failed to create agent from event", { error, eventId });
-      }
     }
 
-    // Reload configuration to get updated agents
-    const updatedConfiguration = await configurationService.loadConfiguration(projectPath);
-    const updatedAgents = updatedConfiguration.agents || {};
+    async loadProject(projectPath: string): Promise<ProjectData> {
+        try {
+            const { config } = await configService.loadConfig(projectPath);
 
-    // If no agents were created from events, create a default agent
-    if (Object.keys(updatedAgents).length === 0) {
-      logger.info("No agents found in project, creating default agent");
-      updatedAgents.default = {
-        nsec: await this.generateNsec(),
-      };
-      updatedConfiguration.agents = updatedAgents;
-      await configurationService.saveConfiguration(projectPath, updatedConfiguration);
+            if (!config.projectNaddr) {
+                throw new Error("Project configuration missing projectNaddr");
+            }
+
+            // For now, return a simplified version without decoding naddr
+            // The identifier and pubkey will be filled when the project is fetched from Nostr
+            return {
+                identifier: config.projectNaddr, // Use naddr as identifier temporarily
+                pubkey: "", // Will be filled when fetched from Nostr
+                naddr: config.projectNaddr,
+                title: "Untitled Project", // This should come from NDKProject
+                description: config.description,
+                repoUrl: config.repoUrl || undefined,
+                hashtags: [], // This should come from NDKProject
+                agentEventIds: [],
+                createdAt: undefined, // This should come from NDKProject
+                updatedAt: undefined, // This should come from NDKProject
+            };
+        } catch (error) {
+            logger.error("Failed to load project", { error, projectPath });
+            throw new Error(`Failed to load project from ${projectPath}`);
+        }
     }
-  }
 
-  private async projectExists(projectPath: string): Promise<boolean> {
-    try {
-      await fs.access(projectPath);
-      const tenexPath = path.join(projectPath, ".tenex");
-      await fs.access(tenexPath);
-      return true;
-    } catch {
-      return false;
+    async ensureProjectExists(identifier: string, naddr: string, ndk: NDK): Promise<string> {
+        const projectPath = path.join(this.projectsPath, identifier);
+
+        // Check if project already exists
+        if (await this.projectExists(projectPath)) {
+            return projectPath;
+        }
+
+        // Initialize the project
+        await this.initializeProject(projectPath, naddr, ndk);
+
+        return projectPath;
     }
-  }
 
-  private async generateNsec(): Promise<string> {
-    const { stdout } = await execAsync("openssl rand -hex 32");
-    const privateKeyHex = stdout.trim();
-    // NDKPrivateKeySigner can accept hex private key directly
-    const signer = new NDKPrivateKeySigner(privateKeyHex);
-    return signer.nsec;
-  }
+    async loadAndInitializeProjectContext(projectPath: string, ndk: NDK): Promise<void> {
+        try {
+            // Load project configuration
+            const { config } = await configService.loadConfig(projectPath);
 
-  private buildProjectProfile(projectName: string, description?: string): AgentProfile {
-    return {
-      name: toKebabCase(projectName),
-      display_name: `${projectName} Project`,
-      about: description || `TENEX project: ${projectName}`,
-      picture: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}`,
-      banner: `https://api.dicebear.com/7.x/shapes/svg?seed=${projectName}-banner`,
-      created_at: Math.floor(Date.now() / 1000),
-      nip05: `${toKebabCase(projectName)}@tenex.bot`,
-      lud16: `${toKebabCase(projectName)}@tenex.bot`,
-      website: "https://tenex.bot",
-    };
-  }
+            if (!config.projectNaddr) {
+                throw new Error("Project configuration missing projectNaddr");
+            }
 
-  private async createProjectProfile(
-    projectNsec: string,
-    projectData: ProjectData,
-    ndk: NDK
-  ): Promise<void> {
-    try {
-      const signer = new NDKPrivateKeySigner(projectNsec);
-      const profile = this.buildProjectProfile(projectData.title, projectData.description);
+            // Fetch project from Nostr
+            const project = await this.fetchProject(config.projectNaddr, ndk);
 
-      const profileEvent = new NDKEvent(ndk, {
-        kind: 0,
-        pubkey: signer.pubkey,
-        content: JSON.stringify(profile),
-        tags: [],
-      });
+            // Load agents using AgentRegistry
+            const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
+            const agentRegistry = new AgentRegistry(projectPath);
+            await agentRegistry.loadFromProject();
 
-      await profileEvent.sign(signer);
-      await profileEvent.publish();
+            // Get all agents from registry
+            const agentMap = agentRegistry.getAllAgentsMap();
+            const loadedAgents = new Map();
 
-      logger.info("Created project profile", {
-        projectName: projectData.title,
-        pubkey: signer.pubkey,
-      });
-    } catch (error) {
-      logger.error("Failed to create project profile", {
-        error,
-        projectName: projectData.title,
-      });
-      // Don't throw - profile creation is not critical for project initialization
+            // Set slug on each agent
+            for (const [slug, agent] of agentMap.entries()) {
+                agent.slug = slug;
+                loadedAgents.set(slug, agent);
+            }
+
+            // Initialize ProjectContext
+            setProjectContext(project, loadedAgents);
+            
+            // Initialize tool logger for tracing tool executions
+            initializeToolLogger(projectPath);
+        } catch (error) {
+            logger.error("Failed to initialize ProjectContext", { error, projectPath });
+            throw error;
+        }
     }
-  }
 
-  private async fetchAgentDefinition(
-    eventId: string,
-    ndk: NDK
-  ): Promise<{
-    id: string;
-    title: string;
-    description: string;
-    role: string;
-    instructions: string;
-    version: string;
-    created_at: number | undefined;
-    pubkey: string;
-  } | null> {
-    try {
-      const filter = {
-        ids: [eventId],
-        kinds: [4199],
-      };
-
-      const event = await ndk.fetchEvent(filter, {
-        closeOnEose: true,
-        groupable: false,
-      });
-
-      if (!event) {
-        return null;
-      }
-
-      return {
-        id: event.id,
-        title: event.tagValue("title") || "Unnamed Agent",
-        description: event.tagValue("description") || "",
-        role: event.tagValue("role") || "assistant",
-        instructions: event.tagValue("instructions") || "",
-        version: event.tagValue("version") || "1.0.0",
-        created_at: event.created_at,
-        pubkey: event.pubkey,
-      };
-    } catch (error) {
-      logger.error("Failed to fetch agent event", { error, eventId });
-      return null;
+    private async fetchProject(naddr: string, ndk: NDK): Promise<NDKProject> {
+        const event = await ndk.fetchEvent(naddr);
+        if (!event) {
+            throw new Error(`Project event not found: ${naddr}`);
+        }
+        return event as NDKProject;
     }
-  }
+
+    private projectToProjectData(project: NDKProject): ProjectData {
+        const repoTag = project.tagValue("repo");
+        const titleTag = project.tagValue("title");
+        const hashtagTags = project.tags
+            .filter((t) => t[0] === "t")
+            .map((t) => t[1])
+            .filter(Boolean) as string[];
+
+        const agentTags = project.tags
+            .filter((t) => t[0] === "agent")
+            .map((t) => t[1])
+            .filter(Boolean) as string[];
+
+        return {
+            identifier: project.dTag || "",
+            pubkey: project.pubkey,
+            naddr: project.encode(),
+            title: titleTag || "Untitled Project",
+            description: project.description,
+            repoUrl: repoTag,
+            hashtags: hashtagTags,
+            agentEventIds: agentTags,
+            createdAt: project.created_at,
+            updatedAt: project.created_at,
+        };
+    }
+
+    private async cloneRepository(repoUrl: string, projectPath: string): Promise<void> {
+        try {
+            await fs.mkdir(path.dirname(projectPath), { recursive: true });
+            const { stdout, stderr } = await execAsync(`git clone "${repoUrl}" "${projectPath}"`);
+            if (stderr) {
+                logger.warn("Git clone warning", { stderr });
+            }
+            logger.info("Cloned repository", { repoUrl, projectPath, stdout });
+        } catch (error) {
+            logger.error("Failed to clone repository", { error, repoUrl });
+            throw error;
+        }
+    }
+
+    private async createProjectStructure(
+        projectPath: string,
+        projectData: ProjectData
+    ): Promise<void> {
+        const tenexPath = path.join(projectPath, ".tenex");
+        await fs.mkdir(tenexPath, { recursive: true });
+
+        // Create project config (without nsec - it's now in agents.json)
+        const projectConfig: TenexConfig = {
+            description: projectData.description,
+            repoUrl: projectData.repoUrl || undefined,
+            projectNaddr: projectData.naddr,
+        };
+
+        await configService.saveProjectConfig(projectPath, projectConfig);
+
+        logger.info("Created project structure with config", { projectPath });
+    }
+
+    private async fetchAndSaveAgentDefinitions(
+        projectPath: string,
+        project: ProjectData,
+        ndk: NDK
+    ): Promise<void> {
+        const agentsDir = path.join(projectPath, ".tenex", "agents");
+        await fs.mkdir(agentsDir, { recursive: true });
+
+        for (const eventId of project.agentEventIds) {
+            try {
+                const agent = await this.fetchAgentDefinition(eventId, ndk);
+                if (agent) {
+                    const filePath = path.join(agentsDir, `${eventId}.json`);
+                    const agentData = {
+                        name: agent.title,
+                        role: agent.role,
+                        instructions: agent.instructions,
+                    };
+                    await fs.writeFile(filePath, JSON.stringify(agentData, null, 2));
+                    logger.info("Saved agent definition", { eventId, name: agent.title });
+                }
+            } catch (error) {
+                logger.error("Failed to fetch agent definition", { error, eventId });
+            }
+        }
+    }
+
+    private async projectExists(projectPath: string): Promise<boolean> {
+        try {
+            await fs.access(projectPath);
+            const tenexPath = path.join(projectPath, ".tenex");
+            await fs.access(tenexPath);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    private async generateNsec(): Promise<string> {
+        const signer = NDKPrivateKeySigner.generate();
+        return signer.nsec;
+    }
+
+    private buildProjectProfile(projectName: string, description?: string) {
+        return {
+            name: toKebabCase(projectName),
+            role: "Project Manager",
+            description: description || `TENEX project: ${projectName}`,
+            capabilities: ["project management", "coordination", "planning"],
+        };
+    }
+
+    private async createProjectProfile(
+        projectNsec: string,
+        projectData: ProjectData,
+        ndk: NDK
+    ): Promise<void> {
+        try {
+            const signer = new NDKPrivateKeySigner(projectNsec);
+            const profile = this.buildProjectProfile(projectData.title, projectData.description);
+
+            const profileEvent = new NDKEvent(ndk, {
+                kind: 0,
+                pubkey: signer.pubkey,
+                content: JSON.stringify(profile),
+                tags: [],
+            });
+
+            await profileEvent.sign(signer);
+            await profileEvent.publish();
+
+            logger.info("Created project profile", {
+                projectName: projectData.title,
+                pubkey: signer.pubkey,
+            });
+        } catch (error) {
+            logger.error("Failed to create project profile", {
+                error,
+                projectName: projectData.title,
+            });
+            // Don't throw - profile creation is not critical for project initialization
+        }
+    }
+
+    private async fetchAgentDefinition(
+        eventId: string,
+        ndk: NDK
+    ): Promise<{
+        id: string;
+        title: string;
+        description: string;
+        role: string;
+        instructions: string;
+        version: string;
+        created_at: number | undefined;
+        pubkey: string;
+    } | null> {
+        try {
+            const filter = {
+                ids: [eventId],
+                kinds: [4199],
+            };
+
+            const event = await ndk.fetchEvent(filter, {
+                closeOnEose: true,
+                groupable: false,
+            });
+
+            if (!event) {
+                return null;
+            }
+
+            return {
+                id: event.id,
+                title: event.tagValue("title") || "Unnamed Agent",
+                description: event.tagValue("description") || "",
+                role: event.tagValue("role") || "assistant",
+                instructions: event.tagValue("instructions") || "",
+                version: event.tagValue("version") || "1.0.0",
+                created_at: event.created_at,
+                pubkey: event.pubkey,
+            };
+        } catch (error) {
+            logger.error("Failed to fetch agent event", { error, eventId });
+            return null;
+        }
+    }
+
+    private async checkAndRunLLMConfigWizard(projectPath: string): Promise<void> {
+        try {
+            const { llms: llmsConfig } = await configService.loadConfig(projectPath);
+
+            // Check if there are any LLM configurations
+            const hasLLMConfig =
+                llmsConfig?.configurations && Object.keys(llmsConfig.configurations).length > 0;
+
+            if (!hasLLMConfig) {
+                logger.info(
+                    chalk.yellow(
+                        "\n⚠️  No LLM configurations found. Let's set up your LLMs for this project.\n"
+                    )
+                );
+
+                const llmEditor = new LLMConfigEditor(projectPath, false);
+                await llmEditor.runOnboardingFlow();
+            }
+        } catch (error) {
+            logger.warn("Failed to check LLM configuration", { error });
+            // Don't throw - LLM configuration is not critical for project initialization
+        }
+    }
 }

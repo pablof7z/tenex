@@ -1,5 +1,5 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/types.js";
 import { useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { onlineProjectStatusAtom, projectLLMConfigsAtom } from "../lib/store";

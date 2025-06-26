@@ -1,6 +1,11 @@
-import { EVENT_KINDS } from "@tenex/types";
-
-export { EVENT_KINDS };
+export const EVENT_KINDS = {
+    CHAT: 24001,
+    THREAD_REPLY: 24002,
+    AGENT_RESPONSE: 24003,
+    PROJECT_STATUS: 24004,
+    TYPING_INDICATOR: 24111,
+    TYPING_INDICATOR_STOP: 24112,
+} as const;
 
 export interface ProjectAgent {
     pubkey: string;

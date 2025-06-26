@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
+import { ContextWindowProgressBar } from "../common/ContextWindowProgressBar";
 
 interface LLMMetadataDialogProps {
     open: boolean;
@@ -188,11 +189,28 @@ export function LLMMetadataDialog({ open, onOpenChange, metadata }: LLMMetadataD
                         {(metadata["llm-total-tokens"] ||
                             metadata["llm-prompt-tokens"] ||
                             metadata["llm-completion-tokens"]) && (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <h3 className="font-semibold text-sm flex items-center gap-2">
                                     <Hash className="w-4 h-4" />
                                     Token Usage
                                 </h3>
+                                
+                                {/* Context Window Progress Bar */}
+                                {metadata["llm-total-tokens"] && metadata["llm-context-window"] && (
+                                    <div className="ml-6">
+                                        <ContextWindowProgressBar
+                                            totalTokens={Number.parseInt(metadata["llm-total-tokens"])}
+                                            contextWindow={Number.parseInt(metadata["llm-context-window"])}
+                                            maxCompletionTokens={
+                                                metadata["llm-max-completion-tokens"] 
+                                                    ? Number.parseInt(metadata["llm-max-completion-tokens"])
+                                                    : undefined
+                                            }
+                                        />
+                                    </div>
+                                )}
+                                
+                                {/* Token Details */}
                                 <div className="grid grid-cols-2 gap-4 ml-6">
                                     {metadata["llm-prompt-tokens"] && (
                                         <div>
@@ -223,6 +241,16 @@ export function LLMMetadataDialog({ open, onOpenChange, metadata }: LLMMetadataD
                                             </span>
                                             <p className="font-mono text-sm font-semibold">
                                                 {formatTokenCount(metadata["llm-total-tokens"])}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {metadata["llm-context-window"] && (
+                                        <div>
+                                            <span className="text-xs text-muted-foreground">
+                                                Context Window:
+                                            </span>
+                                            <p className="font-mono text-sm">
+                                                {formatTokenCount(metadata["llm-context-window"])}
                                             </p>
                                         </div>
                                     )}

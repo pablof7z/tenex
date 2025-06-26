@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { NDKEvent, type NDKTag } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS } from "@tenex/types";
+import { EVENT_KINDS } from "../constants.js";
 import { z } from "zod";
 import { getConfig } from "../config.js";
 import { createCommit, hasUncommittedChanges } from "../lib/git.js";

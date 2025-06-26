@@ -1,72 +1,71 @@
-import type { Agent, ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logInfo } from "@tenex/shared/logger";
+import { logger } from "@/utils/logger";
+const logInfo = logger.info.bind(logger);
 import chalk from "chalk";
+import { getProjectContext } from "@/services";
+import type { Agent } from "@/agents/types";
 
 export class ProjectDisplay {
-  async displayProjectInfo(projectInfo: ProjectRuntimeInfo): Promise<void> {
-    this.displayBasicInfo(projectInfo);
-    await this.displayAgentConfigurations(
-      projectInfo.projectEvent,
-      projectInfo.projectPath,
-      projectInfo.agents
-    );
-    // Note: Documentation display moved to after subscription EOSE
-    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
-  }
-
-  private displayBasicInfo(projectInfo: ProjectRuntimeInfo): void {
-    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    logInfo(chalk.cyan("📦 Project Information"));
-    logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    logInfo(chalk.gray("Title:      ") + chalk.white(projectInfo.title));
-    logInfo(chalk.gray("Repository: ") + chalk.white(projectInfo.repository));
-    logInfo(chalk.gray("Path:       ") + chalk.white(projectInfo.projectPath));
-    if (projectInfo.projectEvent.id) {
-      logInfo(
-        chalk.gray("Event ID:   ") +
-          chalk.gray(`${projectInfo.projectEvent.id.substring(0, 16)}...`)
-      );
-    }
-  }
-
-  private async displayAgentConfigurations(
-    _projectEvent: NDKEvent,
-    _projectPath: string,
-    agents: Map<string, Agent>
-  ): Promise<void> {
-    if (agents.size === 0) {
-      logInfo(chalk.yellow("No agent configurations found for this project."));
-      return;
+    async displayProjectInfo(projectPath: string): Promise<void> {
+        this.displayBasicInfo(projectPath);
+        await this.displayAgentConfigurations();
+        // Note: Documentation display moved to after subscription EOSE
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
     }
 
-    logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    logInfo(chalk.cyan("🤖 Agent Configurations"));
-    logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    private displayBasicInfo(projectPath: string): void {
+        const projectCtx = getProjectContext();
+        const project = projectCtx.project;
+        const titleTag = project.tagValue("title") || "Untitled Project";
+        const repoTag = project.tagValue("repo") || "No repository";
 
-    for (const [, agent] of agents) {
-      this.displayAgent(agent.eventId, agents);
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan("📦 Project Information"));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.gray("Title:      ") + chalk.white(titleTag));
+        logInfo(chalk.gray("Repository: ") + chalk.white(repoTag));
+        logInfo(chalk.gray("Path:       ") + chalk.white(projectPath));
+        if (project.id) {
+            logInfo(chalk.gray("Event ID:   ") + chalk.gray(`${project.id.substring(0, 16)}...`));
+        }
     }
-  }
 
-  private displayAgent(eventId: string, agents: Map<string, Agent>): void {
-    // Find agent by eventId
-    const agentEntry = Array.from(agents.entries()).find(([, agent]) => agent.eventId === eventId);
+    private async displayAgentConfigurations(): Promise<void> {
+        const projectCtx = getProjectContext();
+        const agents = projectCtx.agents;
+        if (agents.size === 0) {
+            logInfo(chalk.yellow("No agent configurations found for this project."));
+            return;
+        }
 
-    if (!agentEntry) {
-      logInfo(chalk.red(`No agent instance found for event: ${eventId}`));
-      return;
+        logInfo(chalk.blue("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+        logInfo(chalk.cyan("🤖 Agent Configurations"));
+        logInfo(chalk.blue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+
+        for (const [, agent] of agents) {
+            if (agent.eventId) {
+                this.displayAgent(agent.eventId, agents);
+            }
+        }
     }
 
-    const [_agentKey, agent] = agentEntry;
+    private displayAgent(eventId: string, agents: Map<string, Agent>): void {
+        // Find agent by eventId
+        const agentEntry = Array.from(agents.entries()).find(
+            ([, agent]) => agent.eventId === eventId
+        );
 
-    // Display agent information with instance pubkey
-    logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
-    logInfo(chalk.gray("Description: ") + chalk.white(agent.description));
-    if (agent.role) {
-      logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
+        if (!agentEntry) {
+            logInfo(chalk.red(`No agent instance found for event: ${eventId}`));
+            return;
+        }
+
+        const [_agentKey, agent] = agentEntry;
+
+        // Display agent information with instance pubkey
+        logInfo(chalk.gray("\nAgent:       ") + chalk.yellow(agent.name));
+        logInfo(chalk.gray("Role:        ") + chalk.white(agent.role));
+        logInfo(chalk.gray("Pubkey:      ") + chalk.white(agent.pubkey));
+        logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
     }
-    logInfo(chalk.gray("Pubkey:      ") + chalk.white(agent.pubkey));
-    logInfo(chalk.gray("Cached:      ") + chalk.green(`✓ ${eventId}.json`));
-  }
 }

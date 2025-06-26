@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { useState, useMemo } from "react";
 import type { ProjectAgent } from "../../hooks/useProjectAgents";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../../lib/constants";
 import { TaskCreationOptionsDialog } from "../dialogs/TaskCreationOptionsDialog";
 import { ThreadDialog } from "../dialogs/ThreadDialog";
 import { VoiceMessageDialog } from "../dialogs/VoiceMessageDialog";

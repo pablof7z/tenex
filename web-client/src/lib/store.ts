@@ -1,10 +1,9 @@
 import type { NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import type { LLMConfig } from "@tenex/types/llm";
-import type { BackendInfo } from "@tenex/types/core";
+import type { LLMConfig, BackendInfo } from "./types.js";
 import { atom } from "jotai";
 
-// Re-export BackendInfo from core types for backward compatibility
-export type { BackendInfo } from "@tenex/types/core";
+// Re-export BackendInfo from local types
+export type { BackendInfo } from "./types.js";
 
 // Map to track online backends: pubkey -> BackendInfo
 export const onlineBackendsAtom = atom<Map<string, BackendInfo>>(new Map<string, BackendInfo>());

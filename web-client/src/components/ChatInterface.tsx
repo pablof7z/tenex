@@ -6,7 +6,7 @@ import {
     useNDK,
     useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/constants";
 import { useAtom } from "jotai";
 import { ArrowDown, Send } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";

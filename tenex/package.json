@@ -4,17 +4,38 @@
   "description": "TENEX Command Line Interface",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "tenex": "bin/tenex.js"
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./events": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    }
   },
-  "files": ["dist", "bin"],
+  "bin": {
+    "tenex": "src/tenex.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
-    "start": "bun run ./bin/tenex.ts",
+    "start": "bun run ./src/tenex.ts",
     "build": "bun scripts/build-bundled.js",
-    "build:simple": "bun scripts/build-simple.js",
     "prepublishOnly": "bun run build",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:unit": "bun test src/**/__tests__/*.test.ts",
+    "test:integration": "bun test src/**/__tests__/*.integration.test.ts",
+    "test:e2e": "bun test tests/e2e/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "clean": "rm -rf dist node_modules bun.lockb coverage",
+    "llm-log": "bun run scripts/llm-log.ts"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -25,9 +46,7 @@
   },
   "dependencies": {
     "@inquirer/search": "^3.0.15",
-    "@nostr-dev-kit/ndk": "^2.14.29",
-    "@tenex/shared": "file:../shared",
-    "@tenex/types": "file:../packages/types",
+    "@nostr-dev-kit/ndk": "^2.14.31",
     "@types/inquirer": "^9.0.8",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
@@ -35,8 +54,10 @@
     "inquirer": "^12.6.3",
     "js-base64": "^3.7.7",
     "jwt-js-decode": "^1.9.0",
-    "multi-llm-ts": "^4.0.2",
-    "nostr-tools": "^2.15.0"
+    "multi-llm-ts": "^4.0.3",
+    "nostr-tools": "^2.15.0",
+    "repomix": "^0.3.9",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",

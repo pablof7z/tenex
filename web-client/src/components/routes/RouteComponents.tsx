@@ -4,6 +4,7 @@ import { useArticle } from "../../hooks/useArticle";
 import { useProject } from "../../hooks/useProject";
 import { AgentRequestsPage } from "../AgentRequestsPage";
 import { AgentsPage } from "../AgentsPage";
+import { BlossomTestPage } from "../BlossomTestPage";
 import { ChatInterface } from "../ChatInterface";
 import { ChatsPage } from "../ChatsPage";
 import { DesktopLayout } from "../DesktopLayout";
@@ -173,4 +174,9 @@ export function DocsPageWrapper() {
 // Desktop layout wrapper
 export function DesktopLayoutWrapper() {
     return <DesktopLayout />;
+}
+
+// Blossom test page
+export function BlossomTestPageWrapper() {
+    return <BlossomTestPage />;
 }

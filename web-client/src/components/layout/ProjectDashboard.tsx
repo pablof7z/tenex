@@ -8,6 +8,7 @@ interface ProjectDashboardProps {
     filteredProjects: NDKProject[];
     onProjectClick: (project: NDKProject) => void;
     onTaskCreate: (project: NDKProject) => void;
+    onVoiceRecord: (project: NDKProject) => void;
     onThreadClick: (thread: NDKEvent) => void;
     onCreateProject: () => void;
 }
@@ -17,6 +18,7 @@ export function ProjectDashboard({
     filteredProjects,
     onProjectClick,
     onTaskCreate,
+    onVoiceRecord,
     onThreadClick,
     onCreateProject,
 }: ProjectDashboardProps) {
@@ -83,6 +85,7 @@ export function ProjectDashboard({
                                     project={project}
                                     onProjectClick={onProjectClick}
                                     onTaskCreate={onTaskCreate}
+                                    onVoiceRecord={onVoiceRecord}
                                     onThreadClick={onThreadClick}
                                 />
                             ))}

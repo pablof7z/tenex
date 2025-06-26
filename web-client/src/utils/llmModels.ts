@@ -4,7 +4,7 @@ import type {
     OpenRouterModelsResponse,
     OpenRouterModelWithMetadata,
 } from "../types/llm";
-import { isOllamaModelsResponse } from "@tenex/types/core";
+import { isOllamaModelsResponse } from "../lib/types.js";
 import { STATIC_MODELS as MODELS } from "../types/llm";
 
 /**

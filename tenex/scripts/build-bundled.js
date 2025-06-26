@@ -1,5 +1,21 @@
 #!/usr/bin/env bun
 
+/**
+ * build-bundled.js - Creates a bundled build of TENEX CLI for npm publishing
+ *
+ * This is the primary build script used for creating the npm package.
+ * It bundles all workspace dependencies (@tenex/*) into a single output file
+ * while keeping external npm dependencies as runtime requirements.
+ *
+ * Key features:
+ * - Bundles all @tenex/* workspace packages into the output
+ * - Keeps external npm dependencies as external (not bundled)
+ * - Removes workspace dependencies from the published package.json
+ * - Creates a standalone package that doesn't require workspace setup
+ *
+ * Usage: bun scripts/build-bundled.js (or npm run build)
+ */
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +45,10 @@ try {
     .join(",");
 
   // Bundle the CLI with workspace dependencies included
-  await $`bun build ${projectRoot}/src/cli.ts --outdir ${distDir} --target node --format esm --external ${externalDeps}`;
+  await $`bun build ${projectRoot}/src/tenex.ts --outdir ${distDir} --target node --format esm --external ${externalDeps}`;
+  
+  // Build browser-compatible exports
+  await $`bun build ${projectRoot}/src/browser.ts --outdir ${distDir} --target browser --format esm --external @nostr-dev-kit/ndk`;
   console.log("✅ Built CLI with bundled workspace dependencies");
 } catch (error) {
   console.error("❌ Build failed:", error);
@@ -37,8 +56,8 @@ try {
 }
 
 // Rename output file
-if (fs.existsSync(path.join(distDir, "cli.js"))) {
-  fs.renameSync(path.join(distDir, "cli.js"), path.join(distDir, "index.js"));
+if (fs.existsSync(path.join(distDir, "tenex.js"))) {
+  fs.renameSync(path.join(distDir, "tenex.js"), path.join(distDir, "index.js"));
 }
 
 // Create type definitions (best effort)

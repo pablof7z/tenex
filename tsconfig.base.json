@@ -8,26 +8,19 @@
         "noFallthroughCasesInSwitch": true,
         "noUncheckedIndexedAccess": true,
         "module": "ESNext",
-        "moduleResolution": "bundler",
+        "moduleResolution": "node",
         "target": "ES2022",
         "lib": ["ES2022"],
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "resolveJsonModule": true,
         "isolatedModules": true,
-        "verbatimModuleSyntax": true,
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,
         "removeComments": false,
         "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "paths": {
-            "@tenex/types": ["./packages/types/src/index.ts"],
-            "@tenex/types/*": ["./packages/types/src/*"],
-            "@tenex/shared": ["./shared/src/index.ts"],
-            "@tenex/shared/*": ["./shared/src/*"]
-        }
+        "forceConsistentCasingInFileNames": true
     },
     "exclude": ["node_modules", "dist", "build", "**/*.test.ts", "**/*.spec.ts"]
 }

@@ -1,110 +1,96 @@
 import path from "node:path";
-import { EventHandler } from "@/commands/run/EventHandler";
+import { EventHandler } from "@/event-handler";
 import { ProjectDisplay } from "@/commands/run/ProjectDisplay";
-import { ProjectLoader, type ProjectRuntimeInfo } from "@/commands/run/ProjectLoader";
 import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
 import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
-import { getNDK, initNDK, shutdownNDK } from "@/nostr/ndkClient";
+import { getNDK, shutdownNDK } from "@/nostr/ndkClient";
+import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { formatError } from "@/utils/errors";
 import type NDK from "@nostr-dev-kit/ndk";
-import { logger } from "@tenex/shared";
+import { logger } from "@/utils/logger";
 import chalk from "chalk";
 import { Command } from "commander";
+import { getProjectContext } from "@/services";
+import { setupGracefulShutdown } from "@/utils/process";
+import { loadLLMRouter } from "@/llm";
 
 export const projectRunCommand = new Command("run")
-  .description("Run the TENEX agent orchestration system for the current project")
-  .option("-p, --path <path>", "Project path", process.cwd())
-  .action(async (options) => {
-    try {
-      const projectPath = path.resolve(options.path);
+    .description("Run the TENEX agent orchestration system for the current project")
+    .option("-p, --path <path>", "Project path", process.cwd())
+    .action(async (options) => {
+        try {
+            const projectPath = path.resolve(options.path);
 
-      // Initialize NDK and get singleton
-      await initNDK();
-      const ndk = getNDK();
+            // Initialize project context (includes NDK setup)
+            await ensureProjectInitialized(projectPath);
+            const ndk = getNDK();
 
-      // Load project using ProjectLoader (which includes fetching the project event)
-      const projectLoader = new ProjectLoader();
-      const projectInfo = await projectLoader.loadProject(projectPath);
+            // Display project information
+            const projectDisplay = new ProjectDisplay();
+            await projectDisplay.displayProjectInfo(projectPath);
 
-      // Display project information
-      const projectDisplay = new ProjectDisplay();
-      await projectDisplay.displayProjectInfo(projectInfo);
-
-      // Start the project listener
-      await runProjectListener(projectInfo, ndk);
-    } catch (err) {
-      const errorMessage = formatError(err);
-      logger.error(`Failed to start project: ${errorMessage}`);
-      process.exit(1);
-    }
-  });
-
-async function runProjectListener(projectInfo: ProjectRuntimeInfo, _ndk: NDK) {
-  try {
-    logger.info(`Starting listener for project: ${projectInfo.title} (${projectInfo.projectId})`);
-
-    // Initialize event handler
-    const eventHandler = new EventHandler(projectInfo);
-    await eventHandler.initialize();
-
-    // Initialize subscription manager
-    const subscriptionManager = new SubscriptionManager(eventHandler, projectInfo);
-    await subscriptionManager.start();
-
-    // Start status publisher
-    const statusPublisher = new StatusPublisher();
-    await statusPublisher.startPublishing(projectInfo);
-
-    logger.success(
-      `Project listener active. Monitoring events from the last ${STARTUP_FILTER_MINUTES} minutes.`
-    );
-    logger.info(chalk.green("\n✅ Ready to process events!\n"));
-
-    // Set up graceful shutdown
-    setupGracefulShutdown(eventHandler, statusPublisher, subscriptionManager);
-
-    // Keep the process running
-    await new Promise(() => {
-      // This promise never resolves, keeping the listener active
+            // Start the project listener
+            await runProjectListener(projectPath, ndk);
+        } catch (err) {
+            const errorMessage = formatError(err);
+            logger.error(`Failed to start project: ${errorMessage}`);
+            process.exit(1);
+        }
     });
-  } catch (err) {
-    const errorMessage = formatError(err);
-    logger.error(`Failed to run project listener: ${errorMessage}`);
-    throw err;
-  }
-}
 
-function setupGracefulShutdown(
-  eventHandler: EventHandler,
-  statusPublisher: StatusPublisher,
-  subscriptionManager: SubscriptionManager
-) {
-  const shutdown = async (signal: string) => {
-    logger.info(`Received ${signal}, shutting down gracefully...`);
-
+async function runProjectListener(projectPath: string, ndk: NDK) {
     try {
-      // Stop subscriptions first
-      await subscriptionManager.stop();
+        const projectCtx = getProjectContext();
+        const project = projectCtx.project;
+        const titleTag = project.tagValue("title") || "Untitled Project";
+        const dTag = project.tagValue("d") || "";
+        logger.info(`Starting listener for project: ${titleTag} (${dTag})`);
 
-      // Stop status publisher
-      statusPublisher.stopPublishing();
+        // Load LLM router
+        const llmService = await loadLLMRouter(projectPath);
 
-      // Clean up event handler subscriptions
-      await eventHandler.cleanup();
+        // Initialize event handler
+        const eventHandler = new EventHandler(projectPath, llmService, ndk);
+        await eventHandler.initialize();
 
-      // Shutdown NDK singleton
-      await shutdownNDK();
+        // Initialize subscription manager
+        const subscriptionManager = new SubscriptionManager(eventHandler, projectPath);
+        await subscriptionManager.start();
 
-      logger.info("Project shutdown complete");
-      process.exit(0);
-    } catch (error) {
-      logger.error("Error during shutdown", { error });
-      process.exit(1);
+        // Start status publisher
+        const statusPublisher = new StatusPublisher();
+        await statusPublisher.startPublishing(projectPath);
+
+        logger.success(
+            `Project listener active. Monitoring events from the last ${STARTUP_FILTER_MINUTES} minutes.`
+        );
+        logger.info(chalk.green("\n✅ Ready to process events!\n"));
+
+        // Set up graceful shutdown
+        setupGracefulShutdown(async () => {
+            // Stop subscriptions first
+            await subscriptionManager.stop();
+
+            // Stop status publisher
+            statusPublisher.stopPublishing();
+
+            // Clean up event handler subscriptions
+            await eventHandler.cleanup();
+
+            // Shutdown NDK singleton
+            await shutdownNDK();
+
+            logger.info("Project shutdown complete");
+        });
+
+        // Keep the process running
+        await new Promise(() => {
+            // This promise never resolves, keeping the listener active
+        });
+    } catch (err) {
+        const errorMessage = formatError(err);
+        logger.error(`Failed to run project listener: ${errorMessage}`);
+        throw err;
     }
-  };
-
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGHUP", () => shutdown("SIGHUP"));
 }

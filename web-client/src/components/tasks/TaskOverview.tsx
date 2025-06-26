@@ -1,6 +1,6 @@
 import type { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { ProfileUtils, StatusUtils, TaskUtils } from "@tenex/shared";
+import { ProfileUtils, StatusUtils, TaskUtils } from "../../lib/utils/business";
 import { AlertCircle, CheckCircle2, Circle, Clock } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";

@@ -310,7 +310,7 @@ export function LLMSettings() {
         [editingConfig, getCredentials, setCredentials, handleSaveConfig]
     );
 
-    const configurations = Object.entries(config.configurations);
+    const configurations = Object.entries(config.configurations) as [string, LLMConfig][];
     const hasConfigurations = configurations.length > 0;
 
     return (

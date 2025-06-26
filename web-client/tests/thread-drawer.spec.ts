@@ -164,12 +164,12 @@ test.describe("Thread Drawer Functionality", () => {
                 .locator(".w-80.flex-shrink-0")
                 .filter({ hasText: projectName });
 
-            // Wait for the thread to appear in the project column (it's in a ThreadOverview component)
-            // Look for the thread title in the h4 element within the thread overview
+            // Wait for the thread to appear in the project column (it's in a ThreadCard component)
+            // Look for the thread title in the h4 element within the thread card
             const threadElement = projectColumn.locator("h4").filter({ hasText: threadTitle });
             await expect(threadElement).toBeVisible({ timeout: 20000 });
 
-            // Click on the thread overview (the parent div is clickable)
+            // Click on the thread card (the parent div is clickable)
             await threadElement.locator("..").locator("..").locator("..").click();
 
             // Verify the drawer opens

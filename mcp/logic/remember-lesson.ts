@@ -1,7 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { NDKEvent as NDKEventClass } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS } from "@tenex/types";
+import { NDKAgentLesson } from "../../tenex/src/events/NDKAgentLesson.js";
 import { getConfig } from "../config.js";
 import { getNDK } from "../ndk.js";
 import { log } from "../utils/log.js";
@@ -40,13 +38,12 @@ export function addRememberLessonCommand(server: McpServer): void {
                 const ndk = await getNDK();
 
                 // Create the lesson event
-                const lessonEvent = new NDKEventClass(ndk);
-                lessonEvent.kind = EVENT_KINDS.AGENT_LESSON;
-                lessonEvent.content = lesson;
+                const lessonEvent = new NDKAgentLesson(ndk);
+                lessonEvent.lesson = lesson;
+                lessonEvent.title = title;
 
-                // Add tags
-                lessonEvent.tags.push(["e", config.agentEventId]); // e-tag the NDKAgent event
-                lessonEvent.tags.push(["title", title]);
+                // Add e-tag to reference the agent event
+                lessonEvent.tags.push(["e", config.agentEventId]);
 
                 // Sign and publish
                 await lessonEvent.sign();

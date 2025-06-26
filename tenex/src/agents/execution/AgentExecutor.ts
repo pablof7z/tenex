@@ -1,180 +1,369 @@
-import { logger } from "@tenex/shared";
-import { Message } from "multi-llm-ts";
-import type { LLMService } from "@/llm";
-import type { ConversationPublisher } from "@/nostr";
-import { getProjectContext } from "@/runtime";
-import type { Phase } from "@/types/conversation";
-import { AgentPromptBuilder } from "./AgentPromptBuilder";
-import { ToolExecutionManager } from "@/tools/execution";
+import { getDefaultToolsForAgent } from "@/agents/constants";
+import type { ConversationManager } from "@/conversations/ConversationManager";
+import type { Phase } from "@/conversations/phases";
+import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
+import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
+import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/nostr";
+import type { LLMMetadata } from "@/nostr/types";
+import { PromptBuilder } from "@/prompts";
+import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
+import {
+  buildHistoryMessages,
+  getLatestUserMessage,
+  needsCurrentUserMessage,
+} from "@/prompts/utils/messageBuilder";
+import { getProjectContext } from "@/services";
+import { getTool } from "@/tools/registry";
 import type {
-  AgentExecutionContext,
-  AgentExecutionResult,
-  AgentPromptContext,
-  ToolExecutionResult
-} from "./types";
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+  HandoffMetadata,
+  PhaseTransitionMetadata,
+  ToolExecutionMetadata,
+  ToolExecutionResult,
+  ToolOutput,
+  ToolResult,
+} from "@/tools/types";
+import { isHandoffMetadata, isPhaseTransitionMetadata } from "@/tools/types";
+import {
+  type TracingContext,
+  type TracingLogger,
+  createAgentExecutionContext,
+  createTracingContext,
+  createTracingLogger,
+} from "@/tracing";
+import { logger } from "@/utils/logger";
+import type NDK from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
+import { Message } from "multi-llm-ts";
+import { ReasonActLoop } from "./ReasonActLoop";
+import type { ReasonActContext, ReasonActResult } from "./ReasonActLoop";
+import type { AgentExecutionContext, AgentExecutionResult } from "./types";
+import "@/prompts/fragments/available-agents";
+import "@/prompts/fragments/pm-routing";
+import "@/prompts/fragments/expertise-boundaries";
+import { TaskPublisher } from "@/nostr/TaskPublisher";
+import { BufferedStreamPublisher } from "./BufferedStreamPublisher";
 
 export class AgentExecutor {
-  private toolManager = new ToolExecutionManager();
+  private reasonActLoop: ReasonActLoop;
+  private taskPublisher: TaskPublisher;
 
   constructor(
     private llmService: LLMService,
-    private conversationPublisher: ConversationPublisher
-  ) {}
+    private ndk: NDK,
+    private conversationManager?: ConversationManager
+  ) {
+    this.reasonActLoop = new ReasonActLoop(llmService);
+    this.taskPublisher = new TaskPublisher(this.ndk);
+  }
 
   /**
    * Execute an agent's assignment for a conversation
    */
   async execute(
     context: AgentExecutionContext,
-    triggeringEvent: NDKEvent
+    triggeringEvent: NDKEvent,
+    parentTracingContext?: TracingContext,
+    options?: { streaming?: boolean }
   ): Promise<AgentExecutionResult> {
-    logger.info(`Agent ${context.agent.name} executing for ${context.phase} phase`, {
-      conversationId: context.conversation.id,
-      agentPubkey: context.agent.pubkey
+    // Create agent execution tracing context
+    const tracingContext = parentTracingContext
+      ? createAgentExecutionContext(parentTracingContext, context.agent.name)
+      : createAgentExecutionContext(
+          createTracingContext(context.conversation.id),
+          context.agent.name
+        );
+
+    const tracingLogger = createTracingLogger(tracingContext, "agent");
+
+    tracingLogger.startOperation("agent_execution", {
+      agentName: context.agent.name,
+      agentPubkey: context.agent.pubkey,
+      phase: context.phase,
     });
 
     try {
-      // 1. Build the agent's prompt
-      const promptContext = this.buildPromptContext(context);
-      
-      // 2. Generate response via LLM
-      const llmResponse = await this.generateResponse(
-        promptContext,
-        context.agent.llmConfig || 'default'
-      );
+      // 1. Get phase-aware tools for this agent
+      const phaseAwareTools = context.agent.isPMAgent
+        ? getDefaultToolsForAgent(true, context.phase)
+        : context.agent.tools || getDefaultToolsForAgent(false);
 
-      // 3. Process response for tool execution
-      const toolContext = {
-        projectPath: getProjectContext().projectPath,
-        conversationId: context.conversation.id,
-        agentName: context.agent.name,
-        phase: context.phase
+      // Create a modified agent with phase-aware tools
+      const agentWithPhaseTools = {
+        ...context.agent,
+        tools: phaseAwareTools,
       };
-      
-      const { enhancedResponse, toolResults } = await this.toolManager.processResponse(
-        llmResponse.content,
-        toolContext
-      );
 
-      // 4. Build metadata
-      const llmMetadata = this.llmService.buildMetadata(
-        llmResponse,
-        promptContext.systemPrompt,
-        promptContext.conversationHistory
-      );
+      // 2. Build the agent's messages
+      const messages = await this.buildMessages({
+        ...context,
+        agent: agentWithPhaseTools,
+      });
 
-      // 5. Determine next responder
-      const nextResponder = this.determineNextResponder(
-        context,
-        enhancedResponse
-      );
+      // 3. Publish typing indicator start
+      await publishTypingStart(this.ndk, triggeringEvent, context.agent.signer);
 
-      // 6. Publish response to Nostr (with enhanced response)
+      // Get tools for response processing
+      const toolNames = context.agent.tools || [];
+      const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
+
+      let finalResponse: CompletionResponse;
+      let finalContent: string;
+      let allToolResults: ToolExecutionResult[] = [];
+      let handoffMetadata: HandoffMetadata | undefined;
+      let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+
+      if (true) {
+        // Use streaming execution
+        tracingLogger.info("Using streaming execution", {
+          agentName: context.agent.name,
+        });
+
+        const streamResult = await this.executeWithStreaming(
+          {
+            projectPath: process.cwd(),
+            conversationId: context.conversation.id,
+            agentName: context.agent.name,
+            phase: context.phase,
+            llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+            agent: agentWithPhaseTools,
+            conversation: context.conversation,
+            eventToReply: triggeringEvent,
+          },
+          messages,
+          tracingContext,
+          tools
+        );
+
+        finalResponse = streamResult.finalResponse;
+        finalContent = streamResult.finalContent;
+        allToolResults = streamResult.allToolResults || [];
+        handoffMetadata = streamResult.handoffMetadata;
+        phaseTransitionMetadata = streamResult.phaseTransitionMetadata;
+      } else {
+        // Use traditional execution
+        const initialResponse = await this.generateResponse(messages, context);
+
+        // Build initial LLM metadata
+        const initialLLMMetadata = await this.buildLLMMetadata(initialResponse, messages);
+
+        // Execute the Reason-Act loop to handle tool calls
+        const reasonActResult = await this.reasonActLoop.execute(
+          initialResponse,
+          {
+            projectPath: process.cwd(),
+            conversationId: context.conversation.id,
+            agentName: context.agent.name,
+            phase: context.phase,
+            llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+            agent: agentWithPhaseTools,
+            conversation: context.conversation,
+            eventToReply: triggeringEvent,
+          },
+          messages,
+          tracingContext,
+          initialLLMMetadata,
+          tools
+        );
+
+        finalResponse = reasonActResult.finalResponse;
+        finalContent = reasonActResult.finalContent;
+        allToolResults = reasonActResult.allToolResults || [];
+        handoffMetadata = reasonActResult.handoffMetadata;
+        phaseTransitionMetadata = reasonActResult.phaseTransitionMetadata;
+      }
+
+      // Build metadata with final response from ReasonActLoop
+      const llmMetadata = await this.buildLLMMetadata(finalResponse, messages);
+
+      // 6. Process handoff and phase transition
+      let nextResponder: string | undefined;
+      let phaseTransition: string | undefined;
+
+      if (handoffMetadata) {
+        nextResponder = handoffMetadata.handoff.to;
+      }
+
+      if (phaseTransitionMetadata) {
+        phaseTransition = phaseTransitionMetadata.phaseTransition.to;
+
+        // Handle phase transition in conversation manager
+        if (this.conversationManager && phaseTransition) {
+          await this.conversationManager.updatePhase(
+            context.conversation.id,
+            phaseTransition as Phase,
+            phaseTransitionMetadata.phaseTransition.message,
+            context.agent.pubkey,
+            context.agent.name,
+            phaseTransitionMetadata.phaseTransition.reason
+          );
+        }
+      }
+
+      // 8. Publish response to Nostr
       const publishedEvent = await this.publishResponse(
         context,
         triggeringEvent,
-        enhancedResponse,
+        finalContent,
         nextResponder,
-        llmMetadata
+        llmMetadata,
+        tracingContext,
+        phaseTransition
       );
+
+      // Log the agent response in human-readable format
+      logger.agentResponse(
+        context.agent.name,
+        finalContent,
+        context.conversation.id,
+        context.conversation.title,
+        publishedEvent.id
+      );
+
+      // 9. Publish typing indicator stop
+      await publishTypingStop(this.ndk, triggeringEvent, context.agent.signer);
+
+      tracingLogger.completeOperation("agent_execution", {
+        agentName: context.agent.name,
+        responseLength: finalContent.length,
+        toolExecutions: allToolResults.length,
+        nextAgent: nextResponder,
+      });
 
       return {
         success: true,
-        response: enhancedResponse,
+        response: finalContent,
         llmMetadata,
-        toolExecutions: toolResults,
+        toolExecutions: allToolResults,
         nextAgent: nextResponder,
-        publishedEvent
+        publishedEvent,
       };
     } catch (error) {
-      logger.error(`Agent execution failed for ${context.agent.name}`, { error });
+      // Ensure typing indicator is stopped even on error
+      await publishTypingStop(this.ndk, triggeringEvent, context.agent.signer);
+
+      tracingLogger.failOperation("agent_execution", error, {
+        agentName: context.agent.name,
+      });
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
 
   /**
-   * Build the complete prompt context for the agent
+   * Build the messages array for the agent execution
    */
-  private buildPromptContext(context: AgentExecutionContext): AgentPromptContext {
-    const systemPrompt = AgentPromptBuilder.buildSystemPrompt(
-      context.agent,
-      context.phase
-    );
+  private async buildMessages(context: AgentExecutionContext): Promise<Message[]> {
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
 
-    const conversationHistory = AgentPromptBuilder.buildConversationContext(
-      context.conversation
-    );
-
-    const phaseContext = AgentPromptBuilder.buildPhaseContext(
-      context.conversation,
-      context.phase
-    );
-
-    const constraints = this.getPhaseConstraints(context.phase);
-
-    return {
-      systemPrompt,
-      conversationHistory,
-      phaseContext,
-      availableTools: context.agent.tools,
-      constraints
-    };
-  }
-
-  /**
-   * Generate response using LLM
-   */
-  private async generateResponse(
-    promptContext: AgentPromptContext,
-    llmConfig: string
-  ) {
-    const messages: Message[] = [
-      new Message('system', promptContext.systemPrompt),
-      new Message('user', AgentPromptBuilder.buildFullPrompt(promptContext))
-    ];
-
-    logger.debug('Generating agent response', {
-      llmConfig,
-      messageCount: messages.length
-    });
-
-    const response = await this.llmService.complete(llmConfig, messages);
-    
-    logger.info('Agent response generated', {
-      model: response.model,
-      tokens: response.usage.totalTokens,
-      cost: response.cost
-    });
-
-    return response;
-  }
-
-
-  /**
-   * Determine who should respond next
-   */
-  private determineNextResponder(
-    context: AgentExecutionContext,
-    response: string
-  ): string | undefined {
-    // In chat phase, typically the user responds
-    if (context.phase === 'chat') {
-      // Get the user's pubkey from the conversation history
-      const firstEvent = context.conversation.history[0];
-      // Always return the conversation starter in chat phase
-      // This ensures we don't fall back to triggeringEvent.pubkey
-      return firstEvent?.pubkey || undefined;
+    // Create tag map for efficient lookup
+    const tagMap = new Map<string, string>();
+    for (const tag of project.tags) {
+      if (tag.length >= 2 && tag[0] && tag[1]) {
+        tagMap.set(tag[0], tag[1]);
+      }
     }
 
-    // In other phases, check if agent is handing off to another agent
-    // TODO: Implement agent handoff detection
-    
-    // Default: no specific next responder
-    return undefined;
+    // No need to load inventory or context files here anymore
+    // The fragment handles this internally
+
+    // Get all available agents for handoffs
+    const availableAgents = Array.from(projectCtx.agents.values());
+
+    const messages: Message[] = [];
+
+    // Build system prompt with all agent and phase context
+    const systemPromptBuilder = new PromptBuilder()
+      .add("agent-system-prompt", {
+        agent: context.agent,
+        phase: context.phase,
+        projectTitle: tagMap.get("title") || "Untitled Project",
+        projectRepository: tagMap.get("repo") || "No repository",
+      })
+      .add("available-agents", {
+        agents: availableAgents,
+        currentAgentPubkey: context.agent.pubkey,
+      })
+      .add("project-inventory-context", {
+        phase: context.phase,
+      })
+      // Move phase context and constraints to system prompt
+      .add("phase-context", {
+        phase: context.phase,
+        phaseMetadata: context.conversation.metadata,
+        conversation: context.conversation,
+      })
+      .add("phase-constraints", {
+        phase: context.phase,
+      });
+
+    // Add PM-specific routing instructions for PM agents
+    if (context.agent.isPMAgent) {
+      systemPromptBuilder.add("pm-routing-instructions", {}).add("pm-handoff-guidance", {});
+
+      // Add Claude Code report fragment if we have one
+      if (context.additionalContext?.claudeCodeReport) {
+        systemPromptBuilder.add("claude-code-report", {
+          phase: context.phase,
+          previousPhase: context.previousPhase,
+          claudeCodeReport: context.additionalContext.claudeCodeReport,
+        });
+      }
+    } else {
+      // Add expertise boundaries for specialist agents
+      systemPromptBuilder.add("expertise-boundaries", {
+        agentRole: context.agent.role || "specialist",
+        isPMAgent: false,
+      });
+    }
+
+    const systemPrompt = systemPromptBuilder.build();
+    messages.push(new Message("system", systemPrompt));
+
+    // Add conversation history as proper messages
+    const historyMessages = buildHistoryMessages(context.conversation.history);
+    messages.push(...historyMessages);
+
+    // Add current user message if needed
+    if (needsCurrentUserMessage(context.conversation)) {
+      const latestUserMessage = getLatestUserMessage(context.conversation);
+      if (latestUserMessage) {
+        messages.push(new Message("user", latestUserMessage));
+      }
+    }
+
+    return messages;
+  }
+
+  /**
+   * Generate initial response from LLM
+   */
+  private async generateResponse(
+    messages: Message[],
+    context: AgentExecutionContext
+  ): Promise<CompletionResponse> {
+    // Get tools for this agent
+    const toolNames = context.agent.tools || [];
+    const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
+
+    return await this.llmService.complete({
+      messages,
+      options: {},
+      tools: tools.length > 0 ? tools : undefined,
+      toolContext: {
+        projectPath: process.cwd(),
+        conversationId: context.conversation.id,
+        agentName: context.agent.name,
+        phase: context.phase,
+        agent: context.agent,
+        conversation: context.conversation,
+        agentSigner: context.agent.signer,
+        conversationRootEventId: context.conversation.history[0]?.id,
+      },
+    });
   }
 
   /**
@@ -183,86 +372,175 @@ export class AgentExecutor {
   private async publishResponse(
     context: AgentExecutionContext,
     triggeringEvent: NDKEvent,
-    response: string,
-    nextResponder?: string,
-    llmMetadata?: any
+    content: string,
+    nextResponder: string | undefined,
+    llmMetadata?: LLMMetadata,
+    tracingContext?: TracingContext,
+    phaseTransition?: string
   ): Promise<NDKEvent> {
-    // In chat phase, if no next responder is specified, use the conversation starter
-    let responder = nextResponder;
-    
-    if (!responder && context.phase === 'chat') {
-      // Get the original conversation starter (human)
-      const firstEvent = context.conversation.history[0];
-      responder = firstEvent?.pubkey;
-    }
-    
-    // Only fall back to triggering event pubkey if we have no other option
-    // and we're not in chat phase
-    if (!responder && context.phase !== 'chat') {
-      responder = triggeringEvent.pubkey;
+    const tracingLogger = tracingContext
+      ? createTracingLogger(tracingContext, "nostr")
+      : logger.forModule("nostr");
+
+    // Check if this is a phase transition request
+    const additionalTags: NDKTag[] = [];
+    if (phaseTransition) {
+      additionalTags.push(["phase", phaseTransition]);
     }
 
-    // Ensure we never tag the agent itself (prevent loops)
-    if (responder === context.agent.pubkey) {
-      logger.warn('Preventing self-tagging in agent response', {
-        agent: context.agent.name,
-        phase: context.phase
-      });
-      responder = undefined;
-    }
-    
-    const publishedEvent = await this.conversationPublisher.publishAgentResponse(
+    const event = await publishAgentResponse(
       triggeringEvent,
-      response,
-      responder || '', // Empty string means no specific next responder
+      content,
+      nextResponder || "",
       context.agent.signer,
-      llmMetadata
+      llmMetadata,
+      additionalTags
     );
 
-    logger.info('Agent response published', {
-      agent: context.agent.name,
-      eventId: publishedEvent.id,
-      nextResponder: responder
-    });
+    if (tracingContext && "logEventPublished" in tracingLogger) {
+      tracingLogger.logEventPublished(event.id || "unknown", "agent_response", {
+        agentName: context.agent.name,
+        preview: content.substring(0, 60),
+        nextResponder,
+        hasLLMMetadata: !!llmMetadata,
+      });
+    }
 
-    return publishedEvent;
+    return event;
   }
 
   /**
-   * Get phase-specific constraints
+   * Execute with streaming support
    */
-  private getPhaseConstraints(phase: Phase): string[] {
-    switch (phase) {
-      case 'chat':
-        return [
-          'Focus on understanding requirements',
-          'Ask one or two clarifying questions at most',
-          'Keep responses concise and friendly'
-        ];
-      
-      case 'plan':
-        return [
-          'Create a structured plan with clear milestones',
-          'Include time estimates when possible',
-          'Identify potential risks or challenges'
-        ];
-      
-      case 'execute':
-        return [
-          'Focus on implementation details',
-          'Provide code examples when relevant',
-          'Explain technical decisions'
-        ];
-      
-      case 'review':
-        return [
-          'Provide constructive feedback',
-          'Highlight both strengths and areas for improvement',
-          'Suggest specific improvements'
-        ];
-      
-      default:
-        return [];
+  private async executeWithStreaming(
+    context: ReasonActContext,
+    messages: Message[],
+    tracingContext: TracingContext,
+    tools?: Tool[]
+  ): Promise<ReasonActResult> {
+    let finalResponse: CompletionResponse | undefined;
+    let finalContent = "";
+    const allToolResults: ToolExecutionResult[] = [];
+    let handoffMetadata: HandoffMetadata | undefined;
+    let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+
+    // Create buffered publisher for streaming
+    const streamPublisher = new BufferedStreamPublisher(context.eventToReply, context.agent);
+
+    // Process the stream
+    const stream = this.reasonActLoop.executeStreaming(context, messages, tracingContext, tools);
+
+    for await (const event of stream) {
+      switch (event.type) {
+        case "content":
+          finalContent += event.content;
+          streamPublisher.addContent(event.content);
+          break;
+
+        case "tool_start":
+          // Flush any buffered content before starting tool
+          await streamPublisher.flush(true);
+          break;
+
+        case "tool_complete": {
+          // Extract tool result and metadata
+          const resultWithMetadata = event.result as {
+            metadata?: unknown;
+          } | null | undefined;
+          
+          const toolResult: ToolExecutionResult = {
+            success: true,
+            output: event.result as ToolOutput,
+            duration: 0,
+            toolName: event.tool,
+            metadata: resultWithMetadata?.metadata as ToolExecutionMetadata | HandoffMetadata | PhaseTransitionMetadata | undefined,
+          };
+
+          allToolResults.push(toolResult);
+
+          // Check for special metadata
+          if (resultWithMetadata?.metadata) {
+            const metadata = resultWithMetadata.metadata;
+            if (isHandoffMetadata(metadata)) {
+              handoffMetadata = metadata;
+            } else if (isPhaseTransitionMetadata(metadata)) {
+              phaseTransitionMetadata = metadata;
+            }
+          }
+          break;
+        }
+
+        case "done":
+          finalResponse = event.response;
+          break;
+      }
     }
+
+    // Flush any remaining content in the buffer
+    if (streamPublisher.hasContent()) {
+      await streamPublisher.flush(false);
+    }
+
+    return {
+      finalResponse:
+        finalResponse ||
+        ({ type: "text", content: finalContent, toolCalls: [] } as CompletionResponse),
+      finalContent,
+      toolExecutions: allToolResults.length,
+      allToolResults,
+      handoffMetadata,
+      phaseTransitionMetadata,
+    };
+  }
+
+  /**
+   * Build LLM metadata for response tracking
+   */
+  private async buildLLMMetadata(
+    response: CompletionResponse,
+    messages: Message[]
+  ): Promise<LLMMetadata | undefined> {
+    const responseWithUsage = {
+      usage: response.usage
+        ? {
+            promptTokens: response.usage.prompt_tokens,
+            completionTokens: response.usage.completion_tokens,
+            totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
+          }
+        : undefined,
+      model: "model" in response && typeof response.model === "string" ? response.model : undefined,
+      experimental_providerMetadata:
+        "experimental_providerMetadata" in response
+          ? (response.experimental_providerMetadata as {
+              openrouter?: { usage?: { total_cost?: number } };
+            })
+          : undefined,
+    };
+
+    const metadata = await buildLLMMetadata(
+      responseWithUsage,
+      responseWithUsage.model || "unknown",
+      messages
+    );
+
+    if (!metadata) {
+      return undefined;
+    }
+
+    // Add additional metadata specific to AgentExecutor
+    const responseWithModel = response as CompletionResponse & {
+      contextWindow?: number;
+      maxCompletionTokens?: number;
+    };
+
+    return {
+      ...metadata,
+      promptTokens: metadata.usage.prompt_tokens,
+      completionTokens: metadata.usage.completion_tokens,
+      totalTokens: metadata.usage.total_tokens,
+      contextWindow: responseWithModel.contextWindow,
+      maxCompletionTokens: responseWithModel.maxCompletionTokens,
+      rawResponse: response.content,
+    };
   }
 }

@@ -5,7 +5,7 @@ import {
     useNDKSessionSigners,
     useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/constants";
 import { ArrowLeft, Bot, CheckCircle2, Copy, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "./common/EmptyState";
@@ -364,7 +364,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="h-[60vh] pr-4">
-                        <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs font-mono">
+                        <pre className="bg-muted p-4 rounded-md text-xs font-mono whitespace-pre-wrap">
                             {selectedEvent && JSON.stringify(selectedEvent.rawEvent(), null, 2)}
                         </pre>
                     </ScrollArea>

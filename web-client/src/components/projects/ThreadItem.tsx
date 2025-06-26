@@ -1,5 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { Badge } from "../ui/badge";
+import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { MessageCircle } from "lucide-react";
 
 interface ThreadItemProps {
     thread: NDKEvent;
@@ -18,53 +19,60 @@ export function ThreadItem({
     getThreadTitle,
     formatTime,
 }: ThreadItemProps) {
-    return (
-        <div className="overflow-hidden rounded-lg sm:rounded-xl mx-0.5 sm:mx-1 bg-card border border-border">
-            <button
-                className="group flex items-center p-2.5 sm:p-3 cursor-pointer transition-all duration-200 ease-out border border-transparent bg-card hover:bg-accent hover:shadow-sm active:scale-[0.98] w-full text-left"
-                onClick={onThreadClick}
-                type="button"
-            >
-                {/* Thread Icon */}
-                <div className="mr-3 sm:mr-4 flex-shrink-0">
-                    <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    </div>
-                </div>
+    const profile = useProfileValue(thread.pubkey);
 
-                {/* Content */}
+    const getAuthorName = () => {
+        if (profile?.name) return profile.name;
+        if (profile?.displayName) return profile.displayName;
+        return `User ${thread.pubkey.slice(0, 8)}`;
+    };
+
+    return (
+        <div
+            className="bg-card p-3 border-b cursor-pointer transition-all hover:shadow-sm hover:bg-muted/50"
+            onClick={onThreadClick}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onThreadClick();
+                }
+            }}
+        >
+            <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                    <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                </div>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-0.5 sm:mb-1">
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-foreground truncate text-sm sm:text-[15px] leading-tight">
-                                {getThreadTitle(thread)}
-                            </h3>
-                            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                                <span className="text-xs text-muted-foreground hidden sm:inline">
-                                    {formatTime(thread.created_at!)}
+                    <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-sm font-medium text-foreground truncate">
+                            {getThreadTitle(thread)}
+                        </h4>
+                        {unreadCount > 0 && (
+                            <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full ml-2 flex-shrink-0">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="space-y-1">
+                        {recentMessage && (
+                            <div className="text-xs text-muted-foreground">
+                                <span className="line-clamp-1">
+                                    {recentMessage.content.length > 80
+                                        ? `${recentMessage.content.slice(0, 80)}...`
+                                        : recentMessage.content}
                                 </span>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            {unreadCount > 0 && (
-                                <Badge
-                                    variant="destructive"
-                                    className="h-5 px-1.5 text-xs font-medium"
-                                >
-                                    {unreadCount}
-                                </Badge>
-                            )}
+                        )}
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{getAuthorName()}</span>
+                            <span>•</span>
+                            <span>{formatTime(recentMessage?.timestamp || thread.created_at!)}</span>
                         </div>
                     </div>
-                    {recentMessage && (
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
-                            {recentMessage.content.length > 80
-                                ? `${recentMessage.content.slice(0, 80)}...`
-                                : recentMessage.content}
-                        </p>
-                    )}
                 </div>
-            </button>
+            </div>
         </div>
     );
 }

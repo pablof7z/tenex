@@ -1,3 +1,4 @@
+import { useNDKCurrentPubkey } from "@nostr-dev-kit/ndk-hooks";
 import { Check, Copy, Edit, Save, Trash2, X } from "lucide-react";
 import type { NDKAgent } from "../../lib/ndk-setup";
 import { Button } from "../ui/button";
@@ -27,6 +28,8 @@ export function AgentHeader({
     onCopyAgentId,
     onDeleteAgent,
 }: AgentHeaderProps) {
+    const currentPubkey = useNDKCurrentPubkey();
+    const isCurrentUserAgent = selectedAgent && selectedAgent.pubkey === currentPubkey;
     return (
         <div className="bg-card border-b border-border px-6 py-4">
             <div className="flex items-center justify-between">
@@ -74,14 +77,16 @@ export function AgentHeader({
                                             <Copy className="w-4 h-4" />
                                         )}
                                     </Button>
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => onDeleteAgent(selectedAgent)}
-                                        title="Delete agent"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    {isCurrentUserAgent && (
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => onDeleteAgent(selectedAgent)}
+                                            title="Delete agent"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    )}
                                 </>
                             )}
                         </>

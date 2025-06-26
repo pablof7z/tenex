@@ -7,11 +7,9 @@ export type { PromptFragment, FragmentConfig } from "./core/types";
 export * from "./templates";
 
 // Import all fragments to ensure they're registered when the module is imported
-import "./fragments/agent";
-import "./fragments/agent-specific";
-import "./fragments/common";
-import "./fragments/context";
-import "./fragments/generic";
+import "./fragments/agentFragments";
+import "./fragments/available-agents";
+import "./fragments/execute-task-prompt";
+import "./fragments/phase";
+import "./fragments/pm-routing";
 import "./fragments/project";
-import "./fragments/routing";
-import "./fragments/tools";

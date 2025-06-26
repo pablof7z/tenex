@@ -12,6 +12,7 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import {
     AgentRequestsPageWrapper,
     AgentsPageWrapper,
+    BlossomTestPageWrapper,
     ChatInterfacePage,
     ChatsPageWrapper,
     DocsPageWrapper,
@@ -70,6 +71,7 @@ function AppContent() {
             <NavigationProvider>
                 <Routes>
                     <Route path="/login" element={<LoginScreen />} />
+                    <Route path="/blossom-test" element={<BlossomTestPageWrapper />} />
                     <Route element={<AuthLayout />}>
                         {/* Root path - show desktop layout on desktop, project list on mobile */}
                         <Route path="/" element={<RootPage />} />

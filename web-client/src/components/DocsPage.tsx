@@ -1,6 +1,6 @@
 import { type NDKArticle, type NDKFilter, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronLeftIcon } from "@radix-ui/react-icons";
-import { EVENT_KINDS } from "@tenex/types/events";
+import { EVENT_KINDS } from "../lib/constants";
 import { formatDistanceToNow } from "date-fns";
 import { FileText } from "lucide-react";
 import { useMemo, useState } from "react";
