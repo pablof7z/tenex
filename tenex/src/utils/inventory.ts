@@ -231,7 +231,20 @@ At the end, if you identified any high-complexity modules, provide them in this 
 Make the inventory comprehensive but readable, focusing on helping developers quickly understand the codebase structure and purpose.`;
 
     const llmRouter = await loadLLMRouter(projectPath);
+    
+    // Debug: Log the router configuration
+    logger.debug("[inventory] LLM Router loaded", {
+        availableConfigs: llmRouter.getConfigKeys(),
+        routerDefaults: (llmRouter as any).config?.defaults,
+    });
+    
     const userMessage = new Message("user", prompt);
+    
+    logger.debug("[inventory] Calling LLM with configName", {
+        configName: "defaults.analyze",
+        expectedResolution: "Should resolve to gemini-2.5",
+    });
+    
     const response = await llmRouter.complete({
         messages: [userMessage],
         options: {
@@ -303,6 +316,12 @@ Focus on technical depth while keeping it accessible to developers who need to w
 
     const llmRouter = await loadLLMRouter(projectPath);
     const userMessage = new Message("user", prompt);
+    
+    logger.debug("[inventory] Calling LLM for module guide", {
+        module: module.name,
+        configName: "defaults.analyze",
+    });
+    
     const response = await llmRouter.complete({
         messages: [userMessage],
         options: {
@@ -423,6 +442,11 @@ ${content}`;
 
         const llmRouter = await loadLLMRouter(projectPath);
         const userMessage = new Message("user", cleanupPrompt);
+        
+        logger.debug("[inventory] Calling LLM for fallback extraction", {
+            configName: "defaults.analyze",
+        });
+        
         const response = await llmRouter.complete({
             messages: [userMessage],
             options: {

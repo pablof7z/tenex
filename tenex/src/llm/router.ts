@@ -31,6 +31,25 @@ export class LLMRouter implements LLMService {
      * Resolve which configuration to use based on context
      */
     private resolveConfigKey(context?: { agentName?: string; configName?: string }): string {
+        // Check if configName is a defaults reference (e.g., "defaults.analyze")
+        if (context?.configName?.startsWith("defaults.")) {
+            const defaultKey = context.configName.substring("defaults.".length);
+            const configKey = this.config.defaults[defaultKey];
+            
+            logger.debug("[LLM Router] Resolving defaults reference", {
+                requestedConfigName: context.configName,
+                defaultKey,
+                resolvedConfigKey: configKey,
+                availableDefaults: this.config.defaults,
+                hasConfigForKey: configKey ? !!this.config.configs[configKey] : false,
+            });
+            
+            if (configKey && this.config.configs[configKey]) {
+                return configKey;
+            }
+            // If the default key doesn't exist or point to a valid config, continue to other logic
+        }
+
         // Direct config name takes precedence
         if (context?.configName && this.config.configs[context.configName]) {
             return context.configName;
@@ -78,7 +97,8 @@ export class LLMRouter implements LLMService {
 
         // Trace request details
         logger.info("[LLM] Starting completion request", {
-            configKey,
+            requestedConfigName: context.configName,
+            resolvedConfigKey: configKey,
             provider: config.provider,
             model: config.model,
             agentName: context.agentName,

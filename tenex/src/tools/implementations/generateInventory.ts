@@ -2,7 +2,6 @@ import type { Tool, ToolExecutionContext, ToolResult } from "../types";
 import { z } from "zod";
 import { logger } from "@/utils/logger";
 import { generateInventory, inventoryExists } from "@/utils/inventory";
-import { getProjectContext, isProjectContextInitialized } from "@/services";
 
 const generateInventorySchema = z.object({
     force: z.boolean().optional().describe("Force regeneration even if inventory already exists"),

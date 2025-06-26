@@ -464,7 +464,7 @@ export function logAgentResponse(
 
 export function logConversationError(
     error: string,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
     conversationId?: string,
     title?: string
 ): void {
@@ -473,9 +473,9 @@ export function logConversationError(
     console.log(chalk.red(`❌ CONVERSATION ERROR ${header}`));
     console.log(chalk.white(`   ${error}`));
     if (context) {
-        Object.entries(context).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(context)) {
             console.log(chalk.dim(`   ${key}: ${value}`));
-        });
+        }
     }
     console.log();
 }

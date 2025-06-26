@@ -103,14 +103,14 @@ function colorizeJSON(json: string): string {
 
 // Format content with enhancements
 function formatContentWithEnhancements(content: string, isSystemPrompt = false): string {
-    content = content.replace(/\\n/g, "\n");
+    let formattedContent = content.replace(/\\n/g, "\n");
 
     if (isSystemPrompt) {
-        content = formatMarkdown(content);
+        formattedContent = formatMarkdown(formattedContent);
     }
 
     // Handle <tool_use> blocks
-    content = content.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (_match, jsonContent) => {
+    formattedContent = formattedContent.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (_match, jsonContent) => {
         try {
             const parsed = JSON.parse(jsonContent.trim());
             const formatted = JSON.stringify(parsed, null, 2);
@@ -122,7 +122,7 @@ function formatContentWithEnhancements(content: string, isSystemPrompt = false):
         }
     });
 
-    return content;
+    return formattedContent;
 }
 
 // Get message summary (multi-line allowed)
@@ -774,10 +774,10 @@ async function runStaticViewer() {
     // Detect and format JSON in text
     function formatContentWithJSON(content: string): string {
         // First, replace escaped newlines with actual newlines
-        content = content.replace(/\\n/g, "\n");
+        const formattedContent = content.replace(/\\n/g, "\n");
 
         // Try to detect JSON blocks
-        const lines = content.split("\n");
+        const lines = formattedContent.split("\n");
         const formattedLines: string[] = [];
 
         let inJsonBlock = false;
