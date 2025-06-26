@@ -50,10 +50,15 @@ export const learnTool: Tool = {
             const parsed = learnSchema.parse(params);
             const { title, lesson, keywords } = parsed;
 
-            logger.info("Agent recording lesson", {
+            logger.info("🎓 Agent recording new lesson", {
                 agent: context.agentName,
+                agentPubkey: context.agent.pubkey,
                 title,
                 lessonLength: lesson.length,
+                keywordCount: keywords?.length || 0,
+                keywords: keywords?.join(", ") || "none",
+                phase: context.phase,
+                conversationId: context.conversationId,
             });
 
             // Check if agent signer is available
@@ -117,12 +122,16 @@ export const learnTool: Tool = {
             await lessonEvent.sign(context.agentSigner);
             await lessonEvent.publish();
 
-            logger.info("Successfully published agent lesson", {
+            logger.info("✅ Successfully published agent lesson", {
                 agent: context.agentName,
+                agentPubkey: context.agent.pubkey,
                 eventId: lessonEvent.id,
                 title,
                 keywords: keywords?.length || 0,
                 phase: context.phase,
+                projectId: projectCtx.project.tagId(),
+                totalLessonsForAgent: projectCtx.getLessonsForAgent(context.agent.pubkey).length,
+                totalLessonsInProject: projectCtx.getAllLessons().length,
             });
 
             return {
@@ -135,9 +144,13 @@ export const learnTool: Tool = {
                 },
             };
         } catch (error) {
-            logger.error("Learn tool failed", { 
-                error,
+            logger.error("❌ Learn tool failed", { 
+                error: error instanceof Error ? error.message : String(error),
                 agent: context.agentName,
+                agentPubkey: context.agent.pubkey,
+                title,
+                phase: context.phase,
+                conversationId: context.conversationId,
             });
             return {
                 success: false,

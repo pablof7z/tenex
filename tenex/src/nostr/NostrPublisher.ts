@@ -278,19 +278,26 @@ export class NostrPublisher {
     }
 
     private cleanPTags(event: NDKEvent): void {
-        // For non-PM agents, preserve the invoker's p-tag
+        // For non-PM agents, ensure the reply p-tags the original invoker to hand control back
         let invokerPubkey: string | undefined;
         
         if (!this.context.agent.isPMAgent) {
             // Get the pubkey of whoever invoked this agent (from the triggering event)
             invokerPubkey = this.context.triggeringEvent.pubkey;
+            
+            if (!invokerPubkey) {
+                logger.warn(
+                    "Could not determine invoker pubkey for non-PM agent reply. Response will not be p-tagged and may stall conversation.", 
+                    { agent: this.context.agent.name }
+                );
+            }
         }
         
-        // Remove all p-tags added by reply()
+        // Remove all p-tags added by NDK's reply() method to ensure clean routing
         event.tags = event.tags.filter(tag => tag[0] !== "p");
         
         // For non-PM agents, add back the invoker's p-tag to yield control back
-        if (invokerPubkey && !this.context.agent.isPMAgent) {
+        if (invokerPubkey) {
             event.tag(["p", invokerPubkey]);
         }
     }

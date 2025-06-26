@@ -3,27 +3,99 @@ import type { PromptFragment } from "../core/types";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/phases";
 import type { Conversation } from "@/conversations/types";
+import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
+import { logger } from "@/utils/logger";
 
-// Retrieved lessons fragment - provides guidance about using learned lessons
+// Retrieved lessons fragment - filters and formats relevant lessons from memory
 interface RetrievedLessonsArgs {
     agent: Agent;
     phase: Phase;
     conversation: Conversation;
+    agentLessons: Map<string, NDKAgentLesson[]>;
 }
 
 export const retrievedLessonsFragment: PromptFragment<RetrievedLessonsArgs> = {
     id: "retrieved-lessons",
-    priority: 25, // After phase context but before tool directives
-    template: ({ agent, phase, conversation }) => {
-        // Note: Prompt fragments must be synchronous in the current architecture
-        // For now, we'll provide instructions about using learned lessons
-        // A future enhancement would be to pre-fetch lessons before prompt building
+    priority: 24, // Before learn-tool-directive
+    template: ({ agent, phase, agentLessons, conversation }) => {
+        const allLessons: NDKAgentLesson[] = Array.from(agentLessons.values()).flat();
         
-        return `## Learning from Past Lessons
+        if (allLessons.length === 0) {
+            logger.debug("📚 No lessons available for retrieval", {
+                agent: agent.name,
+                phase,
+            });
+            return ""; // No lessons learned yet
+        }
 
-When you encounter challenges or decisions, remember that agents in this project may have recorded lessons from similar situations. These lessons are available through the project's knowledge base.
+        // Separate lessons by source
+        const myLessons = (agentLessons.get(agent.pubkey) || [])
+            .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+        
+        const otherLessons = allLessons
+            .filter(l => l.pubkey !== agent.pubkey)
+            .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
 
-If you discover important insights during your work, use the \`learn\` tool to record them for future reference. Include relevant keywords to help other agents find your lessons.`;
+        // Log lesson availability
+        logger.debug("📚 Lesson retrieval context", {
+            agent: agent.name,
+            phase,
+            conversationId: conversation.id,
+            totalLessons: allLessons.length,
+            myLessonsCount: myLessons.length,
+            otherLessonsCount: otherLessons.length,
+        });
+
+        // Select top lessons to show
+        const lessonsToShow = [
+            ...myLessons.slice(0, 3),      // Top 3 from self
+            ...otherLessons.slice(0, 2),   // Top 2 from others
+        ].slice(0, 5); // Max 5 total
+
+        if (lessonsToShow.length === 0) {
+            logger.debug("📚 No relevant lessons after filtering", {
+                agent: agent.name,
+            });
+            return "";
+        }
+
+        // Format lessons for the prompt
+        const formattedLessons = lessonsToShow
+            .map(lesson => {
+                const title = lesson.title || 'Untitled Lesson';
+                const content = lesson.lesson || lesson.content || '';
+                // Use first sentence as summary to save tokens
+                const summary = content.split('.')[0]?.trim() || content.substring(0, 100);
+                const phase = lesson.tags.find(tag => tag[0] === 'phase')?.[1];
+                const isOwnLesson = lesson.pubkey === agent.pubkey;
+                
+                return `- **${title}**${phase ? ` (${phase} phase)` : ''}${!isOwnLesson ? ' [from another agent]' : ''}: ${summary}${!summary.endsWith('.') ? '.' : ''}`;
+            })
+            .join('\n');
+
+        // Log which lessons are being shown
+        logger.info("📖 Injecting lessons into agent prompt", {
+            agent: agent.name,
+            agentPubkey: agent.pubkey,
+            phase,
+            conversationId: conversation.id,
+            lessonsShown: lessonsToShow.length,
+            lessonTitles: lessonsToShow.map(l => ({
+                title: l.title || 'Untitled',
+                fromAgent: l.pubkey === agent.pubkey ? 'self' : 'other',
+                phase: l.tags.find(tag => tag[0] === 'phase')?.[1],
+                keywords: l.tags.filter(tag => tag[0] === 't').map(tag => tag[1]).join(', ') || 'none',
+                eventId: l.id,
+            })),
+        });
+
+        return `## Key Lessons Learned
+
+Review these lessons from past experiences to guide your actions:
+
+${formattedLessons}
+
+Remember to use the \`learn\` tool when you discover new insights or patterns.`;
     },
 };
 

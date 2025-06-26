@@ -305,6 +305,7 @@ export class AgentExecutor {
                 agent: context.agent,
                 phase: context.phase,
                 conversation: context.conversation,
+                agentLessons: projectCtx.agentLessons,
             })
             .add("learn-tool-directive", {
                 hasLearnTool: context.agent.tools?.includes("learn") ?? false,

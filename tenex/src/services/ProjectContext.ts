@@ -1,6 +1,7 @@
 import type { Hexpubkey, NDKProject } from "@nostr-dev-kit/ndk";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { Agent } from "@/agents/types";
+import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
 
 /**
  * ProjectContext provides system-wide access to loaded project and agents
@@ -27,6 +28,12 @@ export class ProjectContext {
      */
     public readonly pubkey: Hexpubkey;
     public readonly agents: Map<string, Agent>;
+    
+    /**
+     * Lessons learned by agents in this project
+     * Key: agent pubkey, Value: array of lessons (limited to most recent 50 per agent)
+     */
+    public readonly agentLessons: Map<string, NDKAgentLesson[]>;
 
     constructor(project: NDKProject, agents: Map<string, Agent>) {
         this.project = project;
@@ -48,6 +55,7 @@ export class ProjectContext {
         this.signer = pmAgent.signer;
         this.pubkey = pmAgent.pubkey;
         this.agents = new Map(agents);
+        this.agentLessons = new Map();
     }
 
     // =====================================================================================
@@ -74,6 +82,39 @@ export class ProjectContext {
 
     hasAgent(slug: string): boolean {
         return this.agents.has(slug);
+    }
+
+    // =====================================================================================
+    // LESSON MANAGEMENT
+    // =====================================================================================
+
+    /**
+     * Add a lesson for an agent, maintaining the 50-lesson limit per agent
+     */
+    addLesson(agentPubkey: string, lesson: NDKAgentLesson): void {
+        const existingLessons = this.agentLessons.get(agentPubkey) || [];
+        
+        // Add the new lesson at the beginning (most recent first)
+        const updatedLessons = [lesson, ...existingLessons];
+        
+        // Keep only the most recent 50 lessons
+        const limitedLessons = updatedLessons.slice(0, 50);
+        
+        this.agentLessons.set(agentPubkey, limitedLessons);
+    }
+
+    /**
+     * Get lessons for a specific agent
+     */
+    getLessonsForAgent(agentPubkey: string): NDKAgentLesson[] {
+        return this.agentLessons.get(agentPubkey) || [];
+    }
+
+    /**
+     * Get all lessons across all agents
+     */
+    getAllLessons(): NDKAgentLesson[] {
+        return Array.from(this.agentLessons.values()).flat();
     }
 }
 

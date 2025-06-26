@@ -1,5 +1,5 @@
-import { Plugin, type PluginExecutionContext } from "multi-llm-ts";
-import type { Tool, ToolExecutionContext, PluginParameter } from "@/tools/types";
+import { Plugin, type PluginExecutionContext, type PluginParameter } from "multi-llm-ts";
+import type { Tool, ToolExecutionContext, PluginParameter as TenexPluginParameter } from "@/tools/types";
 
 /**
  * Adapter that converts TENEX Tool to multi-llm-ts Plugin
@@ -30,8 +30,8 @@ export class ToolPlugin extends Plugin {
     }
 
     getParameters(): PluginParameter[] {
-        // Return parameters in the array format expected by multi-llm-ts
-        return this.tool.parameters.map((param) => ({
+        // Convert TENEX parameters to multi-llm-ts parameters
+        return this.tool.parameters.map((param: TenexPluginParameter): PluginParameter => ({
             name: param.name,
             type: param.type,
             description: param.description,
