@@ -246,6 +246,11 @@ export class ProjectManager implements IProjectManager {
         const agentsDir = path.join(projectPath, ".tenex", "agents");
         await fs.mkdir(agentsDir, { recursive: true });
 
+        // Load the existing agents registry (which should contain the PM agent)
+        const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
+        const agentRegistry = new AgentRegistry(projectPath);
+        await agentRegistry.loadFromProject();
+
         for (const eventId of project.agentEventIds) {
             try {
                 const agent = await this.fetchAgentDefinition(eventId, ndk);
@@ -258,6 +263,18 @@ export class ProjectManager implements IProjectManager {
                     };
                     await fs.writeFile(filePath, JSON.stringify(agentData, null, 2));
                     logger.info("Saved agent definition", { eventId, name: agent.title });
+
+                    // Generate a slug for the agent (kebab-case of the name)
+                    const slug = toKebabCase(agent.title);
+                    
+                    // Ensure the agent is registered in agents.json
+                    await agentRegistry.ensureAgent(slug, {
+                        name: agent.title,
+                        role: agent.role,
+                        instructions: agent.instructions,
+                        eventId: eventId,
+                        tools: [], // Will use default tools from getDefaultToolsForAgent
+                    });
                 }
             } catch (error) {
                 logger.error("Failed to fetch agent definition", { error, eventId });
