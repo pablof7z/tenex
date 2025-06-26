@@ -1,20 +1,19 @@
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import type { NDKEvent as NDKEventType } from "@nostr-dev-kit/ndk";
-import { useNDK, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { CSSUtils, ProfileUtils } from "../../lib/utils/business";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { CSSUtils } from "../../lib/utils/business";
 import { EVENT_KINDS } from "../../lib/constants";
 import { Check, ChevronDown, Cpu } from "lucide-react";
 import { useState } from "react";
 import { useAgentLLMTracking } from "../../hooks/useAgentLLMTracking";
 import { useProjectAgents } from "../../hooks/useProjectAgents";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { ParticipantAvatar } from "./ParticipantAvatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
 
 interface ParticipantAvatarsWithModelsProps {
     participants: string[];
@@ -90,45 +89,6 @@ export function ParticipantAvatarsWithModels({
     );
 }
 
-interface ParticipantAvatarProps {
-    pubkey: string;
-    className?: string;
-}
-
-function ParticipantAvatar({ pubkey, className }: ParticipantAvatarProps) {
-    const profile = useProfileValue(pubkey);
-
-    const displayName = ProfileUtils.getDisplayName(profile || null, pubkey);
-    const avatarUrl = ProfileUtils.getAvatarUrl(profile || null);
-    const initials = ProfileUtils.getInitials(profile || null, pubkey);
-
-    return (
-        <HoverCard>
-            <HoverCardTrigger asChild>
-                <Avatar className={className}>
-                    <AvatarImage src={avatarUrl} alt={displayName} />
-                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                </Avatar>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-64" side="top">
-                <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10">
-                        <AvatarImage src={avatarUrl} alt={displayName} />
-                        <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold truncate">{displayName}</h4>
-                        {profile?.about && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                                {profile.about}
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </HoverCardContent>
-        </HoverCard>
-    );
-}
 
 interface ModelDropdownProps {
     agentPubkey: string;
