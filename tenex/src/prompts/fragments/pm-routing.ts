@@ -1,5 +1,33 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
+import { PHASE_DEFINITIONS, type Phase, ALL_PHASES } from "@/conversations/phases";
+
+// Helper function to generate phase descriptions from centralized definitions
+function generatePhaseDescriptions(): string {
+    return ALL_PHASES.map((phase) => {
+        const def = PHASE_DEFINITIONS[phase];
+        let section = `### ${phase.toUpperCase()}\n\n`;
+        
+        section += `**Use this phase when:**\n`;
+        section += def.whenToUse.map(w => `- ${w}`).join('\n');
+        section += '\n\n';
+        
+        if (def.doNot && def.doNot.length > 0) {
+            section += `**Do NOT:**\n`;
+            section += def.doNot.map(d => `- ${d}`).join('\n');
+            section += '\n\n';
+        }
+        
+        section += `**Goal:** ${def.goal}`;
+        
+        // Add special notes for specific phases
+        if (phase === 'plan') {
+            section += '\n\n**Note:** This phase is rare. Most tasks can go directly from "chat" to "execute".';
+        }
+        
+        return section;
+    }).join('\n\n---\n\n');
+}
 
 // PM Agent routing decision instructions
 export const pmRoutingInstructionsFragment: PromptFragment<Record<string, never>> = {

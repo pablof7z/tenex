@@ -6,7 +6,8 @@ import type { AgentExecutor } from "../agents/execution/AgentExecutor";
 import { formatError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { isEventFromUser } from "../nostr/utils";
-import { publishErrorNotification } from "../nostr";
+import { NostrPublisher } from "../nostr";
+import { getNDK } from "../nostr/ndkClient";
 
 const logInfo = logger.info.bind(logger);
 
@@ -127,28 +128,29 @@ async function handleReplyLogic(
         const isCreditsError =
             result.error.includes("Insufficient credits") || result.error.includes("402");
 
-        if (isCreditsError) {
-            const errorMessage =
-                "⚠️ Unable to process your request: Insufficient credits. Please add more credits at https://openrouter.ai/settings/credits to continue.";
+        const errorMessage = isCreditsError
+            ? "⚠️ Unable to process your request: Insufficient credits. Please add more credits at https://openrouter.ai/settings/credits to continue."
+            : "⚠️ Unable to process your request due to an error. Please try again later.";
 
-            // Publish error notification to user
-            await publishErrorNotification(event, errorMessage, pmAgent.signer);
+        // Create NostrPublisher to publish error
+        const publisher = new NostrPublisher({
+            ndk: getNDK(),
+            conversation,
+            agent: pmAgent,
+            triggeringEvent: event,
+            project: projectCtx.project
+        });
 
-            logger.error("Agent execution failed due to insufficient credits", {
+        await publisher.publishError(errorMessage);
+
+        logger.error(
+            isCreditsError
+                ? "Agent execution failed due to insufficient credits"
+                : "Agent execution failed",
+            {
                 error: result.error,
                 conversation: conversation.id,
-            });
-        } else {
-            // For other errors, publish a generic error message
-            const errorMessage =
-                "⚠️ Unable to process your request due to an error. Please try again later.";
-
-            await publishErrorNotification(event, errorMessage, pmAgent.signer);
-
-            logger.error("Agent execution failed", {
-                error: result.error,
-                conversation: conversation.id,
-            });
-        }
+            }
+        );
     }
 }

@@ -4,6 +4,7 @@ import { logger } from "@/utils/logger";
 import { generateInventory, inventoryExists } from "@/utils/inventory";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { parseToolParams } from "../utils";
 
 const execAsync = promisify(exec);
 
@@ -28,8 +29,11 @@ export const generateInventoryTool: Tool = {
         context: ToolExecutionContext
     ): Promise<ToolResult> {
         try {
-            const parsed = generateInventorySchema.parse(params);
-            const { force = false } = parsed;
+            const parseResult = parseToolParams(generateInventorySchema, params);
+            if (!parseResult.success) {
+                return parseResult.errorResult;
+            }
+            const { force = false } = parseResult.data;
 
             logger.info("Agent requesting inventory generation", {
                 force,

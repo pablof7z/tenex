@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
 import { getNDK } from "@/nostr/ndkClient";
 import type { Tool, ToolExecutionContext, ToolResult } from "../types";
+import { parseToolParams } from "../utils";
 
 const ClaudeCodeArgsSchema = z.object({
     prompt: z.string().min(1, "prompt must be a non-empty string"),
@@ -33,15 +34,12 @@ export const claudeCodeTool: Tool = {
         context: ToolExecutionContext
     ): Promise<ToolResult> {
         try {
-            const parsed = ClaudeCodeArgsSchema.safeParse(params);
-            if (!parsed.success) {
-                return {
-                    success: false,
-                    error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-                };
+            const parseResult = parseToolParams(ClaudeCodeArgsSchema, params);
+            if (!parseResult.success) {
+                return parseResult.errorResult;
             }
 
-            const { prompt, mode = "run" } = parsed.data;
+            const { prompt, mode = "run" } = parseResult.data;
 
             // Use TaskPublisher to ensure all claude_code executions are tracked
             const ndk = getNDK();

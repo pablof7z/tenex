@@ -38,7 +38,9 @@ export function calculateLessonMetrics(projectCtx: ProjectContext): LessonMetric
         // Count keywords
         const keywords = lesson.tags.filter(tag => tag[0] === "t");
         for (const [, keyword] of keywords) {
-            keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+            if (keyword) {
+                keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+            }
         }
 
         // Track lesson length

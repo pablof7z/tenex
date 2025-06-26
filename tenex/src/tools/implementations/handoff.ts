@@ -3,6 +3,7 @@ import type { Tool, ToolExecutionContext, ToolResult, HandoffMetadata } from "..
 import type { Agent } from "@/agents/types";
 import { logger } from "@/utils/logger";
 import { getProjectContext } from "@/services/ProjectContext";
+import { parseToolParams } from "../utils";
 
 const HandoffArgsSchema = z.object({
     target: z.string().min(1, "target must be a non-empty string"),
@@ -31,15 +32,12 @@ export const handoffTool: Tool = {
         params: Record<string, unknown>,
         context: ToolExecutionContext
     ): Promise<ToolResult> {
-        const parsed = HandoffArgsSchema.safeParse(params);
-        if (!parsed.success) {
-            return {
-                success: false,
-                error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-            };
+        const parseResult = parseToolParams(HandoffArgsSchema, params);
+        if (!parseResult.success) {
+            return parseResult.errorResult;
         }
 
-        const { target, message } = parsed.data;
+        const { target, message } = parseResult.data;
 
         // Check if agent is PM
         if (!context.agent?.isPMAgent) {

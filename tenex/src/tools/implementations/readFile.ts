@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import type { Tool, ToolExecutionContext, ToolResult } from "../types";
-import { resolveAndValidatePath } from "../utils";
+import { resolveAndValidatePath, parseToolParams } from "../utils";
 
 const ReadFileArgsSchema = z.object({
     path: z.string().min(1, "path must be a non-empty string"),
@@ -23,15 +23,12 @@ export const readFileTool: Tool = {
         params: Record<string, unknown>,
         context: ToolExecutionContext
     ): Promise<ToolResult> {
-        const parsed = ReadFileArgsSchema.safeParse(params);
-        if (!parsed.success) {
-            return {
-                success: false,
-                error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-            };
+        const parseResult = parseToolParams(ReadFileArgsSchema, params);
+        if (!parseResult.success) {
+            return parseResult.errorResult;
         }
 
-        const { path } = parsed.data;
+        const { path } = parseResult.data;
 
         try {
             // Resolve path and ensure it's within project

@@ -4,6 +4,7 @@ import { logger } from "@/utils/logger";
 import { loadLLMRouter } from "@/llm";
 import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "@/utils/repomix";
+import { parseToolParams } from "../utils";
 
 const analyzeSchema = z.object({
     prompt: z.string().describe("The analysis prompt or question about the codebase"),
@@ -26,8 +27,11 @@ export const analyze: Tool = {
         context: ToolExecutionContext
     ): Promise<ToolResult> {
         try {
-            const parsed = analyzeSchema.parse(params);
-            const { prompt } = parsed;
+            const parseResult = parseToolParams(analyzeSchema, params);
+            if (!parseResult.success) {
+                return parseResult.errorResult;
+            }
+            const { prompt } = parseResult.data;
 
             logger.info("Running analyze tool", { prompt });
 

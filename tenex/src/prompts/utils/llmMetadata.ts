@@ -1,17 +1,7 @@
 import { openRouterPricing } from "@/llm/pricing";
+import type { CompletionResponse } from "@/llm/types";
+import type { LLMMetadata } from "@/nostr/types";
 import type { Message } from "multi-llm-ts";
-
-export interface LLMMetadata {
-    model: string;
-    usage: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-    };
-    cost: number;
-    systemPrompt?: string;
-    userPrompt?: string;
-}
 
 interface ResponseWithUsage {
     usage?: {
@@ -26,31 +16,49 @@ interface ResponseWithUsage {
 }
 
 export async function buildLLMMetadata(
-    response: ResponseWithUsage,
-    model: string,
+    response: CompletionResponse,
     messages: Message[]
 ): Promise<LLMMetadata | undefined> {
     if (!response.usage) {
         return undefined;
     }
 
-    const cost = await calculateCost(response, model);
+    // Convert CompletionResponse to ResponseWithUsage format
+    const responseWithUsage: ResponseWithUsage = {
+        usage: {
+            promptTokens: response.usage.prompt_tokens,
+            completionTokens: response.usage.completion_tokens,
+            totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
+        },
+        model: "model" in response && typeof response.model === "string" ? response.model : undefined,
+        experimental_providerMetadata: "experimental_providerMetadata" in response
+            ? (response.experimental_providerMetadata as ResponseWithUsage["experimental_providerMetadata"])
+            : undefined,
+    };
+
+    const model = responseWithUsage.model || "unknown";
+    const cost = await calculateCost(responseWithUsage, model);
 
     const systemPrompt = messages.find((m) => m.role === "system")?.content;
     const userPrompt = messages.find((m) => m.role === "user")?.content;
 
+    // Extract additional metadata if available
+    const responseWithModel = response as CompletionResponse & {
+        contextWindow?: number;
+        maxCompletionTokens?: number;
+    };
+
     return {
-        model: response.model || model,
-        usage: {
-            prompt_tokens: response.usage.promptTokens,
-            completion_tokens: response.usage.completionTokens,
-            total_tokens:
-                response.usage.totalTokens ||
-                response.usage.promptTokens + response.usage.completionTokens,
-        },
+        model,
         cost,
+        promptTokens: response.usage.prompt_tokens,
+        completionTokens: response.usage.completion_tokens,
+        totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
+        contextWindow: responseWithModel.contextWindow,
+        maxCompletionTokens: responseWithModel.maxCompletionTokens,
         systemPrompt,
         userPrompt,
+        rawResponse: response.content,
     };
 }
 

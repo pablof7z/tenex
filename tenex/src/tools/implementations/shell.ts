@@ -2,6 +2,7 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
 import type { Tool, ToolExecutionContext, ToolResult } from "../types";
+import { parseToolParams } from "../utils";
 
 const execAsync = promisify(exec);
 
@@ -25,15 +26,12 @@ export const shellTool: Tool = {
         params: Record<string, unknown>,
         context: ToolExecutionContext
     ): Promise<ToolResult> {
-        const parsed = ShellArgsSchema.safeParse(params);
-        if (!parsed.success) {
-            return {
-                success: false,
-                error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-            };
+        const parseResult = parseToolParams(ShellArgsSchema, params);
+        if (!parseResult.success) {
+            return parseResult.errorResult;
         }
 
-        const { command } = parsed.data;
+        const { command } = parseResult.data;
 
         try {
             const { stdout, stderr } = await execAsync(command, {

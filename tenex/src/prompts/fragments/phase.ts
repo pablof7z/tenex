@@ -1,6 +1,7 @@
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 import type { Phase } from "@/conversations/phases";
+import { PHASE_DEFINITIONS } from "@/conversations/phases";
 
 // Tool continuation prompt fragment - used by ReasonActLoop
 interface ToolContinuationPromptArgs {
@@ -31,57 +32,8 @@ ${constraints.map((c) => `- ${c}`).join("\n")}`;
 };
 
 function getPhaseConstraints(phase: string): string[] {
-    switch (phase) {
-        case "chat":
-            return [
-                "Default to action - most tasks can go directly to execution",
-                
-            ];
-
-        case "plan":
-            return [
-                "Reserved for genuinely complex architectural decisions",
-                "Only plan when multiple competing technical approaches exist",
-                "Focus on system design, not implementation details",
-            ];
-
-        case "execute":
-            return [
-                "Use the claude_code tool for all project modifications",
-                "Never directly modify project files - always use claude_code",
-                "Focus on implementation details",
-                "Provide code examples when relevant",
-                "Explain technical decisions",
-            ];
-
-        case "brainstorm":
-            return [
-                "Focus on exploration and ideation rather than concrete requirements",
-                "Encourage creative thinking and alternative perspectives",
-                "Don't rush to converge on solutions - embrace open-ended discussion",
-                "Only transition out when user explicitly requests it",
-                "Ask probing questions to deepen understanding",
-            ];
-
-        case "review":
-            return [
-                "Provide constructive feedback",
-                "Highlight both strengths and areas for improvement",
-                "Suggest specific improvements",
-            ];
-
-        case "chores":
-            return [
-                "Focus on updating documentation and inventory for modified code",
-                "Use generate_inventory tool to update project documentation",
-                "Clean up any temporary files or unfinished work",
-                "Ensure all changes are properly documented",
-                "Consider generating guides for complex modules"
-            ];
-
-        default:
-            return [];
-    }
+    const phaseDefinition = PHASE_DEFINITIONS[phase as Phase];
+    return phaseDefinition?.constraints || [];
 }
 
 // Dynamic instruction generation based on phase transition

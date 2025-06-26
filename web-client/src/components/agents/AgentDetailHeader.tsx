@@ -1,8 +1,7 @@
 import { ArrowLeft, Bot, Copy, Edit3, MoreVertical } from "lucide-react";
 import { useState } from "react";
-import type { NDKAgent } from "../../lib/ndk-setup";
+import { NDKAgent } from "../../lib/ndk-setup";
 import { Button } from "../ui/button";
-import { ProfileDisplay } from "../ProfileDisplay";
 
 interface AgentDetailHeaderProps {
     agent: NDKAgent;
@@ -54,11 +53,9 @@ export function AgentDetailHeader({
                             </h1>
                             <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-xs text-muted-foreground">by</span>
-                                <ProfileDisplay
-                                    pubkey={agent.pubkey}
-                                    size="xs"
-                                    className="text-xs"
-                                />
+                                <span className="text-xs text-muted-foreground">
+                                    {agent.pubkey?.slice(0, 8)}...
+                                </span>
                             </div>
                         </div>
                     </div>

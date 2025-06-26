@@ -1,8 +1,6 @@
 import type { Phase } from "@/conversations/phases";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
-import type { StreamPublisher } from "@/nostr/NostrPublisher";
-import { publishToolExecutionStatus } from "@/nostr/ToolExecutionPublisher";
-import { getNDK } from "@/nostr/ndkClient";
+import type { NostrPublisher, StreamPublisher } from "@/nostr/NostrPublisher";
 import type { LLMMetadata } from "@/nostr/types";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type {
@@ -52,64 +50,6 @@ export class ReasonActLoop {
 
     constructor(private llmService: LLMService) {}
 
-    /**
-     * Build LLM metadata for response tracking
-     */
-    private async buildLLMMetadata(
-        response: CompletionResponse,
-        messages: Message[]
-    ): Promise<LLMMetadata | undefined> {
-        const responseWithUsage = {
-            usage: response.usage
-                ? {
-                      promptTokens: response.usage.prompt_tokens,
-                      completionTokens: response.usage.completion_tokens,
-                      totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
-                  }
-                : undefined,
-            model:
-                "model" in response && typeof response.model === "string"
-                    ? response.model
-                    : undefined,
-            experimental_providerMetadata:
-                "experimental_providerMetadata" in response
-                    ? (response.experimental_providerMetadata as {
-                          openrouter?: { usage?: { total_cost?: number } };
-                      })
-                    : undefined,
-        };
-
-        const metadata = await buildLLMMetadata(
-            responseWithUsage,
-            responseWithUsage.model || "unknown",
-            messages
-        );
-
-        if (!metadata) {
-            console.log("WARNING: buildLLMMetadata returned null", {
-                hasUsage: !!response.usage,
-                usage: response.usage,
-                model: responseWithUsage.model
-            });
-            return undefined;
-        }
-
-        // Add additional metadata specific to ReasonActLoop
-        const responseWithModel = response as CompletionResponse & {
-            contextWindow?: number;
-            maxCompletionTokens?: number;
-        };
-
-        return {
-            ...metadata,
-            promptTokens: metadata.usage.prompt_tokens,
-            completionTokens: metadata.usage.completion_tokens,
-            totalTokens: metadata.usage.total_tokens,
-            contextWindow: responseWithModel.contextWindow,
-            maxCompletionTokens: responseWithModel.maxCompletionTokens,
-            rawResponse: response.content,
-        };
-    }
 
     async execute(
         initialResponse: CompletionResponse,
@@ -194,7 +134,7 @@ export class ReasonActLoop {
         context: ReasonActContext,
         messages: Message[],
         tracingContext: TracingContext,
-        streamPublisher?: StreamPublisher,
+        publisher?: NostrPublisher,
         tools?: Tool[]
     ): AsyncIterable<StreamEvent> {
         const tracingLogger = createTracingLogger(tracingContext, "agent");
@@ -232,9 +172,10 @@ export class ReasonActLoop {
                 },
             });
 
-            // Use provided stream publisher or skip publishing
+            // Create stream publisher from NostrPublisher if provided
+            const streamPublisher = publisher?.createStreamPublisher();
             if (!streamPublisher) {
-                tracingLogger.info("No stream publisher provided - streaming without publishing", {
+                tracingLogger.info("No publisher provided - streaming without publishing", {
                     agent: context.agentName
                 });
             }
@@ -256,21 +197,14 @@ export class ReasonActLoop {
                         // Flush any buffered content before starting tool
                         await streamPublisher?.flush({ isToolCall: true });
 
-                        // Publish tool start status if we have event context
-                        if (context.eventToReply && context.agent.signer) {
+                        // Publish tool start status using NostrPublisher
+                        if (publisher) {
                             try {
-                                const ndk = getNDK();
-                                await publishToolExecutionStatus(
-                                    ndk,
-                                    context.eventToReply,
-                                    {
-                                        tool: event.tool,
-                                        status: "starting",
-                                        args: event.args,
-                                    },
-                                    context.agent.signer,
-                                    context.conversation
-                                );
+                                await publisher.publishToolStatus({
+                                    tool: event.tool,
+                                    status: "starting",
+                                    args: event.args,
+                                });
                             } catch (error) {
                                 tracingLogger.info("Failed to publish tool start status", {
                                     tool: event.tool,
@@ -326,20 +260,13 @@ export class ReasonActLoop {
                         await streamPublisher?.flush({ isToolCall: true });
 
                         // Publish tool completion status
-                        if (context.eventToReply && context.agent.signer) {
+                        if (publisher) {
                             try {
-                                const ndk = getNDK();
-                                await publishToolExecutionStatus(
-                                    ndk,
-                                    context.eventToReply,
-                                    {
-                                        tool: event.tool,
-                                        status: "completed",
-                                        result: resultWithMetadata?.success ? "Success" : "Failed",
-                                    },
-                                    context.agent.signer,
-                                    context.conversation
-                                );
+                                await publisher.publishToolStatus({
+                                    tool: event.tool,
+                                    status: "completed",
+                                    result: resultWithMetadata?.success ? "Success" : "Failed",
+                                });
                             } catch (error) {
                                 tracingLogger.info("Failed to publish tool completion status", {
                                     tool: event.tool,
@@ -356,7 +283,7 @@ export class ReasonActLoop {
                             hasResponse: !!finalResponse,
                             hasUsage: !!finalResponse?.usage,
                             usage: finalResponse?.usage,
-                            model: (finalResponse as any)?.model
+                            model: "model" in finalResponse && typeof finalResponse.model === "string" ? finalResponse.model : undefined
                         });
                         break;
 
@@ -371,7 +298,7 @@ export class ReasonActLoop {
                 // Build LLM metadata if we have a final response
                 let llmMetadata: LLMMetadata | undefined;
                 if (finalResponse) {
-                    llmMetadata = await this.buildLLMMetadata(finalResponse, messages);
+                    llmMetadata = await buildLLMMetadata(finalResponse, messages);
                     
                     tracingLogger.debug("Built LLM metadata for final response", {
                         hasMetadata: !!llmMetadata,

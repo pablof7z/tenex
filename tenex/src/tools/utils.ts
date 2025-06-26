@@ -1,4 +1,6 @@
 import { resolve, isAbsolute, relative } from "node:path";
+import { z } from "zod";
+import type { ToolResult } from "./types";
 
 /**
  * Resolves and validates a file path to ensure it stays within the project boundaries.
@@ -17,4 +19,25 @@ export function resolveAndValidatePath(filePath: string, projectPath: string): s
     }
 
     return fullPath;
+}
+
+/**
+ * Parse and validate tool parameters using a Zod schema.
+ * Returns either the parsed data or a ToolResult error.
+ */
+export function parseToolParams<T extends z.ZodTypeAny>(
+    schema: T,
+    params: unknown
+): { success: true; data: z.infer<T> } | { success: false; errorResult: ToolResult } {
+    const parsed = schema.safeParse(params);
+    if (!parsed.success) {
+        return {
+            success: false,
+            errorResult: {
+                success: false,
+                error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+            },
+        };
+    }
+    return { success: true, data: parsed.data };
 }

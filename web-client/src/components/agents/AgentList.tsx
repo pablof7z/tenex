@@ -7,7 +7,7 @@ interface AgentListProps {
     agents: NDKAgent[];
     selectedAgent: NDKAgent | null;
     onBack: () => void;
-    onSelectAgent: (agent: NDKAgent) => void;
+    onAgentSelect: (agent: NDKAgent) => void;
     onCreateNew: () => void;
 }
 
@@ -15,7 +15,7 @@ export function AgentList({
     agents,
     selectedAgent,
     onBack,
-    onSelectAgent,
+    onAgentSelect,
     onCreateNew,
 }: AgentListProps) {
     return (
@@ -24,7 +24,7 @@ export function AgentList({
             items={agents}
             selectedItem={selectedAgent}
             onBack={onBack}
-            onSelect={onSelectAgent}
+            onSelect={onAgentSelect}
             onCreateNew={onCreateNew}
             getItemTitle={(agent) => agent.title || "Untitled Agent"}
             getItemVersion={(agent) => agent.tagValue("ver")}

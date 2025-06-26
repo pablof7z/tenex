@@ -94,16 +94,6 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
         });
     };
 
-    // Show detailed agent view if selected
-    if (showDetailView && selectedAgent) {
-        return (
-            <AgentDetailPage
-                agent={selectedAgent}
-                onBack={handleBackFromDetail}
-            />
-        );
-    }
-
     return (
         <div className="h-screen bg-background flex flex-col md:flex-row">
             {/* Left Sidebar - Agents List */}
@@ -116,22 +106,29 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
             />
 
             {/* Main Content - Agent Details */}
-            <AgentMainContent
-                selectedAgent={selectedAgent}
-                isCreatingNew={isCreatingNew}
-                isEditing={isEditing}
-                lessons={[]}
-                copiedId={copiedId}
-                formData={formData}
-                onEdit={handleEdit}
-                onCancel={handleCancel}
-                onSave={handleSave}
-                onCopyAgentId={handleCopyAgentId}
-                onDeleteAgent={handleDeleteAgent}
-                onFormChange={(field, value) => updateField(field, value)}
-                onAddTag={addTag}
-                onRemoveTag={removeTag}
-            />
+            {showDetailView && selectedAgent ? (
+                <AgentDetailPage
+                    agent={selectedAgent}
+                    onBack={handleBackFromDetail}
+                />
+            ) : (
+                <AgentMainContent
+                    selectedAgent={selectedAgent}
+                    isCreatingNew={isCreatingNew}
+                    isEditing={isEditing}
+                    lessons={[]}
+                    copiedId={copiedId}
+                    formData={formData}
+                    onEdit={handleEdit}
+                    onCancel={handleCancel}
+                    onSave={handleSave}
+                    onCopyAgentId={handleCopyAgentId}
+                    onDeleteAgent={handleDeleteAgent}
+                    onFormChange={(field, value) => updateField(field, value)}
+                    onAddTag={addTag}
+                    onRemoveTag={removeTag}
+                />
+            )}
         </div>
     );
 }

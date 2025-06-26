@@ -1,9 +1,8 @@
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useState } from "react";
-import { NDKAgentLesson } from "../../../../tenex/src/events/NDKAgentLesson.ts";
+import { useState, useMemo } from "react";
 import { EVENT_KINDS } from "../../lib/constants";
-import type { NDKAgent } from "../../lib/ndk-setup";
+import { NDKAgent, NDKAgentLesson } from "../../lib/ndk-setup";
 import { AgentDetailHeader } from "./AgentDetailHeader";
 import { AgentDetailsTab } from "./AgentDetailsTab";
 import { AgentLessonsTab } from "./AgentLessonsTab";
@@ -25,11 +24,14 @@ export function AgentDetailPage({ agent, onBack }: AgentDetailPageProps) {
         [agent.id]
     );
 
-    // Convert raw lessons to typed lessons
-    const lessons = (rawLessons || []).map(NDKAgentLesson.from);
+    // Convert raw lessons to typed lessons with memoization
+    const lessons = useMemo(
+        () => (rawLessons || []).map((event) => new NDKAgentLesson(undefined, event)),
+        [rawLessons]
+    );
 
     return (
-        <div className="h-screen bg-background flex flex-col">
+        <div className="flex-1 flex flex-col">
             {/* Header */}
             <AgentDetailHeader
                 agent={agent}
@@ -41,7 +43,7 @@ export function AgentDetailPage({ agent, onBack }: AgentDetailPageProps) {
 
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto bg-background">
-                <div className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8">
+                <div className="max-w-2xl mx-auto p-4 md:p-6 lg:p-8">
                     {activeTab === "details" ? (
                         <AgentDetailsTab agent={agent} />
                     ) : (

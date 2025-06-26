@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Tool, ToolExecutionContext, ToolResult, PhaseTransitionMetadata } from "../types";
 import { logger } from "@/utils/logger";
 import { type Phase, ALL_PHASES, isValidPhase, PHASE_DESCRIPTIONS } from "@/conversations/phases";
+import { parseToolParams } from "../utils";
 
 const SwitchPhaseArgsSchema = z.object({
     phase: z.enum(ALL_PHASES as [Phase, ...Phase[]]),
@@ -38,15 +39,12 @@ export const switchPhaseTool: Tool = {
         params: Record<string, unknown>,
         context: ToolExecutionContext
     ): Promise<ToolResult> {
-        const parsed = SwitchPhaseArgsSchema.safeParse(params);
-        if (!parsed.success) {
-            return {
-                success: false,
-                error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-            };
+        const parseResult = parseToolParams(SwitchPhaseArgsSchema, params);
+        if (!parseResult.success) {
+            return parseResult.errorResult;
         }
 
-        const { phase, reason, message } = parsed.data;
+        const { phase, reason, message } = parseResult.data;
 
         // Check if agent is PM
         if (!context.agent?.isPMAgent) {

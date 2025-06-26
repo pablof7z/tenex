@@ -1,16 +1,13 @@
 import type { NDKKind } from "@nostr-dev-kit/ndk";
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useSubscribe, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { Brain, MessageSquare, Send } from "lucide-react";
 import { useState } from "react";
-import type { NDKAgentLesson } from "../../../../tenex/src/events/NDKAgentLesson.ts";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { EVENT_KINDS } from "../../lib/constants";
-import { ndk } from "../../lib/ndk-setup";
-import type { NDKAgent } from "../../lib/ndk-setup";
+import { NDKAgent, NDKAgentLesson } from "../../lib/ndk-setup";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-import { ProfileDisplay } from "../ProfileDisplay";
 
 interface AgentLessonsTabProps {
     agent: NDKAgent;
@@ -26,6 +23,7 @@ function LessonReplies({ lesson }: LessonRepliesProps) {
     const [isReplying, setIsReplying] = useState(false);
     const [showReplyForm, setShowReplyForm] = useState(false);
     const { formatRelativeTime } = useTimeFormat();
+    const currentUser = useNDKCurrentUser();
 
     // Fetch replies to this lesson
     const { events: replies } = useSubscribe(
@@ -66,7 +64,9 @@ function LessonReplies({ lesson }: LessonRepliesProps) {
                         return (
                             <div key={reply.id} className="bg-muted/20 p-3 rounded-lg border-l-2 border-blue-500/30">
                                 <div className="flex items-center justify-between gap-2 mb-2">
-                                    <ProfileDisplay pubkey={reply.pubkey} size="sm" className="text-sm" />
+                                    <span className="text-sm text-muted-foreground">
+                                        {reply.pubkey?.slice(0, 8)}...
+                                    </span>
                                     {timestamp && (
                                         <time className="text-xs text-muted-foreground" title={timestamp.toISOString()}>
                                             {formatRelativeTime(timestamp.getTime() / 1000)}
@@ -80,54 +80,56 @@ function LessonReplies({ lesson }: LessonRepliesProps) {
                 </div>
             )}
 
-            {/* Reply form */}
-            {showReplyForm ? (
-                <div className="bg-muted/20 p-3 rounded-lg border border-border">
-                    <Textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Write your reply..."
-                        className="mb-3 resize-none"
-                        rows={3}
-                    />
-                    <div className="flex items-center gap-2">
-                        <Button
-                            onClick={handleReply}
-                            disabled={!replyText.trim() || isReplying}
-                            size="sm"
-                            className="flex items-center gap-2"
-                        >
-                            <Send className="w-3 h-3" />
-                            {isReplying ? "Posting..." : "Reply"}
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setShowReplyForm(false);
-                                setReplyText("");
-                            }}
-                            variant="outline"
-                            size="sm"
-                        >
-                            Cancel
-                        </Button>
+            {/* Reply form - only show if user is authenticated */}
+            {currentUser ? (
+                showReplyForm ? (
+                    <div className="bg-muted/20 p-3 rounded-lg border border-border">
+                        <Textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write your reply..."
+                            className="mb-3 resize-none"
+                            rows={3}
+                        />
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={handleReply}
+                                disabled={!replyText.trim() || isReplying}
+                                size="sm"
+                                className="flex items-center gap-2"
+                            >
+                                <Send className="w-3 h-3" />
+                                {isReplying ? "Posting..." : "Reply"}
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowReplyForm(false);
+                                    setReplyText("");
+                                }}
+                                variant="outline"
+                                size="sm"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
                     </div>
-                </div>
-            ) : (
-                <Button
-                    onClick={() => setShowReplyForm(true)}
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground flex items-center gap-2"
-                >
-                    <MessageSquare className="w-3 h-3" />
-                    Reply
-                </Button>
-            )}
+                ) : (
+                    <Button
+                        onClick={() => setShowReplyForm(true)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground flex items-center gap-2"
+                    >
+                        <MessageSquare className="w-3 h-3" />
+                        Reply
+                    </Button>
+                )
+            ) : null}
         </div>
     );
 }
 
-export function AgentLessonsTab({ agent, lessons }: AgentLessonsTabProps) {
+export function AgentLessonsTab({ lessons }: AgentLessonsTabProps) {
     const { formatDateOnly } = useTimeFormat();
 
     if (!lessons || lessons.length === 0) {
@@ -194,11 +196,9 @@ export function AgentLessonsTab({ agent, lessons }: AgentLessonsTabProps) {
                                     {/* Show creator info */}
                                     <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                                         <span className="text-xs text-muted-foreground">Learned by:</span>
-                                        <ProfileDisplay
-                                            pubkey={lesson.pubkey}
-                                            size="xs"
-                                            className="text-xs"
-                                        />
+                                        <span className="text-xs text-muted-foreground">
+                                            {lesson.pubkey?.slice(0, 8)}...
+                                        </span>
                                     </div>
 
                                     {/* Replies section */}

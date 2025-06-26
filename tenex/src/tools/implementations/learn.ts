@@ -6,6 +6,7 @@ import { getNDK } from "@/nostr";
 import { getProjectContext } from "@/services/ProjectContext";
 import { EXECUTION_TAGS } from "@/nostr/tags";
 import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
+import { parseToolParams } from "../utils";
 
 const learnSchema = z.object({
     title: z.string().describe("Brief title/description of what this lesson is about"),
@@ -46,9 +47,14 @@ export const learnTool: Tool = {
         params: Record<string, unknown>,
         context: ToolExecutionContext
     ): Promise<ToolResult> {
+        let title: string | undefined;
         try {
-            const parsed = learnSchema.parse(params);
-            const { title, lesson, keywords } = parsed;
+            const parseResult = parseToolParams(learnSchema, params);
+            if (!parseResult.success) {
+                return parseResult.errorResult;
+            }
+            ({ title } = parseResult.data);
+            const { lesson, keywords } = parseResult.data;
 
             logger.info("🎓 Agent recording new lesson", {
                 agent: context.agentName,

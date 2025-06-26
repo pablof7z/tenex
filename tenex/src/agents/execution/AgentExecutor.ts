@@ -145,7 +145,7 @@ export class AgentExecutor {
             console.log("phase transition", phaseTransitionMetadata);
 
             // Build metadata with final response from ReasonActLoop
-            const llmMetadata = await this.buildLLMMetadata(finalResponse, messages);
+            const llmMetadata = await buildLLMMetadata(finalResponse, messages);
 
             // 6. Process handoff and phase transition
             let nextResponder: string | undefined;
@@ -446,12 +446,11 @@ export class AgentExecutor {
         let wasPublished = false;
 
         // Process the stream - ReasonActLoop handles all publishing
-        const streamPublisher = publisher?.createStreamPublisher();
         const stream = this.reasonActLoop.executeStreaming(
             context,
             messages,
             tracingContext,
-            streamPublisher,
+            publisher,
             tools
         );
 
