@@ -35,8 +35,7 @@ function getPhaseConstraints(phase: string): string[] {
         case "chat":
             return [
                 "Default to action - most tasks can go directly to execution",
-                "Only clarify when ambiguity would lead to fundamentally different implementations",
-                "Assume reasonable defaults for common development tasks",
+                
             ];
 
         case "plan":
@@ -48,6 +47,8 @@ function getPhaseConstraints(phase: string): string[] {
 
         case "execute":
             return [
+                "Use the claude_code tool for all project modifications",
+                "Never directly modify project files - always use claude_code",
                 "Focus on implementation details",
                 "Provide code examples when relevant",
                 "Explain technical decisions",
@@ -67,6 +68,15 @@ function getPhaseConstraints(phase: string): string[] {
                 "Provide constructive feedback",
                 "Highlight both strengths and areas for improvement",
                 "Suggest specific improvements",
+            ];
+
+        case "chores":
+            return [
+                "Focus on updating documentation and inventory for modified code",
+                "Use generate_inventory tool to update project documentation",
+                "Clean up any temporary files or unfinished work",
+                "Ensure all changes are properly documented",
+                "Consider generating guides for complex modules"
             ];
 
         default:
@@ -174,6 +184,32 @@ You are moving from brainstorm mode to ${toPhase}. In your transition message, i
 4. **Next Steps**: Clear direction for the ${toPhase} phase
 
 Transition the creative exploration into focused action.`;
+    }
+
+    if (fromPhase === "execute" && toPhase === "chores") {
+        return `
+## Transitioning to CHORES Phase
+
+You are moving to maintenance tasks after implementation. In your transition message:
+
+1. **Summary**: Briefly describe what was implemented
+2. **Documentation Needs**: Mention that inventory should be updated
+3. **Cleanup Tasks**: Any code organization needed
+
+The chores agent will check what files were modified and update documentation accordingly.`;
+    }
+
+    if (toPhase === "chores") {
+        return `
+## Transitioning to CHORES Phase
+
+You are moving to maintenance and documentation tasks. In your transition message:
+
+1. **Context**: What work was completed in the ${fromPhase} phase
+2. **Documentation Focus**: Areas that need inventory updates
+3. **Maintenance Tasks**: Any cleanup or organization needed
+
+The chores agent will analyze recent changes and update project documentation.`;
     }
 
     // Default for other transitions

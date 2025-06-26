@@ -7,6 +7,8 @@ import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "./repomix.js";
 import { TaskPublisher, getNDK } from "@/nostr";
 import type { NDKTask, NDKEvent, NDKSigner } from "@nostr-dev-kit/ndk";
+import { PromptBuilder } from "@/prompts/core/PromptBuilder";
+import "@/prompts"; // This ensures all fragments are registered
 
 const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
 
@@ -29,6 +31,7 @@ interface InventoryResult {
 interface InventoryGenerationOptions {
     conversationRootEventId?: string;
     agentSigner?: NDKSigner;
+    focusFiles?: Array<{ path: string; status: string }>;
 }
 
 /**
@@ -75,7 +78,7 @@ export async function generateInventory(
 
     try {
         // Step 2: Generate main inventory with complex module identification
-        const inventoryResult = await generateMainInventory(projectPath, repomixResult.content);
+        const inventoryResult = await generateMainInventory(projectPath, repomixResult.content, options?.focusFiles);
 
         // Step 3: Save main inventory
         await fs.writeFile(inventoryPath, inventoryResult.content, "utf-8");
@@ -180,55 +183,18 @@ async function publishAgentUpdate(
  */
 async function generateMainInventory(
     projectPath: string,
-    repomixContent: string
+    repomixContent: string,
+    focusFiles?: Array<{ path: string; status: string }>
 ): Promise<InventoryResult> {
-    logger.debug("Generating main inventory");
-    const prompt = `You are analyzing a codebase to create a comprehensive inventory. Here is the complete repository content in XML format from repomix:
-
-<repository>
-${repomixContent}
-</repository>
-
-Please generate a comprehensive inventory in markdown format that includes:
-
-1. **Project Overview**
-   - Brief description of what the project does
-   - Main technologies and frameworks used
-   - Architecture style (if identifiable)
-
-2. **Directory Structure**
-   - High-level directory breakdown with purpose of each
-   - Key organizational patterns
-
-3. **Significant Files**
-   - List of important files with one-line value propositions
-   - Focus on entry points, core business logic, configurations
-   - Include file paths and brief descriptions
-
-4. **Architectural Insights**
-   - Key patterns used in the codebase
-   - Data flow and integration points
-   - Notable design decisions
-
-5. **High-Complexity Modules** (if any)
-   - Identify modules/components that are particularly complex
-   - For each complex module, provide: name, file path, reason for complexity
-
-At the end, if you identified any high-complexity modules, provide them in this JSON format:
-\`\`\`json
-{
-  "complexModules": [
-    {
-      "name": "Module Name",
-      "path": "src/path/to/module",
-      "reason": "Brief explanation of complexity",
-      "suggestedFilename": "MODULE_NAME_GUIDE.md"
-    }
-  ]
-}
-\`\`\`
-
-Make the inventory comprehensive but readable, focusing on helping developers quickly understand the codebase structure and purpose.`;
+    logger.debug("Generating main inventory", { 
+        hasFocusFiles: !!focusFiles,
+        focusFileCount: focusFiles?.length 
+    });
+    
+    // Use PromptBuilder to construct the prompt from fragments
+    const prompt = new PromptBuilder()
+        .add("main-inventory-generation", { repomixContent, focusFiles })
+        .build();
 
     const llmRouter = await loadLLMRouter(projectPath);
     
@@ -258,9 +224,12 @@ Make the inventory comprehensive but readable, focusing on helping developers qu
 
     // Extract complex modules from JSON at the end
     const complexModules = await extractComplexModules(content, projectPath);
+    
+    // Strip the complexModules JSON block from the content before saving
+    const cleanContent = stripComplexModulesJson(content);
 
     return {
-        content,
+        content: cleanContent,
         complexModules,
     };
 }
@@ -275,44 +244,15 @@ async function generateModuleGuide(
 ): Promise<void> {
     logger.debug("Generating module guide", { module: module.name });
 
-    const prompt = `You are analyzing a specific complex module in a codebase. Here is the complete repository content in XML format from repomix:
-
-<repository>
-${repomixContent}
-</repository>
-
-Focus specifically on the module: **${module.name}** at path: \`${module.path}\`
-
-This module was identified as complex because: ${module.reason}
-
-Please generate a comprehensive technical guide for this module that includes:
-
-1. **Module Overview**
-   - Purpose and responsibilities
-   - Key interfaces and entry points
-   - Dependencies and relationships
-
-2. **Technical Architecture**
-   - Internal structure and organization
-   - Key classes/functions and their roles
-   - Data flow within the module
-
-3. **Implementation Details**
-   - Core algorithms or business logic
-   - Important patterns or design decisions
-   - Configuration and customization points
-
-4. **Integration Points**
-   - How other parts of the system interact with this module
-   - External dependencies
-   - Event flows or communication patterns
-
-5. **Complexity Analysis**
-   - What makes this module complex
-   - Potential areas for improvement
-   - Common pitfalls or gotchas
-
-Focus on technical depth while keeping it accessible to developers who need to work with or modify this module.`;
+    // Use PromptBuilder to construct the prompt from fragments
+    const prompt = new PromptBuilder()
+        .add("module-guide-generation", {
+            repomixContent,
+            moduleName: module.name,
+            modulePath: module.path,
+            complexityReason: module.reason,
+        })
+        .build();
 
     const llmRouter = await loadLLMRouter(projectPath);
     const userMessage = new Message("user", prompt);
@@ -341,6 +281,31 @@ Focus on technical depth while keeping it accessible to developers who need to w
         module: module.name,
         guideFilePath,
     });
+}
+
+/**
+ * Strip the complexModules JSON block from the inventory content
+ */
+function stripComplexModulesJson(content: string): string {
+    // Pattern to match the entire section about complex modules JSON format
+    // This includes the instruction text and the JSON block
+    const complexModulesSection = /At the end.*?```json\s*\n[\s\S]*?"complexModules"[\s\S]*?\n```/g;
+    
+    // Remove the entire complex modules JSON section
+    content = content.replace(complexModulesSection, '').trim();
+    
+    // Also handle case where JSON block might appear without the instruction text
+    const jsonBlockPattern = /```json\s*\n[\s\S]*?\n```/g;
+    const jsonMatches = content.match(jsonBlockPattern);
+    if (jsonMatches) {
+        for (const match of jsonMatches) {
+            if (match.includes('"complexModules"')) {
+                content = content.replace(match, '').trim();
+            }
+        }
+    }
+    
+    return content;
 }
 
 /**
@@ -421,24 +386,10 @@ async function fallbackExtractComplexModules(
     }
 
     try {
-        const cleanupPrompt = `Extract only the valid JSON array of complex modules from the following text and nothing else. If no JSON is present or no complex modules are mentioned, return an empty array [].
-
-Response format should be exactly:
-\`\`\`json
-{
-  "complexModules": [
-    {
-      "name": "Module Name", 
-      "path": "src/path/to/module",
-      "reason": "Brief explanation",
-      "suggestedFilename": "MODULE_NAME_GUIDE.md"
-    }
-  ]
-}
-\`\`\`
-
-Text to analyze:
-${content}`;
+        // Use PromptBuilder to construct the prompt from fragments
+        const cleanupPrompt = new PromptBuilder()
+            .add("complex-modules-extraction", { content })
+            .build();
 
         const llmRouter = await loadLLMRouter(projectPath);
         const userMessage = new Message("user", cleanupPrompt);
