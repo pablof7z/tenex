@@ -239,7 +239,9 @@ export function SpeechSettings() {
                         >
                             <SelectTrigger id="speech-provider">
                                 <div className="flex items-center justify-between w-full">
-                                    <span>{SPEECH_PROVIDER_NAMES[provider] || "Select a provider"}</span>
+                                    <span>
+                                        {SPEECH_PROVIDER_NAMES[provider] || "Select a provider"}
+                                    </span>
                                 </div>
                             </SelectTrigger>
                             <SelectContent>

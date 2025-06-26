@@ -8,10 +8,10 @@ import type { Conversation } from "@/conversations/types";
  */
 export function buildHistoryMessages(history: NDKEvent[]): Message[] {
     const messages: Message[] = [];
-    
+
     for (const event of history) {
         if (!event.content) continue;
-        
+
         if (isEventFromUser(event)) {
             messages.push(new Message("user", event.content));
         } else {
@@ -19,7 +19,7 @@ export function buildHistoryMessages(history: NDKEvent[]): Message[] {
             messages.push(new Message("assistant", event.content));
         }
     }
-    
+
     return messages;
 }
 
@@ -29,7 +29,7 @@ export function buildHistoryMessages(history: NDKEvent[]): Message[] {
  */
 export function needsCurrentUserMessage(conversation: Conversation): boolean {
     if (conversation.history.length === 0) return true;
-    
+
     const lastEvent = conversation.history[conversation.history.length - 1];
     if (!lastEvent) return true;
     return !isEventFromUser(lastEvent);

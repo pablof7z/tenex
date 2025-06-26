@@ -1,12 +1,17 @@
 import type { NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
 // Simple string utility functions
 const StringUtils = {
-    truncateString: (str: string, maxLength: number) => 
+    truncateString: (str: string, maxLength: number) =>
         str.length > maxLength ? str.substring(0, maxLength) + "..." : str,
-    truncate: (str: string, maxLength: number) => 
+    truncate: (str: string, maxLength: number) =>
         str.length > maxLength ? str.substring(0, maxLength) + "..." : str,
-    getInitials: (name: string) => 
-        name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2),
+    getInitials: (name: string) =>
+        name
+            .split(" ")
+            .map((word) => word[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2),
 };
 import { Clock, ExternalLink, GitBranch } from "lucide-react";
 import { memo } from "react";

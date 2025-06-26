@@ -41,7 +41,6 @@ export interface ToolCallArguments {
     [key: string]: string | number | boolean | undefined;
 }
 
-
 export interface ToolCall {
     tool: string;
     args: ToolCallArguments;

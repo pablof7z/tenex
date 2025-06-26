@@ -34,19 +34,19 @@ export async function listProjects(options: ListProjectOptions): Promise<void> {
         // Create filter for projects
         const filter: NDKFilter = {
             kinds: [31337],
-            authors: [user.pubkey]
+            authors: [user.pubkey],
         };
 
         // Fetch projects
         const events = await ndk.fetchEvents(filter);
-        
+
         // Convert events to project info
         const projects: ProjectInfo[] = [];
-        
+
         for (const event of events) {
-            const titleTag = event.tags.find(tag => tag[0] === "title");
-            const dTag = event.tags.find(tag => tag[0] === "d");
-            
+            const titleTag = event.tags.find((tag) => tag[0] === "title");
+            const dTag = event.tags.find((tag) => tag[0] === "d");
+
             if (titleTag && dTag) {
                 const naddr = event.encode();
                 projects.push({
@@ -54,7 +54,7 @@ export async function listProjects(options: ListProjectOptions): Promise<void> {
                     name: titleTag[1] || "Untitled",
                     description: event.content,
                     created: event.created_at || 0,
-                    author: user.npub
+                    author: user.npub,
                 });
             }
         }
@@ -69,7 +69,7 @@ export async function listProjects(options: ListProjectOptions): Promise<void> {
             }
 
             logger.info(chalk.green(`\nFound ${data.length} project(s):\n`));
-            
+
             for (const project of data) {
                 const date = new Date(project.created * 1000).toLocaleDateString();
                 logger.info(chalk.bold(`📁 ${project.name}`));

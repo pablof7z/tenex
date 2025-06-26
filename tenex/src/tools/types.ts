@@ -28,14 +28,13 @@ export type ToolOutput =
     | object // Structured data
     | null;
 
-
 // Specific metadata for handoff tool
 export interface HandoffMetadata {
     handoff: {
-        to: 'user' | string; // 'user' or agent pubkey
+        to: "user" | string; // 'user' or agent pubkey
         toName: string;
         message?: string;
-    }
+    };
 }
 
 // Specific metadata for phase transition tool
@@ -45,21 +44,25 @@ export interface PhaseTransitionMetadata {
         to: Phase;
         message: string;
         reason?: string;
-    }
+    };
 }
 
 // Type guard functions
 export function isHandoffMetadata(metadata: any): metadata is HandoffMetadata {
-    return metadata?.handoff && 
-           typeof metadata.handoff.to === 'string' &&
-           typeof metadata.handoff.toName === 'string';
+    return (
+        metadata?.handoff &&
+        typeof metadata.handoff.to === "string" &&
+        typeof metadata.handoff.toName === "string"
+    );
 }
 
 export function isPhaseTransitionMetadata(metadata: any): metadata is PhaseTransitionMetadata {
-    return metadata?.phaseTransition &&
-           typeof metadata.phaseTransition.from === 'string' &&
-           typeof metadata.phaseTransition.to === 'string' &&
-           typeof metadata.phaseTransition.message === 'string';
+    return (
+        metadata?.phaseTransition &&
+        typeof metadata.phaseTransition.from === "string" &&
+        typeof metadata.phaseTransition.to === "string" &&
+        typeof metadata.phaseTransition.message === "string"
+    );
 }
 
 // Generic metadata interface for other tools
@@ -79,7 +82,6 @@ export interface ToolInvocation {
     rawMatch: string;
 }
 
-
 // Tool execution result
 export interface ToolResult {
     success: boolean;
@@ -91,7 +93,7 @@ export interface ToolResult {
 // Plugin parameter type from multi-llm-ts
 export interface PluginParameter {
     name: string;
-    type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+    type: "string" | "number" | "boolean" | "object" | "array";
     description: string;
     required?: boolean;
     enum?: string[];
@@ -104,7 +106,10 @@ export interface Tool {
     name: string;
     description: string;
     parameters: PluginParameter[];
-    execute: (params: Record<string, unknown>, context: ToolExecutionContext) => Promise<ToolResult>;
+    execute: (
+        params: Record<string, unknown>,
+        context: ToolExecutionContext
+    ) => Promise<ToolResult>;
 }
 
 import type { Agent } from "@/agents/types";

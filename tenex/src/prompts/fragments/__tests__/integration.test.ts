@@ -16,7 +16,7 @@ describe("Agent Routing Integration", () => {
             tools: ["switch_phase", "handoff"],
         },
         {
-            name: "Frontend Developer", 
+            name: "Frontend Developer",
             pubkey: "dev456",
             role: "Frontend development and UI implementation",
             slug: "frontend-dev",
@@ -55,12 +55,12 @@ describe("Agent Routing Integration", () => {
         expect(prompt).toContain("## Available Agents");
         expect(prompt).toContain("Frontend Developer");
         expect(prompt).not.toContain("Project Manager (PM)");
-        
+
         // Should have PM routing instructions
         expect(prompt).toContain("## PM Agent Routing Instructions");
         expect(prompt).toContain("### 1. Handoff Tool");
         expect(prompt).toContain("Phase Transitions");
-        
+
         // Should have handoff guidance
         expect(prompt).toContain("## Agent Selection Guidance");
         expect(prompt).toContain("Agent Capabilities Match");

@@ -60,12 +60,12 @@ Use the 'switch_phase' tool to transition between workflow phases:
 **Important Notes:**
 - You don't need to use these tools in every response
 - Only use them when you actually need to change the flow
-- If continuing in the current phase with the current agent, simply respond normally`
+- If continuing in the current phase with the current agent, simply respond normally`,
 };
 
 // PM Agent handoff decision guidance
 export const pmHandoffGuidanceFragment: PromptFragment<Record<string, never>> = {
-    id: "pm-handoff-guidance", 
+    id: "pm-handoff-guidance",
     priority: 26,
     template: () => `## Agent Selection Guidance
 

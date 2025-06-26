@@ -194,17 +194,21 @@ export function LoginScreen() {
                                         ⚠️ Make sure to backup your private key after creation
                                     </p>
                                 </div>
-                                
+
                                 {/* Display Generated Pubkey */}
                                 {newAccountPubkey && (
                                     <div className="bg-[#238636]/10 border border-[#238636]/30 rounded-xl p-4 animate-in slide-in-from-top-2 duration-200">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-2 h-2 bg-[#238636] rounded-full" />
-                                            <span className="text-[#238636] text-sm font-medium">Account Created Successfully</span>
+                                            <span className="text-[#238636] text-sm font-medium">
+                                                Account Created Successfully
+                                            </span>
                                         </div>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="text-[#8B949E] text-xs font-medium mb-1 block">Your Public Key</label>
+                                                <label className="text-[#8B949E] text-xs font-medium mb-1 block">
+                                                    Your Public Key
+                                                </label>
                                                 <div className="flex items-center gap-2">
                                                     <code className="flex-1 bg-[#0F1419] border border-[#30363D] rounded-lg p-3 text-[#F0F6FC] text-sm font-mono break-all">
                                                         {newAccountPubkey}
@@ -218,11 +222,14 @@ export function LoginScreen() {
                                                     </button>
                                                 </div>
                                                 {copied && (
-                                                    <p className="text-[#238636] text-xs mt-1">Copied to clipboard!</p>
+                                                    <p className="text-[#238636] text-xs mt-1">
+                                                        Copied to clipboard!
+                                                    </p>
                                                 )}
                                             </div>
                                             <p className="text-[#8B949E] text-xs">
-                                                This is your unique identifier on Nostr. You can share this with others.
+                                                This is your unique identifier on Nostr. You can
+                                                share this with others.
                                             </p>
                                         </div>
                                         <Button
@@ -236,7 +243,7 @@ export function LoginScreen() {
                                         </Button>
                                     </div>
                                 )}
-                                
+
                                 {!newAccountPubkey && (
                                     <Button
                                         onClick={handleNewAccount}

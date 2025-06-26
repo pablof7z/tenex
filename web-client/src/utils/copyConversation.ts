@@ -4,11 +4,7 @@ import { EVENT_KINDS } from "../lib/types.js";
 /**
  * Get a display name for a pubkey
  */
-function getDisplayName(
-    pubkey: string,
-    profiles: Map<string, any>,
-    isAgent = false
-): string {
+function getDisplayName(pubkey: string, profiles: Map<string, any>, isAgent = false): string {
     if (isAgent) {
         const profile = profiles.get(pubkey);
         const agentName = profile?.name || "Agent";

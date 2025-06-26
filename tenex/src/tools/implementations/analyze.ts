@@ -5,39 +5,37 @@ import { loadLLMRouter } from "@/llm";
 import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "@/utils/repomix";
 
-
 const analyzeSchema = z.object({
-  prompt: z.string().describe("The analysis prompt or question about the codebase"),
+    prompt: z.string().describe("The analysis prompt or question about the codebase"),
 });
 
 export const analyze: Tool = {
-  name: "analyze",
-  description: "Analyze the entire codebase using repomix to provide context-aware insights",
-  parameters: [
-    {
-      name: 'prompt',
-      type: 'string',
-      description: 'The analysis prompt or question about the codebase',
-      required: true
-    }
-  ],
-  
-  async execute(
-    params: Record<string, unknown>,
-    context: ToolExecutionContext
-  ): Promise<ToolResult> {
-    try {
-      const parsed = analyzeSchema.parse(params);
-      const { prompt } = parsed;
+    name: "analyze",
+    description: "Analyze the entire codebase using repomix to provide context-aware insights",
+    parameters: [
+        {
+            name: "prompt",
+            type: "string",
+            description: "The analysis prompt or question about the codebase",
+            required: true,
+        },
+    ],
 
-      logger.info("Running analyze tool", { prompt });
+    async execute(
+        params: Record<string, unknown>,
+        context: ToolExecutionContext
+    ): Promise<ToolResult> {
+        try {
+            const parsed = analyzeSchema.parse(params);
+            const { prompt } = parsed;
 
-      const repomixResult = await generateRepomixOutput(context.projectPath);
+            logger.info("Running analyze tool", { prompt });
 
-      try {
+            const repomixResult = await generateRepomixOutput(context.projectPath);
 
-        // Prepare the prompt for the LLM
-        const analysisPrompt = `You are analyzing a codebase. Here is the complete repository content in XML format from repomix:
+            try {
+                // Prepare the prompt for the LLM
+                const analysisPrompt = `You are analyzing a codebase. Here is the complete repository content in XML format from repomix:
 
 <repository>
 ${repomixResult.content}
@@ -49,37 +47,37 @@ ${prompt}
 
 Provide a clear, structured response focused on the specific question asked.`;
 
-        // Call the LLM with the analyze-specific configuration
-        const llmRouter = await loadLLMRouter(context.projectPath);
-        const userMessage = new Message("user", analysisPrompt);
-        const response = await llmRouter.complete({
-          messages: [userMessage],
-          options: {
-            temperature: 0.3,
-            maxTokens: 4000,
-            configName: "defaults.analyze",
-          },
-        });
+                // Call the LLM with the analyze-specific configuration
+                const llmRouter = await loadLLMRouter(context.projectPath);
+                const userMessage = new Message("user", analysisPrompt);
+                const response = await llmRouter.complete({
+                    messages: [userMessage],
+                    options: {
+                        temperature: 0.3,
+                        maxTokens: 4000,
+                        configName: "defaults.analyze",
+                    },
+                });
 
-        logger.info("Analysis completed successfully");
+                logger.info("Analysis completed successfully");
 
-        return {
-          success: true,
-          output: response.content || "",
-          metadata: {
-            repoSize: repomixResult.size,
-          },
-        };
-      } finally {
-        repomixResult.cleanup();
-      }
-    } catch (error) {
-      logger.error("Analyze tool failed", { error });
-      return {
-        success: false,
-        output: "",
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  },
+                return {
+                    success: true,
+                    output: response.content || "",
+                    metadata: {
+                        repoSize: repomixResult.size,
+                    },
+                };
+            } finally {
+                repomixResult.cleanup();
+            }
+        } catch (error) {
+            logger.error("Analyze tool failed", { error });
+            return {
+                success: false,
+                output: "",
+                error: error instanceof Error ? error.message : String(error),
+            };
+        }
+    },
 };

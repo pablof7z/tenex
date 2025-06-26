@@ -50,7 +50,7 @@ const statusUpdateTracker = {
             console.error("Failed to check seen status:", error);
             return false;
         }
-    }
+    },
 };
 
 // Helper function to mark all status updates for a project as seen

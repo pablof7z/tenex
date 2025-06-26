@@ -13,41 +13,44 @@ export function ContextWindowProgressBar({
     totalTokens,
     contextWindow,
     maxCompletionTokens,
-    className
+    className,
 }: ContextWindowProgressBarProps) {
     // Calculate usage percentage
     const usagePercentage = (totalTokens / contextWindow) * 100;
-    
+
     // Determine status and colors
     const getStatus = () => {
-        if (usagePercentage >= 90) return { 
-            status: "critical", 
-            color: "bg-red-500", 
-            icon: AlertTriangle, 
-            textColor: "text-red-600 dark:text-red-400" 
-        };
-        if (usagePercentage >= 75) return { 
-            status: "warning", 
-            color: "bg-yellow-500", 
-            icon: AlertTriangle, 
-            textColor: "text-yellow-600 dark:text-yellow-400" 
-        };
-        if (usagePercentage >= 50) return { 
-            status: "moderate", 
-            color: "bg-blue-500", 
-            icon: Activity, 
-            textColor: "text-blue-600 dark:text-blue-400" 
-        };
-        return { 
-            status: "good", 
-            color: "bg-green-500", 
-            icon: CheckCircle, 
-            textColor: "text-green-600 dark:text-green-400" 
+        if (usagePercentage >= 90)
+            return {
+                status: "critical",
+                color: "bg-red-500",
+                icon: AlertTriangle,
+                textColor: "text-red-600 dark:text-red-400",
+            };
+        if (usagePercentage >= 75)
+            return {
+                status: "warning",
+                color: "bg-yellow-500",
+                icon: AlertTriangle,
+                textColor: "text-yellow-600 dark:text-yellow-400",
+            };
+        if (usagePercentage >= 50)
+            return {
+                status: "moderate",
+                color: "bg-blue-500",
+                icon: Activity,
+                textColor: "text-blue-600 dark:text-blue-400",
+            };
+        return {
+            status: "good",
+            color: "bg-green-500",
+            icon: CheckCircle,
+            textColor: "text-green-600 dark:text-green-400",
         };
     };
 
     const { color, icon: Icon, textColor } = getStatus();
-    
+
     // Format numbers with commas
     const formatNumber = (num: number): string => {
         return num.toLocaleString();
@@ -78,12 +81,9 @@ export function ContextWindowProgressBar({
 
             {/* Progress bar container with gradient background */}
             <div className="relative">
-                <Progress 
-                    value={usagePercentage} 
-                    className="h-3 bg-muted/30"
-                />
+                <Progress value={usagePercentage} className="h-3 bg-muted/30" />
                 {/* Custom progress indicator with gradient */}
-                <div 
+                <div
                     className={cn(
                         "absolute top-0 left-0 h-3 rounded-full transition-all duration-300",
                         color,
@@ -91,13 +91,13 @@ export function ContextWindowProgressBar({
                     )}
                     style={{ width: `${Math.min(usagePercentage, 100)}%` }}
                 />
-                
+
                 {/* Completion tokens limit indicator (if available) */}
                 {maxCompletionTokens && maxCompletionTokens < contextWindow && (
-                    <div 
+                    <div
                         className="absolute top-0 h-3 w-0.5 bg-purple-400 opacity-60"
-                        style={{ 
-                            left: `${Math.min((contextWindow - maxCompletionTokens) / contextWindow * 100, 100)}%` 
+                        style={{
+                            left: `${Math.min(((contextWindow - maxCompletionTokens) / contextWindow) * 100, 100)}%`,
                         }}
                         title={`Max completion tokens limit: ${formatNumber(maxCompletionTokens)}`}
                     />
@@ -139,16 +139,28 @@ export function ContextWindowProgressBar({
                 <Info className="w-3 h-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-muted-foreground leading-relaxed">
                     {usagePercentage >= 90 && (
-                        <span>Context window is nearly full. Consider starting a new conversation or summarizing.</span>
+                        <span>
+                            Context window is nearly full. Consider starting a new conversation or
+                            summarizing.
+                        </span>
                     )}
                     {usagePercentage >= 75 && usagePercentage < 90 && (
-                        <span>Context window usage is high. Monitor token consumption for optimal performance.</span>
+                        <span>
+                            Context window usage is high. Monitor token consumption for optimal
+                            performance.
+                        </span>
                     )}
                     {usagePercentage >= 50 && usagePercentage < 75 && (
-                        <span>Context window usage is moderate. Plenty of space remaining for the conversation.</span>
+                        <span>
+                            Context window usage is moderate. Plenty of space remaining for the
+                            conversation.
+                        </span>
                     )}
                     {usagePercentage < 50 && (
-                        <span>Context window usage is low. Excellent capacity remaining for this conversation.</span>
+                        <span>
+                            Context window usage is low. Excellent capacity remaining for this
+                            conversation.
+                        </span>
                     )}
                 </div>
             </div>

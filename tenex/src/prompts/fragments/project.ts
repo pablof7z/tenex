@@ -12,10 +12,13 @@ interface InventoryContextArgs {
 }
 
 // Helper function to load inventory and context synchronously
-function loadProjectContextSync(phase: Phase): { inventoryContent: string | null, contextFiles: string[] } {
+function loadProjectContextSync(phase: Phase): {
+    inventoryContent: string | null;
+    contextFiles: string[];
+} {
     let inventoryContent: string | null = null;
     let contextFiles: string[] = [];
-    
+
     // Load inventory content for chat and brainstorm phases
     if (phase === "chat" || phase === "brainstorm") {
         try {
@@ -27,19 +30,19 @@ function loadProjectContextSync(phase: Phase): { inventoryContent: string | null
             logger.debug("Could not load inventory content", { error });
         }
     }
-    
+
     // Get list of context files
     try {
         const contextDir = path.join(process.cwd(), "context");
         if (fs.existsSync(contextDir)) {
             const files = fs.readdirSync(contextDir);
-            contextFiles = files.filter(f => f.endsWith(".md"));
+            contextFiles = files.filter((f) => f.endsWith(".md"));
         }
     } catch (error) {
         // Context directory may not exist
         logger.debug("Could not read context directory", { error });
     }
-    
+
     return { inventoryContent, contextFiles };
 }
 
@@ -53,7 +56,7 @@ export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
         parts.push(`<project_inventory>
 The project inventory provides comprehensive information about this codebase:
 `);
-        
+
         // Only show inventory for chat phase
         if (phase === "chat" || phase === "brainstorm") {
             if (inventoryContent) {
@@ -68,17 +71,17 @@ This is just a map for you to be quickly situated.
 No project inventory is available yet. An inventory can be generated to provide detailed information about the project structure, files, and dependencies.`);
             }
         }
-        
+
         // Add context files listing if available
         if (contextFiles && contextFiles.length > 0) {
             parts.push(`### Additional Context Files
 The following documentation files are available in the context/ directory and can be read using the read_file tool:
-${contextFiles.map(f => `- context/${f}`).join('\n')}`);
+${contextFiles.map((f) => `- context/${f}`).join("\n")}`);
         }
 
         parts.push("</project_inventory>\n");
-        
-        return parts.join('\n\n');
+
+        return parts.join("\n\n");
     },
     validateArgs: (args): args is InventoryContextArgs => {
         return (
@@ -101,9 +104,9 @@ export const claudeCodeReportFragment: PromptFragment<ClaudeCodeReportArgs> = {
     priority: 30,
     template: ({ phase, previousPhase, claudeCodeReport }) => {
         const parts = [];
-        
+
         // If we have a Claude Code report from direct invocation
-        if (claudeCodeReport && (phase === 'plan' || phase === 'execute')) {
+        if (claudeCodeReport && (phase === "plan" || phase === "execute")) {
             parts.push(`
 ## Claude Code Report
 
@@ -118,13 +121,13 @@ Your role now is to:
 4. Determine next steps
 `);
         }
-        
+
         // Add phase transition instructions if we have previousPhase
         if (previousPhase && previousPhase !== phase) {
             parts.push(getPhaseTransitionInstructions(previousPhase, phase));
         }
-        
-        return parts.join('\n\n');
+
+        return parts.join("\n\n");
     },
     validateArgs: (args): args is ClaudeCodeReportArgs => {
         return (

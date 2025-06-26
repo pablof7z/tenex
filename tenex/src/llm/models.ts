@@ -13,7 +13,7 @@ export async function getModelsForProvider(
         if (provider === "openrouter" && apiKey) {
             return await loadOpenRouterModels({ apiKey });
         }
-        
+
         const providerMap: Record<string, string> = {
             mistral: "mistralai",
             groq: "groq",
@@ -23,7 +23,7 @@ export async function getModelsForProvider(
             google: "google",
             ollama: "ollama",
         };
-        
+
         const mappedProvider = providerMap[provider] || provider;
         return await loadModels(mappedProvider, {});
     } catch (error) {

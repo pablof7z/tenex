@@ -24,9 +24,9 @@ export const phaseConstraintsFragment: PromptFragment<PhaseConstraintsArgs> = {
     template: ({ phase }) => {
         const constraints = getPhaseConstraints(phase);
         if (constraints.length === 0) return "";
-        
+
         return `## Phase Constraints
-${constraints.map(c => `- ${c}`).join("\n")}`;
+${constraints.map((c) => `- ${c}`).join("\n")}`;
     },
 };
 
@@ -76,7 +76,7 @@ function getPhaseConstraints(phase: string): string[] {
 
 // Dynamic instruction generation based on phase transition
 export function getPhaseTransitionInstructions(fromPhase: Phase, toPhase: Phase): string {
-    if (fromPhase === 'chat' && toPhase === 'plan') {
+    if (fromPhase === "chat" && toPhase === "plan") {
         return `
 ## Transitioning to PLAN Phase
 
@@ -90,8 +90,8 @@ You are moving to planning because the task is complex and requires strategic th
 
 Remember: Only use planning for genuinely complex tasks. Simple tasks should go directly to execution.`;
     }
-    
-    if (fromPhase === 'chat' && toPhase === 'brainstorm') {
+
+    if (fromPhase === "chat" && toPhase === "brainstorm") {
         return `
 ## Transitioning to BRAINSTORM Phase
 
@@ -105,8 +105,8 @@ You are moving to brainstorm mode because the user's request is broad, conceptua
 
 Focus on exploration rather than arriving at concrete requirements. Stay in brainstorm mode until the user explicitly asks to transition out.`;
     }
-    
-    if (fromPhase === 'chat' && toPhase === 'execute') {
+
+    if (fromPhase === "chat" && toPhase === "execute") {
         return `
 ## Transitioning to EXECUTE Phase (Skipping Planning)
 
@@ -119,8 +119,8 @@ You are moving directly to execution because this task is straightforward. In yo
 
 This is a simple task that doesn't require planning - proceed directly to implementation.`;
     }
-    
-    if (fromPhase === 'plan' && toPhase === 'execute') {
+
+    if (fromPhase === "plan" && toPhase === "execute") {
         return `
 ## Transitioning to EXECUTE Phase
 
@@ -134,8 +134,8 @@ You are moving from planning to implementation. In your transition message, incl
 
 This message will be sent directly to Claude Code for implementation.`;
     }
-    
-    if (fromPhase === 'execute' && toPhase === 'review') {
+
+    if (fromPhase === "execute" && toPhase === "review") {
         return `
 ## Transitioning to REVIEW Phase
 
@@ -147,8 +147,8 @@ You are moving from implementation to review. In your transition message, includ
 4. **Known Issues**: Any problems or limitations
 5. **Review Focus**: Areas needing special attention`;
     }
-    
-    if (toPhase === 'brainstorm') {
+
+    if (toPhase === "brainstorm") {
         return `
 ## Transitioning to BRAINSTORM Phase
 
@@ -161,8 +161,8 @@ You are moving to brainstorm mode for open exploration. In your transition messa
 
 Embrace open-ended discussion and creative thinking. Don't rush to concrete solutions.`;
     }
-    
-    if (fromPhase === 'brainstorm') {
+
+    if (fromPhase === "brainstorm") {
         return `
 ## Transitioning from BRAINSTORM Phase
 
@@ -175,7 +175,7 @@ You are moving from brainstorm mode to ${toPhase}. In your transition message, i
 
 Transition the creative exploration into focused action.`;
     }
-    
+
     // Default for other transitions
     return `
 ## Phase Transition

@@ -33,13 +33,12 @@ describe("Agent Execution Prompt Fragments", () => {
             expect(prompt).toContain("You are TestAgent, a Developer");
             expect(prompt).toContain("Test instructions");
             expect(prompt).toContain("Current Phase: CHAT");
-            expect(prompt).toContain("Project Name: \"Test Project\"");
+            expect(prompt).toContain('Project Name: "Test Project"');
             expect(prompt).toContain("Available Tools");
             expect(prompt).toContain("read_file");
             expect(prompt).toContain("shell");
         });
     });
-
 
     describe("phaseContextFragment", () => {
         it("should generate correct phase context for each phase", () => {

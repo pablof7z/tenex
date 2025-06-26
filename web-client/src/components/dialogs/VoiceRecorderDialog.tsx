@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Buffer } from "buffer";
 
 // Polyfill Buffer for browser
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
     (window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
@@ -22,11 +22,7 @@ interface VoiceRecorderDialogProps {
     project: NDKProject;
 }
 
-export function VoiceRecorderDialog({
-    open,
-    onOpenChange,
-    project,
-}: VoiceRecorderDialogProps) {
+export function VoiceRecorderDialog({ open, onOpenChange, project }: VoiceRecorderDialogProps) {
     const { ndk } = useNDK();
     const currentUser = useNDKCurrentUser();
     const [isRecording, setIsRecording] = useState(false);
@@ -78,7 +74,7 @@ export function VoiceRecorderDialog({
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Draw frequency bars
-            const barWidth = canvas.width / bufferLength * 2.5;
+            const barWidth = (canvas.width / bufferLength) * 2.5;
             const barCount = Math.floor(canvas.width / (barWidth + 2));
             const step = Math.floor(bufferLength / barCount);
 
@@ -89,13 +85,13 @@ export function VoiceRecorderDialog({
 
                 // Create gradient for each bar
                 const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-                gradient.addColorStop(0, 'rgba(239, 68, 68, 0.8)'); // red-500
-                gradient.addColorStop(1, 'rgba(239, 68, 68, 0.3)');
+                gradient.addColorStop(0, "rgba(239, 68, 68, 0.8)"); // red-500
+                gradient.addColorStop(1, "rgba(239, 68, 68, 0.3)");
 
                 // Draw rounded bars
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
-                
+
                 // Use roundRect if available, otherwise fallback to regular rect
                 if (ctx.roundRect) {
                     ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2);
@@ -116,17 +112,17 @@ export function VoiceRecorderDialog({
     }, [isRecording]);
 
     const stopRecording = useCallback(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             mediaRecorderRef.current.stop();
         }
         setIsRecording(false);
 
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
         }
 
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        if (audioContextRef.current && audioContextRef.current.state !== "closed") {
             audioContextRef.current.close();
             audioContextRef.current = null;
         }
@@ -168,7 +164,7 @@ export function VoiceRecorderDialog({
             setAudioBlob(null);
             setAudioUrl(null);
             setRecordingDuration(0);
-            
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
 
@@ -185,7 +181,7 @@ export function VoiceRecorderDialog({
             analyserRef.current.fftSize = 256;
 
             const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+                mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4",
             });
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
@@ -208,7 +204,7 @@ export function VoiceRecorderDialog({
                 const finalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
                 setRecordingDuration(finalDuration);
                 console.log("Final duration:", finalDuration);
-                
+
                 const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
                 setAudioBlob(blob);
                 const url = URL.createObjectURL(blob);
@@ -247,7 +243,7 @@ export function VoiceRecorderDialog({
                 type: audioBlob.type || "audio/webm",
             });
             const uploadPromise = blossom.upload(audioFile, {
-                server: "https://blossom.primal.net"
+                server: "https://blossom.primal.net",
             });
 
             // Wait for both operations
@@ -262,7 +258,8 @@ export function VoiceRecorderDialog({
 
             // Store the upload URL for later use
             if (uploadResult?.url) {
-                (window as unknown as { __voiceUploadUrl: string }).__voiceUploadUrl = uploadResult.url;
+                (window as unknown as { __voiceUploadUrl: string }).__voiceUploadUrl =
+                    uploadResult.url;
             }
         } catch (error) {
             console.error("Error during transcription/upload:", error);
@@ -288,9 +285,10 @@ export function VoiceRecorderDialog({
                 article.title = cleanedText.split("\n")[0]?.substring(0, 100) || "Voice Recording";
                 article.content = cleanedText;
                 article.tags.push(["a", project.tagId()]);
-                
+
                 // Add audio attachment if available
-                const voiceUrl = (window as unknown as { __voiceUploadUrl?: string }).__voiceUploadUrl;
+                const voiceUrl = (window as unknown as { __voiceUploadUrl?: string })
+                    .__voiceUploadUrl;
                 if (voiceUrl) {
                     article.tags.push(["audio", voiceUrl]);
                 }
@@ -303,9 +301,10 @@ export function VoiceRecorderDialog({
                 thread.kind = 11;
                 thread.content = cleanedText;
                 thread.tags.push(["a", project.tagId()]);
-                
+
                 // Add audio attachment if available
-                const voiceUrl = (window as unknown as { __voiceUploadUrl?: string }).__voiceUploadUrl;
+                const voiceUrl = (window as unknown as { __voiceUploadUrl?: string })
+                    .__voiceUploadUrl;
                 if (voiceUrl) {
                     thread.tags.push(["audio", voiceUrl]);
                 }
@@ -327,12 +326,12 @@ export function VoiceRecorderDialog({
     const resetState = () => {
         // Stop any ongoing recording first
         stopRecording();
-        
+
         // Clean up audio URL if it exists
         if (audioUrl) {
             URL.revokeObjectURL(audioUrl);
         }
-        
+
         // Reset all state
         setAudioBlob(null);
         setAudioUrl(null);
@@ -375,7 +374,7 @@ export function VoiceRecorderDialog({
                                     width={400}
                                     height={120}
                                     className="w-full h-30 rounded-lg"
-                                    style={{ maxWidth: '100%', height: 'auto' }}
+                                    style={{ maxWidth: "100%", height: "auto" }}
                                 />
                             </div>
 
@@ -412,7 +411,9 @@ export function VoiceRecorderDialog({
                                 <audio controls src={audioUrl!} className="w-full" />
                                 <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
                                     <span>Duration</span>
-                                    <span className="font-medium">{formatDuration(recordingDuration)}</span>
+                                    <span className="font-medium">
+                                        {formatDuration(recordingDuration)}
+                                    </span>
                                 </div>
                             </div>
 
@@ -459,7 +460,9 @@ export function VoiceRecorderDialog({
                         {/* Transcription Header */}
                         <div className="px-6 py-4 border-b border-gray-100">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-medium text-gray-900">Review Transcription</h3>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                    Review Transcription
+                                </h3>
                                 <button
                                     onClick={() => setIsEditingTranscription(true)}
                                     className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -479,7 +482,8 @@ export function VoiceRecorderDialog({
                                 placeholder="Transcription will appear here..."
                             />
                             <div className="mt-2 text-xs text-gray-500 text-right">
-                                {transcription.split(' ').filter(word => word.length > 0).length} words
+                                {transcription.split(" ").filter((word) => word.length > 0).length}{" "}
+                                words
                             </div>
                         </div>
 

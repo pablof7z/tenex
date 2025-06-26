@@ -5,7 +5,7 @@ export function ContextWindowDemo() {
     return (
         <div className="p-6 space-y-8 max-w-2xl">
             <h2 className="text-2xl font-bold mb-6">Context Window Progress Bar Demo</h2>
-            
+
             {/* Low usage scenario */}
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Low Usage (30%)</h3>
@@ -59,10 +59,7 @@ export function ContextWindowDemo() {
             {/* Gemini scenario */}
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Gemini 1.5 Pro (Large context window)</h3>
-                <ContextWindowProgressBar
-                    totalTokens={200000}
-                    contextWindow={1048576}
-                />
+                <ContextWindowProgressBar totalTokens={200000} contextWindow={1048576} />
             </div>
         </div>
     );

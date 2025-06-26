@@ -3,9 +3,7 @@ import "../pm-routing"; // Ensure fragments are registered
 
 describe("PM Routing Fragments", () => {
     it("should generate PM routing instructions", () => {
-        const prompt = new PromptBuilder()
-            .add("pm-routing-instructions", {})
-            .build();
+        const prompt = new PromptBuilder().add("pm-routing-instructions", {}).build();
 
         expect(prompt).toContain("## PM Agent Routing Instructions");
         expect(prompt).toContain("Handoff Tool");
@@ -19,9 +17,7 @@ describe("PM Routing Fragments", () => {
     });
 
     it("should generate PM handoff guidance", () => {
-        const prompt = new PromptBuilder()
-            .add("pm-handoff-guidance", {})
-            .build();
+        const prompt = new PromptBuilder().add("pm-handoff-guidance", {}).build();
 
         expect(prompt).toContain("## Agent Selection Guidance");
         expect(prompt).toContain("Agent Capabilities Match");

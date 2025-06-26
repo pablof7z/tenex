@@ -294,7 +294,11 @@ export function ChatInterface({
                           EVENT_KINDS.TYPING_INDICATOR as NDKKind,
                           EVENT_KINDS.TYPING_INDICATOR_STOP as NDKKind,
                       ],
-                      "#e": currentThreadEvent ? [currentThreadEvent.id] : task?.id ? [task?.id] : [],
+                      "#e": currentThreadEvent
+                          ? [currentThreadEvent.id]
+                          : task?.id
+                            ? [task?.id]
+                            : [],
                       since: Math.floor(Date.now() / 1000) - 60, // Only show indicators from last minute
                   },
               ]
@@ -448,8 +452,7 @@ export function ChatInterface({
                         } catch (error) {
                             console.warn("Failed to generate thread title:", error);
                             // Fallback to a simple title based on first few words
-                            finalTitle =
-                                `${messageInput.trim().split(" ").slice(0, 4).join(" ").slice(0, 30)}...`;
+                            finalTitle = `${messageInput.trim().split(" ").slice(0, 4).join(" ").slice(0, 30)}...`;
                         }
                     }
 
@@ -512,23 +515,26 @@ export function ChatInterface({
                 event.content = cleanContent;
 
                 // Remove all p-tags that NDK's .reply() generated
-                event.tags = event.tags.filter((tag) => tag[0] !== "p");  
-                
+                event.tags = event.tags.filter((tag) => tag[0] !== "p");
+
                 if (project) {
                     event.tags.push(["a", project.tagId()]); // Project reference
                 }
-                
+
                 // Find the most recent agent from status updates
-                const sortedUpdates = [...statusUpdates].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+                const sortedUpdates = [...statusUpdates].sort(
+                    (a, b) => (b.created_at ?? 0) - (a.created_at ?? 0)
+                );
                 const mostRecentUpdate = sortedUpdates[0];
 
-                const claudeSessionId = statusUpdates.find(s => !!s.hasTag("claude-session-id"))
+                const claudeSessionId = statusUpdates
+                    .find((s) => !!s.hasTag("claude-session-id"))
                     ?.tagValue("claude-session-id");
                 if (!claudeSessionId) {
                     alert("No claude-session-id found in status updates. This is a bug");
                     return;
                 }
-                
+
                 if (mostRecentUpdate) {
                     // P-tag the most recent agent that responded
                     event.tags.push(["p", mostRecentUpdate.pubkey]);
@@ -536,7 +542,7 @@ export function ChatInterface({
                     // Check if there's a claude-session-id in the most recent update
                     event.tags.push(["claude-session-id", claudeSessionId]);
                 }
-                
+
                 // Add mentioned agents to the reply (explicit p-tags)
                 for (const agent of mentionedAgents) {
                     // Don't add duplicate p-tags
@@ -557,11 +563,30 @@ export function ChatInterface({
             requestAnimationFrame(() => {
                 scrollToBottom(true); // Force scroll after sending
             });
-        } catch { /**/
+        } catch {
+            /**/
         } finally {
             setIsSending(false);
         }
-    }, [messageInput, ndk, isSending, isThreadMode, task, extractMentions, currentThreadEvent, kind11Event, project, threadTitle, isNewThread, initialAgentPubkeys, rootEventId, projectAgents, setMessageDrafts, scrollToBottom, statusUpdates]);
+    }, [
+        messageInput,
+        ndk,
+        isSending,
+        isThreadMode,
+        task,
+        extractMentions,
+        currentThreadEvent,
+        kind11Event,
+        project,
+        threadTitle,
+        isNewThread,
+        initialAgentPubkeys,
+        rootEventId,
+        projectAgents,
+        setMessageDrafts,
+        scrollToBottom,
+        statusUpdates,
+    ]);
 
     const handleKeyPress = useCallback(
         (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

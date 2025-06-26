@@ -3,23 +3,23 @@ import { logger } from "./logger.js";
 
 // Default Nostr relay URLs for TENEX
 const DEFAULT_RELAY_URLS = [
-  "wss://relay.damus.io",
-  "wss://relay.primal.net", 
-  "wss://relay.nostr.band",
-  "wss://nos.lol",
-  "wss://relay.snort.social"
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://relay.nostr.band",
+    "wss://nos.lol",
+    "wss://relay.snort.social",
 ];
 
 /**
  * Get relay URLs for NDK connection
  */
 function getRelayUrls(): string[] {
-  const relaysEnv = process.env.RELAYS;
-  if (relaysEnv) {
-    return relaysEnv.split(',').map(url => url.trim());
-  }
-  
-  return DEFAULT_RELAY_URLS;
+    const relaysEnv = process.env.RELAYS;
+    if (relaysEnv) {
+        return relaysEnv.split(",").map((url) => url.trim());
+    }
+
+    return DEFAULT_RELAY_URLS;
 }
 
 let ndkInstance: NDK | null = null;
@@ -46,9 +46,9 @@ export async function getNDK(config: NDKSetupConfig = {}): Promise<NDK> {
         }
 
         await ndkInstance.connect();
-        
+
         // Only log if not in JSON mode (check process.argv for --json flag)
-        const isJsonMode = process.argv.includes('--json');
+        const isJsonMode = process.argv.includes("--json");
         if (!isJsonMode) {
             logger.info(`✅ Connected to ${ndkInstance.pool.connectedRelays().length} relays`);
         }

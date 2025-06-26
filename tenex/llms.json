@@ -1,29 +1,29 @@
 {
-  "configurations": {
-    "sonnet": {
-      "provider": "openrouter",
-      "model": "anthropic/claude-sonnet-4",
-      "enableCaching": true
+    "configurations": {
+        "sonnet": {
+            "provider": "openrouter",
+            "model": "anthropic/claude-sonnet-4",
+            "enableCaching": true
+        },
+        "gemini-2.5": {
+            "provider": "openrouter",
+            "model": "google/gemini-2.5-pro-preview",
+            "enableCaching": false
+        },
+        "deepseek": {
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "enableCaching": false
+        }
     },
-    "gemini-2.5": {
-      "provider": "openrouter",
-      "model": "google/gemini-2.5-pro-preview",
-      "enableCaching": false
+    "defaults": {
+        "agents": "sonnet",
+        "analyze": "gemini-2.5"
     },
-    "deepseek": {
-      "provider": "openrouter",
-      "model": "deepseek/deepseek-chat-v3-0324",
-      "enableCaching": false
+    "credentials": {
+        "openrouter": {
+            "apiKey": "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",
+            "baseUrl": "https://openrouter.ai/api/v1"
+        }
     }
-  },
-  "defaults": {
-    "agents": "sonnet",
-    "analyze": "gemini-2.5"
-  },
-  "credentials": {
-    "openrouter": {
-      "apiKey": "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",
-      "baseUrl": "https://openrouter.ai/api/v1"
-    }
-  }
 }

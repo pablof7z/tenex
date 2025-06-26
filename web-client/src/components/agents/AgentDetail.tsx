@@ -33,9 +33,11 @@ export function AgentDetail({ agent, lessons }: AgentDetailProps) {
                                     </p>
                                 )}
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-muted-foreground">Created by:</span>
-                                    <ProfileDisplay 
-                                        pubkey={agent.pubkey} 
+                                    <span className="text-sm text-muted-foreground">
+                                        Created by:
+                                    </span>
+                                    <ProfileDisplay
+                                        pubkey={agent.pubkey}
                                         size="sm"
                                         className="text-sm"
                                     />

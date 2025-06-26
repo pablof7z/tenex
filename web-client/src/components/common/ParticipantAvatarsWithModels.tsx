@@ -89,7 +89,6 @@ export function ParticipantAvatarsWithModels({
     );
 }
 
-
 interface ModelDropdownProps {
     agentPubkey: string;
     currentModel?: string;

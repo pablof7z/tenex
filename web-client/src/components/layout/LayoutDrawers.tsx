@@ -89,10 +89,7 @@ export function LayoutDrawers({
 
             {/* Thread Detail Drawer */}
             <Sheet open={!!selectedThread} onOpenChange={(open) => !open && onThreadClose()}>
-                <SheetContent
-                    side="right"
-                    className="p-0 flex flex-col overflow-hidden"
-                >
+                <SheetContent side="right" className="p-0 flex flex-col overflow-hidden">
                     {selectedThread &&
                         (() => {
                             // Find the project for this thread if it's a real thread with tags
@@ -119,12 +116,11 @@ export function LayoutDrawers({
                             )?.[1];
 
                             // For new threads with empty titles, pass undefined to trigger auto-generation
-                            const threadTitle =
-                                titleTag?.trim()
-                                    ? titleTag
-                                    : selectedThread.id === "new"
-                                      ? undefined
-                                      : selectedThread.content?.split("\n")[0] || "Thread";
+                            const threadTitle = titleTag?.trim()
+                                ? titleTag
+                                : selectedThread.id === "new"
+                                  ? undefined
+                                  : selectedThread.content?.split("\n")[0] || "Thread";
 
                             // Extract selected agents from temporary thread object
                             const tempThread = selectedThread as NDKEvent & {

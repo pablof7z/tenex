@@ -93,7 +93,6 @@ export function parseModuleVerbosity(): ModuleVerbosityConfig {
                 }
             }
         }
-
     }
 
     return config;
@@ -358,7 +357,6 @@ export function logConversationStart(
     }
     console.log();
 }
-
 
 export function logLLMInteraction(
     type: string,

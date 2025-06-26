@@ -10,16 +10,24 @@ import chalk from "chalk";
 // Format markdown
 function formatMarkdown(text: string): string {
     return text
-        .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, content) => chalk.bold.blue(`${hashes} ${content}`))
-        .replace(/\*\*([^*]+)\*\*/g, chalk.bold('$1'))
-        .replace(/\*([^*]+)\*/g, chalk.italic('$1'))
+        .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, content) =>
+            chalk.bold.blue(`${hashes} ${content}`)
+        )
+        .replace(/\*\*([^*]+)\*\*/g, chalk.bold("$1"))
+        .replace(/\*([^*]+)\*/g, chalk.italic("$1"))
         .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-            return `${chalk.gray(`\`\`\`${lang || ''}`)}\n${chalk.green(code)}${chalk.gray('```')}`;
+            return `${chalk.gray(`\`\`\`${lang || ""}`)}\n${chalk.green(code)}${chalk.gray("```")}`;
         })
-        .replace(/`([^`]+)`/g, chalk.yellow('`$1`'))
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, chalk.cyan('[$1]') + chalk.gray('($2)'))
-        .replace(/^(\s*)([-*+])\s+(.+)$/gm, (_, spaces, bullet, content) => `${spaces}${chalk.yellow(bullet)} ${content}`)
-        .replace(/^(\s*)(\d+\.)\s+(.+)$/gm, (_, spaces, num, content) => `${spaces}${chalk.yellow(num)} ${content}`);
+        .replace(/`([^`]+)`/g, chalk.yellow("`$1`"))
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, chalk.cyan("[$1]") + chalk.gray("($2)"))
+        .replace(
+            /^(\s*)([-*+])\s+(.+)$/gm,
+            (_, spaces, bullet, content) => `${spaces}${chalk.yellow(bullet)} ${content}`
+        )
+        .replace(
+            /^(\s*)(\d+\.)\s+(.+)$/gm,
+            (_, spaces, num, content) => `${spaces}${chalk.yellow(num)} ${content}`
+        );
 }
 
 // Format JSON
@@ -27,30 +35,37 @@ function colorizeJSON(json: string): string {
     return json
         .replace(/"([^"]+)":/g, chalk.cyan('"$1":'))
         .replace(/: "([^"]+)"/g, `: ${chalk.green('"$1"')}`)
-        .replace(/: (\d+)/g, `: ${chalk.yellow('$1')}`)
-        .replace(/: (true|false)/g, `: ${chalk.magenta('$1')}`)
-        .replace(/: null/g, `: ${chalk.gray('null')}`);
+        .replace(/: (\d+)/g, `: ${chalk.yellow("$1")}`)
+        .replace(/: (true|false)/g, `: ${chalk.magenta("$1")}`)
+        .replace(/: null/g, `: ${chalk.gray("null")}`);
 }
 
 // Format content with enhancements
 function formatContentWithEnhancements(content: string, isSystemPrompt = false): string {
-    let formattedContent = content.replace(/\\n/g, '\n');
-    
+    let formattedContent = content.replace(/\\n/g, "\n");
+
     if (isSystemPrompt) {
         formattedContent = formatMarkdown(formattedContent);
     }
-    
+
     // Handle <tool_use> blocks
-    formattedContent = formattedContent.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (match, jsonContent) => {
-        try {
-            const parsed = JSON.parse(jsonContent.trim());
-            const formatted = JSON.stringify(parsed, null, 2);
-            return chalk.gray('<tool_use>\n') + colorizeJSON(formatted) + chalk.gray('\n</tool_use>');
-        } catch {
-            return chalk.gray('<tool_use>') + jsonContent + chalk.gray('</tool_use>');
+    formattedContent = formattedContent.replace(
+        /<tool_use>([\s\S]*?)<\/tool_use>/g,
+        (match, jsonContent) => {
+            try {
+                const parsed = JSON.parse(jsonContent.trim());
+                const formatted = JSON.stringify(parsed, null, 2);
+                return (
+                    chalk.gray("<tool_use>\n") +
+                    colorizeJSON(formatted) +
+                    chalk.gray("\n</tool_use>")
+                );
+            } catch {
+                return chalk.gray("<tool_use>") + jsonContent + chalk.gray("</tool_use>");
+            }
         }
-    });
-    
+    );
+
     return formattedContent;
 }
 
@@ -95,13 +110,15 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
 
             // Get all available agents for handoffs
             const availableAgents = Array.from(projectCtx.agents.values());
-            
+
             // Validate phase
-            const phase = (ALL_PHASES.includes(options.phase as Phase) ? options.phase : "chat") as Phase;
-            
+            const phase = (
+                ALL_PHASES.includes(options.phase as Phase) ? options.phase : "chat"
+            ) as Phase;
+
             // No need to load inventory or context files here anymore
             // The fragment handles this internally
-            
+
             // Build system prompt to match production
             const systemPromptBuilder = new PromptBuilder()
                 .add("agent-system-prompt", {
@@ -115,7 +132,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
                     currentAgentPubkey: agent.pubkey,
                 })
                 .add("project-inventory-context", {
-                    phase
+                    phase,
                 })
                 .add("phase-context", {
                     phase: phase,
@@ -125,22 +142,22 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
                 .add("phase-constraints", {
                     phase: phase,
                 });
-                
+
             // Add expertise boundaries for non-PM agents
             if (!agent.isPMAgent) {
                 systemPromptBuilder.add("expertise-boundaries", {});
             }
-                
+
             // Add PM-specific fragments if it's a PM agent
             if (agent.isPMAgent) {
                 systemPromptBuilder
                     .add("pm-routing-instructions", {})
                     .add("pm-handoff-guidance", {});
             }
-            
-            // Note: claude-code-report fragment is only added in production when 
+
+            // Note: claude-code-report fragment is only added in production when
             // Claude Code has been invoked directly, which requires conversation context
-            
+
             const systemPrompt = systemPromptBuilder.build();
 
             // Format and display the system prompt with enhancements

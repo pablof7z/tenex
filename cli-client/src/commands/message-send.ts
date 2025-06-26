@@ -49,15 +49,15 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
             // Assume it's already in a tag format
             aTag = options.project;
         }
-        
+
         // Extract first line of message as title (or use a default)
-        const firstLine = options.message.split('\n')[0].trim();
+        const firstLine = options.message.split("\n")[0].trim();
         const title = firstLine.length > 0 ? firstLine.substring(0, 100) : "New Thread";
-        
+
         // Add tags
         event.tags = [
             ["a", aTag], // Reference to project in kind:pubkey:identifier format
-            ["title", title]
+            ["title", title],
         ];
 
         // Publish the event
@@ -75,7 +75,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
             message: options.message,
             author: user.npub,
             timestamp: event.created_at,
-            title
+            title,
         };
 
         outputResult(result, { json: options.json }, (data) => {

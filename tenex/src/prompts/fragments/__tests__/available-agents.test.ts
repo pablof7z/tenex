@@ -16,7 +16,7 @@ describe("Available Agents Fragment", () => {
         },
         {
             name: "Frontend Developer",
-            pubkey: "dev456", 
+            pubkey: "dev456",
             role: "Frontend development and UI implementation",
             slug: "frontend-dev",
             isPMAgent: false,
@@ -27,7 +27,7 @@ describe("Available Agents Fragment", () => {
         {
             name: "Backend Developer",
             pubkey: "backend789",
-            role: "Backend development and API implementation", 
+            role: "Backend development and API implementation",
             slug: "backend-dev",
             signer: {} as any,
             llmConfig: "gpt-4",

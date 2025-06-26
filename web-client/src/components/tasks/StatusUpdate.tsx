@@ -1,6 +1,19 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNDKCurrentPubkey, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Brain, Cpu, DollarSign, GitCommit, MoreHorizontal, Copy, Eye, MessageCircle, Target, Play, CheckCircle, Settings } from "lucide-react";
+import {
+    Brain,
+    Cpu,
+    DollarSign,
+    GitCommit,
+    MoreHorizontal,
+    Copy,
+    Eye,
+    MessageCircle,
+    Target,
+    Play,
+    CheckCircle,
+    Settings,
+} from "lucide-react";
 import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -13,7 +26,12 @@ import { LLMMetadataDialog } from "../dialogs/LLMMetadataDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
 interface StatusUpdateProps {
@@ -277,7 +295,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
 
     const getPhaseIcon = (phase: string | null) => {
         if (!phase) return null;
-        
+
         const phaseIcons = {
             chat: MessageCircle,
             plan: Target,
@@ -285,22 +303,22 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
             review: CheckCircle,
             chores: Settings,
         };
-        
+
         const IconComponent = phaseIcons[phase as keyof typeof phaseIcons];
         return IconComponent ? <IconComponent className="w-3 h-3" /> : null;
     };
 
     const getPhaseColor = (phase: string | null) => {
         if (!phase) return "bg-gray-500";
-        
+
         const phaseColors = {
             chat: "bg-blue-500",
-            plan: "bg-purple-500", 
+            plan: "bg-purple-500",
             execute: "bg-green-500",
             review: "bg-orange-500",
             chores: "bg-gray-500",
         };
-        
+
         return phaseColors[phase as keyof typeof phaseColors] || "bg-gray-500";
     };
 
@@ -382,7 +400,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                         <span>{formatRelativeTime(event.created_at!)}</span>
                         {/* Phase indicator for user messages */}
                         {getPhase() && (
-                            <div 
+                            <div
                                 className={`flex items-center justify-center w-4 h-4 rounded-full ${getPhaseColor(getPhase())} text-white`}
                                 title={`Phase: ${getPhase()}`}
                             >
@@ -406,12 +424,15 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                                     <Copy className="w-3.5 h-3.5 mr-2" />
                                     Copy ID
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleCopyRawEvent} className="cursor-pointer">
+                                <DropdownMenuItem
+                                    onClick={handleCopyRawEvent}
+                                    className="cursor-pointer"
+                                >
                                     <Copy className="w-3.5 h-3.5 mr-2" />
                                     Copy Raw Event
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    onClick={() => setShowRawEventDialog(true)} 
+                                <DropdownMenuItem
+                                    onClick={() => setShowRawEventDialog(true)}
                                     className="cursor-pointer"
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" />
@@ -453,7 +474,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                         </span>
                         {/* Phase indicator */}
                         {getPhase() && (
-                            <div 
+                            <div
                                 className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhase())} text-white`}
                                 title={`Phase: ${getPhase()}`}
                             >
@@ -492,12 +513,15 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                                     <Copy className="w-3.5 h-3.5 mr-2" />
                                     Copy ID
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleCopyRawEvent} className="cursor-pointer">
+                                <DropdownMenuItem
+                                    onClick={handleCopyRawEvent}
+                                    className="cursor-pointer"
+                                >
                                     <Copy className="w-3.5 h-3.5 mr-2" />
                                     Copy Raw Event
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    onClick={() => setShowRawEventDialog(true)} 
+                                <DropdownMenuItem
+                                    onClick={() => setShowRawEventDialog(true)}
                                     className="cursor-pointer"
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" />

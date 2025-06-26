@@ -28,10 +28,7 @@ export class ProjectContext {
     public readonly pubkey: Hexpubkey;
     public readonly agents: Map<string, Agent>;
 
-    constructor(
-        project: NDKProject,
-        agents: Map<string, Agent>
-    ) {
+    constructor(project: NDKProject, agents: Map<string, Agent>) {
         this.project = project;
 
         // Find the PM agent dynamically
@@ -86,10 +83,7 @@ let projectContext: ProjectContext | undefined = undefined;
 /**
  * Initialize the project context. Should be called once during project startup.
  */
-export function setProjectContext(
-    project: NDKProject,
-    agents: Map<string, Agent>
-): void {
+export function setProjectContext(project: NDKProject, agents: Map<string, Agent>): void {
     projectContext = new ProjectContext(project, agents);
 }
 

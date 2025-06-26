@@ -68,7 +68,9 @@ export function ThreadItem({
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>{getAuthorName()}</span>
                             <span>•</span>
-                            <span>{formatTime(recentMessage?.timestamp || thread.created_at!)}</span>
+                            <span>
+                                {formatTime(recentMessage?.timestamp || thread.created_at!)}
+                            </span>
                         </div>
                     </div>
                 </div>

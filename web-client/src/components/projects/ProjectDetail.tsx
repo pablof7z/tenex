@@ -121,7 +121,9 @@ export function ProjectDetail({
         const seenUpdates = JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
 
         for (const update of statusUpdates) {
-            const taskId = update.tags?.find((tag: string[]) => tag[0] === "e" && tag[3] === "task")?.[1];
+            const taskId = update.tags?.find(
+                (tag: string[]) => tag[0] === "e" && tag[3] === "task"
+            )?.[1];
             if (taskId && !seenUpdates[update.id]) {
                 const currentUnread = unreadMap.get(taskId) || 0;
                 unreadMap.set(taskId, currentUnread + 1);

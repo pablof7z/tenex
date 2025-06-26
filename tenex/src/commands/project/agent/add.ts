@@ -66,10 +66,7 @@ export const agentAddCommand = new Command("add")
                 role,
                 instructions: prompt,
                 llmConfig: DEFAULT_AGENT_LLM_CONFIG,
-                tools: [
-                    readFileTool.name,
-                    shellTool.name
-                ],
+                tools: [readFileTool.name, shellTool.name],
             };
 
             // Use AgentRegistry to ensure agent (this handles all file operations)

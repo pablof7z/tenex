@@ -45,13 +45,17 @@ export class OpenRouterPricingService {
     /**
      * Calculate cost for token usage
      */
-    async calculateCost(modelId: string, promptTokens: number, completionTokens: number): Promise<number> {
+    async calculateCost(
+        modelId: string,
+        promptTokens: number,
+        completionTokens: number
+    ): Promise<number> {
         const pricing = await this.getModelPricing(modelId);
-        
+
         if (!pricing) {
             logger.warn("Model pricing not found, using default", { modelId });
             // Return a minimal default cost
-            return (promptTokens + completionTokens) / 1_000_000 * 1.0; // $1 per 1M tokens
+            return ((promptTokens + completionTokens) / 1_000_000) * 1.0; // $1 per 1M tokens
         }
 
         const promptCost = (promptTokens / 1_000_000) * pricing.prompt;
@@ -74,21 +78,21 @@ export class OpenRouterPricingService {
     async refreshCache(): Promise<void> {
         try {
             const response = await fetch(this.apiUrl);
-            
+
             if (!response.ok) {
                 throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json() as OpenRouterResponse;
-            
+            const data = (await response.json()) as OpenRouterResponse;
+
             // Clear existing cache
             this.pricingCache.clear();
-            
+
             // Populate cache with new data
             for (const model of data.data) {
                 const promptPrice = Number.parseFloat(model.pricing.prompt);
                 const completionPrice = Number.parseFloat(model.pricing.completion);
-                
+
                 // Only cache models with valid pricing
                 if (!Number.isNaN(promptPrice) && !Number.isNaN(completionPrice)) {
                     this.pricingCache.set(model.id, {
@@ -97,7 +101,7 @@ export class OpenRouterPricingService {
                     });
                 }
             }
-            
+
             this.cacheExpiry = Date.now() + this.cacheValidityMs;
         } catch (error) {
             logger.error("Failed to refresh OpenRouter pricing cache", {
@@ -122,23 +126,26 @@ export class OpenRouterPricingService {
      */
     async findModelId(partialModelName: string): Promise<string | null> {
         await this.ensureFreshCache();
-        
+
         const searchTerm = partialModelName.toLowerCase();
-        
+
         // Exact match first
         for (const modelId of this.pricingCache.keys()) {
             if (modelId.toLowerCase() === searchTerm) {
                 return modelId;
             }
         }
-        
+
         // Partial match
         for (const modelId of this.pricingCache.keys()) {
-            if (modelId.toLowerCase().includes(searchTerm) || searchTerm.includes(modelId.toLowerCase())) {
+            if (
+                modelId.toLowerCase().includes(searchTerm) ||
+                searchTerm.includes(modelId.toLowerCase())
+            ) {
                 return modelId;
             }
         }
-        
+
         return null;
     }
 }

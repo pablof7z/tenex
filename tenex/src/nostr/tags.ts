@@ -35,9 +35,9 @@ export const CLAUDE_TAGS = {
 } as const;
 
 // Type helpers
-export type StatusTag = typeof STATUS_TAGS[keyof typeof STATUS_TAGS];
-export type LLMTag = typeof LLM_TAGS[keyof typeof LLM_TAGS];
-export type ExecutionTag = typeof EXECUTION_TAGS[keyof typeof EXECUTION_TAGS];
-export type ClaudeTag = typeof CLAUDE_TAGS[keyof typeof CLAUDE_TAGS];
+export type StatusTag = (typeof STATUS_TAGS)[keyof typeof STATUS_TAGS];
+export type LLMTag = (typeof LLM_TAGS)[keyof typeof LLM_TAGS];
+export type ExecutionTag = (typeof EXECUTION_TAGS)[keyof typeof EXECUTION_TAGS];
+export type ClaudeTag = (typeof CLAUDE_TAGS)[keyof typeof CLAUDE_TAGS];
 
 export type AllTags = StatusTag | LLMTag | ExecutionTag | ClaudeTag;

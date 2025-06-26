@@ -19,8 +19,8 @@ const mockOpenRouterResponse = {
                 request: "0",
                 image: "0",
                 web_search: "0",
-                internal_reasoning: "0"
-            }
+                internal_reasoning: "0",
+            },
         },
         {
             id: "google/gemini-2.5-flash",
@@ -31,10 +31,10 @@ const mockOpenRouterResponse = {
                 request: "0",
                 image: "0.001238",
                 web_search: "0",
-                internal_reasoning: "0"
-            }
-        }
-    ]
+                internal_reasoning: "0",
+            },
+        },
+    ],
 };
 
 describe("OpenRouterPricingService", () => {
@@ -55,8 +55,10 @@ describe("OpenRouterPricingService", () => {
             await service.refreshCache();
 
             expect(mockFetch).toHaveBeenCalledWith("https://openrouter.ai/api/v1/models");
-            
-            const mistralPricing = await service.getModelPricing("mistralai/mistral-small-3.2-24b-instruct");
+
+            const mistralPricing = await service.getModelPricing(
+                "mistralai/mistral-small-3.2-24b-instruct"
+            );
             expect(mistralPricing).toEqual({
                 prompt: 0.0000001,
                 completion: 0.0000003,
@@ -70,7 +72,9 @@ describe("OpenRouterPricingService", () => {
                 statusText: "Internal Server Error",
             });
 
-            await expect(service.refreshCache()).rejects.toThrow("OpenRouter API error: 500 Internal Server Error");
+            await expect(service.refreshCache()).rejects.toThrow(
+                "OpenRouter API error: 500 Internal Server Error"
+            );
         });
     });
 
@@ -85,14 +89,14 @@ describe("OpenRouterPricingService", () => {
 
         it("should calculate cost correctly for known model", async () => {
             const cost = await service.calculateCost("google/gemini-2.5-flash", 10000, 5000);
-            
+
             // Expected: (10000/1M * 0.0000003) + (5000/1M * 0.0000025) = 0.000000003 + 0.0000000125 = 0.0000000155
             expect(cost).toBeCloseTo(0.0000000155, 10);
         });
 
         it("should return default cost for unknown model", async () => {
             const cost = await service.calculateCost("unknown-model", 10000, 5000);
-            
+
             // Expected: (10000 + 5000) / 1M * 1.0 = 0.015
             expect(cost).toBeCloseTo(0.015, 10);
         });

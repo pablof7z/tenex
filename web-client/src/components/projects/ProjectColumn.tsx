@@ -38,9 +38,9 @@ export function ProjectColumn({
     const handlePointerDown = (e: React.PointerEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        
+
         setIsLongPressing(true);
-        
+
         // Start long-press timer (500ms)
         longPressTimerRef.current = setTimeout(() => {
             // Long press triggered - clear the timer to indicate it fired
@@ -53,14 +53,14 @@ export function ProjectColumn({
     const handlePointerUp = (e: React.PointerEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        
+
         setIsLongPressing(false);
-        
+
         // Check if timer is still active (means long-press didn't fire)
         if (longPressTimerRef.current) {
             clearTimeout(longPressTimerRef.current);
             longPressTimerRef.current = null;
-            
+
             // Timer was still active, so this was a regular click
             onTaskCreate?.(project);
         }
@@ -69,7 +69,7 @@ export function ProjectColumn({
 
     const handlePointerLeave = () => {
         setIsLongPressing(false);
-        
+
         // Clear timer if pointer leaves the button (cancels both long-press and click)
         if (longPressTimerRef.current) {
             clearTimeout(longPressTimerRef.current);
@@ -129,8 +129,12 @@ export function ProjectColumn({
     const threadReplies = useMemo(() => {
         return projectThreads.filter((thread: NDKEvent) => {
             // Check if this is a reply to another thread
-            const rootTag = thread.tags?.find((tag: string[]) => tag[0] === "e" && tag[3] === "root")?.[1];
-            const replyTag = thread.tags?.find((tag: string[]) => tag[0] === "e" && tag[3] === "reply")?.[1];
+            const rootTag = thread.tags?.find(
+                (tag: string[]) => tag[0] === "e" && tag[3] === "root"
+            )?.[1];
+            const replyTag = thread.tags?.find(
+                (tag: string[]) => tag[0] === "e" && tag[3] === "reply"
+            )?.[1];
             return rootTag || replyTag;
         });
     }, [projectThreads]);
@@ -251,9 +255,7 @@ export function ProjectColumn({
                         <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center mx-auto mb-3">
                             <Plus className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                            No threads yet
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">No threads yet</p>
                         <Button variant="ghost" size="sm" onClick={() => onTaskCreate?.(project)}>
                             Create content
                         </Button>

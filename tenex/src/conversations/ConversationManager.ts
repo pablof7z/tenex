@@ -83,8 +83,8 @@ export class ConversationManager {
     }
 
     async updatePhase(
-        id: string, 
-        phase: Phase, 
+        id: string,
+        phase: Phase,
         message: string,
         agentPubkey: string,
         agentName: string,
@@ -127,13 +127,13 @@ export class ConversationManager {
             timestamp: Date.now(),
             agentPubkey,
             agentName,
-            reason
+            reason,
         };
 
         // Update conversation
         conversation.phase = phase;
         conversation.phaseStartedAt = Date.now();
-        
+
         conversation.phaseTransitions.push(transition);
 
         tracingLogger.logTransition(previousPhase, phase, {
@@ -186,7 +186,6 @@ export class ConversationManager {
         await this.persistence.save(conversation);
     }
 
-
     async updateMetadata(
         conversationId: string,
         metadata: Partial<ConversationMetadata>
@@ -213,7 +212,6 @@ export class ConversationManager {
         // when we implement phase transition events
         return conversation.history;
     }
-
 
     getAllConversations(): Conversation[] {
         return Array.from(this.conversations.values());

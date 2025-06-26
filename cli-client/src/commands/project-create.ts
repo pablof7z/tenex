@@ -66,7 +66,7 @@ export async function createProject(options: CreateProjectOptions): Promise<void
             description: options.description || `A TENEX project: ${options.name}`,
             projectId,
             eventId: project.id,
-            author: user.npub
+            author: user.npub,
         };
 
         outputResult(result, { json: options.json }, (data) => {

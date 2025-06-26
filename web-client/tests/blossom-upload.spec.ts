@@ -22,11 +22,11 @@ test.describe("Blossom file upload", () => {
 
         // Wait for the current pubkey to be generated and displayed
         await expect(page.locator("h2")).toContainText("Current Identity");
-        
+
         // Check that pubkey is displayed (should be a hex string)
         const pubkeyElement = page.locator(".font-mono.text-sm.break-all");
         await expect(pubkeyElement).not.toContainText("Loading...");
-        
+
         // Get the pubkey value to verify it's a valid hex string
         const pubkeyText = await pubkeyElement.textContent();
         expect(pubkeyText).toBeTruthy();
@@ -46,7 +46,9 @@ test.describe("Blossom file upload", () => {
         // Wait for upload to complete (either success or failure)
         await page.waitForFunction(
             () => {
-                const uploadingText = document.querySelector('text="Uploading to blossom server..."');
+                const uploadingText = document.querySelector(
+                    'text="Uploading to blossom server..."'
+                );
                 return !uploadingText || !uploadingText.textContent?.includes("Uploading");
             },
             { timeout: 30000 }
@@ -62,26 +64,28 @@ test.describe("Blossom file upload", () => {
 
         if (await successMessage.isVisible({ timeout: 1000 }).catch(() => false)) {
             console.log("Upload successful!");
-            
+
             // Verify the file URL is displayed
-            const fileUrlElement = page.locator(".text-\\[\\#229ED9\\]").filter({ hasText: "https://" });
+            const fileUrlElement = page
+                .locator(".text-\\[\\#229ED9\\]")
+                .filter({ hasText: "https://" });
             await expect(fileUrlElement).toBeVisible();
-            
+
             const fileUrl = await fileUrlElement.textContent();
             expect(fileUrl).toBeTruthy();
             expect(fileUrl).toMatch(/^https:\/\/blossom\.primal\.net\/.+/);
-            
+
             console.log("File uploaded successfully to:", fileUrl);
         } else if (await failureMessage.isVisible({ timeout: 1000 }).catch(() => false)) {
             console.log("Upload failed - this is expected if the blossom server is not accessible");
-            
+
             // Verify error message is displayed
             const errorElement = page.locator(".text-\\[\\#F85149\\]").last();
             await expect(errorElement).toBeVisible();
-            
+
             const errorText = await errorElement.textContent();
             console.log("Upload error:", errorText);
-            
+
             // This is acceptable for the test - we've verified the upload process works
         } else {
             throw new Error("No upload result displayed");

@@ -1,14 +1,14 @@
-import React from "react"
-import type { NDKLLMRule } from "../../types/template"
-import { Badge } from "../ui/badge"
-import { EntityListSidebar } from "@/components/common/EntityListSidebar"
+import React from "react";
+import type { NDKLLMRule } from "../../types/template";
+import { Badge } from "../ui/badge";
+import { EntityListSidebar } from "@/components/common/EntityListSidebar";
 
 interface InstructionsListProps {
-    instructions: NDKLLMRule[]
-    selectedInstruction: NDKLLMRule | null
-    onSelectInstruction: (instruction: NDKLLMRule) => void
-    onCreateNew: () => void
-    onBack: () => void
+    instructions: NDKLLMRule[];
+    selectedInstruction: NDKLLMRule | null;
+    onSelectInstruction: (instruction: NDKLLMRule) => void;
+    onCreateNew: () => void;
+    onBack: () => void;
 }
 
 export function InstructionsList({
@@ -26,16 +26,16 @@ export function InstructionsList({
             onBack={onBack}
             onSelect={onSelectInstruction}
             onCreateNew={onCreateNew}
-            getItemTitle={(instruction) => 
+            getItemTitle={(instruction) =>
                 instruction.title || instruction.tagValue?.("title") || "Untitled"
             }
             getItemVersion={(instruction) => instruction.version || "1"}
-            getItemDescription={(instruction) => 
-                instruction.description || 
+            getItemDescription={(instruction) =>
+                instruction.description ||
                 (instruction.content ? `${instruction.content.slice(0, 100)}...` : undefined)
             }
             renderItemExtra={(instruction) => {
-                const tags = instruction.getMatchingTags("t").map((tag) => tag[1])
+                const tags = instruction.getMatchingTags("t").map((tag) => tag[1]);
                 return tags.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mt-2">
                         {tags.map((tag) => (
@@ -48,11 +48,11 @@ export function InstructionsList({
                             </Badge>
                         ))}
                     </div>
-                ) : null
+                ) : null;
             }}
             createButtonText="Add new instruction"
             className="w-80"
             itemsClassName="bg-muted/30"
         />
-    )
+    );
 }

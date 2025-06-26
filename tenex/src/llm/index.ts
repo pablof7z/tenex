@@ -2,7 +2,12 @@
 export * from "./types";
 
 // Export router and utilities
-export { LLMRouter, loadLLMRouter, createAgentAwareLLMService, type LLMRouterConfig } from "./router";
+export {
+    LLMRouter,
+    loadLLMRouter,
+    createAgentAwareLLMService,
+    type LLMRouterConfig,
+} from "./router";
 
 // Export model utilities
 export { getModelsForProvider, getAllModels } from "./models";

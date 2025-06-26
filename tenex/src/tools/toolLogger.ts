@@ -6,31 +6,31 @@ export interface ToolCallLogEntry {
     timestamp: string;
     timestampMs: number;
     requestId: string;
-    
+
     // Context
     agentName: string;
     phase: string;
     conversationId: string;
-    
+
     // Tool information
     toolName: string;
     args: Record<string, unknown>;
     argsLength: number;
-    
+
     // Result
     status: "success" | "error";
     output?: string;
     outputLength?: number;
     error?: string;
     metadata?: Record<string, unknown>;
-    
+
     // Performance
     performance: {
         startTime: number;
         endTime: number;
         durationMs: number;
     };
-    
+
     // Trace information
     trace: {
         callStack?: string[];
@@ -43,35 +43,35 @@ export interface ToolCallLogEntry {
 
 export class ToolCallLogger {
     private readonly logDir: string;
-    
+
     constructor(projectPath: string) {
         this.logDir = join(projectPath, ".tenex", "logs", "tools");
     }
-    
+
     private async ensureLogDirectory(): Promise<void> {
         try {
             await fs.mkdir(this.logDir, { recursive: true });
         } catch (error) {
             // Ignore if directory already exists
-            if (error instanceof Error && 'code' in error && error.code !== 'EEXIST') {
+            if (error instanceof Error && "code" in error && error.code !== "EEXIST") {
                 throw error;
             }
         }
     }
-    
+
     private getLogFileName(): string {
-        const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
         return `tool-calls-${date}.jsonl`;
     }
-    
+
     private getLogFilePath(): string {
         return join(this.logDir, this.getLogFileName());
     }
-    
+
     private generateRequestId(toolName: string, agentName: string): string {
         return `${agentName}-${toolName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
-    
+
     async logToolCall(
         toolName: string,
         args: Record<string, unknown>,
@@ -88,40 +88,50 @@ export class ToolCallLogger {
     ): Promise<void> {
         try {
             await this.ensureLogDirectory();
-            
+
             const requestId = this.generateRequestId(toolName, context.agentName);
             const durationMs = performance.endTime - performance.startTime;
             const timestamp = new Date().toISOString();
-            
+
             const logEntry: ToolCallLogEntry = {
                 timestamp,
                 timestampMs: performance.startTime,
                 requestId,
-                
+
                 // Context
                 agentName: context.agentName,
                 phase: context.phase,
                 conversationId: context.conversationId,
-                
+
                 // Tool information
                 toolName,
                 args,
                 argsLength: JSON.stringify(args).length,
-                
+
                 // Result
                 status: result.success ? "success" : "error",
-                output: typeof result.output === 'string' ? result.output : result.output ? JSON.stringify(result.output) : undefined,
-                outputLength: typeof result.output === 'string' ? result.output.length : result.output ? JSON.stringify(result.output).length : undefined,
+                output:
+                    typeof result.output === "string"
+                        ? result.output
+                        : result.output
+                          ? JSON.stringify(result.output)
+                          : undefined,
+                outputLength:
+                    typeof result.output === "string"
+                        ? result.output.length
+                        : result.output
+                          ? JSON.stringify(result.output).length
+                          : undefined,
                 error: result.error,
                 metadata: result.metadata as Record<string, unknown> | undefined,
-                
+
                 // Performance
                 performance: {
                     startTime: performance.startTime,
                     endTime: performance.endTime,
                     durationMs,
                 },
-                
+
                 // Trace information
                 trace: {
                     callStack: trace?.callStack,
@@ -131,16 +141,15 @@ export class ToolCallLogger {
                     batchSize: trace?.batchSize,
                 },
             };
-            
+
             // Write to JSONL file
             const logLine = `${JSON.stringify(logEntry)}\n`;
             const logFilePath = this.getLogFilePath();
-            
-            await fs.appendFile(logFilePath, logLine, 'utf-8');
-            
+
+            await fs.appendFile(logFilePath, logLine, "utf-8");
         } catch (logError) {
             // Don't let logging errors break the main flow
-            console.error('[Tool Logger] Failed to log tool call:', logError);
+            console.error("[Tool Logger] Failed to log tool call:", logError);
         }
     }
 }

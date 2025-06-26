@@ -88,13 +88,13 @@ export const TenexLLMsSchema = z.object({
         z.object({
             provider: z.enum([
                 "anthropic",
-                "openai", 
+                "openai",
                 "google",
                 "ollama",
                 "mistral",
                 "groq",
                 "openrouter",
-                "deepseek"
+                "deepseek",
             ]),
             model: z.string(),
             temperature: z.number().optional(),

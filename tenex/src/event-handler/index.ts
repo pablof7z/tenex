@@ -58,14 +58,14 @@ export class EventHandler {
             case EVENT_KINDS.GENERIC_REPLY:
                 await handleChatMessage(event, {
                     conversationManager: this.conversationManager,
-                    agentExecutor: this.agentExecutor
+                    agentExecutor: this.agentExecutor,
                 });
                 break;
 
             case EVENT_KINDS.NEW_CONVERSATION:
                 await handleNewConversation(event, {
                     conversationManager: this.conversationManager,
-                    agentExecutor: this.agentExecutor
+                    agentExecutor: this.agentExecutor,
                 });
                 break;
 

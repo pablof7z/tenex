@@ -1,5 +1,5 @@
-import { Plugin, type PluginExecutionContext } from 'multi-llm-ts';
-import type { Tool, ToolExecutionContext } from '@/tools/types';
+import { Plugin, type PluginExecutionContext } from "multi-llm-ts";
+import type { Tool, ToolExecutionContext } from "@/tools/types";
 
 /**
  * Adapter that converts TENEX Tool to multi-llm-ts Plugin
@@ -31,12 +31,12 @@ export class ToolPlugin extends Plugin {
 
     getParameters(): any {
         // Return parameters in the array format expected by multi-llm-ts
-        return this.tool.parameters.map(param => ({
+        return this.tool.parameters.map((param) => ({
             name: param.name,
             type: param.type,
             description: param.description,
             required: param.required,
-            ...(param.enum ? { enum: param.enum } : {})
+            ...(param.enum ? { enum: param.enum } : {}),
         }));
     }
 
@@ -45,9 +45,7 @@ export class ToolPlugin extends Plugin {
     }
 
     getRunningDescription(tool: string, args: Record<string, unknown>): string {
-        const argsStr = Object.keys(args).length > 0 
-            ? ` with ${JSON.stringify(args)}` 
-            : '';
+        const argsStr = Object.keys(args).length > 0 ? ` with ${JSON.stringify(args)}` : "";
         return `Running ${this.tool.name}${argsStr}`;
     }
 
@@ -55,10 +53,13 @@ export class ToolPlugin extends Plugin {
         return `Completed ${this.tool.name}`;
     }
 
-    async execute(context: PluginExecutionContext, parameters: Record<string, unknown>): Promise<unknown> {
+    async execute(
+        context: PluginExecutionContext,
+        parameters: Record<string, unknown>
+    ): Promise<unknown> {
         // Execute the tool with TENEX context
         const result = await this.tool.execute(parameters, this.tenexContext);
-        
+
         // Return the result directly - multi-llm-ts will handle it
         return result;
     }

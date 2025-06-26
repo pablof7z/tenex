@@ -8,7 +8,7 @@ export interface LLMCallLogEntry {
     requestId: string;
     duration?: number;
     durationMs?: number;
-    
+
     // Configuration context
     configKey: string;
     config: {
@@ -19,14 +19,14 @@ export interface LLMCallLogEntry {
         temperature?: number;
         maxTokens?: number;
     };
-    
+
     // Request context
     agentName?: string;
     context?: {
         configName?: string;
         agentName?: string;
     };
-    
+
     // Complete request data
     request: {
         messages: Array<{
@@ -42,7 +42,7 @@ export interface LLMCallLogEntry {
             length: number;
         };
     };
-    
+
     // Complete response data (if successful)
     response?: {
         content?: string;
@@ -60,17 +60,17 @@ export interface LLMCallLogEntry {
             cost?: number;
         };
     };
-    
+
     // Error data (if failed)
     error?: {
         message: string;
         stack?: string;
         type: string;
     };
-    
+
     // Status
     status: "success" | "error";
-    
+
     // Performance metrics
     performance: {
         startTime: number;
@@ -82,42 +82,45 @@ export interface LLMCallLogEntry {
 
 export class LLMCallLogger {
     private readonly logDir: string;
-    
+
     constructor(projectPath: string) {
         this.logDir = join(projectPath, ".tenex", "logs", "llms");
     }
-    
+
     private async ensureLogDirectory(): Promise<void> {
         try {
             await fs.mkdir(this.logDir, { recursive: true });
         } catch (error) {
             // Ignore if directory already exists
-            if (error instanceof Error && 'code' in error && error.code !== 'EEXIST') {
+            if (error instanceof Error && "code" in error && error.code !== "EEXIST") {
                 throw error;
             }
         }
     }
-    
+
     private getLogFileName(): string {
-        const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
         return `llm-calls-${date}.jsonl`;
     }
-    
+
     private getLogFilePath(): string {
         return join(this.logDir, this.getLogFileName());
     }
-    
+
     private generateRequestId(configKey: string): string {
         return `${configKey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
-    
-    private calculateTokensPerSecond(usage?: { completionTokens?: number }, durationMs?: number): number | undefined {
+
+    private calculateTokensPerSecond(
+        usage?: { completionTokens?: number },
+        durationMs?: number
+    ): number | undefined {
         if (!usage?.completionTokens || !durationMs || durationMs === 0) {
             return undefined;
         }
         return Math.round((usage.completionTokens / durationMs) * 1000);
     }
-    
+
     async logLLMCall(
         configKey: string,
         config: LLMConfig,
@@ -127,29 +130,34 @@ export class LLMCallLogger {
     ): Promise<void> {
         try {
             await this.ensureLogDirectory();
-            
+
             const requestId = this.generateRequestId(configKey);
             const durationMs = performance.endTime - performance.startTime;
             const timestamp = new Date().toISOString();
-            
+
             // Extract system prompt
-            const systemMessage = request.messages.find(m => m.role === 'system');
-            const systemPrompt = systemMessage ? {
-                content: systemMessage.content,
-                length: systemMessage.content.length
-            } : undefined;
-            
+            const systemMessage = request.messages.find((m) => m.role === "system");
+            const systemPrompt = systemMessage
+                ? {
+                      content: systemMessage.content,
+                      length: systemMessage.content.length,
+                  }
+                : undefined;
+
             // Calculate total request length
-            const totalRequestLength = request.messages.reduce((sum, msg) => sum + msg.content.length, 0);
-            
+            const totalRequestLength = request.messages.reduce(
+                (sum, msg) => sum + msg.content.length,
+                0
+            );
+
             // Build log entry
             const logEntry: LLMCallLogEntry = {
                 timestamp,
                 timestampMs: performance.startTime,
                 requestId,
-                duration: Math.round(durationMs / 1000 * 100) / 100, // seconds with 2 decimals
+                duration: Math.round((durationMs / 1000) * 100) / 100, // seconds with 2 decimals
                 durationMs,
-                
+
                 configKey,
                 config: {
                     provider: config.provider,
@@ -159,15 +167,15 @@ export class LLMCallLogger {
                     temperature: config.temperature,
                     maxTokens: config.maxTokens,
                 },
-                
+
                 agentName: request.options?.agentName,
                 context: {
                     configName: request.options?.configName,
                     agentName: request.options?.agentName,
                 },
-                
+
                 request: {
-                    messages: request.messages.map(msg => ({
+                    messages: request.messages.map((msg) => ({
                         role: msg.role,
                         content: msg.content,
                         contentLength: msg.content.length,
@@ -177,40 +185,46 @@ export class LLMCallLogger {
                     totalRequestLength,
                     systemPrompt,
                 },
-                
+
                 status: result.error ? "error" : "success",
-                
+
                 performance: {
                     startTime: performance.startTime,
                     endTime: performance.endTime,
                     durationMs,
                     tokensPerSecond: this.calculateTokensPerSecond(
-                        result.response?.usage ? { completionTokens: result.response.usage.completion_tokens } : undefined, 
+                        result.response?.usage
+                            ? { completionTokens: result.response.usage.completion_tokens }
+                            : undefined,
                         durationMs
                     ),
                 },
             };
-            
+
             // Add response data if successful
             if (result.response) {
                 logEntry.response = {
                     content: result.response.content,
                     contentLength: result.response.content?.length || 0,
-                    toolCalls: result.response.toolCalls?.map(tc => ({
+                    toolCalls: result.response.toolCalls?.map((tc) => ({
                         name: tc.name,
                         params: tc.params,
                         paramsLength: JSON.stringify(tc.params).length,
                     })),
                     toolCallCount: result.response.toolCalls?.length || 0,
-                    usage: result.response.usage ? {
-                        promptTokens: result.response.usage.prompt_tokens,
-                        completionTokens: result.response.usage.completion_tokens,
-                        totalTokens: (result.response.usage.prompt_tokens || 0) + (result.response.usage.completion_tokens || 0),
-                        cost: undefined // Cost calculation would need to be implemented based on model pricing
-                    } : undefined,
+                    usage: result.response.usage
+                        ? {
+                              promptTokens: result.response.usage.prompt_tokens,
+                              completionTokens: result.response.usage.completion_tokens,
+                              totalTokens:
+                                  (result.response.usage.prompt_tokens || 0) +
+                                  (result.response.usage.completion_tokens || 0),
+                              cost: undefined, // Cost calculation would need to be implemented based on model pricing
+                          }
+                        : undefined,
                 };
             }
-            
+
             // Add error data if failed
             if (result.error) {
                 logEntry.error = {
@@ -219,16 +233,15 @@ export class LLMCallLogger {
                     type: result.error.constructor.name,
                 };
             }
-            
+
             // Write to JSONL file
             const logLine = `${JSON.stringify(logEntry)}\n`;
             const logFilePath = this.getLogFilePath();
-            
-            await fs.appendFile(logFilePath, logLine, 'utf-8');
-            
+
+            await fs.appendFile(logFilePath, logLine, "utf-8");
         } catch (logError) {
             // Don't let logging errors break the main flow
-            console.error('[LLM Logger] Failed to log LLM call:', logError);
+            console.error("[LLM Logger] Failed to log LLM call:", logError);
         }
     }
 }

@@ -7,11 +7,11 @@ export function useSpeechToText() {
 
     const transcribe = async (audioBlob: Blob): Promise<string> => {
         setIsTranscribing(true);
-        
+
         try {
             // Check if we have speech configuration
             const speechConfig = config?.speech;
-            
+
             if (!speechConfig || !speechConfig.credentials.apiKey) {
                 throw new Error("OpenAI API key not configured");
             }
@@ -27,13 +27,16 @@ export function useSpeechToText() {
             formData.append("model", "whisper-1");
 
             // Make request to OpenAI Whisper API
-            const response = await fetch(speechConfig.credentials.baseUrl + "/audio/transcriptions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${speechConfig.credentials.apiKey}`,
-                },
-                body: formData,
-            });
+            const response = await fetch(
+                speechConfig.credentials.baseUrl + "/audio/transcriptions",
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${speechConfig.credentials.apiKey}`,
+                    },
+                    body: formData,
+                }
+            );
 
             if (!response.ok) {
                 throw new Error(`Transcription failed: ${response.statusText}`);
@@ -41,12 +44,12 @@ export function useSpeechToText() {
 
             const result = await response.json();
             setIsTranscribing(false);
-            
+
             return result.text || "";
         } catch (error) {
             console.error("Speech-to-text error:", error);
             setIsTranscribing(false);
-            
+
             // Fallback to a placeholder for development
             return "[Transcription placeholder - configure OpenAI API key for actual transcription]";
         }

@@ -129,16 +129,16 @@ function getPhaseContext(phase: Phase, conversation?: Conversation): string | nu
     if (!conversation?.phaseTransitions?.length) {
         return null;
     }
-    
+
     // Get the most recent transition into this phase
     const latestTransition = conversation.phaseTransitions
-        .filter(t => t.to === phase)
+        .filter((t) => t.to === phase)
         .sort((a, b) => b.timestamp - a.timestamp)[0];
-    
+
     if (latestTransition) {
         return `### Context from Previous Phase\n${latestTransition.message}`;
     }
-    
+
     return null;
 }
 

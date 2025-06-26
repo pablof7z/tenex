@@ -42,19 +42,19 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
     // Check if the most recent update has a Claude Code session
     const hasClaudeCodeSession = useMemo(() => {
         if (!sortedUpdates || sortedUpdates.length === 0) return false;
-        
+
         // Get the most recent update
         const mostRecentUpdate = sortedUpdates[sortedUpdates.length - 1];
         if (!mostRecentUpdate) return false;
-        
+
         // Check if it has a claude-session-id tag
-        const sessionIdTag = mostRecentUpdate.tags?.find(tag => tag[0] === "claude-session-id");
+        const sessionIdTag = mostRecentUpdate.tags?.find((tag) => tag[0] === "claude-session-id");
         return !!sessionIdTag?.[1];
     }, [sortedUpdates]);
 
     // Determine the input placeholder based on Claude Code session
-    const inputPlaceholder = hasClaudeCodeSession 
-        ? "Reply to Claude Code session..." 
+    const inputPlaceholder = hasClaudeCodeSession
+        ? "Reply to Claude Code session..."
         : "Add a comment...";
 
     const getTaskTitle = (task: NDKTask) => {
@@ -92,7 +92,7 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
                     </h2>
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
-                        {task.id}
+                            {task.id}
                             {formatAbsoluteTime(task.created_at!)}
                         </span>
                         <Badge variant="outline" className="text-xs">

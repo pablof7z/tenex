@@ -299,7 +299,9 @@ export class ProjectCreator {
         if (formData.selectedAgents && formData.selectedAgents.length > 0) {
             logger.info(
                 `Agents (${formData.selectedAgents.length}): ${chalk.white(
-                    formData.selectedAgents.map((a) => a.tagValue?.("title") || "Unnamed").join(", ")
+                    formData.selectedAgents
+                        .map((a) => a.tagValue?.("title") || "Unnamed")
+                        .join(", ")
                 )}`
             );
         }

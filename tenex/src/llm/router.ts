@@ -1,9 +1,12 @@
 import type { ChatModel } from "multi-llm-ts";
-import {
-    igniteEngine,
-    loadModels,
-} from "multi-llm-ts";
-import type { LLMConfig, CompletionRequest, CompletionResponse, LLMService, StreamEvent } from "./types";
+import { igniteEngine, loadModels } from "multi-llm-ts";
+import type {
+    LLMConfig,
+    CompletionRequest,
+    CompletionResponse,
+    LLMService,
+    StreamEvent,
+} from "./types";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services";
 import { getLLMLogger, initializeLLMLogger } from "./callLogger";
@@ -58,7 +61,7 @@ export class LLMRouter implements LLMService {
      */
     async complete(request: CompletionRequest): Promise<CompletionResponse> {
         const startTime = Date.now();
-        
+
         // Extract context from request options
         const context = {
             configName: request.options?.configName,
@@ -68,7 +71,7 @@ export class LLMRouter implements LLMService {
         // Get the configuration key
         const configKey = this.resolveConfigKey(context);
         const config = this.config.configs[configKey];
-        
+
         if (!config) {
             throw new Error(`No LLM configuration found for key: ${configKey}`);
         }
@@ -80,17 +83,17 @@ export class LLMRouter implements LLMService {
             model: config.model,
             agentName: context.agentName,
             messageCount: request.messages.length,
-            lastMessage: request.messages[request.messages.length-1],
-            requestId: `${configKey}-${Date.now()}`
+            lastMessage: request.messages[request.messages.length - 1],
+            requestId: `${configKey}-${Date.now()}`,
         });
 
         // Trace system prompt if present
-        const systemMessage = request.messages.find(m => m.role === 'system');
+        const systemMessage = request.messages.find((m) => m.role === "system");
         if (systemMessage) {
             logger.debug("[LLM] System prompt", {
                 configKey,
                 systemPrompt: systemMessage.content,
-                length: systemMessage.content.length
+                length: systemMessage.content.length,
             });
         }
 
@@ -101,8 +104,9 @@ export class LLMRouter implements LLMService {
                 index,
                 role: msg.role,
                 contentLength: msg.content.length,
-                contentPreview: msg.content.substring(0, 200) + (msg.content.length > 200 ? '...' : '')
-            }))
+                contentPreview:
+                    msg.content.substring(0, 200) + (msg.content.length > 200 ? "..." : ""),
+            })),
         });
 
         let response: CompletionResponse | undefined;
@@ -114,27 +118,28 @@ export class LLMRouter implements LLMService {
                 apiKey: config.apiKey,
                 baseURL: config.baseUrl,
             };
-            
+
             const llm = igniteEngine(config.provider, llmConfig);
-            
+
             // Register tools as plugins if provided
             if (request.tools && request.toolContext) {
                 for (const tool of request.tools) {
                     llm.addPlugin(new ToolPlugin(tool, request.toolContext));
                 }
             }
-            
+
             const models = await loadModels(config.provider, llmConfig);
-            
+
             if (!models || !models.chat || models.chat.length === 0) {
                 throw new Error(`No models available for provider ${config.provider}`);
             }
-            
+
             // Find the specific model - handle both string and ChatModel types
-            const model = models.chat.find(m => {
-                const modelId = typeof m === 'string' ? m : m.id;
-                return modelId === config.model;
-            }) || models.chat[0];
+            const model =
+                models.chat.find((m) => {
+                    const modelId = typeof m === "string" ? m : m.id;
+                    return modelId === config.model;
+                }) || models.chat[0];
             if (!model) {
                 throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
             }
@@ -142,22 +147,23 @@ export class LLMRouter implements LLMService {
             // Execute completion with new API
             response = await llm.complete(model, request.messages, {
                 usage: true,
-                caching: config.enableCaching ?? true
+                caching: config.enableCaching ?? true,
             });
-            
+
             // Extract context window information from model metadata
-            if (typeof model === 'object' && model !== null && 'meta' in model) {
+            if (typeof model === "object" && model !== null && "meta" in model) {
                 const modelMeta = (model as any).meta;
                 if (modelMeta) {
                     // Add context window information to response
                     (response as any).contextWindow = modelMeta.context_length;
-                    (response as any).maxCompletionTokens = modelMeta.top_provider?.max_completion_tokens;
+                    (response as any).maxCompletionTokens =
+                        modelMeta.top_provider?.max_completion_tokens;
                 }
             }
-            
+
             const endTime = Date.now();
             const duration = endTime - startTime;
-            
+
             // Trace response details
             logger.info("[LLM] Completion response received", {
                 configKey,
@@ -167,7 +173,7 @@ export class LLMRouter implements LLMService {
                 contentLength: response.content?.length || 0,
                 hasToolCalls: !!response.toolCalls?.length,
                 toolCallCount: response.toolCalls?.length || 0,
-                usage: response.usage
+                usage: response.usage,
             });
 
             // Trace response content
@@ -175,7 +181,7 @@ export class LLMRouter implements LLMService {
                 logger.debug("[LLM] Response content", {
                     configKey,
                     content: response.content,
-                    contentLength: response.content.length
+                    contentLength: response.content.length,
                 });
             }
 
@@ -183,10 +189,10 @@ export class LLMRouter implements LLMService {
             if (response.toolCalls?.length) {
                 logger.debug("[LLM] Tool calls", {
                     configKey,
-                    toolCalls: response.toolCalls.map(tc => ({
+                    toolCalls: response.toolCalls.map((tc) => ({
                         name: tc.name,
-                        paramsLength: JSON.stringify(tc.params).length
-                    }))
+                        paramsLength: JSON.stringify(tc.params).length,
+                    })),
                 });
             }
 
@@ -201,19 +207,18 @@ export class LLMRouter implements LLMService {
                     { startTime, endTime }
                 );
             }
-            
+
             return response;
-            
         } catch (caughtError) {
             const endTime = Date.now();
             const duration = endTime - startTime;
             error = caughtError instanceof Error ? caughtError : new Error(String(caughtError));
-            
+
             logger.error("[LLM] Completion failed", {
                 configKey,
                 duration: `${duration}ms`,
                 error: error.message,
-                stack: error.stack
+                stack: error.stack,
             });
 
             // Log to comprehensive JSONL logger
@@ -227,7 +232,7 @@ export class LLMRouter implements LLMService {
                     { startTime, endTime }
                 );
             }
-            
+
             throw error;
         }
     }
@@ -256,27 +261,28 @@ export class LLMRouter implements LLMService {
                 apiKey: config.apiKey,
                 baseURL: config.baseUrl,
             };
-            
+
             const llm = igniteEngine(config.provider, llmConfig);
-            
+
             // Register tools as plugins if provided
             if (request.tools && request.toolContext) {
                 for (const tool of request.tools) {
                     llm.addPlugin(new ToolPlugin(tool, request.toolContext));
                 }
             }
-            
+
             const models = await loadModels(config.provider, llmConfig);
-            
+
             if (!models || !models.chat || models.chat.length === 0) {
                 throw new Error(`No models available for provider ${config.provider}`);
             }
-            
+
             // Find the specific model
-            const model = models.chat.find(m => {
-                const modelId = typeof m === 'string' ? m : m.id;
-                return modelId === config.model;
-            }) || models.chat[0];
+            const model =
+                models.chat.find((m) => {
+                    const modelId = typeof m === "string" ? m : m.id;
+                    return modelId === config.model;
+                }) || models.chat[0];
             if (!model) {
                 throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
             }
@@ -284,37 +290,37 @@ export class LLMRouter implements LLMService {
             // Use generate() for streaming
             const stream = llm.generate(model, request.messages, {
                 usage: true,
-                caching: config.enableCaching ?? true
+                caching: config.enableCaching ?? true,
             });
 
-            let fullContent = '';
+            let fullContent = "";
             let lastResponse: CompletionResponse | undefined;
 
             for await (const chunk of stream) {
-                if (chunk.type === 'content' || chunk.type === 'reasoning') {
+                if (chunk.type === "content" || chunk.type === "reasoning") {
                     fullContent += chunk.text;
-                    yield { type: 'content', content: chunk.text };
-                } else if (chunk.type === 'tool') {
-                    if (chunk.status === 'calling' && chunk.call?.params) {
-                        yield { 
-                            type: 'tool_start', 
-                            tool: chunk.name, 
-                            args: chunk.call.params 
+                    yield { type: "content", content: chunk.text };
+                } else if (chunk.type === "tool") {
+                    if (chunk.status === "calling" && chunk.call?.params) {
+                        yield {
+                            type: "tool_start",
+                            tool: chunk.name,
+                            args: chunk.call.params,
                         };
                     } else if (chunk.done && chunk.call?.result !== undefined) {
-                        yield { 
-                            type: 'tool_complete', 
-                            tool: chunk.name, 
-                            result: chunk.call.result 
+                        yield {
+                            type: "tool_complete",
+                            tool: chunk.name,
+                            result: chunk.call.result,
                         };
                     }
-                } else if (chunk.type === 'usage') {
+                } else if (chunk.type === "usage") {
                     // Build the final response
                     lastResponse = {
-                        type: 'text',
+                        type: "text",
                         content: fullContent,
                         usage: chunk.usage,
-                        toolCalls: []
+                        toolCalls: [],
                     } as CompletionResponse;
                 }
             }
@@ -343,19 +349,18 @@ export class LLMRouter implements LLMService {
                     );
                 }
 
-                yield { type: 'done', response: lastResponse };
+                yield { type: "done", response: lastResponse };
             }
-            
         } catch (error) {
             const endTime = Date.now();
             const duration = endTime - startTime;
             const errorObj = error instanceof Error ? error : new Error(String(error));
-            
+
             logger.error("[LLM] Streaming failed", {
                 configKey,
                 duration: `${duration}ms`,
                 error: errorObj.message,
-                stack: errorObj.stack
+                stack: errorObj.stack,
             });
 
             // Log to comprehensive JSONL logger
@@ -369,8 +374,8 @@ export class LLMRouter implements LLMService {
                     { startTime, endTime }
                 );
             }
-            
-            yield { type: 'error', error: errorObj.message };
+
+            yield { type: "error", error: errorObj.message };
         }
     }
 }
@@ -382,18 +387,18 @@ export async function loadLLMRouter(projectPath: string): Promise<LLMRouter> {
     try {
         // Initialize comprehensive LLM logger
         initializeLLMLogger(projectPath);
-        
+
         // Use configService to load merged global and project-specific configuration
         const { llms: tenexLLMs } = await configService.loadConfig(projectPath);
 
         // Transform TenexLLMs structure to LLMRouterConfig
         const configs: Record<string, LLMConfig> = {};
-        
+
         // For each configuration, merge in the credentials
         for (const [name, config] of Object.entries(tenexLLMs.configurations)) {
             const provider = config.provider;
             const credentials = tenexLLMs.credentials?.[provider] || {};
-            
+
             configs[name] = {
                 ...config,
                 apiKey: credentials.apiKey,
@@ -416,10 +421,7 @@ export async function loadLLMRouter(projectPath: string): Promise<LLMRouter> {
 /**
  * Create an agent-aware LLM service that automatically routes based on agent
  */
-export function createAgentAwareLLMService(
-    router: LLMRouter,
-    agentName: string
-): LLMService {
+export function createAgentAwareLLMService(router: LLMRouter, agentName: string): LLMService {
     return {
         complete: async (request: CompletionRequest) => {
             // Inject agent name into options

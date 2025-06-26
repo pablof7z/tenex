@@ -118,7 +118,7 @@ export async function runDebugChat(
                     projectRepository: project.tagValue("repo") || undefined,
                 })
                 .add("project-inventory-context", {
-                    phase: "chat" as Phase
+                    phase: "chat" as Phase,
                 })
                 .build();
 
@@ -216,7 +216,6 @@ export async function runDebugChat(
             }
 
             if (input.toLowerCase() === "prompt") {
-
                 const systemPrompt = new PromptBuilder()
                     .add("agent-system-prompt", {
                         agent,
@@ -225,7 +224,7 @@ export async function runDebugChat(
                         projectRepository: project.tagValue("repo") || undefined,
                     })
                     .add("project-inventory-context", {
-                        phase: "chat" as Phase
+                        phase: "chat" as Phase,
                     })
                     .build();
 

@@ -57,7 +57,9 @@ export class ProjectManager implements IProjectManager {
                 // Create project directory and initialize git
                 await fs.mkdir(projectPath, { recursive: true });
                 await initializeGitRepository(projectPath);
-                logger.info("Created new project directory and initialized git repository", { projectPath });
+                logger.info("Created new project directory and initialized git repository", {
+                    projectPath,
+                });
             }
 
             // Ensure .tenex is in .gitignore
@@ -159,7 +161,7 @@ export class ProjectManager implements IProjectManager {
 
             // Initialize ProjectContext
             setProjectContext(project, loadedAgents);
-            
+
             // Initialize tool logger for tracing tool executions
             initializeToolLogger(projectPath);
         } catch (error) {

@@ -72,9 +72,9 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
             // Validate the loaded data with Zod
             const parseResult = SerializedConversationSchema.safeParse(rawData);
             if (!parseResult.success) {
-                logger.error("Invalid conversation data", { 
+                logger.error("Invalid conversation data", {
                     id: conversationId,
-                    errors: parseResult.error.errors
+                    errors: parseResult.error.errors,
                 });
                 return null;
             }
@@ -87,14 +87,16 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
                 id: data.id,
                 title: data.title,
                 phase: data.phase,
-                history: data.history.map((serializedEvent: string) => {
-                    try {
-                        return NDKEvent.deserialize(ndk, serializedEvent);
-                    } catch (error) {
-                        logger.error("Failed to deserialize event", { error, serializedEvent });
-                        return null;
-                    }
-                }).filter((event): event is NDKEvent => event !== null),
+                history: data.history
+                    .map((serializedEvent: string) => {
+                        try {
+                            return NDKEvent.deserialize(ndk, serializedEvent);
+                        } catch (error) {
+                            logger.error("Failed to deserialize event", { error, serializedEvent });
+                            return null;
+                        }
+                    })
+                    .filter((event): event is NDKEvent => event !== null),
                 phaseStartedAt: data.phaseStartedAt,
                 metadata: data.metadata,
                 phaseTransitions: data.phaseTransitions,
@@ -254,7 +256,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
             const parseResult = MetadataFileSchema.safeParse(rawData);
             if (!parseResult.success) {
                 logger.error("Invalid metadata file structure", {
-                    errors: parseResult.error.errors
+                    errors: parseResult.error.errors,
                 });
                 return { conversations: [] };
             }

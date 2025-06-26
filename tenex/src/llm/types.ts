@@ -5,8 +5,8 @@
 
 import { NDKAgent } from "@/events";
 import { NDKKind, NDKProject, NDKTask } from "@nostr-dev-kit/ndk";
-import type { 
-    Message as LlmMessage, 
+import type {
+    Message as LlmMessage,
     LlmCompletionOpts,
     LlmResponse,
     LlmTool,
@@ -38,12 +38,12 @@ export interface CompletionRequest {
 }
 
 // Streaming types
-export type StreamEvent = 
-    | { type: 'content'; content: string }
-    | { type: 'tool_start'; tool: string; args: Record<string, unknown> }
-    | { type: 'tool_complete'; tool: string; result: unknown }
-    | { type: 'error'; error: string }
-    | { type: 'done'; response: CompletionResponse };
+export type StreamEvent =
+    | { type: "content"; content: string }
+    | { type: "tool_start"; tool: string; args: Record<string, unknown> }
+    | { type: "tool_complete"; tool: string; result: unknown }
+    | { type: "error"; error: string }
+    | { type: "done"; response: CompletionResponse };
 
 /**
  * Pure LLM service interface - single responsibility

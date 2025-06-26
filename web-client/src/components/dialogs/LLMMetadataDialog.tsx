@@ -194,22 +194,28 @@ export function LLMMetadataDialog({ open, onOpenChange, metadata }: LLMMetadataD
                                     <Hash className="w-4 h-4" />
                                     Token Usage
                                 </h3>
-                                
+
                                 {/* Context Window Progress Bar */}
                                 {metadata["llm-total-tokens"] && metadata["llm-context-window"] && (
                                     <div className="ml-6">
                                         <ContextWindowProgressBar
-                                            totalTokens={Number.parseInt(metadata["llm-total-tokens"])}
-                                            contextWindow={Number.parseInt(metadata["llm-context-window"])}
+                                            totalTokens={Number.parseInt(
+                                                metadata["llm-total-tokens"]
+                                            )}
+                                            contextWindow={Number.parseInt(
+                                                metadata["llm-context-window"]
+                                            )}
                                             maxCompletionTokens={
-                                                metadata["llm-max-completion-tokens"] 
-                                                    ? Number.parseInt(metadata["llm-max-completion-tokens"])
+                                                metadata["llm-max-completion-tokens"]
+                                                    ? Number.parseInt(
+                                                          metadata["llm-max-completion-tokens"]
+                                                      )
                                                     : undefined
                                             }
                                         />
                                     </div>
                                 )}
-                                
+
                                 {/* Token Details */}
                                 <div className="grid grid-cols-2 gap-4 ml-6">
                                     {metadata["llm-prompt-tokens"] && (

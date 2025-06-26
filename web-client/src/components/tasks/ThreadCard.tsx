@@ -35,7 +35,6 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
             .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
     }, [replies, thread.id]);
 
-
     // Get latest reply
     const latestReply = threadReplies[0];
     const latestActivity = latestReply || thread;

@@ -17,8 +17,8 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
         }
 
         // Filter out current agent if specified
-        const availableForHandoff = currentAgentPubkey 
-            ? agents.filter(agent => agent.pubkey !== currentAgentPubkey)
+        const availableForHandoff = currentAgentPubkey
+            ? agents.filter((agent) => agent.pubkey !== currentAgentPubkey)
             : agents;
 
         if (availableForHandoff.length === 0) {
@@ -26,20 +26,20 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
         }
 
         // Find current agent to determine if PM
-        const currentAgent = currentAgentPubkey 
-            ? agents.find(agent => agent.pubkey === currentAgentPubkey)
+        const currentAgent = currentAgentPubkey
+            ? agents.find((agent) => agent.pubkey === currentAgentPubkey)
             : null;
         const isCurrentAgentPM = currentAgent?.isPMAgent || false;
 
         const agentList = availableForHandoff
-            .map(agent => {
+            .map((agent) => {
                 const pmIndicator = agent.isPMAgent ? " (Project Manager)" : "";
                 return `- **${agent.name}**${pmIndicator} (${agent.slug})\n  Role: ${agent.role}\n`;
             })
             .join("\n\n");
 
         // Provide different guidance based on agent type
-        const guidance = isCurrentAgentPM 
+        const guidance = isCurrentAgentPM
             ? `**As Project Manager**: When tasks fall within a specialist's area of expertise, delegate to them using the handoff tool. Let specialists handle implementation details within their domain.`
             : "**As a Specialist**: Focus on your area of expertise. If you receive feedback or tasks that fall outside your specialization, defer to other specialists or the PM agent rather than attempting to handle them yourself.";
 

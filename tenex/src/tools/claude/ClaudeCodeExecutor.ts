@@ -62,9 +62,11 @@ export class ClaudeCodeExecutor {
 
             logger.info("🚀 Spawning Claude Code process", {
                 cwd: this.options.projectPath,
-                prompt: this.options.prompt.substring(0, 100) + (this.options.prompt.length > 100 ? "..." : ""),
+                prompt:
+                    this.options.prompt.substring(0, 100) +
+                    (this.options.prompt.length > 100 ? "..." : ""),
                 timeout: this.options.timeout || "none",
-                model: "sonnet"
+                model: "sonnet",
             });
 
             this.process = spawn("claude", args, {
@@ -115,7 +117,7 @@ export class ClaudeCodeExecutor {
                     sessionId: result.sessionId,
                     totalCost: result.totalCost,
                     messageCount: result.messageCount,
-                    assistantMessagesCount: result.assistantMessages.length
+                    assistantMessagesCount: result.assistantMessages.length,
                 });
 
                 if (code !== 0) {

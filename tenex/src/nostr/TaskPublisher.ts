@@ -50,7 +50,7 @@ export class TaskPublisher {
             task.tags.push([EXECUTION_TAGS.BRANCH, options.branch]);
         }
         task.tags.push([EXECUTION_TAGS.EXECUTOR, "claude-code"]);
-        
+
         // Add the 'e' tag for the conversation root
         if (options.conversationRootEventId) {
             task.tags.push(["e", options.conversationRootEventId, "", "root"]);
@@ -97,7 +97,7 @@ export class TaskPublisher {
         // Handle Claude message if provided
         if (update.claudeMessage) {
             const message = update.claudeMessage;
-            
+
             // Build LLM metadata from Claude message
             if (message.message?.model && message.message?.usage) {
                 const llmMetadata: LLMMetadata = {
@@ -105,22 +105,35 @@ export class TaskPublisher {
                     cost: message.cost_usd || 0,
                     promptTokens: message.message.usage.input_tokens,
                     completionTokens: message.message.usage.output_tokens,
-                    totalTokens: message.message.usage.input_tokens + message.message.usage.output_tokens,
+                    totalTokens:
+                        message.message.usage.input_tokens + message.message.usage.output_tokens,
                 };
 
                 // Add LLM metadata tags
                 updateEvent.tags.push([LLM_TAGS.MODEL, llmMetadata.model]);
                 updateEvent.tags.push([LLM_TAGS.COST_USD, llmMetadata.cost.toString()]);
-                updateEvent.tags.push([LLM_TAGS.PROMPT_TOKENS, llmMetadata.promptTokens.toString()]);
-                updateEvent.tags.push([LLM_TAGS.COMPLETION_TOKENS, llmMetadata.completionTokens.toString()]);
+                updateEvent.tags.push([
+                    LLM_TAGS.PROMPT_TOKENS,
+                    llmMetadata.promptTokens.toString(),
+                ]);
+                updateEvent.tags.push([
+                    LLM_TAGS.COMPLETION_TOKENS,
+                    llmMetadata.completionTokens.toString(),
+                ]);
                 updateEvent.tags.push([LLM_TAGS.TOTAL_TOKENS, llmMetadata.totalTokens.toString()]);
-                
+
                 // Add context window metadata if available
                 if (llmMetadata.contextWindow) {
-                    updateEvent.tags.push([LLM_TAGS.CONTEXT_WINDOW, llmMetadata.contextWindow.toString()]);
+                    updateEvent.tags.push([
+                        LLM_TAGS.CONTEXT_WINDOW,
+                        llmMetadata.contextWindow.toString(),
+                    ]);
                 }
                 if (llmMetadata.maxCompletionTokens) {
-                    updateEvent.tags.push([LLM_TAGS.MAX_COMPLETION_TOKENS, llmMetadata.maxCompletionTokens.toString()]);
+                    updateEvent.tags.push([
+                        LLM_TAGS.MAX_COMPLETION_TOKENS,
+                        llmMetadata.maxCompletionTokens.toString(),
+                    ]);
                 }
             }
 
@@ -139,7 +152,8 @@ export class TaskPublisher {
             }
         } else {
             // Set content from update message
-            updateEvent.content = update.message || `Task update: ${update.status || "in-progress"}`;
+            updateEvent.content =
+                update.message || `Task update: ${update.status || "in-progress"}`;
         }
 
         // Sign and publish
@@ -216,23 +230,23 @@ export class TaskPublisher {
         result: ClaudeCodeResult;
     }> {
         let task: NDKTask | undefined;
-        
+
         try {
             // Create NDKTask
             task = await this.createTask({
                 title: options.title,
                 prompt: options.prompt,
                 branch: options.branch,
-                conversationRootEventId: options.conversationRootEventId
+                conversationRootEventId: options.conversationRootEventId,
             });
-            
+
             // Update task status to in-progress
             await this.updateTask(task, {
                 status: "in-progress",
                 progress: 0,
-                message: "Starting Claude Code execution..."
+                message: "Starting Claude Code execution...",
             });
-            
+
             // Create ClaudeCodeExecutor with message callbacks
             const executor = new ClaudeCodeExecutor({
                 prompt: options.prompt,
@@ -244,38 +258,32 @@ export class TaskPublisher {
                     }
                 },
                 onError: (error) => {
-                    logger.error("Claude Code execution error", { 
+                    logger.error("Claude Code execution error", {
                         error: error.message,
-                        taskId: task?.id 
+                        taskId: task?.id,
                     });
-                }
+                },
             });
-            
+
             // Execute and get result
             const result = await executor.execute();
-            
+
             // Complete the task
-            await this.completeTask(
-                task,
-                result.success,
-                {
-                    sessionId: result.sessionId,
-                    totalCost: result.totalCost,
-                    messageCount: result.messageCount,
-                    duration: result.duration,
-                    error: result.error
-                }
-            );
-            
+            await this.completeTask(task, result.success, {
+                sessionId: result.sessionId,
+                totalCost: result.totalCost,
+                messageCount: result.messageCount,
+                duration: result.duration,
+                error: result.error,
+            });
+
             return { task, result };
         } catch (error) {
             // If task was created, mark it as failed
             if (task) {
-                await this.completeTask(
-                    task,
-                    false,
-                    { error: error instanceof Error ? error.message : 'Unknown error' }
-                );
+                await this.completeTask(task, false, {
+                    error: error instanceof Error ? error.message : "Unknown error",
+                });
             }
             throw error;
         }

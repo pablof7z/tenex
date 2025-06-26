@@ -9,10 +9,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { getModelsForProvider, getAllModels } from "./models";
 import type { ModelsList } from "multi-llm-ts";
-import {
-    Message,
-    igniteEngine,
-} from "multi-llm-ts";
+import { Message, igniteEngine } from "multi-llm-ts";
 import { LLM_DEFAULTS } from "./constants";
 
 type LLMConfigWithName = LLMConfig & {
@@ -121,8 +118,14 @@ export class LLMConfigEditor {
                               { name: "Test existing configuration", value: "test" },
                               { name: "Edit existing configuration", value: "edit" },
                               { name: "Remove configuration", value: "remove" },
-                              { name: `Set agent's default [${currentAgentDefault}]`, value: "default-agents" },
-                              { name: `Set analyze tool's default [${currentAnalyzeDefault}]`, value: "default-analyze" },
+                              {
+                                  name: `Set agent's default [${currentAgentDefault}]`,
+                                  value: "default-agents",
+                              },
+                              {
+                                  name: `Set analyze tool's default [${currentAnalyzeDefault}]`,
+                                  value: "default-analyze",
+                              },
                           ]
                         : []),
                     { name: "Exit", value: "exit" },
@@ -190,8 +193,14 @@ export class LLMConfigEditor {
                     ? [
                           { name: "Edit existing configuration", value: "edit" },
                           { name: "Remove configuration", value: "remove" },
-                          { name: `Agent's default: [${currentAgentDefault}]`, value: "default-agents" },
-                          { name: `Analyze tool's default: [${currentAnalyzeDefault}]`, value: "default-analyze" },
+                          {
+                              name: `Agent's default: [${currentAgentDefault}]`,
+                              value: "default-agents",
+                          },
+                          {
+                              name: `Analyze tool's default: [${currentAnalyzeDefault}]`,
+                              value: "default-analyze",
+                          },
                       ]
                     : []),
             ];
@@ -323,7 +332,7 @@ export class LLMConfigEditor {
 
         // Fetch models dynamically based on provider
         logger.info(chalk.cyan(`🔍 Fetching available ${provider} models...`));
-        
+
         try {
             const modelsList = await getModelsForProvider(provider, existingApiKey);
             if (!modelsList || modelsList.chat.length === 0) {
@@ -333,10 +342,10 @@ export class LLMConfigEditor {
                 }
                 return;
             }
-            
-            availableModels = modelsList.chat.map((m: any) => typeof m === 'string' ? m : m.id);
+
+            availableModels = modelsList.chat.map((m: any) => (typeof m === "string" ? m : m.id));
             logger.info(chalk.green(`✅ Found ${availableModels.length} ${provider} models`));
-            
+
             if (provider === "openrouter") {
                 const selection = await selectOpenRouterModelWithPricing(availableModels);
                 model = selection.model;
@@ -478,7 +487,7 @@ export class LLMConfigEditor {
         // Test the configuration
         logger.info(chalk.cyan(`🧪 Testing ${configName} configuration...`));
         const testSuccessful = await this.testLLMConfig(newConfig);
-        
+
         if (testSuccessful) {
             logger.info(chalk.green("✅ LLM configuration test successful!"));
         } else {
@@ -513,7 +522,6 @@ export class LLMConfigEditor {
             }
             llmsConfig.defaults[LLM_DEFAULTS.AGENTS] = configName;
         }
-
 
         // If this is global config and a new API key was entered, save it to credentials
         if (this.isGlobal && apiKey && provider !== "ollama") {
@@ -582,20 +590,29 @@ export class LLMConfigEditor {
 
                 // Fetch models dynamically based on provider
                 logger.info(chalk.cyan(`🔍 Fetching available ${config.provider} models...`));
-                
+
                 try {
-                    const modelsList = await getModelsForProvider(config.provider as LLMProvider, existingApiKey);
+                    const modelsList = await getModelsForProvider(
+                        config.provider as LLMProvider,
+                        existingApiKey
+                    );
                     if (!modelsList || modelsList.chat.length === 0) {
                         logger.error(chalk.red(`❌ No models available for ${config.provider}`));
                         if (config.provider === "ollama") {
-                            logger.info(chalk.yellow("💡 Make sure Ollama is running with: ollama serve"));
+                            logger.info(
+                                chalk.yellow("💡 Make sure Ollama is running with: ollama serve")
+                            );
                         }
                         return;
                     }
-                    
-                    availableModels = modelsList.chat.map((m: any) => typeof m === 'string' ? m : m.id);
-                    logger.info(chalk.green(`✅ Found ${availableModels.length} ${config.provider} models`));
-                    
+
+                    availableModels = modelsList.chat.map((m: any) =>
+                        typeof m === "string" ? m : m.id
+                    );
+                    logger.info(
+                        chalk.green(`✅ Found ${availableModels.length} ${config.provider} models`)
+                    );
+
                     if (config.provider === "openrouter") {
                         const selection = await selectOpenRouterModelWithPricing(availableModels);
                         newModel = selection.model;
@@ -604,7 +621,9 @@ export class LLMConfigEditor {
                         newModel = await selectModelWithSearch(config.provider, availableModels);
                     }
                 } catch (error) {
-                    logger.error(chalk.red(`❌ Failed to fetch ${config.provider} models: ${error}`));
+                    logger.error(
+                        chalk.red(`❌ Failed to fetch ${config.provider} models: ${error}`)
+                    );
                     return;
                 }
 
@@ -715,7 +734,10 @@ export class LLMConfigEditor {
         }
     }
 
-    private async setDefaultConfiguration(llmsConfig: TenexLLMs, defaultType: string): Promise<void> {
+    private async setDefaultConfiguration(
+        llmsConfig: TenexLLMs,
+        defaultType: string
+    ): Promise<void> {
         const configs = this.getConfigList(llmsConfig);
         const currentDefault = llmsConfig.defaults?.[defaultType] || "none";
         const typeLabel = defaultType === LLM_DEFAULTS.AGENTS ? "agent" : "analyze tool";
@@ -743,7 +765,6 @@ export class LLMConfigEditor {
         logger.info(chalk.green(`\n✅ Configuration "${configName}" set as ${typeLabel} default!`));
     }
 
-
     private async testExistingConfiguration(llmsConfig: TenexLLMs): Promise<void> {
         const configs = this.getConfigList(llmsConfig);
 
@@ -763,7 +784,7 @@ export class LLMConfigEditor {
         }
         logger.info(chalk.cyan(`🧪 Testing ${configName} configuration...`));
         const success = await this.testLLMConfig(config as LLMConfig);
-        
+
         if (success) {
             logger.info(chalk.green("✅ LLM configuration test successful!"));
         } else {
@@ -780,27 +801,34 @@ export class LLMConfigEditor {
                 apiKey: config.apiKey,
                 baseURL: config.baseUrl,
             };
-            
+
             // Use the proper multi-llm-ts v4.0 API
             const llm = igniteEngine(config.provider, llmConfig);
-            const models = await getModelsForProvider(config.provider as LLMProvider, config.apiKey);
-            
+            const models = await getModelsForProvider(
+                config.provider as LLMProvider,
+                config.apiKey
+            );
+
             if (!models || !models.chat || models.chat.length === 0) {
                 throw new Error(`No models available for provider ${config.provider}`);
             }
-            
+
             // Find the specific model - handle both string and ChatModel types
-            const model = models.chat.find(m => {
-                const modelId = typeof m === 'string' ? m : m.id;
-                return modelId === config.model;
-            }) || models.chat[0];
+            const model =
+                models.chat.find((m) => {
+                    const modelId = typeof m === "string" ? m : m.id;
+                    return modelId === config.model;
+                }) || models.chat[0];
             if (!model) {
                 throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
             }
-            
-            const testMessage = new Message("user", "Say 'Configuration test successful!' and nothing else.");
+
+            const testMessage = new Message(
+                "user",
+                "Say 'Configuration test successful!' and nothing else."
+            );
             const response = await llm.complete(model, [testMessage]);
-            
+
             return (response.content || "").toLowerCase().includes("configuration test successful");
         } catch (error) {
             logger.error("LLM test failed:", error);

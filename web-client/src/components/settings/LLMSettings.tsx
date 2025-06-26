@@ -339,9 +339,7 @@ export function LLMSettings() {
                             onValueChange={(value: LLMProvider) => setSelectedProvider(value)}
                         >
                             <SelectTrigger className="w-full">
-                                <SelectValue>
-                                    {PROVIDER_NAMES[selectedProvider]}
-                                </SelectValue>
+                                <SelectValue>{PROVIDER_NAMES[selectedProvider]}</SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 {Object.entries(PROVIDER_NAMES).map(([provider, name]) => (

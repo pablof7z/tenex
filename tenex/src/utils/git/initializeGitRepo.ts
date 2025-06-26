@@ -27,11 +27,11 @@ export async function initializeGitRepository(projectPath: string): Promise<void
         const { stdout, stderr } = await execAsync("git init", {
             cwd: projectPath,
         });
-        
+
         if (stderr) {
             logger.warn("Git init warning", { stderr });
         }
-        
+
         logger.info("Initialized git repository", { projectPath, stdout });
     } catch (error) {
         logger.error("Failed to initialize git repository", { error, projectPath });

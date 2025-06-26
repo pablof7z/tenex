@@ -42,9 +42,7 @@ export class TaskExecutor {
         try {
             // 1. Create git branch if requested
             if (options.createBranch !== false) {
-                const branchResult = createExecutionBranch(
-                    options.prompt.substring(0, 30)
-                );
+                const branchResult = createExecutionBranch(options.prompt.substring(0, 30));
                 if (branchResult.created) {
                     branch = branchResult.branchName;
                 }
