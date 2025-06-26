@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { Command } from "commander";
-import { ScenarioRegistry, BaseScenario, ScenarioResult } from "./index";
+import { ScenarioRegistry, type BaseScenario, type ScenarioResult } from "./index";
 
 const program = new Command();
 
@@ -27,7 +27,7 @@ program
     .action(async (scenarioName, options) => {
         try {
             const apiKey =
-                options.apiKey || process.env["OPENAI_API_KEY"] || process.env["ANTHROPIC_API_KEY"];
+                options.apiKey || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
 
             if (!apiKey) {
                 console.error(

@@ -1,4 +1,4 @@
-import { Logger } from "./Logger";
+import type { Logger } from "./Logger";
 
 /**
  * Options for retry behavior.
@@ -158,7 +158,7 @@ export async function retry<T>(fn: () => Promise<T>, options: RetryOptions = {})
  * ```
  */
 export function WithRetry(options: RetryOptions = {}) {
-    return function (_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+    return (_target: any, _propertyKey: string, descriptor: PropertyDescriptor) => {
         const originalMethod = descriptor.value;
 
         descriptor.value = async function (...args: any[]) {

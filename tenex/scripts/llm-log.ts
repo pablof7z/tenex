@@ -110,7 +110,7 @@ function formatContentWithEnhancements(content: string, isSystemPrompt = false):
     }
 
     // Handle <tool_use> blocks
-    content = content.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (match, jsonContent) => {
+    content = content.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (_match, jsonContent) => {
         try {
             const parsed = JSON.parse(jsonContent.trim());
             const formatted = JSON.stringify(parsed, null, 2);
@@ -126,7 +126,7 @@ function formatContentWithEnhancements(content: string, isSystemPrompt = false):
 }
 
 // Get message summary (multi-line allowed)
-function getMessageSummary(msg: any, maxLines = 5): string {
+function getMessageSummary(msg: { role: string; content: string; contentLength: number }, maxLines = 5): string {
     const lines = msg.content.trim().split("\n");
     if (lines.length <= maxLines) {
         return msg.content.trim();
@@ -175,7 +175,9 @@ function formatEntry(
             lines.push("");
             lines.push(chalk.bold("Last Message:"));
             const userSummary = getMessageSummary(lastUserMsg);
-            userSummary.split("\n").forEach((line) => lines.push(`  ${chalk.green(line)}`));
+            for (const line of userSummary.split("\n")) {
+                lines.push(`  ${chalk.green(line)}`);
+            }
         }
 
         if (entry.response) {
@@ -183,9 +185,9 @@ function formatEntry(
                 lines.push("");
                 lines.push(chalk.bold("Response:"));
                 const responseSummary = getMessageSummary({ content: entry.response.content });
-                responseSummary
-                    .split("\n")
-                    .forEach((line) => lines.push(`  ${chalk.magenta(line)}`));
+                for (const line of responseSummary.split("\n")) {
+                    lines.push(`  ${chalk.magenta(line)}`);
+                }
             }
             if (entry.response.toolCalls && entry.response.toolCalls.length > 0) {
                 const toolNames = entry.response.toolCalls.map((tc) => tc.name).join(", ");
@@ -216,7 +218,9 @@ function formatExpandedEntry(entry: LLMCallLogEntry, verbosity: VerbosityLevel):
             `${chalk.bold("System Prompt:")} ${chalk.gray(`(${formatBytes(entry.request.systemPrompt.length)})`)}`
         );
         const formatted = formatContentWithEnhancements(entry.request.systemPrompt.content, true);
-        formatted.split("\n").forEach((line) => lines.push(`  ${line}`));
+        for (const line of formatted.split("\n")) {
+            lines.push(`  ${line}`);
+        }
         lines.push("");
     } else if (entry.request.systemPrompt) {
         lines.push(
@@ -227,7 +231,7 @@ function formatExpandedEntry(entry: LLMCallLogEntry, verbosity: VerbosityLevel):
 
     if (verbosity >= VerbosityLevel.MESSAGES) {
         lines.push(chalk.bold("Messages:"));
-        entry.request.messages.forEach((msg, idx) => {
+        for (const [idx, msg] of entry.request.messages.entries()) {
             const roleColor =
                 msg.role === "system"
                     ? chalk.blue
@@ -243,12 +247,14 @@ function formatExpandedEntry(entry: LLMCallLogEntry, verbosity: VerbosityLevel):
 
             if (verbosity >= VerbosityLevel.FULL || msg.role !== "system") {
                 const formatted = formatContentWithEnhancements(msg.content, msg.role === "system");
-                formatted.split("\n").forEach((line) => lines.push(`    ${line}`));
+                for (const line of formatted.split("\n")) {
+                    lines.push(`    ${line}`);
+                }
             } else {
                 lines.push(`    ${chalk.gray("[content hidden - press → to expand]")}`);
             }
             lines.push("");
-        });
+        }
     } else {
         lines.push(
             `${chalk.bold("Messages:")} ${entry.request.messageCount} ${chalk.gray("[press → to expand]")}`
@@ -264,7 +270,9 @@ function formatExpandedEntry(entry: LLMCallLogEntry, verbosity: VerbosityLevel):
             );
             if (verbosity >= VerbosityLevel.MESSAGES) {
                 const formatted = formatContentWithEnhancements(entry.response.content);
-                formatted.split("\n").forEach((line) => lines.push(`  ${line}`));
+                for (const line of formatted.split("\n")) {
+                    lines.push(`  ${line}`);
+                }
             } else {
                 lines.push(
                     `  ${chalk.magenta(getMessageSummary({ content: entry.response.content }))}`
@@ -281,9 +289,9 @@ function performSearch(entries: LLMCallLogEntry[], query: string): SearchResult[
     const results: SearchResult[] = [];
     const lowerQuery = query.toLowerCase();
 
-    entries.forEach((entry, entryIndex) => {
+    for (const [entryIndex, entry] of entries.entries()) {
         // Search in request messages
-        entry.request.messages.forEach((msg, msgIndex) => {
+        for (const [msgIndex, msg] of entry.request.messages.entries()) {
             const content = msg.content.toLowerCase();
             const index = content.indexOf(lowerQuery);
             if (index !== -1) {
@@ -302,7 +310,7 @@ function performSearch(entries: LLMCallLogEntry[], query: string): SearchResult[
                             : index - start + lowerQuery.length,
                 });
             }
-        });
+        }
 
         // Search in response content
         if (entry.response?.content) {
@@ -325,7 +333,7 @@ function performSearch(entries: LLMCallLogEntry[], query: string): SearchResult[
                 });
             }
         }
-    });
+    }
 
     return results;
 }
@@ -358,7 +366,7 @@ function displaySearchResults(state: NavigationState) {
             console.log("");
         }
 
-        state.searchResults.slice(startIndex, endIndex).forEach((result, relativeIndex) => {
+        for (const [relativeIndex, result] of state.searchResults.slice(startIndex, endIndex).entries()) {
             const index = startIndex + relativeIndex;
             const isSelected = index === state.currentSearchResult;
             const entry = state.entries[result.entryIndex];
@@ -390,7 +398,7 @@ function displaySearchResults(state: NavigationState) {
                 console.log(`  ${formattedPreview}`);
             }
             console.log("");
-        });
+        }
 
         if (endIndex < state.searchResults.length) {
             console.log(
@@ -485,7 +493,9 @@ function display(state: NavigationState) {
     const entryLines = formatEntry(entry, state.verbosity, true);
 
     // Display all lines of the current entry
-    entryLines.forEach((line) => console.log(line));
+    for (const line of entryLines) {
+        console.log(line);
+    }
 
     console.log("");
     console.log(chalk.gray("═".repeat(80)));
@@ -746,7 +756,7 @@ function formatDuration(ms: number): string {
 
 async function runStaticViewer() {
     // JSON detection regex
-    const JSON_REGEX = /(\{[\s\S]*\}|\[[\s\S]*\])/;
+    const _JSON_REGEX = /(\{[\s\S]*\}|\[[\s\S]*\])/;
 
     // Format bytes to human readable
     function formatBytes(bytes: number): string {
@@ -840,7 +850,7 @@ async function runStaticViewer() {
     }
 
     // Format a message
-    function formatMessage(msg: any, index: number): string {
+    function formatMessage(msg: { role: string; content: string; contentLength: number }, index: number): string {
         const roleColor =
             msg.role === "system"
                 ? chalk.blue
@@ -858,16 +868,16 @@ async function runStaticViewer() {
         if (msg.content) {
             const formattedContent = formatContentWithJSON(msg.content);
             const contentLines = formattedContent.split("\n");
-            contentLines.forEach((line) => {
+            for (const line of contentLines) {
                 lines.push(`        ${line}`);
-            });
+            }
         }
 
         return lines.join("\n");
     }
 
     // Format tool call
-    function formatToolCall(tc: any, index: number): string {
+    function formatToolCall(tc: { name: string; params: unknown; paramsLength: number; id?: string; args?: unknown }, index: number): string {
         const lines: string[] = [];
         lines.push(
             `    ${chalk.gray(`[${index}]`)} ${chalk.cyan(tc.name)} ${chalk.gray(`(${tc.id})`)}`
@@ -876,9 +886,9 @@ async function runStaticViewer() {
         if (tc.args && Object.keys(tc.args).length > 0) {
             lines.push(chalk.gray("        Args:"));
             const argsFormatted = JSON.stringify(tc.args, null, 2);
-            argsFormatted.split("\n").forEach((line) => {
+            for (const line of argsFormatted.split("\n")) {
                 lines.push(`          ${line}`);
-            });
+            }
         }
 
         return lines.join("\n");
@@ -917,15 +927,15 @@ async function runStaticViewer() {
                 `\n  ${chalk.bold("System Prompt:")} ${chalk.gray(`(${formatBytes(entry.request.systemPrompt.length)})`)}`
             );
             const systemContent = formatContentWithJSON(entry.request.systemPrompt.content);
-            systemContent.split("\n").forEach((line) => {
+            for (const line of systemContent.split("\n")) {
                 lines.push(`    ${line}`);
-            });
+            }
         }
 
         lines.push(`\n  ${chalk.bold("Messages:")}`);
-        entry.request.messages.forEach((msg, idx) => {
+        for (const [idx, msg] of entry.request.messages.entries()) {
             lines.push(formatMessage(msg, idx));
-        });
+        }
 
         // Response details (if successful)
         if (entry.response) {
@@ -936,16 +946,16 @@ async function runStaticViewer() {
                     `  ${chalk.bold("Content:")} ${chalk.gray(`(${formatBytes(entry.response.contentLength || 0)})`)}`
                 );
                 const responseContent = formatContentWithJSON(entry.response.content);
-                responseContent.split("\n").forEach((line) => {
+                for (const line of responseContent.split("\n")) {
                     lines.push(`    ${line}`);
-                });
+                }
             }
 
             if (entry.response.toolCalls && entry.response.toolCalls.length > 0) {
                 lines.push(`\n  ${chalk.bold("Tool Calls:")} ${entry.response.toolCallCount}`);
-                entry.response.toolCalls.forEach((tc, idx) => {
+                for (const [idx, tc] of entry.response.toolCalls.entries()) {
                     lines.push(formatToolCall(tc, idx));
-                });
+                }
             }
 
             if (entry.response.usage) {
@@ -974,9 +984,9 @@ async function runStaticViewer() {
             lines.push(`  ${chalk.bold("Message:")} ${chalk.red(entry.error.message)}`);
             if (entry.error.stack) {
                 lines.push(`  ${chalk.bold("Stack:")}`);
-                entry.error.stack.split("\n").forEach((line) => {
+                for (const line of entry.error.stack.split("\n")) {
                     lines.push(`    ${chalk.gray(line)}`);
-                });
+                }
             }
         }
 
@@ -1058,9 +1068,9 @@ async function runStaticViewer() {
             console.log(chalk.gray(`\n${"═".repeat(80)}\n`));
 
             // Display each entry
-            entries.forEach((entry, index) => {
+            for (const [index, entry] of entries.entries()) {
                 console.log(formatLogEntry(entry, index));
-            });
+            }
         } catch (error) {
             console.error(chalk.red("❌ Error reading log file:"), error);
             process.exit(1);

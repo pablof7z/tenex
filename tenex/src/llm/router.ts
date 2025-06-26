@@ -152,11 +152,12 @@ export class LLMRouter implements LLMService {
 
             // Extract context window information from model metadata
             if (typeof model === "object" && model !== null && "meta" in model) {
-                const modelMeta = (model as any).meta;
+                const modelMeta = (model as { meta?: { context_length?: number; top_provider?: { max_completion_tokens?: number } } }).meta;
                 if (modelMeta) {
                     // Add context window information to response
-                    (response as any).contextWindow = modelMeta.context_length;
-                    (response as any).maxCompletionTokens =
+                    const extendedResponse = response as CompletionResponse & { contextWindow?: number; maxCompletionTokens?: number };
+                    extendedResponse.contextWindow = modelMeta.context_length;
+                    extendedResponse.maxCompletionTokens =
                         modelMeta.top_provider?.max_completion_tokens;
                 }
             }

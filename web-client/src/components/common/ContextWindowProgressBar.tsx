@@ -58,7 +58,7 @@ export function ContextWindowProgressBar({
 
     // Format percentage
     const formatPercentage = (percentage: number): string => {
-        return percentage.toFixed(1) + "%";
+        return `${percentage.toFixed(1)}%`;
     };
 
     // Calculate remaining tokens

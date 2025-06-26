@@ -39,7 +39,7 @@ export class AgentRegistry {
             );
 
             // Load each agent from the registry
-            for (const [slug, registryEntry] of Object.entries(this.registry)) {
+            for (const [slug, _registryEntry] of Object.entries(this.registry)) {
                 await this.loadAgentBySlug(slug);
             }
 

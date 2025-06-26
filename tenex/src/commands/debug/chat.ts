@@ -82,7 +82,7 @@ export async function runDebugChat(
 
         // Create conversation state for AgentExecutor
         const conversationId = uuidv4();
-        const conversationManager = new ConversationManager(projectPath);
+        const _conversationManager = new ConversationManager(projectPath);
         const conversation: Conversation = {
             id: conversationId,
             title: "Debug Chat Session",

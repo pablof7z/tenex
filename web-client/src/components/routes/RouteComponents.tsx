@@ -4,7 +4,6 @@ import { useArticle } from "../../hooks/useArticle";
 import { useProject } from "../../hooks/useProject";
 import { AgentRequestsPage } from "../AgentRequestsPage";
 import { AgentsPage } from "../AgentsPage";
-import { BlossomTestPage } from "../BlossomTestPage";
 import { ChatInterface } from "../ChatInterface";
 import { ChatsPage } from "../ChatsPage";
 import { DesktopLayout } from "../DesktopLayout";

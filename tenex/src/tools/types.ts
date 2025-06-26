@@ -48,19 +48,32 @@ export interface PhaseTransitionMetadata {
 }
 
 // Type guard functions
-export function isHandoffMetadata(metadata: any): metadata is HandoffMetadata {
+export function isHandoffMetadata(metadata: unknown): metadata is HandoffMetadata {
     return (
-        metadata?.handoff &&
+        metadata !== null &&
+        typeof metadata === "object" &&
+        "handoff" in metadata &&
+        metadata.handoff !== null &&
+        typeof metadata.handoff === "object" &&
+        "to" in metadata.handoff &&
         typeof metadata.handoff.to === "string" &&
+        "toName" in metadata.handoff &&
         typeof metadata.handoff.toName === "string"
     );
 }
 
-export function isPhaseTransitionMetadata(metadata: any): metadata is PhaseTransitionMetadata {
+export function isPhaseTransitionMetadata(metadata: unknown): metadata is PhaseTransitionMetadata {
     return (
-        metadata?.phaseTransition &&
+        metadata !== null &&
+        typeof metadata === "object" &&
+        "phaseTransition" in metadata &&
+        metadata.phaseTransition !== null &&
+        typeof metadata.phaseTransition === "object" &&
+        "from" in metadata.phaseTransition &&
         typeof metadata.phaseTransition.from === "string" &&
+        "to" in metadata.phaseTransition &&
         typeof metadata.phaseTransition.to === "string" &&
+        "message" in metadata.phaseTransition &&
         typeof metadata.phaseTransition.message === "string"
     );
 }
@@ -115,6 +128,7 @@ export interface Tool {
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 import type { Phase } from "@/conversations/phases";
+import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 export interface ToolExecutionContext {
     projectPath: string;
@@ -123,7 +137,7 @@ export interface ToolExecutionContext {
     phase: string;
     agent: Agent;
     conversation?: Conversation;
-    agentSigner?: any; // NDK signer for the agent
+    agentSigner?: NDKPrivateKeySigner; // NDK signer for the agent
     conversationRootEventId?: string; // Root event ID for task tagging
 }
 

@@ -1,5 +1,5 @@
-import { Conversation } from "../Conversation";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { Conversation } from "../Conversation";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { getConfig } from "../config";
 import { TestError } from "../types";
 

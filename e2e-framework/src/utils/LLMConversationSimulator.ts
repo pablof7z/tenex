@@ -1,4 +1,4 @@
-import { Conversation } from "../Conversation";
+import type { Conversation } from "../Conversation";
 import { Logger } from "./Logger";
 
 /**
@@ -80,7 +80,7 @@ export class LLMConversationSimulator {
                 lastAssistantMessage = response.content;
                 exchanges.push({ role: "assistant", message: lastAssistantMessage });
                 this.logger.debug("Received TENEX response", {
-                    response: lastAssistantMessage.substring(0, 100) + "...",
+                    response: `${lastAssistantMessage.substring(0, 100)}...`,
                 });
 
                 // Check if conversation reached a natural end
@@ -103,7 +103,7 @@ export class LLMConversationSimulator {
                 exchanges.push({ role: "user", message: userResponse.message });
                 await conversation.sendMessage(userResponse.message);
                 this.logger.debug("Sent user response", {
-                    message: userResponse.message.substring(0, 100) + "...",
+                    message: `${userResponse.message.substring(0, 100)}...`,
                 });
 
                 // Delay between turns to simulate human typing
@@ -224,11 +224,10 @@ will help you plan and build your project.`;
 
         if (provider === "openai") {
             return this.callOpenAI(prompt, model, apiKey);
-        } else if (provider === "anthropic") {
+        }if (provider === "anthropic") {
             return this.callAnthropic(prompt, model, apiKey);
-        } else {
-            throw new Error(`Unsupported LLM provider: ${provider}`);
         }
+            throw new Error(`Unsupported LLM provider: ${provider}`);
     }
 
     /**

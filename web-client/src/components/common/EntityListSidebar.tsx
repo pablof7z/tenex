@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";

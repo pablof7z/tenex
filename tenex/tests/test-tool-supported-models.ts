@@ -1,4 +1,4 @@
-import { igniteEngine, loadModels, Message, Plugin, PluginExecutionContext } from "multi-llm-ts";
+import { igniteEngine, loadModels, Message, Plugin, type PluginExecutionContext } from "multi-llm-ts";
 
 // Create a simple weather plugin
 class WeatherPlugin extends Plugin {
@@ -66,7 +66,7 @@ async function testToolSupportedModels() {
             continue;
         }
 
-        const modelInfo = typeof model === "string" ? { id: model } : model;
+        const _modelInfo = typeof model === "string" ? { id: model } : model;
         const supportsTools = typeof model !== "string" && model.capabilities?.tools;
 
         console.log(`\n${"=".repeat(60)}`);

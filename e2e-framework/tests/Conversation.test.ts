@@ -29,13 +29,13 @@ describe("Conversation", () => {
         mockOrchestrator = {
             client: {
                 sendMessage: async (naddr: string, message: string) => {
-                    mockOrchestrator["lastMessage"] = { naddr, message };
+                    mockOrchestrator.lastMessage = { naddr, message };
                     return threadId;
                 },
             },
             monitor: {
                 waitForProjectEvent: async (projectEvent: NDKEvent, filter: any, options?: any) => {
-                    mockOrchestrator["waitCall"] = { projectEvent, filter, options };
+                    mockOrchestrator.waitCall = { projectEvent, filter, options };
 
                     // Determine which event to return based on the test context
                     if (options?.validate) {
@@ -81,7 +81,7 @@ describe("Conversation", () => {
         test("should send message through orchestrator client", async () => {
             await conversation.sendMessage("Hello from conversation");
 
-            expect(mockOrchestrator["lastMessage"]).toEqual({
+            expect(mockOrchestrator.lastMessage).toEqual({
                 naddr: "naddr456",
                 message: "Hello from conversation",
             });
@@ -92,7 +92,7 @@ describe("Conversation", () => {
         test("should wait for event with correct filter", async () => {
             const reply = await conversation.waitForReply();
 
-            const waitCall = mockOrchestrator["waitCall"];
+            const waitCall = mockOrchestrator.waitCall;
             expect(waitCall.projectEvent.content).toBe("Project event");
             expect(waitCall.filter).toEqual({
                 kinds: [1111], // NDKKind.GenericReply
@@ -111,7 +111,7 @@ describe("Conversation", () => {
 
             await conversation.waitForReply(options);
 
-            const waitCall = mockOrchestrator["waitCall"];
+            const waitCall = mockOrchestrator.waitCall;
             // Check individual properties since validate function is wrapped
             expect(waitCall.options.timeout).toBe(5000);
             expect(typeof waitCall.options.validate).toBe("function");
@@ -132,7 +132,7 @@ describe("Conversation", () => {
         test("should wait for completion indicators", async () => {
             await conversation.waitForCompletion();
 
-            const { options } = mockOrchestrator["waitCall"];
+            const { options } = mockOrchestrator.waitCall;
             expect(options.timeout).toBe(60000); // Default timeout
             expect(options.validate).toBeDefined();
 
@@ -149,7 +149,7 @@ describe("Conversation", () => {
                 indicators: ["Ready", "Success"],
             });
 
-            const validate = mockOrchestrator["waitCall"].options.validate;
+            const validate = mockOrchestrator.waitCall.options.validate;
             expect(validate(createMockEvent("Task ready"))).toBe(true);
             expect(validate(createMockEvent("Operation success"))).toBe(true);
             expect(validate(createMockEvent("Done"))).toBe(false); // Not in custom list
@@ -158,13 +158,13 @@ describe("Conversation", () => {
         test("should use custom timeout", async () => {
             await conversation.waitForCompletion({ timeout: 30000 });
 
-            expect(mockOrchestrator["waitCall"].options.timeout).toBe(30000);
+            expect(mockOrchestrator.waitCall.options.timeout).toBe(30000);
         });
 
         test("should be case insensitive", async () => {
             await conversation.waitForCompletion();
 
-            const validate = mockOrchestrator["waitCall"].options.validate;
+            const validate = mockOrchestrator.waitCall.options.validate;
             expect(validate(createMockEvent("DONE"))).toBe(true);
             expect(validate(createMockEvent("completed"))).toBe(true);
             expect(validate(createMockEvent("FiNiShEd"))).toBe(true);

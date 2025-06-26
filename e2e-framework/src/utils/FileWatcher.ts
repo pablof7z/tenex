@@ -67,7 +67,7 @@ export async function watchForFile(
                     cleanup();
                     resolve();
                 }
-            } catch (e) {
+            } catch (_e) {
                 // File doesn't exist yet or can't be read
             }
         };
@@ -100,7 +100,7 @@ export async function watchForFile(
                     clearInterval(pollIntervalId);
                     pollIntervalId = null;
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Directory doesn't exist yet, keep polling
             }
         };

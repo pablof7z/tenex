@@ -23,8 +23,8 @@ describe("BaseScenario", () => {
     beforeEach(() => {
         scenario = new TestScenario();
         // Mock orchestrator methods to prevent actual daemon startup
-        scenario["orchestrator"].setup = mock(() => Promise.resolve());
-        scenario["orchestrator"].teardown = mock(() => Promise.resolve());
+        scenario.orchestrator.setup = mock(() => Promise.resolve());
+        scenario.orchestrator.teardown = mock(() => Promise.resolve());
     });
 
     test("should have correct name and description", () => {
@@ -35,8 +35,8 @@ describe("BaseScenario", () => {
     test("should call setup, run, and teardown in correct order", async () => {
         const result = await scenario.execute();
 
-        expect(scenario["orchestrator"].setup).toHaveBeenCalledTimes(1);
-        expect(scenario["orchestrator"].teardown).toHaveBeenCalledTimes(1);
+        expect(scenario.orchestrator.setup).toHaveBeenCalledTimes(1);
+        expect(scenario.orchestrator.teardown).toHaveBeenCalledTimes(1);
         expect(scenario.runCalled).toBe(true);
         expect(result.success).toBe(true);
     });
@@ -73,7 +73,7 @@ describe("BaseScenario", () => {
             // Expected to throw
         }
 
-        expect(scenario["orchestrator"].teardown).toHaveBeenCalledTimes(1);
+        expect(scenario.orchestrator.teardown).toHaveBeenCalledTimes(1);
     });
 
     test("should accept configuration options", () => {
@@ -87,7 +87,7 @@ describe("BaseScenario", () => {
         };
 
         const configuredScenario = new TestScenario(options);
-        expect(configuredScenario["orchestrator"]).toBeDefined();
+        expect(configuredScenario.orchestrator).toBeDefined();
     });
 
     test("should measure execution duration", async () => {

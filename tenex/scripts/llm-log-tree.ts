@@ -22,7 +22,7 @@ interface TreeNode {
     expanded: boolean;
     children?: TreeNode[];
     content?: string;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
     parent?: TreeNode;
     depth: number;
     // For navigation back to original data
@@ -110,14 +110,14 @@ function colorizeJSON(json: string): string {
 
 // Format content with enhancements
 function formatContentWithEnhancements(content: string, isSystemPrompt = false): string {
-    content = content.replace(/\\n/g, "\n");
+    let formattedContent = content.replace(/\\n/g, "\n");
 
     if (isSystemPrompt) {
-        content = formatMarkdown(content);
+        formattedContent = formatMarkdown(formattedContent);
     }
 
     // Handle <tool_use> blocks
-    content = content.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (match, jsonContent) => {
+    formattedContent = formattedContent.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (_match, jsonContent) => {
         try {
             const parsed = JSON.parse(jsonContent.trim());
             const formatted = JSON.stringify(parsed, null, 2);
@@ -129,7 +129,7 @@ function formatContentWithEnhancements(content: string, isSystemPrompt = false):
         }
     });
 
-    return content;
+    return formattedContent;
 }
 
 // Get one-line summary of content
@@ -388,7 +388,7 @@ function displayTree(state: NavigationState) {
     // Calculate viewport - we need to count actual lines, not just nodes
     if (currentVisibleIndex >= 0) {
         // Calculate how many lines we need for visible nodes
-        let totalLinesNeeded = 0;
+        let _totalLinesNeeded = 0;
         const nodeLineCount: number[] = [];
 
         for (let i = 0; i < visibleNodes.length; i++) {
@@ -413,14 +413,14 @@ function displayTree(state: NavigationState) {
 
             nodeLineCount.push(lines);
             if (i <= currentVisibleIndex) {
-                totalLinesNeeded += lines;
+                _totalLinesNeeded += lines;
             }
         }
 
         // Now adjust viewport to keep current node visible
-        let currentNodeStart = 0;
+        let _currentNodeStart = 0;
         for (let i = 0; i < currentVisibleIndex; i++) {
-            currentNodeStart += nodeLineCount[i];
+            _currentNodeStart += nodeLineCount[i];
         }
 
         // Check if we need to scroll

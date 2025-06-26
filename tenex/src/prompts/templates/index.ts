@@ -22,7 +22,7 @@ export function extractJSON<T = unknown>(response: string): T | null {
             return JSON.parse(jsonMatch[0]) as T;
         }
         return null;
-    } catch (error) {
+    } catch (_error) {
         return null;
     }
 }

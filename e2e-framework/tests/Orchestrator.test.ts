@@ -15,22 +15,22 @@ describe("Orchestrator", () => {
         orchestrator = new Orchestrator();
 
         // Mock the dependencies methods
-        orchestrator["environment"].setup = async () => {
+        orchestrator.environment.setup = async () => {
             setupCalls.push("environment.setup");
         };
 
-        orchestrator["environment"].writeConfig = async (config) => {
+        orchestrator.environment.writeConfig = async (config) => {
             setupCalls.push("environment.writeConfig");
-            orchestrator["writtenConfig"] = config;
+            orchestrator.writtenConfig = config;
         };
 
-        orchestrator["environment"].teardown = async () => {
+        orchestrator.environment.teardown = async () => {
             teardownCalls.push("environment.teardown");
         };
 
-        orchestrator["processController"].spawn = async (name, cmd, args, opts) => {
+        orchestrator.processController.spawn = async (name, cmd, args, opts) => {
             setupCalls.push("processController.spawn");
-            orchestrator["spawnArgs"] = { name, cmd, args, opts };
+            orchestrator.spawnArgs = { name, cmd, args, opts };
             return {
                 process: { on: () => {} },
                 stdout: (async function* () {
@@ -41,20 +41,20 @@ describe("Orchestrator", () => {
             };
         };
 
-        orchestrator["processController"].killAll = async () => {
+        orchestrator.processController.killAll = async () => {
             teardownCalls.push("processController.killAll");
         };
 
-        orchestrator["nostrMonitor"].connect = async () => {
+        orchestrator.nostrMonitor.connect = async () => {
             setupCalls.push("nostrMonitor.connect");
         };
 
-        orchestrator["nostrMonitor"].disconnect = async () => {
+        orchestrator.nostrMonitor.disconnect = async () => {
             teardownCalls.push("nostrMonitor.disconnect");
         };
 
-        orchestrator["cliClient"].createProject = async (options) => {
-            orchestrator["createProjectOptions"] = options;
+        orchestrator.cliClient.createProject = async (options) => {
+            orchestrator.createProjectOptions = options;
             return {
                 naddr: "naddr123",
                 name: options.name,
@@ -65,11 +65,11 @@ describe("Orchestrator", () => {
     describe("constructor", () => {
         test("should initialize with default options", () => {
             const orch = new Orchestrator();
-            expect(orch["options"]).toEqual({});
-            expect(orch["environment"]).toBeDefined();
-            expect(orch["processController"]).toBeDefined();
-            expect(orch["nostrMonitor"]).toBeDefined();
-            expect(orch["cliClient"]).toBeDefined();
+            expect(orch.options).toEqual({});
+            expect(orch.environment).toBeDefined();
+            expect(orch.processController).toBeDefined();
+            expect(orch.nostrMonitor).toBeDefined();
+            expect(orch.cliClient).toBeDefined();
         });
 
         test("should accept custom options", () => {
@@ -84,13 +84,13 @@ describe("Orchestrator", () => {
             };
 
             const orch = new Orchestrator(options);
-            expect(orch["options"]).toEqual(options);
+            expect(orch.options).toEqual(options);
         });
 
         test("should generate test identity", () => {
-            expect(orchestrator["nsec"]).toMatch(/^nsec1/);
-            expect(orchestrator["npub"]).toBeDefined();
-            expect(orchestrator["npub"].length).toBeGreaterThan(0);
+            expect(orchestrator.nsec).toMatch(/^nsec1/);
+            expect(orchestrator.npub).toBeDefined();
+            expect(orchestrator.npub.length).toBeGreaterThan(0);
         });
     });
 
@@ -109,9 +109,9 @@ describe("Orchestrator", () => {
         test("should write config with whitelisted pubkey", async () => {
             await orchestrator.setup();
 
-            const config = orchestrator["writtenConfig"];
+            const config = orchestrator.writtenConfig;
             expect(config).toBeDefined();
-            expect(config.whitelistedPubkeys).toContain(orchestrator["npub"]);
+            expect(config.whitelistedPubkeys).toContain(orchestrator.npub);
             expect(config.llmConfigs).toEqual([]);
         });
 
@@ -126,44 +126,44 @@ describe("Orchestrator", () => {
             const orch = new Orchestrator({ llmConfig });
 
             // Mock the writeConfig method
-            orch["environment"].writeConfig = async (config) => {
-                orch["writtenConfig"] = config;
+            orch.environment.writeConfig = async (config) => {
+                orch.writtenConfig = config;
             };
 
             // Need to mock other methods too
-            orch["environment"].setup = async () => {};
-            orch["processController"].spawn = async () => ({
+            orch.environment.setup = async () => {};
+            orch.processController.spawn = async () => ({
                 process: {},
                 stdout: (async function* () {
                     yield "Monitoring events from";
                 })(),
                 stderr: (async function* () {})(),
             });
-            orch["nostrMonitor"].connect = async () => {};
+            orch.nostrMonitor.connect = async () => {};
 
             await orch.setup();
 
-            const config = orch["writtenConfig"];
+            const config = orch.writtenConfig;
             expect(config.llmConfigs).toEqual([llmConfig]);
         });
 
         test("should start daemon with correct environment", async () => {
             await orchestrator.setup();
 
-            const args = orchestrator["spawnArgs"];
+            const args = orchestrator.spawnArgs;
             expect(args.name).toBe("daemon");
             expect(args.cmd).toBe("bun");
             expect(args.args).toEqual(["tenex", "daemon"]);
-            expect(args.opts.env.TENEX_CONFIG_DIR).toBe(orchestrator["environment"].getConfigDir());
+            expect(args.opts.env.TENEX_CONFIG_DIR).toBe(orchestrator.environment.getConfigDir());
         });
 
         test("should wait for daemon ready message", async () => {
             await orchestrator.setup();
-            expect(orchestrator["daemonHandle"]).toBeDefined();
+            expect(orchestrator.daemonHandle).toBeDefined();
         });
 
         test("should throw if daemon fails to start", async () => {
-            orchestrator["processController"].spawn = async () => ({
+            orchestrator.processController.spawn = async () => ({
                 process: {},
                 stdout: (async function* () {
                     yield "Error: Failed to start";
@@ -198,12 +198,12 @@ describe("Orchestrator", () => {
 
             const project = await orchestrator.createProject(projectOptions);
 
-            expect(orchestrator["createProjectOptions"]).toEqual(projectOptions);
+            expect(orchestrator.createProjectOptions).toEqual(projectOptions);
             expect(project).toBeInstanceOf(Project);
             expect(project.naddr).toBe("naddr123");
             expect(project.name).toBe("test-project");
             expect(project.directory).toBe(
-                orchestrator["environment"].getProjectDir("test-project")
+                orchestrator.environment.getProjectDir("test-project")
             );
         });
     });
@@ -238,7 +238,7 @@ describe("Orchestrator", () => {
         test("should read file from project directory", async () => {
             // This test would need actual file system operations
             // For unit test, we'll just verify the path construction
-            const fullPath = orchestrator["readFile"].toString();
+            const fullPath = orchestrator.readFile.toString();
             expect(fullPath).toContain("path.join");
             expect(fullPath).toContain("readFile");
         });
@@ -246,11 +246,11 @@ describe("Orchestrator", () => {
 
     describe("getters", () => {
         test("should expose client", () => {
-            expect(orchestrator.client).toBe(orchestrator["cliClient"]);
+            expect(orchestrator.client).toBe(orchestrator.cliClient);
         });
 
         test("should expose monitor", () => {
-            expect(orchestrator.monitor).toBe(orchestrator["nostrMonitor"]);
+            expect(orchestrator.monitor).toBe(orchestrator.nostrMonitor);
         });
     });
 });

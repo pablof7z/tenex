@@ -1,4 +1,4 @@
-import { NDKEvent, NDKFilter } from "@nostr-dev-kit/ndk";
+import { NDKEvent, type NDKFilter } from "@nostr-dev-kit/ndk";
 import { logger } from "../logger.js";
 import chalk from "chalk";
 import { getNDK } from "../ndk-setup.js";

@@ -231,14 +231,14 @@ export class ConversationManager {
     private async loadConversations(): Promise<void> {
         try {
             const metadata = await this.persistence.list();
-            let loadedCount = 0;
+            let _loadedCount = 0;
 
             for (const meta of metadata) {
                 if (!meta.archived) {
                     const conversation = await this.persistence.load(meta.id);
                     if (conversation) {
                         this.conversations.set(meta.id, conversation);
-                        loadedCount++;
+                        _loadedCount++;
                     }
                 }
             }

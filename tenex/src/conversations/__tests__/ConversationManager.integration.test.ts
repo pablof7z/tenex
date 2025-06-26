@@ -34,7 +34,7 @@ describe("ConversationManager Integration Tests", () => {
         // Remove test directory
         try {
             await fs.rm(testDir, { recursive: true, force: true });
-        } catch (error) {
+        } catch (_error) {
             // Ignore cleanup errors
         }
     });
@@ -60,7 +60,7 @@ describe("ConversationManager Integration Tests", () => {
 
         it("should persist conversation updates", async () => {
             const event = createConversationEvent("conv-123");
-            const conversation = await manager.createConversation(event);
+            const _conversation = await manager.createConversation(event);
 
             // Add events and update phase
             const reply1 = createReplyEvent("conv-123", "User message");
@@ -85,10 +85,10 @@ describe("ConversationManager Integration Tests", () => {
 
         it("should load conversations on startup", async () => {
             // Create conversations with first manager
-            const conv1 = await manager.createConversation(
+            const _conv1 = await manager.createConversation(
                 createConversationEvent("conv-1", "First", "Conversation 1")
             );
-            const conv2 = await manager.createConversation(
+            const _conv2 = await manager.createConversation(
                 createConversationEvent("conv-2", "Second", "Conversation 2")
             );
 
@@ -120,7 +120,7 @@ describe("ConversationManager Integration Tests", () => {
     describe("Archival System", () => {
         it("should archive conversations to separate directory", async () => {
             const event = createConversationEvent("conv-archive", "To be archived", "Archive Test");
-            const conversation = await manager.createConversation(event);
+            const _conversation = await manager.createConversation(event);
 
             // Add some history
             await manager.addEvent("conv-archive", createReplyEvent("conv-archive", "Message 1"));
@@ -208,11 +208,11 @@ describe("ConversationManager Integration Tests", () => {
             jest.useFakeTimers();
 
             const event = createConversationEvent("conv-autosave");
-            const conversation = await manager.createConversation(event);
+            const _conversation = await manager.createConversation(event);
 
             // Clear initial save
             const convFile = path.join(conversationsDir, "active", "conv-autosave.json");
-            let initialMtime = (await fs.stat(convFile)).mtime;
+            const initialMtime = (await fs.stat(convFile)).mtime;
 
             // Add an event but don't save manually
             await manager.addEvent(
@@ -315,7 +315,7 @@ describe("ConversationManager Integration Tests", () => {
 
         it("should recover from file system errors during save", async () => {
             const event = createConversationEvent("conv-error");
-            const conversation = await manager.createConversation(event);
+            const _conversation = await manager.createConversation(event);
 
             // Make directory read-only to cause save error
             const activeDir = path.join(conversationsDir, "active");
@@ -324,7 +324,7 @@ describe("ConversationManager Integration Tests", () => {
             // Try to save - should not throw
             try {
                 await manager.saveConversation("conv-error");
-            } catch (error) {
+            } catch (_error) {
                 // Expected to fail, but shouldn't crash
             }
 
@@ -339,7 +339,7 @@ describe("ConversationManager Integration Tests", () => {
     describe("Metadata Persistence", () => {
         it("should persist and load conversation metadata", async () => {
             const event = createConversationEvent("conv-meta");
-            const conversation = await manager.createConversation(event);
+            const _conversation = await manager.createConversation(event);
 
             // Add various metadata
             await manager.updateMetadata("conv-meta", {

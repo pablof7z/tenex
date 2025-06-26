@@ -1,13 +1,13 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { CliClient } from "../src/CliClient";
-import { ProcessController, type ProcessHandle } from "../src/ProcessController";
+import type { ProcessController, ProcessHandle } from "../src/ProcessController";
 import type { ProjectInfo } from "../src/types";
 
 // Helper to create mock process handle
 function createMockHandle(
     stdout: string[],
     stderr: string[] = [],
-    exitCode: number = 0
+    exitCode = 0
 ): ProcessHandle {
     const stdoutIterator = (async function* () {
         for (const line of stdout) {
@@ -63,9 +63,9 @@ describe("CliClient", () => {
 
     describe("constructor", () => {
         test("should store nsec and cli path", () => {
-            expect(client["nsec"]).toBe(nsec);
-            expect(client["cliPath"]).toBe(cliPath);
-            expect(client["processController"]).toBe(mockController);
+            expect(client.nsec).toBe(nsec);
+            expect(client.cliPath).toBe(cliPath);
+            expect(client.processController).toBe(mockController);
         });
     });
 
@@ -293,7 +293,7 @@ describe("CliClient", () => {
             const projects = [{ naddr: "naddr1", name: "project1" }];
             mockController.spawn = async (...args: any[]) => {
                 spawnCalls.push(args);
-                return createMockHandle([JSON.stringify(projects) + "\n\n"]);
+                return createMockHandle([`${JSON.stringify(projects)}\n\n`]);
             };
 
             const result = await client.listProjects();

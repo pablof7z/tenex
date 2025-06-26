@@ -109,10 +109,10 @@ export class ReasonActLoop {
     async execute(
         initialResponse: CompletionResponse,
         context: ReasonActContext,
-        messages: Message[],
+        _messages: Message[],
         tracingContext: TracingContext,
         initialLLMMetadata?: LLMMetadata,
-        tools?: Tool[]
+        _tools?: Tool[]
     ): Promise<ReasonActResult> {
         const tracingLogger = createTracingLogger(tracingContext, "agent");
         const allToolResults: ToolExecutionResult[] = [];

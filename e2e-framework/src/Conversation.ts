@@ -4,7 +4,7 @@ import type { Project } from "./Project";
 import type { ReplyOptions, CompletionOptions } from "./types";
 import { getConfig } from "./config";
 import { NostrEventKinds } from "./constants";
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 
 /**
  * Represents a conversation thread within a TENEX project.

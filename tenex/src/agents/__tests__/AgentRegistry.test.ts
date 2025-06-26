@@ -26,8 +26,8 @@ mock.module("@/services", () => ({
 describe("AgentRegistry", () => {
     let registry: AgentRegistry;
     const testProjectPath = "/test/project";
-    const agentsPath = path.join(testProjectPath, "agents.json");
-    const agentsDir = path.join(testProjectPath, ".tenex", "agents");
+    const _agentsPath = path.join(testProjectPath, "agents.json");
+    const _agentsDir = path.join(testProjectPath, ".tenex", "agents");
 
     beforeEach(() => {
         // Reset mocks
@@ -80,7 +80,7 @@ describe("AgentRegistry", () => {
             (fs.readFile as any).mockImplementation(async (path: string) => {
                 if (path.includes("developer.json")) {
                     return JSON.stringify(developerDefinition);
-                } else if (path.includes("reviewer.json")) {
+                }if (path.includes("reviewer.json")) {
                     return JSON.stringify(reviewerDefinition);
                 }
                 return "{}";

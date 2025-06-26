@@ -12,16 +12,16 @@ describe("Project", () => {
         mockOrchestrator = {
             client: {
                 sendMessage: async (naddr: string, message: string) => {
-                    mockOrchestrator["lastMessage"] = { naddr, message };
+                    mockOrchestrator.lastMessage = { naddr, message };
                     return "thread123";
                 },
             },
             waitForFile: async (projectDir: string, filePath: string, options?: any) => {
-                mockOrchestrator["waitForFileCall"] = { projectDir, filePath, options };
+                mockOrchestrator.waitForFileCall = { projectDir, filePath, options };
                 // Simulate success
             },
             readFile: async (projectDir: string, filePath: string) => {
-                mockOrchestrator["readFileCall"] = { projectDir, filePath };
+                mockOrchestrator.readFileCall = { projectDir, filePath };
                 if (filePath === "exists.txt") {
                     return "file content";
                 }
@@ -52,7 +52,7 @@ describe("Project", () => {
                 title: "Test Chat",
             });
 
-            expect(mockOrchestrator["lastMessage"]).toEqual({
+            expect(mockOrchestrator.lastMessage).toEqual({
                 naddr: "naddr123",
                 message: "Hello world",
             });
@@ -77,7 +77,7 @@ describe("Project", () => {
 
             await project.waitForFile("test.txt", options);
 
-            expect(mockOrchestrator["waitForFileCall"]).toEqual({
+            expect(mockOrchestrator.waitForFileCall).toEqual({
                 projectDir: "/tmp/projects/test-project",
                 filePath: "test.txt",
                 options,
@@ -87,7 +87,7 @@ describe("Project", () => {
         test("should work without options", async () => {
             await project.waitForFile("test.txt");
 
-            expect(mockOrchestrator["waitForFileCall"]).toEqual({
+            expect(mockOrchestrator.waitForFileCall).toEqual({
                 projectDir: "/tmp/projects/test-project",
                 filePath: "test.txt",
                 options: undefined,
@@ -99,7 +99,7 @@ describe("Project", () => {
         test("should delegate to orchestrator with project directory", async () => {
             const content = await project.readFile("exists.txt");
 
-            expect(mockOrchestrator["readFileCall"]).toEqual({
+            expect(mockOrchestrator.readFileCall).toEqual({
                 projectDir: "/tmp/projects/test-project",
                 filePath: "exists.txt",
             });

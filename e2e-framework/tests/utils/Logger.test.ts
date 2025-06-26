@@ -15,7 +15,7 @@ describe("Logger", () => {
     afterEach(async () => {
         try {
             await rm(logFile, { force: true });
-        } catch (e) {
+        } catch (_e) {
             // Ignore cleanup errors
         }
     });

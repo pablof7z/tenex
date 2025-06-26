@@ -58,7 +58,7 @@ What do you think about the architecture?`);
 with those features? Start with a simple CLI using Node.js.`);
 
         // Wait for implementation to begin
-        const response3 = await conversation.waitForReply({ timeout: 45000 });
+        const _response3 = await conversation.waitForReply({ timeout: 45000 });
         console.log("Got implementation response");
 
         // Wait for files to be created

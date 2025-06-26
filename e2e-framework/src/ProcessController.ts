@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
-import { type Readable } from "node:stream";
+import type { Readable } from "node:stream";
 import { getConfig } from "./config";
 
 export interface ProcessHandle {

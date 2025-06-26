@@ -30,7 +30,7 @@ describe("ProcessController", () => {
             const handle = await controller.spawn("test-process", "echo", ["test"]);
 
             // Access private member for testing
-            const processes = controller["processes"];
+            const processes = controller.processes;
             expect(processes.has("test-process")).toBe(true);
             expect(processes.get("test-process")).toBe(handle);
         });
@@ -62,7 +62,7 @@ describe("ProcessController", () => {
 
         test("should automatically remove process from map on exit", async () => {
             const handle = await controller.spawn("short-lived", "echo", ["hello"]);
-            const processes = controller["processes"];
+            const processes = controller.processes;
 
             // Initially, the process is in the map
             expect(processes.has("short-lived")).toBe(true);
@@ -192,7 +192,7 @@ describe("ProcessController", () => {
         test("should remove process from internal map", async () => {
             await controller.spawn("test-kill", "sleep", ["10"]);
 
-            const processes = controller["processes"];
+            const processes = controller.processes;
             expect(processes.has("test-kill")).toBe(true);
 
             await controller.kill("test-kill");
@@ -250,7 +250,7 @@ describe("ProcessController", () => {
             await controller.spawn("proc1", "echo", ["test"]);
             await controller.spawn("proc2", "echo", ["test"]);
 
-            const processes = controller["processes"];
+            const processes = controller.processes;
             expect(processes.size).toBe(2);
 
             await controller.killAll();

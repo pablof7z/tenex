@@ -63,7 +63,7 @@ export class AgentExecutor {
         context: AgentExecutionContext,
         triggeringEvent: NDKEvent,
         parentTracingContext?: TracingContext,
-        options?: { streaming?: boolean }
+        _options?: { streaming?: boolean }
     ): Promise<AgentExecutionResult> {
         // Create agent execution tracing context
         const tracingContext = parentTracingContext
@@ -106,71 +106,32 @@ export class AgentExecutor {
             const toolNames = context.agent.tools || [];
             const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
 
-            let finalResponse: CompletionResponse;
-            let finalContent: string;
-            let allToolResults: ToolExecutionResult[] = [];
-            let handoffMetadata: HandoffMetadata | undefined;
-            let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+            // Use streaming execution
+            tracingLogger.info("Using streaming execution", {
+                agentName: context.agent.name,
+            });
 
-            if (true) {
-                // Use streaming execution
-                tracingLogger.info("Using streaming execution", {
+            const streamResult = await this.executeWithStreaming(
+                {
+                    projectPath: process.cwd(),
+                    conversationId: context.conversation.id,
                     agentName: context.agent.name,
-                });
+                    phase: context.phase,
+                    llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+                    agent: agentWithPhaseTools,
+                    conversation: context.conversation,
+                    eventToReply: triggeringEvent,
+                },
+                messages,
+                tracingContext,
+                tools
+            );
 
-                const streamResult = await this.executeWithStreaming(
-                    {
-                        projectPath: process.cwd(),
-                        conversationId: context.conversation.id,
-                        agentName: context.agent.name,
-                        phase: context.phase,
-                        llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-                        agent: agentWithPhaseTools,
-                        conversation: context.conversation,
-                        eventToReply: triggeringEvent,
-                    },
-                    messages,
-                    tracingContext,
-                    tools
-                );
-
-                finalResponse = streamResult.finalResponse;
-                finalContent = streamResult.finalContent;
-                allToolResults = streamResult.allToolResults || [];
-                handoffMetadata = streamResult.handoffMetadata;
-                phaseTransitionMetadata = streamResult.phaseTransitionMetadata;
-            } else {
-                // Use traditional execution
-                const initialResponse = await this.generateResponse(messages, context);
-
-                // Build initial LLM metadata
-                const initialLLMMetadata = await this.buildLLMMetadata(initialResponse, messages);
-
-                // Execute the Reason-Act loop to handle tool calls
-                const reasonActResult = await this.reasonActLoop.execute(
-                    initialResponse,
-                    {
-                        projectPath: process.cwd(),
-                        conversationId: context.conversation.id,
-                        agentName: context.agent.name,
-                        phase: context.phase,
-                        llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-                        agent: agentWithPhaseTools,
-                        conversation: context.conversation,
-                        eventToReply: triggeringEvent,
-                    },
-                    messages,
-                    tracingContext,
-                    initialLLMMetadata,
-                    tools
-                );
-
-                finalResponse = reasonActResult.finalResponse;
-                finalContent = reasonActResult.finalContent;
-                allToolResults = reasonActResult.allToolResults || [];
-                handoffMetadata = reasonActResult.handoffMetadata;
-                phaseTransitionMetadata = reasonActResult.phaseTransitionMetadata;
-            }
+            const finalResponse = streamResult.finalResponse;
+            const finalContent = streamResult.finalContent;
+            const allToolResults = streamResult.allToolResults || [];
+            const handoffMetadata = streamResult.handoffMetadata;
+            const phaseTransitionMetadata = streamResult.phaseTransitionMetadata;
 
             // Build metadata with final response from ReasonActLoop
             const llmMetadata = await this.buildLLMMetadata(finalResponse, messages);

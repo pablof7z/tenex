@@ -6,8 +6,8 @@ import {
     assertMessageCount,
     assertReplyFromAgent,
 } from "../../src/assertions/ConversationAssertions";
-import { Conversation } from "../../src/Conversation";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { Conversation } from "../../src/Conversation";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 describe("ConversationAssertions", () => {
     let mockConversation: Conversation;
@@ -44,7 +44,7 @@ describe("ConversationAssertions", () => {
         test("should handle case-sensitive search when specified", async () => {
             mockEvent.content = "Hello World";
             mockConversation.waitForReply = mock(async ({ validate }) => {
-                if (validate && validate(mockEvent)) {
+                if (validate?.(mockEvent)) {
                     return mockEvent;
                 }
                 return null;

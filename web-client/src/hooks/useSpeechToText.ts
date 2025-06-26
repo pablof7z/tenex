@@ -28,7 +28,7 @@ export function useSpeechToText() {
 
             // Make request to OpenAI Whisper API
             const response = await fetch(
-                speechConfig.credentials.baseUrl + "/audio/transcriptions",
+                `${speechConfig.credentials.baseUrl}/audio/transcriptions`,
                 {
                     method: "POST",
                     headers: {

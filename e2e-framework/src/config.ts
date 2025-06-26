@@ -83,20 +83,20 @@ export function loadConfig(): FrameworkConfig {
     const config = { ...DEFAULT_CONFIG };
 
     // Override from environment variables if present
-    if (process.env["TENEX_E2E_DEFAULT_TIMEOUT"]) {
-        config.timeouts.default = parseInt(process.env["TENEX_E2E_DEFAULT_TIMEOUT"]);
+    if (process.env.TENEX_E2E_DEFAULT_TIMEOUT) {
+        config.timeouts.default = Number.parseInt(process.env.TENEX_E2E_DEFAULT_TIMEOUT);
     }
 
-    if (process.env["TENEX_E2E_DAEMON_TIMEOUT"]) {
-        config.timeouts.daemonStart = parseInt(process.env["TENEX_E2E_DAEMON_TIMEOUT"]);
+    if (process.env.TENEX_E2E_DAEMON_TIMEOUT) {
+        config.timeouts.daemonStart = Number.parseInt(process.env.TENEX_E2E_DAEMON_TIMEOUT);
     }
 
-    if (process.env["TENEX_E2E_RELAYS"]) {
-        config.nostr.defaultRelays = process.env["TENEX_E2E_RELAYS"].split(",");
+    if (process.env.TENEX_E2E_RELAYS) {
+        config.nostr.defaultRelays = process.env.TENEX_E2E_RELAYS.split(",");
     }
 
-    if (process.env["TENEX_E2E_CLI_PATH"]) {
-        config.cli.path = process.env["TENEX_E2E_CLI_PATH"];
+    if (process.env.TENEX_E2E_CLI_PATH) {
+        config.cli.path = process.env.TENEX_E2E_CLI_PATH;
     }
 
     return config;

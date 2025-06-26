@@ -27,17 +27,17 @@ describe("TestEnvironment", () => {
             const env2 = new TestEnvironment();
 
             // Test IDs should be different
-            expect(env1["testId"]).not.toBe(env2["testId"]);
+            expect(env1.testId).not.toBe(env2.testId);
 
             // Test ID should match expected format
-            expect(env1["testId"]).toMatch(/^\d+-[a-z0-9]{6}$/);
+            expect(env1.testId).toMatch(/^\d+-[a-z0-9]{6}$/);
         });
 
         test("should use provided test ID", () => {
             const customId = "custom-test-id";
             const customEnv = new TestEnvironment(customId);
 
-            expect(customEnv["testId"]).toBe(customId);
+            expect(customEnv.testId).toBe(customId);
         });
     });
 
@@ -45,7 +45,7 @@ describe("TestEnvironment", () => {
         test("should create temp directory structure", async () => {
             await env.setup();
 
-            const tempDir = env["tempDir"];
+            const tempDir = env.tempDir;
             expect(tempDir).toContain("tenex-e2e-");
             expect(tempDir).toContain(tmpdir());
 
@@ -59,7 +59,7 @@ describe("TestEnvironment", () => {
             // Since mkdir is hard to mock in Bun, we'll test a related scenario
             // Create environment and setup first
             await env.setup();
-            const tempDir = env["tempDir"];
+            const tempDir = env.tempDir;
 
             // Remove write permissions (this might not work on all systems)
             try {
@@ -73,7 +73,7 @@ describe("TestEnvironment", () => {
 
                 // Restore permissions for cleanup
                 await fs.chmod(tempDir, 0o755);
-            } catch (e) {
+            } catch (_e) {
                 // If chmod doesn't work on this system, just pass the test
                 expect(true).toBe(true);
             }
@@ -83,7 +83,7 @@ describe("TestEnvironment", () => {
     describe("teardown", () => {
         test("should remove temp directory", async () => {
             await env.setup();
-            const tempDir = env["tempDir"];
+            const tempDir = env.tempDir;
 
             expect(existsSync(tempDir)).toBe(true);
 
@@ -99,7 +99,7 @@ describe("TestEnvironment", () => {
 
         test("should force remove even with content", async () => {
             await env.setup();
-            const tempDir = env["tempDir"];
+            const tempDir = env.tempDir;
 
             // Create a file in the temp directory
             const fs = await import("node:fs/promises");
@@ -116,7 +116,7 @@ describe("TestEnvironment", () => {
             await env.setup();
 
             const configDir = env.getConfigDir();
-            expect(configDir).toBe(path.join(env["tempDir"], ".tenex"));
+            expect(configDir).toBe(path.join(env.tempDir, ".tenex"));
         });
 
         test("should work before setup", () => {
@@ -130,7 +130,7 @@ describe("TestEnvironment", () => {
             await env.setup();
 
             const projectDir = env.getProjectDir("my-project");
-            expect(projectDir).toBe(path.join(env["tempDir"], "projects", "my-project"));
+            expect(projectDir).toBe(path.join(env.tempDir, "projects", "my-project"));
         });
 
         test("should handle project names with special characters", async () => {
@@ -234,7 +234,7 @@ describe("TestEnvironment", () => {
             await env.teardown();
 
             // Verify everything is cleaned up
-            expect(existsSync(env["tempDir"])).toBe(false);
+            expect(existsSync(env.tempDir)).toBe(false);
         });
     });
 });

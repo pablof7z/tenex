@@ -64,7 +64,7 @@ async function readToolLogs(projectPath: string): Promise<ToolCallLogEntry[]> {
             }
         }
     } catch (error) {
-        if ((error as any).code !== "ENOENT") {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
             throw error;
         }
     }

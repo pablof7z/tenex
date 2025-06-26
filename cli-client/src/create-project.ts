@@ -1,5 +1,5 @@
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKEvent, type NDKFilter, NDKProject, NDKProjectTemplate } from "@nostr-dev-kit/ndk";
+import { type NDKEvent, type NDKFilter, NDKProject, NDKProjectTemplate } from "@nostr-dev-kit/ndk";
 import { logger } from "./logger.js";
 import chalk from "chalk";
 import inquirer from "inquirer";

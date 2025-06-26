@@ -14,7 +14,7 @@ export async function ensureTenexInGitignore(projectPath: string): Promise<void>
         // Check if .gitignore exists
         try {
             gitignoreContent = await fs.readFile(gitignorePath, "utf-8");
-        } catch (error) {
+        } catch (_error) {
             // .gitignore doesn't exist, we'll create it
             logger.info("No .gitignore found, will create one");
         }

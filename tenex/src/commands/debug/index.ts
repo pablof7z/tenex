@@ -51,7 +51,7 @@ function formatContentWithEnhancements(content: string, isSystemPrompt = false):
     // Handle <tool_use> blocks
     formattedContent = formattedContent.replace(
         /<tool_use>([\s\S]*?)<\/tool_use>/g,
-        (match, jsonContent) => {
+        (_match, jsonContent) => {
             try {
                 const parsed = JSON.parse(jsonContent.trim());
                 const formatted = JSON.stringify(parsed, null, 2);

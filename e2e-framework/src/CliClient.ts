@@ -1,4 +1,4 @@
-import { ProcessController } from "./ProcessController";
+import type { ProcessController } from "./ProcessController";
 import type { ProjectInfo } from "./types";
 import { retry } from "./utils/Retry";
 import { Logger } from "./utils/Logger";
@@ -87,7 +87,7 @@ export class CliClient {
     async sendMessage(projectEvent: NDKEvent, message: string): Promise<string> {
         this.logger.info("Creating conversation", {
             projectId: projectEvent.id,
-            message: message.substring(0, 50) + "...",
+            message: `${message.substring(0, 50)}...`,
         });
 
         // Create a new conversation event (kind 11 thread root)
@@ -145,13 +145,13 @@ export class CliClient {
 
         // Collect stdout
         for await (const line of handle.stdout) {
-            output += line + "\n";
+            output += `${line}\n`;
         }
 
         // Collect stderr (but don't wait for it to complete)
         const stderrPromise = (async () => {
             for await (const line of handle.stderr) {
-                errorOutput += line + "\n";
+                errorOutput += `${line}\n`;
             }
         })();
 
@@ -192,18 +192,16 @@ export class CliClient {
                     // If we successfully parsed JSON, return it
                     return parsed;
                 } catch {
-                    // Silently ignore non-JSON lines
-                    continue;
                 }
             }
 
             // If no single line worked, try to find JSON starting with { or [
             const jsonStart = Math.min(
-                output.indexOf("{") !== -1 ? output.indexOf("{") : Infinity,
-                output.indexOf("[") !== -1 ? output.indexOf("[") : Infinity
+                output.indexOf("{") !== -1 ? output.indexOf("{") : Number.POSITIVE_INFINITY,
+                output.indexOf("[") !== -1 ? output.indexOf("[") : Number.POSITIVE_INFINITY
             );
 
-            if (jsonStart !== Infinity) {
+            if (jsonStart !== Number.POSITIVE_INFINITY) {
                 try {
                     const jsonStr = output.substring(jsonStart);
                     return JSON.parse(jsonStr);
@@ -212,7 +210,7 @@ export class CliClient {
                 }
             }
 
-            throw new Error(`No valid JSON found in output`);
+            throw new Error("No valid JSON found in output");
         } catch (error: any) {
             this.logger.error(`Failed to parse ${context} response`, {
                 error: error.message,

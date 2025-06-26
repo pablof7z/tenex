@@ -7,7 +7,7 @@ import {
     assertFileSize,
     assertJsonFile,
 } from "../../src/assertions/FileAssertions";
-import { Project } from "../../src/Project";
+import type { Project } from "../../src/Project";
 
 describe("FileAssertions", () => {
     let mockProject: Project;

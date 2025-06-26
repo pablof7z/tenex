@@ -344,7 +344,7 @@ export class Orchestrator {
         })();
 
         // Also monitor daemon output to see what projects it's processing
-        let outputMonitor: Promise<void>;
+        let _outputMonitor: Promise<void>;
 
         // Wait for daemon ready signal and continue logging after
         let ready = false;
@@ -360,7 +360,7 @@ export class Orchestrator {
             ) {
                 ready = true;
                 // Continue reading stdout in background to prevent blocking
-                outputMonitor = (async () => {
+                _outputMonitor = (async () => {
                     if (!this.daemonHandle) return;
                     for await (const line of this.daemonHandle.stdout) {
                         this.logger.debug("Daemon output", { line });

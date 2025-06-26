@@ -1,4 +1,4 @@
-import { igniteEngine, loadModels, Message, Model, LlmTool } from "multi-llm-ts";
+import { igniteEngine, loadModels, Message, Model, type LlmTool } from "multi-llm-ts";
 
 // Define tools using multi-llm-ts format
 const weatherTool: LlmTool = {

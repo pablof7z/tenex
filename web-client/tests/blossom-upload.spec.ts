@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { writeFileSync } from "fs";
-import path from "path";
+import { writeFileSync } from "node:fs";
+import path from "node:path";
 
 test.describe("Blossom file upload", () => {
     test("should generate a key, display pubkey, and upload a file to blossom server", async ({

@@ -6,8 +6,8 @@ import {
     assertProcessRunning,
     assertProcessOutputPattern,
 } from "../../src/assertions/ProcessAssertions";
-import { ProcessHandle } from "../../src/ProcessController";
-import { ChildProcess } from "child_process";
+import type { ProcessHandle } from "../../src/ProcessController";
+import type { ChildProcess } from "node:child_process";
 
 // Helper to create async generator
 async function* createAsyncGenerator(values: string[]) {
@@ -24,7 +24,7 @@ describe("ProcessAssertions", () => {
         mockProcess = {
             killed: false,
             exitCode: null,
-            on: mock((event, callback) => {
+            on: mock((_event, _callback) => {
                 // Default behavior - can be overridden in tests
             }),
         } as any;
@@ -149,15 +149,15 @@ describe("ProcessAssertions", () => {
         });
 
         test("should respect timeout", async () => {
-            let yielded = 0;
+            let _yielded = 0;
             // Create a generator that tracks how many items were yielded
             mockHandle.stdout = (async function* () {
                 yield "1";
-                yielded++;
+                _yielded++;
                 // This delay is longer than the timeout
                 await new Promise((resolve) => setTimeout(resolve, 200));
                 yield "2";
-                yielded++;
+                _yielded++;
             })();
             mockHandle.stderr = createAsyncGenerator([]); // Empty stderr
 

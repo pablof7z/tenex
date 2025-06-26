@@ -3,7 +3,7 @@ import { fragmentRegistry } from "@/prompts/core/FragmentRegistry";
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/phases";
 import type { Conversation } from "@/conversations/types";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 
 // Import fragments to register them
 import "../agentFragments";
@@ -70,7 +70,7 @@ describe("Agent Execution Prompt Fragments", () => {
                 slug: "integrated-agent",
             };
 
-            const mockHistory: Conversation["history"] = [
+            const _mockHistory: Conversation["history"] = [
                 {
                     id: "event1",
                     content: "Build a new feature",

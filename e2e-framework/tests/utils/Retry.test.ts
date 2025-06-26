@@ -63,7 +63,7 @@ describe("Retry", () => {
                 {
                     maxAttempts: 5,
                     initialDelay: 10,
-                    isRetryable: (error) => false,
+                    isRetryable: (_error) => false,
                 }
             );
 

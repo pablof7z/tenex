@@ -343,7 +343,7 @@ export class LLMConfigEditor {
                 return;
             }
 
-            availableModels = modelsList.chat.map((m: any) => (typeof m === "string" ? m : m.id));
+            availableModels = modelsList.chat.map((m) => (typeof m === "string" ? m : m.id));
             logger.info(chalk.green(`✅ Found ${availableModels.length} ${provider} models`));
 
             if (provider === "openrouter") {
@@ -606,7 +606,7 @@ export class LLMConfigEditor {
                         return;
                     }
 
-                    availableModels = modelsList.chat.map((m: any) =>
+                    availableModels = modelsList.chat.map((m) =>
                         typeof m === "string" ? m : m.id
                     );
                     logger.info(

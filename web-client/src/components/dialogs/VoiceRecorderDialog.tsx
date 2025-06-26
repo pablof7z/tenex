@@ -9,12 +9,6 @@ import NDKBlossom from "@nostr-dev-kit/ndk-blossom";
 import { useSpeechToText } from "../../hooks/useSpeechToText";
 import { useLLM } from "../../hooks/useLLM";
 import { toast } from "sonner";
-import { Buffer } from "buffer";
-
-// Polyfill Buffer for browser
-if (typeof window !== "undefined") {
-    (window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
-}
 
 interface VoiceRecorderDialogProps {
     open: boolean;
@@ -314,7 +308,7 @@ export function VoiceRecorderDialog({ open, onOpenChange, project }: VoiceRecord
             }
 
             // Clean up
-            delete (window as unknown as { __voiceUploadUrl?: string }).__voiceUploadUrl;
+            (window as unknown as { __voiceUploadUrl?: string }).__voiceUploadUrl = undefined;
             onOpenChange(false);
             resetState();
         } catch (error) {

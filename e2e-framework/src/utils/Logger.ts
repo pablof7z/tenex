@@ -126,7 +126,7 @@ export class Logger {
         // File output
         if (this.options.logFile) {
             try {
-                const logLine = JSON.stringify(entry) + "\n";
+                const logLine = `${JSON.stringify(entry)}\n`;
                 await appendFile(this.options.logFile, logLine);
             } catch (error) {
                 // Don't fail if logging fails, but warn about it

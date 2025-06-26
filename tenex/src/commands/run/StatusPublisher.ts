@@ -47,7 +47,7 @@ export class StatusPublisher {
         }
     }
 
-    private async addAgentPubkeys(event: NDKEvent, projectPath: string): Promise<void> {
+    private async addAgentPubkeys(event: NDKEvent, _projectPath: string): Promise<void> {
         try {
             if (isProjectContextInitialized()) {
                 const projectCtx = getProjectContext();

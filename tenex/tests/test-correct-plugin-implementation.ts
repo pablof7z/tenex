@@ -3,8 +3,8 @@ import {
     loadModels,
     Message,
     Plugin,
-    PluginExecutionContext,
-    PluginParameter,
+    type PluginExecutionContext,
+    type PluginParameter,
 } from "multi-llm-ts";
 
 // Correct plugin implementation based on the library's interface
@@ -25,15 +25,15 @@ class WeatherPlugin extends Plugin {
         return "Get the current weather in a given location";
     }
 
-    getPreparationDescription(tool: string): string {
+    getPreparationDescription(_tool: string): string {
         return "Checking weather data...";
     }
 
-    getRunningDescription(tool: string, args: any): string {
+    getRunningDescription(_tool: string, args: any): string {
         return `Getting weather for ${args.location}...`;
     }
 
-    getCompletedDescription(tool: string, args: any, results: any): string | undefined {
+    getCompletedDescription(_tool: string, args: any, _results: any): string | undefined {
         return `Weather retrieved for ${args.location}`;
     }
 
@@ -81,15 +81,15 @@ class CalculatorPlugin extends Plugin {
         return "Perform basic mathematical calculations";
     }
 
-    getPreparationDescription(tool: string): string {
+    getPreparationDescription(_tool: string): string {
         return "Preparing calculation...";
     }
 
-    getRunningDescription(tool: string, args: any): string {
+    getRunningDescription(_tool: string, args: any): string {
         return `Calculating ${args.operation} of ${args.a} and ${args.b}...`;
     }
 
-    getCompletedDescription(tool: string, args: any, results: any): string | undefined {
+    getCompletedDescription(_tool: string, _args: any, results: any): string | undefined {
         return `Calculation complete: ${results.result}`;
     }
 
@@ -136,7 +136,7 @@ class CalculatorPlugin extends Plugin {
                 result = a * b;
                 break;
             case "divide":
-                result = b !== 0 ? a / b : NaN;
+                result = b !== 0 ? a / b : Number.NaN;
                 break;
             default:
                 throw new Error(`Unknown operation: ${operation}`);
@@ -177,7 +177,7 @@ async function testCorrectPluginImplementation() {
 
         console.log(`\n${"=".repeat(60)}`);
         console.log(`Testing: ${model.name} (${model.id})`);
-        console.log(`Capabilities:`, model.capabilities);
+        console.log("Capabilities:", model.capabilities);
         console.log("=".repeat(60));
 
         try {
@@ -205,7 +205,7 @@ async function testCorrectPluginImplementation() {
 
             const stream = await llm.generate(model, messages);
 
-            let response = "";
+            let _response = "";
             const toolCalls: any[] = [];
 
             for await (const chunk of stream) {
@@ -213,7 +213,7 @@ async function testCorrectPluginImplementation() {
                     console.log("\n🎯 Tool chunk received:", chunk);
                     toolCalls.push(chunk);
                 } else if (chunk.type === "content" && chunk.text) {
-                    response += chunk.text;
+                    _response += chunk.text;
                     process.stdout.write(chunk.text);
                 }
             }
@@ -235,7 +235,7 @@ async function testCorrectPluginImplementation() {
                     console.log("✅ Tool calls found in complete() response!");
                     completeResponse.toolCalls.forEach((tc, i) => {
                         console.log(`  Tool ${i + 1}: ${tc.name}`);
-                        console.log(`    Params:`, tc.params);
+                        console.log("    Params:", tc.params);
                     });
                 }
             }

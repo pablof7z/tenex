@@ -74,7 +74,7 @@ and figure out what would make this unique and valuable?`,
             try {
                 await project.waitForFile(file, { timeout: 60000 });
                 console.log(`✓ Found ${file}`);
-            } catch (error) {
+            } catch (_error) {
                 console.log(`✗ Missing ${file}`);
             }
         }

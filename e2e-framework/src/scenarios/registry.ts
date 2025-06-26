@@ -1,4 +1,4 @@
-import { BaseScenario } from "../BaseScenario";
+import type { BaseScenario } from "../BaseScenario";
 import { FileCreationScenario } from "./FileCreationScenario";
 import { MultiAgentScenario } from "./MultiAgentScenario";
 import { BuildModeScenario } from "./BuildModeScenario";
@@ -25,17 +25,17 @@ export class ScenarioRegistry {
     ]);
 
     static getScenario(name: string): typeof BaseScenario | undefined {
-        return this.scenarios.get(name);
+        return ScenarioRegistry.scenarios.get(name);
     }
 
     static getScenarioNames(): string[] {
-        return Array.from(this.scenarios.keys());
+        return Array.from(ScenarioRegistry.scenarios.keys());
     }
 
     static getScenarioInfo(): ScenarioInfo[] {
         const info: ScenarioInfo[] = [];
 
-        for (const [name, ScenarioClass] of this.scenarios.entries()) {
+        for (const [name, ScenarioClass] of ScenarioRegistry.scenarios.entries()) {
             // Create temporary instance to get name and description
             const instance = new (ScenarioClass as any)();
             info.push({
@@ -49,7 +49,7 @@ export class ScenarioRegistry {
     }
 
     static createScenario(name: string, options?: any): BaseScenario {
-        const ScenarioClass = this.scenarios.get(name);
+        const ScenarioClass = ScenarioRegistry.scenarios.get(name);
         if (!ScenarioClass) {
             throw new Error(`Unknown scenario: ${name}`);
         }
@@ -57,6 +57,6 @@ export class ScenarioRegistry {
     }
 
     static registerScenario(name: string, scenarioClass: typeof BaseScenario): void {
-        this.scenarios.set(name, scenarioClass);
+        ScenarioRegistry.scenarios.set(name, scenarioClass);
     }
 }

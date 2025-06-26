@@ -6,7 +6,7 @@ import { loadLLMRouter } from "@/llm";
 import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "./repomix.js";
 import { TaskPublisher, getNDK } from "@/nostr";
-import type { NDKTask, NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKTask, NDKEvent, NDKSigner } from "@nostr-dev-kit/ndk";
 
 const DEFAULT_INVENTORY_PATH = "context/INVENTORY.md";
 
@@ -28,7 +28,7 @@ interface InventoryResult {
 
 interface InventoryGenerationOptions {
     conversationRootEventId?: string;
-    agentSigner?: any;
+    agentSigner?: NDKSigner;
 }
 
 /**
@@ -157,8 +157,8 @@ export async function generateInventory(
  */
 async function publishAgentUpdate(
     task: NDKTask,
-    taskPublisher: TaskPublisher,
-    agentSigner: any,
+    _taskPublisher: TaskPublisher,
+    agentSigner: NDKSigner,
     message: string
 ): Promise<NDKEvent> {
     const reply = task.reply();

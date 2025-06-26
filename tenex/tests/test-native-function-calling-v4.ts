@@ -1,4 +1,4 @@
-import { igniteEngine, loadModels, Message, Plugin, PluginExecutionContext } from "multi-llm-ts";
+import { igniteEngine, loadModels, Message, Plugin, type PluginExecutionContext } from "multi-llm-ts";
 
 // Create plugins using the v4.0 API
 class WeatherPlugin extends Plugin {
@@ -66,7 +66,7 @@ class CalculatorPlugin extends Plugin {
         };
     }
 
-    async execute(context: PluginExecutionContext, parameters: any): Promise<any> {
+    async execute(_context: PluginExecutionContext, parameters: any): Promise<any> {
         console.log("Calculator plugin called with:", parameters);
         const { operation, a, b } = parameters;
 
@@ -145,7 +145,7 @@ async function testNativeFunctionCallingV4() {
             // Use generate method to get streaming response
             const stream = await llm.generate(model, messages);
 
-            let fullResponse = "";
+            let _fullResponse = "";
             const toolCalls: any[] = [];
 
             for await (const chunk of stream) {
@@ -153,7 +153,7 @@ async function testNativeFunctionCallingV4() {
                     console.log("\nTool call detected:", chunk);
                     toolCalls.push(chunk);
                 } else if (chunk.type === "content" && chunk.text) {
-                    fullResponse += chunk.text;
+                    _fullResponse += chunk.text;
                     process.stdout.write(chunk.text);
                 }
             }
@@ -167,7 +167,7 @@ async function testNativeFunctionCallingV4() {
                 // Tool calls are automatically executed by multi-llm-ts
                 for (const toolCall of toolCalls) {
                     console.log(`Tool ${toolCall.name} was called with params:`, toolCall.params);
-                    console.log(`Result:`, toolCall.result);
+                    console.log("Result:", toolCall.result);
                 }
             } else {
                 console.log(`❌ ${modelInfo.name} did not use native function calling`);

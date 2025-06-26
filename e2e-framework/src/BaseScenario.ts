@@ -1,5 +1,5 @@
 import { Orchestrator } from "./Orchestrator";
-import { LLMConfig } from "./types";
+import type { LLMConfig } from "./types";
 
 /**
  * Configuration options for test scenarios.

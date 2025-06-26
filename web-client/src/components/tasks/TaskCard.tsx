@@ -24,7 +24,7 @@ export const TaskCard = memo(
         // Get task complexity
         const getTaskComplexity = () => {
             const complexityTag = task.tags?.find((tag) => tag[0] === "complexity")?.[1];
-            return complexityTag ? parseInt(complexityTag, 10) : null;
+            return complexityTag ? Number.parseInt(complexityTag, 10) : null;
         };
 
         // Get task content preview

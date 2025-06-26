@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, mock } from "bun:test";
 import { NostrMonitor } from "../src/NostrMonitor";
-import NDK, { NDKEvent } from "@nostr-dev-kit/ndk";
+import NDK, { type NDKEvent } from "@nostr-dev-kit/ndk";
 
 // Mock NDK
 const mockConnect = mock(() => Promise.resolve());
@@ -50,14 +50,14 @@ describe("NostrMonitor", () => {
             // Create some subscriptions first
             const sub1 = { stop: mock() };
             const sub2 = { stop: mock() };
-            monitor["subscriptions"].set("sub1", sub1 as any);
-            monitor["subscriptions"].set("sub2", sub2 as any);
+            monitor.subscriptions.set("sub1", sub1 as any);
+            monitor.subscriptions.set("sub2", sub2 as any);
 
             await monitor.disconnect();
 
             expect(sub1.stop).toHaveBeenCalledTimes(1);
             expect(sub2.stop).toHaveBeenCalledTimes(1);
-            expect(monitor["subscriptions"].size).toBe(0);
+            expect(monitor.subscriptions.size).toBe(0);
         });
     });
 
@@ -180,9 +180,9 @@ describe("NostrMonitor", () => {
                 filter: () => ({ authors: ["pubkey123"] }),
             };
 
-            let capturedFilter: any;
+            let _capturedFilter: any;
             mockSubscribe.mockImplementationOnce((filter) => {
-                capturedFilter = filter;
+                _capturedFilter = filter;
                 return { on: mock(), stop: mock() };
             });
 

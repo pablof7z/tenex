@@ -40,7 +40,7 @@ export class TracingLogger {
      * Format message with tracing context
      */
     private formatMessage(
-        message: string,
+        _message: string,
         additionalContext?: Record<string, unknown>
     ): [Record<string, unknown>] {
         if (!this.isTracingEnabled) {

@@ -1,4 +1,4 @@
-import { ProcessHandle } from "../ProcessController";
+import type { ProcessHandle } from "../ProcessController";
 import { getConfig } from "../config";
 import { TestError } from "../types";
 
@@ -42,7 +42,7 @@ export async function assertProcessOutput(
 
 export async function assertProcessExits(
     handle: ProcessHandle,
-    expectedCode: number = 0,
+    expectedCode = 0,
     timeout?: number
 ): Promise<void> {
     const config = getConfig();

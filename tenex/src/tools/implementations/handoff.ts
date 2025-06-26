@@ -80,7 +80,7 @@ export const handoffTool: Tool = {
         try {
             const projectContext = getProjectContext();
             availableAgents = Array.from(projectContext.agents.values());
-        } catch (error) {
+        } catch (_error) {
             return {
                 success: false,
                 error: "Failed to get project context or agents are not available",

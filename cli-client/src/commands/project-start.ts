@@ -2,7 +2,7 @@ import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "../logger.js";
 
 // TENEX-specific event kinds
-const EVENT_KINDS = {
+const _EVENT_KINDS = {
     TYPING_INDICATOR: 24111 as const,
 } as const;
 import chalk from "chalk";
