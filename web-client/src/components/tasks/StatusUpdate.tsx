@@ -381,6 +381,35 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
         );
     };
 
+    // Check if this is the task description message
+    const isTaskDescription = event.tags?.some(tag => tag[0] === "task-description" && tag[1] === "true");
+
+    if (isTaskDescription) {
+        // Task description - special blue styling
+        return (
+            <div className="bg-blue-50/50 border-b border-blue-100 p-4">
+                <div className="flex gap-3">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <MessageCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-sm text-blue-900">
+                                Task Created
+                            </span>
+                            <span className="text-xs text-blue-600">
+                                {formatRelativeTime(event.created_at!)}
+                            </span>
+                        </div>
+                        <div className="text-sm text-blue-800 whitespace-pre-wrap leading-relaxed">
+                            {event.content}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (isUserMessage()) {
         // User message - align right, different styling
         return (

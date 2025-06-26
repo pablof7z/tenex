@@ -33,11 +33,53 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
 
     const { formatAbsoluteTime } = useTimeFormat();
 
+    // Helper function to get task title
+    const getTaskTitle = (task: NDKTask) => {
+        const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
+        if (titleTag) return titleTag;
+
+        const firstLine = task.content?.split("\n")[0] || "Untitled Task";
+        return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
+    };
+
     // Sort status updates chronologically (oldest first for chat-like experience)
     const sortedUpdates = useMemo(() => {
         if (!statusUpdates) return [];
         return [...statusUpdates].sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
     }, [statusUpdates]);
+
+    // Create a pseudo-event for the task description to display as the first message
+    const taskDescriptionEvent = useMemo(() => {
+        if (!task) return null;
+        
+        // Create a minimal NDKEvent-like object that StatusUpdate can render
+        return {
+            id: `${task.id}-description`,
+            pubkey: task.pubkey,
+            created_at: task.created_at,
+            content: task.content || "No description provided",
+            kind: 1111, // Same as status updates
+            tags: [
+                ["title", getTaskTitle(task)],
+                ["task-description", "true"] // Special tag to identify this as the task description
+            ],
+            sig: task.sig,
+            tagValue: (tagName: string) => {
+                const tag = task.tags?.find(t => t[0] === tagName);
+                return tag?.[1];
+            }
+        } as any; // Type assertion needed since this is a pseudo-event
+    }, [task]);
+
+    // Combine task description with status updates
+    const allMessages = useMemo(() => {
+        const messages = [];
+        if (taskDescriptionEvent) {
+            messages.push(taskDescriptionEvent);
+        }
+        messages.push(...sortedUpdates);
+        return messages;
+    }, [taskDescriptionEvent, sortedUpdates]);
 
     // Check if the most recent update has a Claude Code session
     const hasClaudeCodeSession = useMemo(() => {
@@ -56,14 +98,6 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
     const inputPlaceholder = hasClaudeCodeSession
         ? "Reply to Claude Code session..."
         : "Add a comment...";
-
-    const getTaskTitle = (task: NDKTask) => {
-        const titleTag = task.tags?.find((tag) => tag[0] === "title")?.[1];
-        if (titleTag) return titleTag;
-
-        const firstLine = task.content?.split("\n")[0] || "Untitled Task";
-        return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
-    };
 
     if (!task) {
         return (
@@ -149,32 +183,10 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
             {/* Header */}
             {header}
 
-            {/* Task Description as First Message */}
-            <div className="bg-blue-50/50 border-b border-blue-100 p-4 max-h-screen overflow-y-auto">
-                <div className="flex gap-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <MessageSquare className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm text-blue-900">
-                                Task Created
-                            </span>
-                            <span className="text-xs text-blue-600">
-                                {formatAbsoluteTime(task.created_at!)}
-                            </span>
-                        </div>
-                        <div className="text-sm text-blue-800 whitespace-pre-wrap leading-relaxed">
-                            {task.content || "No description provided"}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Chat Interface */}
+            {/* Chat Interface - now includes task description as first message */}
             <div className="flex-1 overflow-hidden">
                 <ChatInterface
-                    statusUpdates={sortedUpdates}
+                    statusUpdates={allMessages}
                     task={task}
                     project={project}
                     inputPlaceholder={inputPlaceholder}
