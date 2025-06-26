@@ -3,6 +3,7 @@ import { Bot, Brain, Sparkles, Tag, User } from "lucide-react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import type { NDKAgent } from "../../lib/ndk-setup";
 import { Badge } from "../ui/badge";
+import { ProfileDisplay } from "../ProfileDisplay";
 
 interface AgentDetailProps {
     agent: NDKAgent;
@@ -27,10 +28,18 @@ export function AgentDetail({ agent, lessons }: AgentDetailProps) {
                                     {agent.title || "Unnamed Agent"}
                                 </h3>
                                 {agent.description && (
-                                    <p className="text-muted-foreground text-base leading-relaxed">
+                                    <p className="text-muted-foreground text-base leading-relaxed mb-3">
                                         {agent.description}
                                     </p>
                                 )}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">Created by:</span>
+                                    <ProfileDisplay 
+                                        pubkey={agent.pubkey} 
+                                        size="sm"
+                                        className="text-sm"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
