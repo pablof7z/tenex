@@ -5,12 +5,13 @@ import { logger } from "@/utils/logger";
 import { ensureDirectory, fileExists, readJsonFile, writeJsonFile } from "@/lib/fs";
 import { getNDK } from "@/nostr/ndkClient";
 import type { Conversation, ConversationMetadata as ConvMetadata } from "../types";
-import { type Phase, isValidPhase } from "@/conversations/phases";
+import type { Phase } from "@/conversations/phases";
 import type {
     ConversationPersistenceAdapter,
     ConversationSearchCriteria,
     ConversationMetadata,
 } from "./types";
+import { SerializedConversationSchema, MetadataFileSchema } from "./schemas";
 
 export class FileSystemAdapter implements ConversationPersistenceAdapter {
     private conversationsDir: string;
@@ -66,80 +67,37 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
                 }
             }
 
-            const data = await readJsonFile(filePath);
+            const rawData = await readJsonFile(filePath);
 
-            // Validate the loaded data
-            if (!data || typeof data !== "object") {
-                logger.error("Invalid conversation data", { id: conversationId });
+            // Validate the loaded data with Zod
+            const parseResult = SerializedConversationSchema.safeParse(rawData);
+            if (!parseResult.success) {
+                logger.error("Invalid conversation data", { 
+                    id: conversationId,
+                    errors: parseResult.error.errors
+                });
                 return null;
             }
 
-            // Type-safe property access without assertions
-            function hasProperty<T extends object, K extends PropertyKey>(
-                obj: T,
-                key: K
-            ): obj is T & Record<K, unknown> {
-                return key in obj;
-            }
-
-
-            // Validate required properties
-            if (
-                !hasProperty(data, "id") ||
-                !hasProperty(data, "title") ||
-                !hasProperty(data, "phase") ||
-                !hasProperty(data, "history") ||
-                !hasProperty(data, "metadata") ||
-                !Array.isArray(data.history)
-            ) {
-                logger.error("Invalid conversation structure", { id: conversationId });
-                return null;
-            }
-
-            // Validate phase
-            if (typeof data.phase !== "string" || !isValidPhase(data.phase)) {
-                logger.error("Invalid phase", { id: conversationId, phase: data.phase });
-                return null;
-            }
-
-            // Validate metadata is an object
-            if (
-                typeof data.metadata !== "object" ||
-                data.metadata === null ||
-                Array.isArray(data.metadata)
-            ) {
-                logger.error("Invalid metadata structure", { id: conversationId });
-                return null;
-            }
-
-            // Build metadata object with proper typing
-            const metadata: ConvMetadata = {};
-            for (const [key, value] of Object.entries(data.metadata)) {
-                metadata[key] = value;
-            }
+            const data = parseResult.data;
 
             // Reconstruct conversation with validated data
             const ndk = getNDK();
             const conversation: Conversation = {
-                id: String(data.id),
-                title: String(data.title),
+                id: data.id,
+                title: data.title,
                 phase: data.phase,
                 history: data.history.map((serializedEvent: string) => {
                     try {
                         return NDKEvent.deserialize(ndk, serializedEvent);
                     } catch (error) {
                         logger.error("Failed to deserialize event", { error, serializedEvent });
-                        // Return null for failed deserializations
                         return null;
                     }
                 }).filter((event): event is NDKEvent => event !== null),
-                phaseStartedAt: hasProperty(data, "phaseStartedAt")
-                    ? Number(data.phaseStartedAt)
-                    : undefined,
-                metadata,
-                phaseTransitions: hasProperty(data, "phaseTransitions") && Array.isArray(data.phaseTransitions)
-                    ? data.phaseTransitions
-                    : [],
+                phaseStartedAt: data.phaseStartedAt,
+                metadata: data.metadata,
+                phaseTransitions: data.phaseTransitions,
             };
 
             return conversation;
@@ -290,43 +248,18 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
 
     private async loadMetadata(): Promise<{ conversations: ConversationMetadata[] }> {
         try {
-            const data = await readJsonFile(this.metadataPath);
+            const rawData = await readJsonFile(this.metadataPath);
 
-            // Parse and validate without type assertions
-            const defaultValue = { conversations: [] };
-
-            if (data === null || typeof data !== "object") {
-                return defaultValue;
+            // Validate with Zod
+            const parseResult = MetadataFileSchema.safeParse(rawData);
+            if (!parseResult.success) {
+                logger.error("Invalid metadata file structure", {
+                    errors: parseResult.error.errors
+                });
+                return { conversations: [] };
             }
 
-            // Check if conversations property exists and is an array
-            if (!("conversations" in data)) {
-                return defaultValue;
-            }
-
-            const dataWithConversations = data as { conversations: unknown };
-            if (!Array.isArray(dataWithConversations.conversations)) {
-                return defaultValue;
-            }
-
-            // Return the validated structure
-            return {
-                conversations: dataWithConversations.conversations.filter(
-                    (item): item is ConversationMetadata => {
-                        return (
-                            item !== null &&
-                            typeof item === "object" &&
-                            "id" in item &&
-                            "title" in item &&
-                            "createdAt" in item &&
-                            "updatedAt" in item &&
-                            "phase" in item &&
-                            "eventCount" in item &&
-                            "agentCount" in item
-                        );
-                    }
-                ),
-            };
+            return parseResult.data;
         } catch {
             return { conversations: [] };
         }
