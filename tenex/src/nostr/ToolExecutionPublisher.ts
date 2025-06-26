@@ -2,6 +2,9 @@ import { NDKEvent, type NDKSigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 import type { NDKTag } from "@nostr-dev-kit/ndk";
+import { EXECUTION_TAGS } from "@/nostr/tags";
+import type { Conversation } from "@/conversations/types";
+import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
 
 export interface ToolExecutionStatus {
     tool: string;
@@ -19,7 +22,8 @@ export async function publishToolExecutionStatus(
     ndk: NDK,
     eventToReply: NDKEvent,
     status: ToolExecutionStatus,
-    signer: NDKSigner
+    signer: NDKSigner,
+    conversation?: Conversation
 ): Promise<NDKEvent> {
     try {
         const toolEvent = new NDKEvent(ndk);
@@ -33,6 +37,12 @@ export async function publishToolExecutionStatus(
         // Add tool-specific tags
         toolEvent.tags.push(["tool", status.tool]);
         toolEvent.tags.push(["status", status.status]);
+
+        // Add execution time tag if conversation provided
+        if (conversation) {
+            const totalSeconds = getTotalExecutionTimeSeconds(conversation);
+            toolEvent.tags.push([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
+        }
 
         // Build content with status details
         const contentParts: string[] = [];

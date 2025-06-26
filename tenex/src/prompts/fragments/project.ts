@@ -57,19 +57,16 @@ export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
 The project inventory provides comprehensive information about this codebase:
 `);
 
-        // Only show inventory for chat phase
-        if (phase === "chat" || phase === "brainstorm") {
-            if (inventoryContent) {
-                parts.push(`${inventoryContent}
+        if (inventoryContent) {
+            parts.push(`${inventoryContent}
 
 This inventory helps you understand the project structure, significant files, and architectural patterns when working with the codebase.
 
 This is just a map for you to be quickly situated.
 `);
-            } else {
-                parts.push(`## Project Context
-No project inventory is available yet. An inventory can be generated to provide detailed information about the project structure, files, and dependencies.`);
-            }
+        } else {
+            parts.push(`## Project Context
+No project inventory is available yet. You should suggest to the user to create one as it will greatly improve how your understanding.`);
         }
 
         // Add context files listing if available

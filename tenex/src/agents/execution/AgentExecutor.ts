@@ -3,7 +3,7 @@ import type { ConversationManager } from "@/conversations/ConversationManager";
 import type { Phase } from "@/conversations/phases";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
-import { publishAgentResponse, publishTypingStart, publishTypingStop } from "@/nostr";
+import { NostrPublisher } from "@/nostr";
 import type { LLMMetadata } from "@/nostr/types";
 import { PromptBuilder } from "@/prompts";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
@@ -41,7 +41,7 @@ import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/pm-routing";
 import "@/prompts/fragments/expertise-boundaries";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
-import { BufferedStreamPublisher } from "./BufferedStreamPublisher";
+import { startExecutionTime, stopExecutionTime } from "@/conversations/executionTime";
 
 export class AgentExecutor {
     private reasonActLoop: ReasonActLoop;
@@ -81,7 +81,20 @@ export class AgentExecutor {
             phase: context.phase,
         });
 
+        // Create NostrPublisher outside try block so it's accessible in catch
+        const projectCtx = getProjectContext();
+        const publisher = new NostrPublisher({
+            ndk: this.ndk,
+            conversation: context.conversation,
+            agent: context.agent,
+            triggeringEvent: triggeringEvent,
+            project: projectCtx.project
+        });
+
         try {
+            // Start execution time tracking
+            startExecutionTime(context.conversation);
+            
             // 1. Get phase-aware tools for this agent
             const phaseAwareTools = context.agent.isPMAgent
                 ? getDefaultToolsForAgent(true, context.phase)
@@ -100,16 +113,11 @@ export class AgentExecutor {
             });
 
             // 3. Publish typing indicator start
-            await publishTypingStart(this.ndk, triggeringEvent, context.agent.signer);
+            await publisher.publishTypingIndicator("start");
 
-            // Get tools for response processing
-            const toolNames = context.agent.tools || [];
+            // Get tools for response processing - use phase-aware tools
+            const toolNames = agentWithPhaseTools.tools || [];
             const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
-
-            // Use streaming execution
-            tracingLogger.info("Using streaming execution", {
-                agentName: context.agent.name,
-            });
 
             const streamResult = await this.executeWithStreaming(
                 {
@@ -124,7 +132,8 @@ export class AgentExecutor {
                 },
                 messages,
                 tracingContext,
-                tools
+                tools,
+                publisher
             );
 
             const finalResponse = streamResult.finalResponse;
@@ -132,6 +141,8 @@ export class AgentExecutor {
             const allToolResults = streamResult.allToolResults || [];
             const handoffMetadata = streamResult.handoffMetadata;
             const phaseTransitionMetadata = streamResult.phaseTransitionMetadata;
+
+            console.log("phase transition", phaseTransitionMetadata);
 
             // Build metadata with final response from ReasonActLoop
             const llmMetadata = await this.buildLLMMetadata(finalResponse, messages);
@@ -160,16 +171,29 @@ export class AgentExecutor {
                 }
             }
 
-            // 8. Publish response to Nostr
-            const publishedEvent = await this.publishResponse(
-                context,
-                triggeringEvent,
-                finalContent,
-                nextResponder,
-                llmMetadata,
-                tracingContext,
-                phaseTransition
-            );
+            // 8. Check if response was already published during streaming
+            let publishedEvent: NDKEvent | undefined;
+            if (streamResult.wasPublished) {
+                tracingLogger.debug("Response already published during streaming", {
+                    agentName: context.agent.name,
+                });
+                // We don't have the actual event ID from streaming, but we know it was published
+                publishedEvent = undefined;
+            } else {
+                // This should not happen with the new architecture, but keep as safety fallback
+                tracingLogger.error("Response was not published during streaming - publishing now", {
+                    agentName: context.agent.name,
+                });
+                publishedEvent = await this.publishResponse(
+                    context,
+                    triggeringEvent,
+                    finalContent,
+                    nextResponder,
+                    llmMetadata,
+                    tracingContext,
+                    phaseTransition
+                );
+            }
 
             // Log the agent response in human-readable format
             logger.agentResponse(
@@ -177,17 +201,26 @@ export class AgentExecutor {
                 finalContent,
                 context.conversation.id,
                 context.conversation.title,
-                publishedEvent.id
+                publishedEvent?.id || "streaming-published"
             );
 
             // 9. Publish typing indicator stop
-            await publishTypingStop(this.ndk, triggeringEvent, context.agent.signer);
+            await publisher.publishTypingIndicator("stop");
+
+            // Stop execution time tracking
+            const sessionDuration = stopExecutionTime(context.conversation);
+            
+            // Save updated conversation with execution time
+            if (this.conversationManager) {
+                await this.conversationManager.saveConversation(context.conversation.id);
+            }
 
             tracingLogger.completeOperation("agent_execution", {
                 agentName: context.agent.name,
                 responseLength: finalContent.length,
                 toolExecutions: allToolResults.length,
                 nextAgent: nextResponder,
+                sessionDurationMs: sessionDuration,
             });
 
             return {
@@ -199,8 +232,16 @@ export class AgentExecutor {
                 publishedEvent,
             };
         } catch (error) {
+            // Stop execution time tracking even on error
+            stopExecutionTime(context.conversation);
+            
+            // Save updated conversation with execution time
+            if (this.conversationManager) {
+                await this.conversationManager.saveConversation(context.conversation.id);
+            }
+            
             // Ensure typing indicator is stopped even on error
-            await publishTypingStop(this.ndk, triggeringEvent, context.agent.signer);
+            await publisher.publishTypingIndicator("stop");
 
             tracingLogger.failOperation("agent_execution", error, {
                 agentName: context.agent.name,
@@ -259,6 +300,14 @@ export class AgentExecutor {
             })
             .add("phase-constraints", {
                 phase: context.phase,
+            })
+            .add("retrieved-lessons", {
+                agent: context.agent,
+                phase: context.phase,
+                conversation: context.conversation,
+            })
+            .add("learn-tool-directive", {
+                hasLearnTool: context.agent.tools?.includes("learn") ?? false,
             });
 
         // Add PM-specific routing instructions for PM agents
@@ -349,14 +398,22 @@ export class AgentExecutor {
             additionalTags.push(["phase", phaseTransition]);
         }
 
-        const event = await publishAgentResponse(
-            triggeringEvent,
+        // This method is now only used as a fallback - should not normally be called
+        const publisher = new NostrPublisher({
+            ndk: this.ndk,
+            conversation: context.conversation,
+            agent: context.agent,
+            triggeringEvent: triggeringEvent,
+            project: getProjectContext().project
+        });
+        
+        const event = await publisher.publishResponse({
             content,
-            nextResponder || "",
-            context.agent.signer,
+            nextAgent: nextResponder,
             llmMetadata,
+            phaseTransition: phaseTransition ? { phaseTransition: { from: context.phase, to: phaseTransition as Phase, message: "" } } : undefined,
             additionalTags
-        );
+        });
 
         if (tracingContext && "logEventPublished" in tracingLogger) {
             tracingLogger.logEventPublished(event.id || "unknown", "agent_response", {
@@ -377,22 +434,23 @@ export class AgentExecutor {
         context: ReasonActContext,
         messages: Message[],
         tracingContext: TracingContext,
-        tools?: Tool[]
+        tools?: Tool[],
+        publisher?: NostrPublisher
     ): Promise<ReasonActResult> {
         let finalResponse: CompletionResponse | undefined;
         let finalContent = "";
         const allToolResults: ToolExecutionResult[] = [];
         let handoffMetadata: HandoffMetadata | undefined;
         let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+        let wasPublished = false;
 
-        // Create buffered publisher for streaming
-        const streamPublisher = new BufferedStreamPublisher(context.eventToReply, context.agent);
-
-        // Process the stream
+        // Process the stream - ReasonActLoop handles all publishing
+        const streamPublisher = publisher?.createStreamPublisher();
         const stream = this.reasonActLoop.executeStreaming(
             context,
             messages,
             tracingContext,
+            streamPublisher,
             tools
         );
 
@@ -400,12 +458,6 @@ export class AgentExecutor {
             switch (event.type) {
                 case "content":
                     finalContent += event.content;
-                    streamPublisher.addContent(event.content);
-                    break;
-
-                case "tool_start":
-                    // Flush any buffered content before starting tool
-                    await streamPublisher.flush(true);
                     break;
 
                 case "tool_complete": {
@@ -445,13 +497,10 @@ export class AgentExecutor {
 
                 case "done":
                     finalResponse = event.response;
+                    // The ReasonActLoop always publishes responses when it completes
+                    wasPublished = true;
                     break;
             }
-        }
-
-        // Flush any remaining content in the buffer
-        if (streamPublisher.hasContent()) {
-            await streamPublisher.flush(false);
         }
 
         return {
@@ -463,6 +512,7 @@ export class AgentExecutor {
             allToolResults,
             handoffMetadata,
             phaseTransitionMetadata,
+            wasPublished,
         };
     }
 

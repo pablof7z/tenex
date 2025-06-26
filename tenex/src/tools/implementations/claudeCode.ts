@@ -58,6 +58,7 @@ export const claudeCodeTool: Tool = {
                 title: `Claude Code ${mode === "plan" ? "Planning" : "Execution"} (via ${context.agentName})`,
                 branch,
                 conversationRootEventId,
+                conversation: context.conversation,
             });
 
             // Convert ClaudeCodeResult to ToolResult

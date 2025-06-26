@@ -89,42 +89,6 @@ export const customInstructionsFragment: PromptFragment<CustomInstructionsArgs> 
 // HELPER FUNCTIONS
 // ========================================================================
 
-function getPhaseInstructions(phase: Phase): string {
-    switch (phase) {
-        case "chat":
-            return `In the CHAT phase, you should:
-- Quickly understand the user's requirements and proceed to execution
-- Skip to execute phase for most tasks unless they're architecturally complex
-- Only ask questions if the answer would fundamentally change the implementation
-- Treat implementation as the default response to most requests`;
-
-        case "plan":
-            return `In the PLAN phase, you should:
-- Focus on complex tasks that have ambiguous implementation paths
-- Break down multi-component features into manageable steps
-- Identify architectural decisions and trade-offs
-- Map out dependencies and integration points
-- Only create plans when the implementation approach is genuinely unclear`;
-
-        case "execute":
-            return `In the EXECUTE phase, you should:
-- Implement the planned solutions step by step
-- Provide working code and configurations
-- Test implementations thoroughly
-- Document your progress and any deviations from the plan`;
-
-        case "review":
-            return `In the REVIEW phase, you should:
-- Assess the quality of implementations
-- Provide constructive feedback
-- Identify areas for improvement
-- Validate that requirements have been met`;
-
-        default:
-            return "Focus on the current task and provide value to the user.";
-    }
-}
-
 function getPhaseContext(phase: Phase, conversation?: Conversation): string | null {
     if (!conversation?.phaseTransitions?.length) {
         return null;

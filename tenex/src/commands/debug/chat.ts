@@ -93,6 +93,11 @@ export async function runDebugChat(
                 projectPath,
             },
             phaseTransitions: [],
+            executionTime: {
+                totalSeconds: 0,
+                isActive: false,
+                lastUpdated: Date.now(),
+            },
         };
 
         // Initialize NDK for AgentExecutor

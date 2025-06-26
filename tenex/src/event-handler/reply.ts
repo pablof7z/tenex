@@ -61,7 +61,7 @@ export const handleChatMessage = async (
 
     // This is a reply within an existing conversation
     try {
-        await handleReplyLogic(event, context);
+        await handleReplyLogic(event, context, mentionedPubkeys);
     } catch (error) {
         logInfo(chalk.red(`❌ Failed to route reply: ${formatError(error)}`));
     }
@@ -69,7 +69,8 @@ export const handleChatMessage = async (
 
 async function handleReplyLogic(
     event: NDKEvent,
-    { conversationManager, agentExecutor }: EventHandlerContext
+    { conversationManager, agentExecutor }: EventHandlerContext,
+    mentionedPubkeys: string[]
 ): Promise<void> {
     // Find the conversation this reply belongs to
     const conversation = conversationManager.getConversationByEvent(
@@ -84,20 +85,36 @@ async function handleReplyLogic(
     // Add event to conversation history
     await conversationManager.addEvent(conversation.id, event);
 
-    // Only respond to user messages
-    if (!isEventFromUser(event)) {
-        logger.info("Event is not from user, not sending to any agent");
-        return;
-    }
-
     // Get PM agent directly from project context
     const projectCtx = getProjectContext();
     const pmAgent = projectCtx.getProjectAgent();
 
-    // Execute with PM agent to handle routing
+    // Determine which agent should handle this event
+    let targetAgent = pmAgent; // Default to PM agent
+    
+    // Check if this is an agent-to-agent message (not from user)
+    if (!isEventFromUser(event)) {
+        // Find the first p-tagged system agent that isn't the author (prevent loops)
+        for (const pubkey of mentionedPubkeys) {
+            const agent = Array.from(projectCtx.agents.values()).find(a => a.pubkey === pubkey);
+            if (agent && agent.pubkey !== event.pubkey) {
+                targetAgent = agent;
+                logger.info(`Routing to p-tagged agent: ${agent.name} (${agent.pubkey})`);
+                break;
+            }
+        }
+        
+        // If no valid target agent found, skip processing
+        if (targetAgent === pmAgent && !mentionedPubkeys.includes(pmAgent.pubkey)) {
+            logger.info("Event is not from user and doesn't p-tag any valid agent, skipping");
+            return;
+        }
+    }
+
+    // Execute with the appropriate agent
     const result = await agentExecutor.execute(
         {
-            agent: pmAgent,
+            agent: targetAgent,
             conversation,
             phase: conversation.phase,
         },

@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Clock, MessageCircle } from "lucide-react";
+import { Clock, MessageCircle, Timer } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 
@@ -11,7 +11,7 @@ interface ThreadOverviewProps {
 }
 
 export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
-    const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
+    const { formatRelativeTime, formatDuration } = useTimeFormat({ relativeFormat: "short" });
 
     // Get thread title
     const getThreadTitle = () => {
@@ -38,6 +38,12 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
     // Get latest reply
     const latestReply = threadReplies[0];
     const latestActivity = latestReply || thread;
+
+    // Get execution time from latest activity
+    const executionTime = useMemo(() => {
+        const netTimeTag = latestActivity.tags?.find((tag) => tag[0] === "net-time")?.[1];
+        return netTimeTag ? parseInt(netTimeTag, 10) : null;
+    }, [latestActivity]);
 
     // Get author info
     const AuthorInfo = ({ pubkey }: { pubkey: string }) => {
@@ -113,6 +119,12 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
                                 <Clock className="w-3 h-3" />
                                 <span>{formatRelativeTime(latestActivity.created_at!)}</span>
                             </div>
+                            {executionTime !== null && executionTime > 0 && (
+                                <div className="flex items-center gap-1">
+                                    <Timer className="w-3 h-3" />
+                                    <span>{formatDuration(executionTime)}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

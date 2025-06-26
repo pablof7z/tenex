@@ -25,6 +25,7 @@ export const EXECUTION_TAGS = {
     EXECUTOR: "executor",
     BRANCH: "branch",
     PROMPT: "prompt",
+    NET_TIME: "net-time",
 } as const;
 
 // Claude-specific tags (for backwards compatibility)

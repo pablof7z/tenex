@@ -14,6 +14,13 @@ export const PhaseTransitionSchema = z.object({
 
 export const ConversationMetadataSchema = z.record(z.string(), z.unknown());
 
+const ExecutionTimeSchema = z.object({
+    totalSeconds: z.number(),
+    currentSessionStart: z.number().optional(),
+    isActive: z.boolean(),
+    lastUpdated: z.number(),
+});
+
 export const SerializedConversationSchema = z.object({
     id: z.string(),
     title: z.string(),
@@ -22,6 +29,7 @@ export const SerializedConversationSchema = z.object({
     phaseStartedAt: z.number().optional(),
     metadata: ConversationMetadataSchema,
     phaseTransitions: z.array(PhaseTransitionSchema).default([]),
+    executionTime: ExecutionTimeSchema.optional(),
 });
 
 export const ConversationMetadataFileSchema = z.object({

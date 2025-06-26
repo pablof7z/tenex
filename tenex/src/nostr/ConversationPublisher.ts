@@ -6,6 +6,8 @@ import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
+import { EXECUTION_TAGS } from "@/nostr/tags";
+import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
 
 export async function publishAgentResponse(
     eventToReply: NDKEvent,
@@ -13,7 +15,8 @@ export async function publishAgentResponse(
     nextAgent: string,
     signer: NDKPrivateKeySigner,
     llmMetadata?: LLMMetadata,
-    additionalTags?: NDKTag[]
+    additionalTags?: NDKTag[],
+    conversation?: Conversation
 ): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
@@ -62,6 +65,12 @@ export async function publishAgentResponse(
         }
     }
 
+    // Add execution time tag if conversation provided
+    if (conversation) {
+        const totalSeconds = getTotalExecutionTimeSeconds(conversation);
+        reply.tag([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
+    }
+
     reply.content = content;
 
     // Sign with the provided signer (agent or project)
@@ -82,7 +91,8 @@ export async function publishAgentResponse(
 export async function publishErrorNotification(
     eventToReply: NDKEvent,
     errorMessage: string,
-    signer: NDKPrivateKeySigner
+    signer: NDKPrivateKeySigner,
+    conversation?: Conversation
 ): Promise<NDKEvent> {
     const reply = eventToReply.reply();
 
@@ -95,6 +105,12 @@ export async function publishErrorNotification(
 
     // Add error indicator tag
     reply.tag(["error", "system"]);
+
+    // Add execution time tag if conversation provided
+    if (conversation) {
+        const totalSeconds = getTotalExecutionTimeSeconds(conversation);
+        reply.tag([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
+    }
 
     // Set error message content
     reply.content = errorMessage;

@@ -35,15 +35,6 @@ export class LLMRouter implements LLMService {
         if (context?.configName?.startsWith("defaults.")) {
             const defaultKey = context.configName.substring("defaults.".length);
             const configKey = this.config.defaults[defaultKey];
-            
-            logger.debug("[LLM Router] Resolving defaults reference", {
-                requestedConfigName: context.configName,
-                defaultKey,
-                resolvedConfigKey: configKey,
-                availableDefaults: this.config.defaults,
-                hasConfigForKey: configKey ? !!this.config.configs[configKey] : false,
-            });
-            
             if (configKey && this.config.configs[configKey]) {
                 return configKey;
             }

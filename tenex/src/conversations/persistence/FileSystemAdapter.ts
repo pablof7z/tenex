@@ -100,6 +100,11 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
                 phaseStartedAt: data.phaseStartedAt,
                 metadata: data.metadata,
                 phaseTransitions: data.phaseTransitions,
+                executionTime: data.executionTime || {
+                    totalSeconds: 0,
+                    isActive: false,
+                    lastUpdated: Date.now(),
+                },
             };
 
             return conversation;

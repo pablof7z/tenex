@@ -9,6 +9,14 @@ export interface Conversation {
     phaseStartedAt?: number;
     metadata: ConversationMetadata;
     phaseTransitions: PhaseTransition[]; // First-class phase transition history
+    
+    // Execution time tracking
+    executionTime: {
+        totalSeconds: number;
+        currentSessionStart?: number;
+        isActive: boolean;
+        lastUpdated: number;
+    };
 }
 
 export interface ConversationMetadata {

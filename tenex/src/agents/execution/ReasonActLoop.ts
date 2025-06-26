@@ -1,6 +1,6 @@
 import type { Phase } from "@/conversations/phases";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
-import { publishAgentResponse } from "@/nostr/ConversationPublisher";
+import type { StreamPublisher } from "@/nostr/NostrPublisher";
 import { publishToolExecutionStatus } from "@/nostr/ToolExecutionPublisher";
 import { getNDK } from "@/nostr/ndkClient";
 import type { LLMMetadata } from "@/nostr/types";
@@ -17,7 +17,6 @@ import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import type { Message } from "multi-llm-ts";
-import { BufferedStreamPublisher } from "./BufferedStreamPublisher";
 
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
@@ -41,6 +40,7 @@ export interface ReasonActResult {
     allToolResults?: ToolExecutionResult[]; // Array of actual tool execution results
     handoffMetadata?: HandoffMetadata;
     phaseTransitionMetadata?: PhaseTransitionMetadata;
+    wasPublished?: boolean; // Track if response was published during streaming
 }
 
 interface StreamingReasonActResult extends ReasonActResult {
@@ -86,6 +86,11 @@ export class ReasonActLoop {
         );
 
         if (!metadata) {
+            console.log("WARNING: buildLLMMetadata returned null", {
+                hasUsage: !!response.usage,
+                usage: response.usage,
+                model: responseWithUsage.model
+            });
             return undefined;
         }
 
@@ -155,17 +160,11 @@ export class ReasonActLoop {
             // Publish the response with tool results
             if (context.eventToReply && context.agent.signer && initialLLMMetadata) {
                 try {
-                    await publishAgentResponse(
-                        context.eventToReply,
-                        initialResponse.content || "",
-                        context.nextAgent || "",
-                        context.agent.signer,
-                        initialLLMMetadata,
-                        [
-                            ["has-tools", "true"],
-                            ["tool-count", String(initialResponse.toolCalls.length)],
-                        ]
-                    );
+                    // TODO: Publishing should be handled by the caller with NostrPublisher
+                    // For now, non-streaming path doesn't publish
+                    tracingLogger.info("Non-streaming path - publishing should be handled by caller", {
+                        agent: context.agentName
+                    });
 
                     tracingLogger.debug("Published response with native tool calls", {
                         agent: context.agentName,
@@ -187,6 +186,7 @@ export class ReasonActLoop {
             allToolResults,
             handoffMetadata,
             phaseTransitionMetadata,
+            wasPublished: !!(context.eventToReply && context.agent.signer && initialLLMMetadata && initialResponse.toolCalls?.length),
         };
     }
 
@@ -194,6 +194,7 @@ export class ReasonActLoop {
         context: ReasonActContext,
         messages: Message[],
         tracingContext: TracingContext,
+        streamPublisher?: StreamPublisher,
         tools?: Tool[]
     ): AsyncIterable<StreamEvent> {
         const tracingLogger = createTracingLogger(tracingContext, "agent");
@@ -207,6 +208,7 @@ export class ReasonActLoop {
             agent: context.agentName,
             phase: context.phase,
             hasTools: !!(tools && tools.length > 0),
+            tools: JSON.stringify(tools, null, 4)
         });
 
         try {
@@ -230,11 +232,13 @@ export class ReasonActLoop {
                 },
             });
 
-            // Create buffered publisher for streaming
-            const streamPublisher = new BufferedStreamPublisher(
-                context.eventToReply,
-                context.agent
-            );
+            // Use provided stream publisher or skip publishing
+            if (!streamPublisher) {
+                tracingLogger.info("No stream publisher provided - streaming without publishing", {
+                    agent: context.agentName
+                });
+            }
+
 
             for await (const event of stream) {
                 console.log(event);
@@ -245,12 +249,12 @@ export class ReasonActLoop {
                 switch (event.type) {
                     case "content":
                         fullContent += event.content;
-                        streamPublisher.addContent(event.content);
+                        streamPublisher?.addContent(event.content);
                         break;
 
                     case "tool_start":
                         // Flush any buffered content before starting tool
-                        await streamPublisher.flush(true);
+                        await streamPublisher?.flush({ isToolCall: true });
 
                         // Publish tool start status if we have event context
                         if (context.eventToReply && context.agent.signer) {
@@ -264,7 +268,8 @@ export class ReasonActLoop {
                                         status: "starting",
                                         args: event.args,
                                     },
-                                    context.agent.signer
+                                    context.agent.signer,
+                                    context.conversation
                                 );
                             } catch (error) {
                                 tracingLogger.info("Failed to publish tool start status", {
@@ -276,7 +281,7 @@ export class ReasonActLoop {
                         break;
 
                     case "tool_complete": {
-                        // Extract tool result and metadata
+                        // FIRST: Extract tool result and metadata BEFORE flushing
                         const resultWithMetadata = event.result as
                             | {
                                   metadata?: unknown;
@@ -299,28 +304,6 @@ export class ReasonActLoop {
 
                         allToolResults.push(toolResult);
 
-                        // Publish tool completion status
-                        if (context.eventToReply && context.agent.signer) {
-                            try {
-                                const ndk = getNDK();
-                                await publishToolExecutionStatus(
-                                    ndk,
-                                    context.eventToReply,
-                                    {
-                                        tool: event.tool,
-                                        status: "completed",
-                                        result: resultWithMetadata?.success ? "Success" : "Failed",
-                                    },
-                                    context.agent.signer
-                                );
-                            } catch (error) {
-                                tracingLogger.info("Failed to publish tool completion status", {
-                                    tool: event.tool,
-                                    error: error instanceof Error ? error.message : String(error),
-                                });
-                            }
-                        }
-
                         // Check for special metadata
                         if (resultWithMetadata?.metadata) {
                             const metadata = resultWithMetadata.metadata;
@@ -338,11 +321,43 @@ export class ReasonActLoop {
                                 });
                             }
                         }
+
+                        // THEN: Flush buffered content after metadata extraction
+                        await streamPublisher?.flush({ isToolCall: true });
+
+                        // Publish tool completion status
+                        if (context.eventToReply && context.agent.signer) {
+                            try {
+                                const ndk = getNDK();
+                                await publishToolExecutionStatus(
+                                    ndk,
+                                    context.eventToReply,
+                                    {
+                                        tool: event.tool,
+                                        status: "completed",
+                                        result: resultWithMetadata?.success ? "Success" : "Failed",
+                                    },
+                                    context.agent.signer,
+                                    context.conversation
+                                );
+                            } catch (error) {
+                                tracingLogger.info("Failed to publish tool completion status", {
+                                    tool: event.tool,
+                                    error: error instanceof Error ? error.message : String(error),
+                                });
+                            }
+                        }
                         break;
                     }
 
                     case "done":
                         finalResponse = event.response;
+                        tracingLogger.debug("Received done event", {
+                            hasResponse: !!finalResponse,
+                            hasUsage: !!finalResponse?.usage,
+                            usage: finalResponse?.usage,
+                            model: (finalResponse as any)?.model
+                        });
                         break;
 
                     case "error":
@@ -351,38 +366,46 @@ export class ReasonActLoop {
                 }
             }
 
-            // Flush any remaining content in the buffer
-            if (streamPublisher.hasContent()) {
-                await streamPublisher.flush(false);
-            }
-
-            // If we have a next agent or phase transition, publish the response
-            if (
-                (context.nextAgent || phaseTransitionMetadata) &&
-                finalResponse &&
-                context.eventToReply
-            ) {
-                try {
-                    await publishAgentResponse(
-                        context.eventToReply,
-                        fullContent,
-                        context.nextAgent || handoffMetadata?.handoff.to || "",
-                        context.agent.signer,
-                        await this.buildLLMMetadata(finalResponse, messages),
-                        phaseTransitionMetadata
-                            ? [["phase", phaseTransitionMetadata.phaseTransition.to]]
-                            : []
-                    );
-
-                    tracingLogger.debug("Published streaming response", {
+            // Handle stream completion - finalize after all events are processed
+            if (streamPublisher && !streamPublisher.isFinalized()) {
+                // Build LLM metadata if we have a final response
+                let llmMetadata: LLMMetadata | undefined;
+                if (finalResponse) {
+                    llmMetadata = await this.buildLLMMetadata(finalResponse, messages);
+                    
+                    tracingLogger.debug("Built LLM metadata for final response", {
+                        hasMetadata: !!llmMetadata,
+                        model: llmMetadata?.model,
+                        cost: llmMetadata?.cost,
+                        promptTokens: llmMetadata?.promptTokens,
+                        completionTokens: llmMetadata?.completionTokens
+                    });
+                } else {
+                    tracingLogger.info("No final response received from stream - LLM metadata will be missing", {
+                        agent: context.agentName,
+                        contentLength: fullContent.length
+                    });
+                }
+                
+                // Finalize the stream with metadata
+                await streamPublisher.finalize({
+                    llmMetadata,
+                    phaseTransition: phaseTransitionMetadata,
+                    handoff: handoffMetadata,
+                    nextAgent: context.nextAgent || handoffMetadata?.handoff.to
+                });
+                
+                if (phaseTransitionMetadata) {
+                    tracingLogger.debug("Published final response for phase transition", {
+                        agent: context.agentName,
+                        fromPhase: phaseTransitionMetadata.phaseTransition.from,
+                        toPhase: phaseTransitionMetadata.phaseTransition.to,
+                        hasHandoff: !!handoffMetadata,
+                    });
+                } else {
+                    tracingLogger.debug("Published final response on stream completion", {
                         agent: context.agentName,
                         hasHandoff: !!handoffMetadata,
-                        hasPhaseTransition: !!phaseTransitionMetadata,
-                    });
-                } catch (error) {
-                    tracingLogger.error("Failed to publish streaming response", {
-                        agent: context.agentName,
-                        error: error instanceof Error ? error.message : String(error),
                     });
                 }
             }

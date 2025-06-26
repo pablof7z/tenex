@@ -7,6 +7,7 @@ import { switchPhaseTool } from "./implementations/switchPhase";
 import { handoffTool } from "./implementations/handoff";
 import { analyze } from "./implementations/analyze";
 import { generateInventoryTool } from "./implementations/generateInventory";
+import { learnTool } from "./implementations/learn";
 
 // Registry of all available tools
 const toolsMap = new Map<string, Tool>([
@@ -18,6 +19,7 @@ const toolsMap = new Map<string, Tool>([
     ["handoff", handoffTool],
     ["analyze", analyze],
     ["generate_inventory", generateInventoryTool],
+    ["learn", learnTool],
 ]);
 
 export function getTool(name: string): Tool | undefined {

@@ -13,6 +13,7 @@ import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import { FileSystemAdapter } from "./persistence";
 import type { ConversationMetadata, Conversation } from "./types";
 import { isEventFromUser } from "@/nostr/utils";
+import { initializeExecutionTime, ensureExecutionTimeInitialized } from "./executionTime";
 
 export class ConversationManager {
     private conversations: Map<string, Conversation> = new Map();
@@ -61,9 +62,15 @@ export class ConversationManager {
                 summary: event.content,
             },
             phaseTransitions: [], // Initialize empty phase transitions array
+            executionTime: {
+                totalSeconds: 0,
+                isActive: false,
+                lastUpdated: Date.now(),
+            },
         };
 
         this.conversations.set(id, conversation);
+        
         tracingLogger.info(`Created new conversation: ${title}`, {
             title,
             phase: "chat",
@@ -237,6 +244,9 @@ export class ConversationManager {
                 if (!meta.archived) {
                     const conversation = await this.persistence.load(meta.id);
                     if (conversation) {
+                        // Ensure execution time is initialized for loaded conversations
+                        ensureExecutionTimeInitialized(conversation);
+                        
                         this.conversations.set(meta.id, conversation);
                         _loadedCount++;
                     }

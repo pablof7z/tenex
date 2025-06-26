@@ -7,12 +7,15 @@ import type { LLMMetadata } from "@/nostr/types";
 import { STATUS_TAGS, LLM_TAGS, EXECUTION_TAGS, CLAUDE_TAGS } from "@/nostr/tags";
 import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
 import type { ClaudeCodeResult } from "@/tools/claude/ClaudeCodeExecutor";
+import type { Conversation } from "@/conversations/types";
+import { startExecutionTime, stopExecutionTime, getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
 
 export interface TaskCreationOptions {
     title: string;
     prompt: string;
     branch?: string;
     conversationRootEventId?: string;
+    conversation?: Conversation;
 }
 
 export interface TaskUpdateOptions {
@@ -22,6 +25,7 @@ export interface TaskUpdateOptions {
     cost?: number;
     sessionId?: string;
     claudeMessage?: ClaudeCodeMessage;
+    conversation?: Conversation;
 }
 
 /**
@@ -56,6 +60,12 @@ export class TaskPublisher {
             task.tags.push(["e", options.conversationRootEventId, "", "root"]);
         }
 
+        // Add execution time tag if conversation provided
+        if (options.conversation) {
+            const totalSeconds = getTotalExecutionTimeSeconds(options.conversation);
+            task.tags.push([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
+        }
+
         // Sign and publish
         await task.sign(projectCtx.signer);
         await task.publish();
@@ -76,6 +86,8 @@ export class TaskPublisher {
         // Create a regular event that references the task
         const updateEvent = task.reply();
 
+        console.log('task update', JSON.stringify(update, null, 4))
+
         // Tag the project
         const projectCtx = getProjectContext();
         updateEvent.tag(projectCtx.project);
@@ -92,6 +104,12 @@ export class TaskPublisher {
         }
         if (update.sessionId) {
             updateEvent.tags.push([EXECUTION_TAGS.SESSION_ID, update.sessionId]);
+        }
+
+        // Add execution time tag if conversation provided
+        if (update.conversation) {
+            const totalSeconds = getTotalExecutionTimeSeconds(update.conversation);
+            updateEvent.tags.push([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
         }
 
         // Handle Claude message if provided
@@ -147,14 +165,43 @@ export class TaskPublisher {
             }
 
             // Set content from Claude message
-            if (message.type === "assistant" && message.message?.content?.[0]?.text) {
-                updateEvent.content = message.message.content[0].text;
+            if (message.type === "assistant") {
+                const content = message.message?.content?.[0];
+                if (content?.text) {
+                    updateEvent.content = content.text;
+                } else {
+                    // Fallback to update message or default
+                    updateEvent.content =
+                        update.message || `Task update: ${update.status || "in-progress"}`;
+                }
+            } else if (message.type === "tool_use" && message.tool_use?.name === "TodoWrite") {
+                // Parse TodoWrite tool use
+                const todos = (message.tool_use.input as any)?.todos || [];
+                const inProgressTask = todos.find((todo: any) => todo.status === "in_progress");
+                const completedTasks = todos.filter((todo: any) => todo.status === "completed");
+                const lastCompletedTask = completedTasks[completedTasks.length - 1];
+                
+                let formattedContent = "";
+                if (lastCompletedTask) {
+                    formattedContent += `✅ ${lastCompletedTask.content}\n`;
+                }
+                if (inProgressTask) {
+                    formattedContent += `🔄 ${inProgressTask.content}`;
+                }
+                
+                updateEvent.content = formattedContent || update.message || `Task update: ${update.status || "in-progress"}`;
+            } else {
+                // Fallback to update message or default
+                updateEvent.content =
+                    update.message || `Task update: ${update.status || "in-progress"}`;
             }
         } else {
             // Set content from update message
             updateEvent.content =
                 update.message || `Task update: ${update.status || "in-progress"}`;
         }
+
+        console.log('task update with content', updateEvent.content)
 
         // Sign and publish
         await updateEvent.sign(projectCtx.signer);
@@ -225,6 +272,7 @@ export class TaskPublisher {
         title: string;
         branch?: string;
         conversationRootEventId?: string;
+        conversation?: Conversation;
     }): Promise<{
         task: NDKTask;
         result: ClaudeCodeResult;
@@ -232,19 +280,17 @@ export class TaskPublisher {
         let task: NDKTask | undefined;
 
         try {
+            // Start execution time tracking if conversation provided
+            if (options.conversation) {
+                startExecutionTime(options.conversation);
+            }
+            
             // Create NDKTask
             task = await this.createTask({
                 title: options.title,
                 prompt: options.prompt,
                 branch: options.branch,
                 conversationRootEventId: options.conversationRootEventId,
-            });
-
-            // Update task status to in-progress
-            await this.updateTask(task, {
-                status: "in-progress",
-                progress: 0,
-                message: "Starting Claude Code execution...",
             });
 
             // Create ClaudeCodeExecutor with message callbacks
@@ -268,6 +314,11 @@ export class TaskPublisher {
             // Execute and get result
             const result = await executor.execute();
 
+            // Stop execution time tracking
+            if (options.conversation) {
+                stopExecutionTime(options.conversation);
+            }
+            
             // Complete the task
             await this.completeTask(task, result.success, {
                 sessionId: result.sessionId,
@@ -279,6 +330,11 @@ export class TaskPublisher {
 
             return { task, result };
         } catch (error) {
+            // Stop execution time tracking even on error
+            if (options.conversation) {
+                stopExecutionTime(options.conversation);
+            }
+            
             // If task was created, mark it as failed
             if (task) {
                 await this.completeTask(task, false, {
