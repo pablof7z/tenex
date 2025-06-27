@@ -107,7 +107,7 @@ Focus specifically on the module: **${moduleName}** at path: \`${modulePath}\`
 
 This module was identified as complex because: ${complexityReason}
 
-Please generate a comprehensive technical guide for this module that includes:
+Please generate a comprehensive technical documentation for this module that includes:
 
 1. **Module Overview**
    - Purpose and responsibilities
@@ -129,12 +129,12 @@ Please generate a comprehensive technical guide for this module that includes:
    - External dependencies
    - Event flows or communication patterns
 
-5. **Complexity Analysis**
-   - What makes this module complex
-   - Potential areas for improvement
-   - Common pitfalls or gotchas
+5. **Usage Guide**
+   - How to properly use this module
+   - Example use cases
+   - Common patterns and best practices
 
-Focus on technical depth while keeping it accessible to developers who need to work with or modify this module.`;
+Focus on documenting how the module works at both a high-level conceptual understanding and detailed technical level. Keep the documentation accessible to developers who need to understand, use, or modify this module.`;
     },
     validateArgs: (args): args is ModuleGuideArgs => {
         return (
