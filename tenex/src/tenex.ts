@@ -42,6 +42,12 @@ debug
     .action((agent, options) => {
         import("./commands/debug/chat").then(({ runDebugChat }) => runDebugChat(agent, options));
     });
+debug
+    .command("conversation <nevent>")
+    .description("Fetch and display a Nostr conversation thread")
+    .action((nevent) => {
+        import("./commands/debug/conversation").then(({ runDebugConversation }) => runDebugConversation(nevent));
+    });
 
 // Initialize NDK before parsing commands
 export async function main(): Promise<void> {
