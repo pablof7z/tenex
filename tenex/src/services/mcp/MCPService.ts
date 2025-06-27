@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
+import { z } from "zod";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services/ConfigService";
 import type { MCPServerConfig, TenexMCP } from "@/services/config/types";
@@ -9,23 +10,28 @@ import type { Tool, ToolResult, PluginParameter } from "@/tools/types";
 
 interface MCPClient {
     client: Client;
-    process: ChildProcess;
+    process?: ChildProcess;
     serverName: string;
     config: MCPServerConfig;
 }
 
-interface MCPToolsListResponse {
-    tools: MCPTool[];
-}
+// Define Zod schemas for MCP responses
+const MCPToolSchema = z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    inputSchema: z.object({
+        properties: z.record(z.any()).optional(),
+        required: z.array(z.string()).optional(),
+    }).optional(),
+});
 
-interface MCPTool {
-    name: string;
-    description?: string;
-    inputSchema?: {
-        properties?: Record<string, MCPToolProperty>;
-        required?: string[];
-    };
-}
+const MCPToolsListResponseSchema = z.object({
+    tools: z.array(MCPToolSchema),
+});
+
+type MCPToolsListResponse = z.infer<typeof MCPToolsListResponseSchema>;
+
+type MCPTool = z.infer<typeof MCPToolSchema>;
 
 interface MCPToolProperty {
     type: string;
@@ -36,24 +42,23 @@ interface MCPToolProperty {
     maximum?: number;
 }
 
-interface MCPToolExecuteResponse {
-    content?: MCPContent[];
-}
+const MCPContentSchema = z.object({
+    type: z.string(),
+    text: z.string().optional(),
+});
 
-interface MCPContent {
-    type: string;
-    text?: string;
-}
+const MCPToolExecuteResponseSchema = z.object({
+    content: z.array(MCPContentSchema).optional(),
+});
+
+type MCPToolExecuteResponse = z.infer<typeof MCPToolExecuteResponseSchema>;
+type MCPContent = z.infer<typeof MCPContentSchema>;
 
 interface StdioTransportWithProcess extends StdioClientTransport {
     process?: ChildProcess;
     subprocess?: ChildProcess;
 }
 
-// Type-safe wrapper for MCP Client with proper request method
-interface MCPClientWithRequest extends Client {
-    request<T = unknown>(request: { method: string; params?: unknown }): Promise<T>;
-}
 
 export class MCPService {
     private static instance: MCPService;
@@ -140,6 +145,8 @@ export class MCPService {
             Object.assign(mergedEnv, config.env);
         }
 
+        logger.debug(`Starting MCP server '${name}' with command: ${config.command} ${config.args.join(' ')}`);
+        
         const transport = new StdioClientTransport({
             command: config.command,
             args: config.args,
@@ -153,12 +160,17 @@ export class MCPService {
             capabilities: {},
         });
 
-        await client.connect(transport);
+        try {
+            await client.connect(transport);
+        } catch (error) {
+            logger.error(`Failed to connect to MCP server '${name}':`, error);
+            throw error;
+        }
 
         // Perform health check
         try {
             const healthCheck = await Promise.race([
-                (client as MCPClientWithRequest).request<MCPToolsListResponse>({ method: "tools/list" }),
+                client.request({ method: "tools/list" }, MCPToolsListResponseSchema),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error("Health check timeout")), 5000)
                 )
@@ -167,14 +179,18 @@ export class MCPService {
             logger.info(`MCP server '${name}' passed health check`);
         } catch (error) {
             logger.error(`MCP server '${name}' failed health check:`, error);
-            await client.close();
+            try {
+                await client.close();
+            } catch (closeError) {
+                // Ignore close errors
+            }
             return;
         }
 
         // Store the client with the transport's subprocess
         this.clients.set(name, {
             client,
-            process: (transport as StdioTransportWithProcess).process || (transport as StdioTransportWithProcess).subprocess || spawn('echo', ['no process']),
+            process: (transport as any).process || (transport as any).subprocess,
             serverName: name,
             config,
         });
@@ -199,7 +215,7 @@ export class MCPService {
 
         for (const [serverName, mcpClient] of this.clients) {
             try {
-                const result = await (mcpClient.client as MCPClientWithRequest).request<MCPToolsListResponse>({ method: "tools/list" });
+                const result = await mcpClient.client.request({ method: "tools/list" }, MCPToolsListResponseSchema);
                 
                 if (result && "tools" in result && Array.isArray(result.tools)) {
                     for (const mcpTool of result.tools) {
@@ -285,13 +301,13 @@ export class MCPService {
         }
 
         try {
-            const result = await (mcpClient.client as MCPClientWithRequest).request<MCPToolExecuteResponse>({
+            const result = await mcpClient.client.request({
                 method: "tools/call",
                 params: {
                     name: toolName,
                     arguments: args,
                 }
-            });
+            }, MCPToolExecuteResponseSchema);
 
             // Extract text content from the response
             if (result?.content && Array.isArray(result.content)) {
@@ -326,28 +342,34 @@ export class MCPService {
             // Close the client connection
             await mcpClient.client.close();
 
-            // Kill the process
-            mcpClient.process.kill("SIGTERM");
+            // Kill the process if it exists
+            if (mcpClient.process) {
+                mcpClient.process.kill("SIGTERM");
 
-            // Give it some time to shut down gracefully
-            await new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                    mcpClient.process.kill("SIGKILL");
-                    resolve(undefined);
-                }, 5000);
+                // Give it some time to shut down gracefully
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        if (mcpClient.process) {
+                            mcpClient.process.kill("SIGKILL");
+                        }
+                        resolve(undefined);
+                    }, 5000);
 
-                mcpClient.process.once("exit", () => {
-                    clearTimeout(timeout);
-                    resolve(undefined);
+                    mcpClient.process!.once("exit", () => {
+                        clearTimeout(timeout);
+                        resolve(undefined);
+                    });
                 });
-            });
+            }
 
             logger.info(`Shut down MCP server '${name}'`);
         } catch (error) {
             logger.error(`Error shutting down MCP server '${name}':`, error);
             // Force kill if graceful shutdown fails
             try {
-                mcpClient.process.kill("SIGKILL");
+                if (mcpClient.process) {
+                    mcpClient.process.kill("SIGKILL");
+                }
             } catch {}
         }
     }
@@ -355,7 +377,7 @@ export class MCPService {
     // Check if a server is running
     isServerRunning(name: string): boolean {
         const mcpClient = this.clients.get(name);
-        return mcpClient ? !mcpClient.process.killed : false;
+        return mcpClient ? !mcpClient.process?.killed : false;
     }
 
     // Get list of running servers
