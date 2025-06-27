@@ -15,15 +15,15 @@ import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
 import { getProjectContext } from "@/services";
 import { getTool } from "@/tools/registry";
 import type {
-    HandoffMetadata,
-    PhaseTransitionMetadata,
+    ContinueMetadata,
+    CompleteMetadata,
     ToolExecutionMetadata,
     ToolExecutionResult,
     ToolOutput,
     ToolResult,
 } from "@/tools/types";
 import { mcpService } from "@/services/mcp/MCPService";
-import { isHandoffMetadata, isPhaseTransitionMetadata } from "@/tools/types";
+import { isContinueMetadata, isCompleteMetadata } from "@/tools/types";
 import {
     type TracingContext,
     type TracingLogger,
@@ -144,36 +144,33 @@ export class AgentExecutor {
             const finalResponse = streamResult.finalResponse;
             const finalContent = streamResult.finalContent;
             const allToolResults = streamResult.allToolResults || [];
-            const handoffMetadata = streamResult.handoffMetadata;
-            const phaseTransitionMetadata = streamResult.phaseTransitionMetadata;
-
-            console.log("phase transition", phaseTransitionMetadata);
+            const continueMetadata = streamResult.continueMetadata;
+            const completeMetadata = streamResult.completeMetadata;
 
             // Build metadata with final response from ReasonActLoop
             const llmMetadata = await buildLLMMetadata(finalResponse, messages);
 
-            // 6. Process handoff and phase transition
+            // 6. Process routing decisions
             let nextResponder: string | undefined;
             let phaseTransition: string | undefined;
 
-            if (handoffMetadata) {
-                nextResponder = handoffMetadata.handoff.to;
-            }
-
-            if (phaseTransitionMetadata) {
-                phaseTransition = phaseTransitionMetadata.phaseTransition.to;
+            if (continueMetadata) {
+                nextResponder = continueMetadata.routingDecision.destination;
+                phaseTransition = continueMetadata.routingDecision.phase;
 
                 // Handle phase transition in conversation manager
                 if (this.conversationManager && phaseTransition) {
                     await this.conversationManager.updatePhase(
                         context.conversation.id,
                         phaseTransition as Phase,
-                        phaseTransitionMetadata.phaseTransition.message,
+                        continueMetadata.routingDecision.message,
                         context.agent.pubkey,
                         context.agent.name,
-                        phaseTransitionMetadata.phaseTransition.reason
+                        continueMetadata.routingDecision.reason
                     );
                 }
+            } else if (completeMetadata) {
+                nextResponder = completeMetadata.completion.nextAgent;
             }
 
             // 8. Check if response was already published during streaming
@@ -409,8 +406,8 @@ export class AgentExecutor {
         let finalResponse: CompletionResponse | undefined;
         let finalContent = "";
         const allToolResults: ToolExecutionResult[] = [];
-        let handoffMetadata: HandoffMetadata | undefined;
-        let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+        let continueMetadata: ContinueMetadata | undefined;
+        let completeMetadata: CompleteMetadata | undefined;
         let wasPublished = false;
 
         // Process the stream - ReasonActLoop handles all publishing
@@ -444,8 +441,8 @@ export class AgentExecutor {
                         toolName: event.tool,
                         metadata: resultWithMetadata?.metadata as
                             | ToolExecutionMetadata
-                            | HandoffMetadata
-                            | PhaseTransitionMetadata
+                            | ContinueMetadata
+                            | CompleteMetadata
                             | undefined,
                     };
 
@@ -454,10 +451,10 @@ export class AgentExecutor {
                     // Check for special metadata
                     if (resultWithMetadata?.metadata) {
                         const metadata = resultWithMetadata.metadata;
-                        if (isHandoffMetadata(metadata)) {
-                            handoffMetadata = metadata;
-                        } else if (isPhaseTransitionMetadata(metadata)) {
-                            phaseTransitionMetadata = metadata;
+                        if (isContinueMetadata(metadata)) {
+                            continueMetadata = metadata;
+                        } else if (isCompleteMetadata(metadata)) {
+                            completeMetadata = metadata;
                         }
                     }
                     break;
@@ -488,8 +485,8 @@ export class AgentExecutor {
             finalContent,
             toolExecutions: allToolResults.length,
             allToolResults,
-            handoffMetadata,
-            phaseTransitionMetadata,
+            continueMetadata,
+            completeMetadata,
             wasPublished,
         };
     }

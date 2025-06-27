@@ -19,6 +19,7 @@ export interface Agent {
     eventId?: string; // NDKAgent event ID
     slug: string; // Agent slug/key from agents.json
     isPMAgent?: boolean; // Whether this agent is the PM agent (project manager/orchestrator)
+    isBuiltIn?: boolean; // Whether this is a built-in agent (executer, planner)
 }
 
 export interface AgentContext {

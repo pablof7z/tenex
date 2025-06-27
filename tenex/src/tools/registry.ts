@@ -3,8 +3,8 @@ import { readFileTool } from "./implementations/readFile";
 import { shellTool } from "./implementations/shell";
 import { claudeCodeTool } from "./implementations/claudeCode";
 import { getTimeTool } from "./implementations/getTime";
-import { switchPhaseTool } from "./implementations/switchPhase";
-import { handoffTool } from "./implementations/handoff";
+import { continueTool } from "./implementations/continue";
+import { completeTool } from "./implementations/complete";
 import { analyze } from "./implementations/analyze";
 import { generateInventoryTool } from "./implementations/generateInventory";
 import { learnTool } from "./implementations/learn";
@@ -15,8 +15,8 @@ const toolsMap = new Map<string, Tool>([
     ["shell", shellTool],
     ["claude_code", claudeCodeTool],
     ["get_time", getTimeTool],
-    ["switch_phase", switchPhaseTool],
-    ["handoff", handoffTool],
+    ["continue", continueTool],
+    ["complete", completeTool],
     ["analyze", analyze],
     ["generate_inventory", generateInventoryTool],
     ["learn", learnTool],

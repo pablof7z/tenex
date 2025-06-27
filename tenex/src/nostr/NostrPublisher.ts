@@ -3,7 +3,7 @@ import { NDKEvent, type NDKProject, type NDKPrivateKeySigner, type NDKTag } from
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 import type { LLMMetadata } from "@/nostr/types";
-import type { HandoffMetadata, PhaseTransitionMetadata } from "@/tools/types";
+import type { ContinueMetadata, CompleteMetadata } from "@/tools/types";
 import { EVENT_KINDS } from "@/llm/types";
 import { logger } from "@/utils/logger";
 import { EXECUTION_TAGS } from "@/nostr/tags";
@@ -32,8 +32,8 @@ export interface NostrPublisherContext {
 export interface ResponseOptions {
     content: string;
     llmMetadata?: LLMMetadata;
-    handoff?: HandoffMetadata;
-    phaseTransition?: PhaseTransitionMetadata;
+    continueMetadata?: ContinueMetadata;
+    completeMetadata?: CompleteMetadata;
     nextAgent?: string;
     additionalTags?: NDKTag[];
 }
@@ -46,8 +46,8 @@ export interface FlushOptions {
 // Metadata for finalizing stream
 export interface FinalizeMetadata {
     llmMetadata?: LLMMetadata;
-    handoff?: HandoffMetadata;
-    phaseTransition?: PhaseTransitionMetadata;
+    continueMetadata?: ContinueMetadata;
+    completeMetadata?: CompleteMetadata;
     nextAgent?: string;
 }
 
@@ -63,16 +63,15 @@ export class NostrPublisher {
             
             // Add metadata tags
             this.addLLMMetadata(reply, options.llmMetadata);
-            this.addHandoffMetadata(reply, options.handoff);
-            this.addPhaseTransitionMetadata(reply, options.phaseTransition);
+            this.addRoutingMetadata(reply, options.continueMetadata, options.completeMetadata);
             
             // Debug logging for metadata
             logger.debug("Adding metadata to response", {
                 hasLLMMetadata: !!options.llmMetadata,
                 llmModel: options.llmMetadata?.model,
                 llmCost: options.llmMetadata?.cost,
-                hasHandoff: !!options.handoff,
-                hasPhaseTransition: !!options.phaseTransition
+                hasContinueMetadata: !!options.continueMetadata,
+                hasCompleteMetadata: !!options.completeMetadata
             });
             
             // Add next agent p-tag if specified
@@ -323,14 +322,15 @@ export class NostrPublisher {
         }
     }
 
-    private addHandoffMetadata(event: NDKEvent, handoff?: HandoffMetadata): void {
-        if (!handoff) return;
-        event.tag(["handoff", "true"]);
-    }
-
-    private addPhaseTransitionMetadata(event: NDKEvent, phaseTransition?: PhaseTransitionMetadata): void {
-        if (!phaseTransition) return;
-        // Note: new phase is already in base tags
+    private addRoutingMetadata(event: NDKEvent, continueMetadata?: ContinueMetadata, completeMetadata?: CompleteMetadata): void {
+        if (continueMetadata) {
+            event.tag(["routing", "continue"]);
+            if (continueMetadata.routingDecision.phase) {
+                event.tag(["new-phase", continueMetadata.routingDecision.phase]);
+            }
+        } else if (completeMetadata) {
+            event.tag(["routing", "complete"]);
+        }
         event.tag(["phase-transition", "true"]);
         event.tag(["phase-from", phaseTransition.phaseTransition.from]);
     }
