@@ -22,6 +22,7 @@ import type {
     ToolOutput,
     ToolResult,
 } from "@/tools/types";
+import { mcpService } from "@/services/mcp/MCPService";
 import { isHandoffMetadata, isPhaseTransitionMetadata } from "@/tools/types";
 import {
     type TracingContext,
@@ -118,6 +119,10 @@ export class AgentExecutor {
             // Get tools for response processing - use phase-aware tools
             const toolNames = agentWithPhaseTools.tools || [];
             const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
+            
+            // Add MCP tools if available
+            const mcpTools = await mcpService.getAvailableTools();
+            const allTools = [...tools, ...mcpTools];
 
             const streamResult = await this.executeWithStreaming(
                 {
@@ -132,7 +137,7 @@ export class AgentExecutor {
                 },
                 messages,
                 tracingContext,
-                tools,
+                allTools,
                 publisher
             );
 
@@ -309,6 +314,9 @@ export class AgentExecutor {
             })
             .add("learn-tool-directive", {
                 hasLearnTool: context.agent.tools?.includes("learn") ?? false,
+            })
+            .add("mcp-tools", {
+                enabled: true,
             });
 
         // Add PM-specific routing instructions for PM agents
@@ -544,8 +552,7 @@ export class AgentExecutor {
         };
 
         const metadata = await buildLLMMetadata(
-            responseWithUsage,
-            responseWithUsage.model || "unknown",
+            response,
             messages
         );
 
@@ -561,9 +568,9 @@ export class AgentExecutor {
 
         return {
             ...metadata,
-            promptTokens: metadata.usage.prompt_tokens,
-            completionTokens: metadata.usage.completion_tokens,
-            totalTokens: metadata.usage.total_tokens,
+            promptTokens: metadata.promptTokens,
+            completionTokens: metadata.completionTokens,
+            totalTokens: metadata.totalTokens,
             contextWindow: responseWithModel.contextWindow,
             maxCompletionTokens: responseWithModel.maxCompletionTokens,
             rawResponse: response.content,

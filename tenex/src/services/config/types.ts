@@ -113,6 +113,36 @@ export const TenexLLMsSchema = z.object({
 });
 
 // =====================================================================================
+// MCP SCHEMA (mcp.json)
+// =====================================================================================
+
+export interface MCPServerConfig {
+    command: string;
+    args: string[];
+    env?: Record<string, string>;
+    description?: string;
+    allowedPaths?: string[];
+}
+
+export interface TenexMCP {
+    servers: Record<string, MCPServerConfig>;
+    enabled: boolean;
+}
+
+export const MCPServerConfigSchema = z.object({
+    command: z.string(),
+    args: z.array(z.string()),
+    env: z.record(z.string()).optional(),
+    description: z.string().optional(),
+    allowedPaths: z.array(z.string()).optional(),
+});
+
+export const TenexMCPSchema = z.object({
+    servers: z.record(MCPServerConfigSchema).default({}),
+    enabled: z.boolean().default(true),
+});
+
+// =====================================================================================
 // LOADED CONFIGURATION STATE
 // =====================================================================================
 
@@ -120,13 +150,14 @@ export interface LoadedConfig {
     config: TenexConfig;
     agents: TenexAgents;
     llms: TenexLLMs;
+    mcp: TenexMCP;
 }
 
 // =====================================================================================
 // HELPER TYPES
 // =====================================================================================
 
-export type ConfigFile = "config.json" | "agents.json" | "llms.json";
+export type ConfigFile = "config.json" | "agents.json" | "llms.json" | "mcp.json";
 
 export interface ConfigPaths {
     global: string;

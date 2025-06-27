@@ -17,7 +17,10 @@
     "bin": {
         "tenex": "src/tenex.ts"
     },
-    "files": ["dist", "src"],
+    "files": [
+        "dist",
+        "src"
+    ],
     "scripts": {
         "start": "bun run ./src/tenex.ts",
         "build": "bun scripts/build-bundled.js",
@@ -43,6 +46,7 @@
     },
     "dependencies": {
         "@inquirer/search": "^3.0.15",
+        "@modelcontextprotocol/sdk": "^1.13.2",
         "@nostr-dev-kit/ndk": "^2.14.31",
         "@types/inquirer": "^9.0.8",
         "chalk": "^5.4.1",

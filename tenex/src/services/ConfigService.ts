@@ -6,10 +6,11 @@ import type {
     TenexConfig,
     TenexAgents,
     TenexLLMs,
+    TenexMCP,
     LoadedConfig,
     ConfigFile,
 } from "@/services/config/types";
-import { TenexConfigSchema, TenexAgentsSchema, TenexLLMsSchema } from "@/services/config/types";
+import { TenexConfigSchema, TenexAgentsSchema, TenexLLMsSchema, TenexMCPSchema } from "@/services/config/types";
 import type { z } from "zod";
 
 /**
@@ -91,7 +92,17 @@ export class ConfigService {
             credentials: { ...globalLLMs.credentials, ...projectLLMs.credentials },
         };
 
-        return { config, agents, llms };
+        // Load MCP (merge global and project)
+        const globalMCP = await this.loadTenexMCP(globalPath);
+        const projectMCP = projPath
+            ? await this.loadTenexMCP(projPath)
+            : { servers: {}, enabled: true };
+        const mcp: TenexMCP = {
+            servers: { ...globalMCP.servers, ...projectMCP.servers },
+            enabled: projectMCP.enabled !== undefined ? projectMCP.enabled : globalMCP.enabled,
+        };
+
+        return { config, agents, llms, mcp };
     }
 
     // =====================================================================================
@@ -122,6 +133,18 @@ export class ConfigService {
         });
     }
 
+    async loadTenexMCP(basePath: string): Promise<TenexMCP> {
+        const result = await this.loadConfigFile(this.getConfigFilePath(basePath, "mcp.json"), TenexMCPSchema, {
+            servers: {},
+            enabled: true,
+        });
+        // Ensure servers is always defined
+        return {
+            servers: result.servers || {},
+            enabled: result.enabled ?? true,
+        };
+    }
+
     // =====================================================================================
     // INDIVIDUAL FILE SAVING
     // =====================================================================================
@@ -147,6 +170,14 @@ export class ConfigService {
             this.getConfigFilePath(basePath, "llms.json"),
             llms,
             TenexLLMsSchema
+        );
+    }
+
+    async saveTenexMCP(basePath: string, mcp: TenexMCP): Promise<void> {
+        await this.saveConfigFile(
+            this.getConfigFilePath(basePath, "mcp.json"),
+            mcp,
+            TenexMCPSchema
         );
     }
 
@@ -226,6 +257,18 @@ export class ConfigService {
         const projPath = this.getProjectPath(projectPath);
         await ensureDirectory(projPath);
         await this.saveTenexLLMs(projPath, llms);
+    }
+
+    async saveGlobalMCP(mcp: TenexMCP): Promise<void> {
+        const globalPath = this.getGlobalPath();
+        await ensureDirectory(globalPath);
+        await this.saveTenexMCP(globalPath, mcp);
+    }
+
+    async saveProjectMCP(projectPath: string, mcp: TenexMCP): Promise<void> {
+        const projPath = this.getProjectPath(projectPath);
+        await ensureDirectory(projPath);
+        await this.saveTenexMCP(projPath, mcp);
     }
 
     // =====================================================================================

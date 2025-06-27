@@ -12,6 +12,7 @@ import "./fragments/available-agents";
 import "./fragments/execute-task-prompt";
 import "./fragments/inventory";
 import "./fragments/learn-tool";
+import "./fragments/mcp-tools";
 import "./fragments/phase";
 import "./fragments/pm-routing";
 import "./fragments/project";

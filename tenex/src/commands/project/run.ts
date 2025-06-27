@@ -14,6 +14,7 @@ import { Command } from "commander";
 import { getProjectContext } from "@/services";
 import { setupGracefulShutdown } from "@/utils/process";
 import { loadLLMRouter } from "@/llm";
+import { mcpService } from "@/services/mcp/MCPService";
 
 export const projectRunCommand = new Command("run")
     .description("Run the TENEX agent orchestration system for the current project")
@@ -50,6 +51,9 @@ async function runProjectListener(projectPath: string, ndk: NDK) {
         // Load LLM router
         const llmService = await loadLLMRouter(projectPath);
 
+        // Initialize MCP service
+        await mcpService.initialize(projectPath);
+
         // Initialize event handler
         const eventHandler = new EventHandler(projectPath, llmService, ndk);
         await eventHandler.initialize();
@@ -77,6 +81,9 @@ async function runProjectListener(projectPath: string, ndk: NDK) {
 
             // Clean up event handler subscriptions
             await eventHandler.cleanup();
+
+            // Shutdown MCP service
+            await mcpService.shutdown();
 
             // Shutdown NDK singleton
             await shutdownNDK();
