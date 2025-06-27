@@ -20,7 +20,7 @@ export const listCommand = new Command("list")
             
             if (!config.mcp || Object.keys(config.mcp.servers).length === 0) {
                 logger.info("No MCP servers configured");
-                return;
+                process.exit(0);
             }
 
             // Display header
@@ -54,6 +54,9 @@ export const listCommand = new Command("list")
             logger.info(chalk.gray("\n─".repeat(60)));
             logger.info(`MCP enabled: ${config.mcp.enabled ? chalk.green("yes") : chalk.red("no")}`);
             logger.info(`Total servers: ${Object.keys(config.mcp.servers).length}`);
+            
+            // Exit successfully
+            process.exit(0);
 
         } catch (error) {
             logger.error("Failed to list MCP servers:", error);

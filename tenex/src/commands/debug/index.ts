@@ -1,10 +1,12 @@
 import { AgentRegistry } from "@/agents/AgentRegistry";
-import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { type Phase, ALL_PHASES } from "@/conversations/phases";
 import { formatError } from "@/utils/errors";
 import { logError, logInfo } from "@/utils/logger";
+import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
+import { mcpService } from "@/services/mcp/MCPService";
+import type { Tool } from "@/tools/types";
 import chalk from "chalk";
 
 // Format markdown
@@ -116,49 +118,29 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
                 ALL_PHASES.includes(options.phase as Phase) ? options.phase : "chat"
             ) as Phase;
 
-            // No need to load inventory or context files here anymore
-            // The fragment handles this internally
-
-            // Build system prompt to match production
-            const systemPromptBuilder = new PromptBuilder()
-                .add("agent-system-prompt", {
-                    agent,
-                    phase: phase,
-                    projectTitle: titleTag?.[1] || "Untitled Project",
-                    projectRepository: repoTag?.[1] || "No repository",
-                })
-                .add("available-agents", {
-                    agents: availableAgents,
-                    currentAgentPubkey: agent.pubkey,
-                })
-                .add("project-inventory-context", {
-                    phase,
-                })
-                .add("phase-context", {
-                    phase: phase,
-                    phaseMetadata: undefined, // No conversation metadata in debug mode
-                    conversation: undefined, // No conversation context in debug mode
-                })
-                .add("phase-constraints", {
-                    phase: phase,
-                });
-
-            // Add expertise boundaries for non-PM agents
-            if (!agent.isPMAgent) {
-                systemPromptBuilder.add("expertise-boundaries", {});
+            // Initialize MCP service to get tools
+            let mcpTools: Tool[] = [];
+            try {
+                await mcpService.initialize(projectPath);
+                mcpTools = await mcpService.getAvailableTools();
+                logInfo(`Loaded ${mcpTools.length} MCP tools`);
+            } catch (error) {
+                logError(`Failed to initialize MCP service: ${error}`);
+                // Continue without MCP tools - don't fail the whole debug command
             }
 
-            // Add PM-specific fragments if it's a PM agent
-            if (agent.isPMAgent) {
-                systemPromptBuilder
-                    .add("pm-routing-instructions", {})
-                    .add("pm-handoff-guidance", {});
-            }
-
-            // Note: claude-code-report fragment is only added in production when
-            // Claude Code has been invoked directly, which requires conversation context
-
-            const systemPrompt = systemPromptBuilder.build();
+            // Build system prompt using the shared function - exactly as production does
+            const systemPrompt = buildSystemPrompt({
+                agent,
+                phase,
+                projectTitle: titleTag?.[1] || "Untitled Project",
+                projectRepository: repoTag?.[1],
+                availableAgents,
+                conversation: undefined, // No conversation in debug mode
+                agentLessons: projectCtx.agentLessons,
+                mcpTools,
+                claudeCodeReport: undefined, // No Claude Code report in debug mode
+            });
 
             // Format and display the system prompt with enhancements
             const formattedPrompt = formatContentWithEnhancements(systemPrompt, true);

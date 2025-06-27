@@ -1,7 +1,10 @@
 import type { Hexpubkey, NDKProject } from "@nostr-dev-kit/ndk";
-import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { Agent } from "@/agents/types";
 import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
+import { logger } from "@/utils/logger";
+import { PM_AGENT_DEFINITION } from "@/agents/projectAgentDefinition";
+import { getDefaultToolsForAgent } from "@/agents/constants";
 
 /**
  * ProjectContext provides system-wide access to loaded project and agents
@@ -48,7 +51,25 @@ export class ProjectContext {
         }
 
         if (!pmAgent) {
-            throw new Error("PM agent not found in agents");
+            logger.warn("PM agent not found in agents, creating default PM agent");
+            
+            // Create a default PM agent
+            const signer = NDKPrivateKeySigner.generate();
+            const defaultPMAgent: Agent = {
+                name: PM_AGENT_DEFINITION.name,
+                pubkey: signer.pubkey,
+                signer,
+                role: PM_AGENT_DEFINITION.role,
+                instructions: PM_AGENT_DEFINITION.instructions || "",
+                llmConfig: PM_AGENT_DEFINITION.llmConfig || "agents",
+                tools: PM_AGENT_DEFINITION.tools || [],
+                slug: "pm",
+                isPMAgent: true,
+            };
+            
+            // Add to agents map
+            agents.set("pm", defaultPMAgent);
+            pmAgent = defaultPMAgent;
         }
 
         // Hardwire to PM agent's signer and pubkey

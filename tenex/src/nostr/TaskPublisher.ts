@@ -1,6 +1,6 @@
 import { getProjectContext } from "@/services";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKTask, type NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKTask, NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
 
 export interface TaskCreationOptions {

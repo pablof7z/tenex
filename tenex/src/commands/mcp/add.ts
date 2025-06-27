@@ -133,6 +133,9 @@ export const addCommand = new Command("add")
             if (Object.keys(envVars).length > 0) {
                 logger.info(`Environment variables: ${Object.keys(envVars).join(", ")}`);
             }
+            
+            // Exit successfully
+            process.exit(0);
         } catch (error) {
             logger.error("Failed to add MCP server:", error);
             process.exit(1);

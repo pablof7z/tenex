@@ -9,6 +9,7 @@ import { logger } from "@/utils/logger";
 // Project inventory context fragment
 interface InventoryContextArgs {
     phase: Phase;
+    inventoryContent?: string; // Optional to support both old and new usage
 }
 
 // Helper function to load inventory and context synchronously
@@ -49,8 +50,19 @@ function loadProjectContextSync(phase: Phase): {
 export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
     id: "project-inventory-context",
     priority: 25,
-    template: ({ phase }) => {
-        const { inventoryContent, contextFiles } = loadProjectContextSync(phase);
+    template: (args) => {
+        const { phase, inventoryContent: providedContent } = args;
+        
+        // If content is provided directly, use it; otherwise load from file
+        let inventoryContent: string | null = providedContent || null;
+        let contextFiles: string[] = [];
+        
+        if (!providedContent) {
+            const loaded = loadProjectContextSync(phase);
+            inventoryContent = loaded.inventoryContent;
+            contextFiles = loaded.contextFiles;
+        }
+        
         const parts: string[] = [];
 
         parts.push(`<project_inventory>
@@ -91,20 +103,18 @@ ${contextFiles.map((f) => `- context/${f}`).join("\n")}`);
 
 // Claude Code report processing fragment for PM agents
 interface ClaudeCodeReportArgs {
-    phase: Phase;
-    previousPhase?: Phase;
     claudeCodeReport?: string;
 }
 
 export const claudeCodeReportFragment: PromptFragment<ClaudeCodeReportArgs> = {
     id: "claude-code-report",
     priority: 30,
-    template: ({ phase, previousPhase, claudeCodeReport }) => {
-        const parts = [];
+    template: ({ claudeCodeReport }) => {
+        if (!claudeCodeReport) {
+            return "";
+        }
 
-        // If we have a Claude Code report from direct invocation
-        if (claudeCodeReport && (phase === "plan" || phase === "execute")) {
-            parts.push(`
+        return `
 ## Claude Code Report
 
 Claude Code has completed the following work:
@@ -116,21 +126,12 @@ Your role now is to:
 2. Identify any gaps or issues
 3. Coordinate with other agents as needed
 4. Determine next steps
-`);
-        }
-
-        // Add phase transition instructions if we have previousPhase
-        if (previousPhase && previousPhase !== phase) {
-            parts.push(getPhaseTransitionInstructions(previousPhase, phase));
-        }
-
-        return parts.join("\n\n");
+`;
     },
     validateArgs: (args): args is ClaudeCodeReportArgs => {
         return (
             typeof args === "object" &&
-            args !== null &&
-            typeof (args as ClaudeCodeReportArgs).phase === "string"
+            args !== null
         );
     },
 };

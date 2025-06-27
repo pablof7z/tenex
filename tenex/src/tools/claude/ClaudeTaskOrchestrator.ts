@@ -4,7 +4,7 @@ import { ClaudeToNostrTranslator } from "./ClaudeToNostrTranslator";
 import { ClaudeStreamHandler } from "./ClaudeStreamHandler";
 import { logger } from "@/utils/logger";
 import type { NDKTask } from "@/types/nostr";
-import { startExecutionTime, stopExecutionTime } from "@/utils/conversationUtils";
+import { startExecutionTime, stopExecutionTime } from "@/conversations/executionTime";
 import type { Conversation } from "@/types";
 
 export interface ClaudeTaskOptions {

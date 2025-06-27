@@ -5,6 +5,7 @@ import type { Tool } from "@/tools/types";
 
 interface MCPToolsArgs {
     enabled?: boolean;
+    tools?: Tool[]; // Optional to support both old and new usage
 }
 
 export const mcpToolsFragment: PromptFragment<MCPToolsArgs> = {
@@ -16,8 +17,8 @@ export const mcpToolsFragment: PromptFragment<MCPToolsArgs> = {
         }
 
         try {
-            // Get cached tools synchronously
-            const tools = mcpService.getCachedTools();
+            // Use provided tools or get cached tools synchronously
+            const tools = args.tools || mcpService.getCachedTools();
             
             if (tools.length === 0) {
                 return "";

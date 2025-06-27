@@ -1,4 +1,4 @@
-export type Phase = "chat" | "brainstorm" | "plan" | "execute" | "review" | "chores";
+export type Phase = "chat" | "brainstorm" | "plan" | "execute" | "review" | "chores" | "reflection";
 
 export const PHASES = {
     CHAT: "chat" as const,
@@ -7,6 +7,7 @@ export const PHASES = {
     EXECUTE: "execute" as const,
     REVIEW: "review" as const,
     CHORES: "chores" as const,
+    REFLECTION: "reflection" as const,
 } as const;
 
 export const ALL_PHASES: readonly Phase[] = [
@@ -16,6 +17,7 @@ export const ALL_PHASES: readonly Phase[] = [
     PHASES.EXECUTE,
     PHASES.REVIEW,
     PHASES.CHORES,
+    PHASES.REFLECTION,
 ] as const;
 
 export const PHASE_DESCRIPTIONS = {
@@ -25,6 +27,7 @@ export const PHASE_DESCRIPTIONS = {
     [PHASES.EXECUTE]: "Implementation and coding",
     [PHASES.REVIEW]: "Code review and validation",
     [PHASES.CHORES]: "Cleanup and documentation tasks",
+    [PHASES.REFLECTION]: "Learn from mistakes and gather insights",
 } as const;
 
 export interface PhaseDefinition {
@@ -132,6 +135,23 @@ export const PHASE_DEFINITIONS: Record<Phase, PhaseDefinition> = {
             "Ensure all changes are properly documented",
             "Consider generating guides for complex modules"
         ]
+    },
+    [PHASES.REFLECTION]: {
+        description: "Learn from mistakes and gather insights",
+        goal: "Reflect on the work done, learn from mistakes, and record valuable insights.",
+        whenToUse: [
+            "After completing significant work or fixing complex issues",
+            "When mistakes were made and corrected during execution",
+            "When discovering important patterns or best practices",
+            "At the end of a project iteration or milestone"
+        ],
+        constraints: [
+            "Use the learn tool to record important lessons and insights",
+            "Focus on actionable learnings that prevent future mistakes",
+            "Record project-specific knowledge for PM's understanding",
+            "Be concise and specific in lessons learned",
+            "Include relevant keywords for future retrieval"
+        ]
     }
 } as const;
 
@@ -141,7 +161,8 @@ export const PHASE_TRANSITIONS = {
     [PHASES.PLAN]: [PHASES.EXECUTE],
     [PHASES.EXECUTE]: [PHASES.REVIEW, PHASES.CHAT],
     [PHASES.REVIEW]: [PHASES.CHORES, PHASES.EXECUTE, PHASES.CHAT],
-    [PHASES.CHORES]: [PHASES.CHAT],
+    [PHASES.CHORES]: [PHASES.REFLECTION],
+    [PHASES.REFLECTION]: [PHASES.CHAT],
 } as const;
 
 export function isValidPhase(phase: string): phase is Phase {
