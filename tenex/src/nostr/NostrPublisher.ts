@@ -169,15 +169,10 @@ export class NostrPublisher {
 
     async publishToolStatus(status: ToolExecutionStatus): Promise<NDKEvent> {
         try {
-            const event = new NDKEvent(this.context.ndk);
-            event.kind = 7777; // Custom kind for tool execution status
+            const event = this.context.triggeringEvent.reply();
             
             // Add base tags
             this.addBaseTags(event);
-            
-            // Build reply tags
-            event.tag(["e", this.context.triggeringEvent.id, "", "reply"]);
-            event.tag(["p", this.context.triggeringEvent.pubkey]);
             
             // Add tool-specific tags
             event.tag(["tool", status.tool]);

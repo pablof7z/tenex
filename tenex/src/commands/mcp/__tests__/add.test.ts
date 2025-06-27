@@ -24,11 +24,10 @@ mock.module("@/services/ConfigService", () => ({
     },
 }));
 
-// Mock @inquirer/prompts
-const mockInput = mock();
-mock.module("@inquirer/prompts", () => ({
-    input: mockInput,
-}));
+// Mock process.exit
+const mockProcessExit = mock();
+const originalProcessExit = process.exit;
+process.exit = mockProcessExit as any;
 
 // Mock which command validation
 const mockWhich = mock();
@@ -52,10 +51,10 @@ describe("MCP add command", () => {
         (fs.readFile as any).mockReset();
         (fs.writeJsonFile as any).mockReset();
         (fs.ensureDirectory as any).mockReset();
-        mockInput.mockReset();
         mockWhich.mockReset();
         mockConsoleLog.mockReset();
         mockConsoleError.mockReset();
+        mockProcessExit.mockReset();
 
         // Replace console methods
         console.log = mockConsoleLog;
@@ -87,10 +86,11 @@ describe("MCP add command", () => {
         // Restore console methods
         console.log = originalConsoleLog;
         console.error = originalConsoleError;
+        process.exit = originalProcessExit;
     });
 
-    describe("interactive mode", () => {
-        it("should add a new MCP server interactively", async () => {
+    describe("command-line mode", () => {
+        it("should add a new MCP server with name and command", async () => {
             const { configService } = await import("@/services/ConfigService");
             (configService.projectConfigExists as any).mockResolvedValue(true);
             (configService.getProjectPath as any).mockReturnValue("/test/project");
@@ -100,26 +100,7 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockResolvedValue(undefined);
 
-            // Mock input calls in sequence
-            mockInput
-                .mockResolvedValueOnce("test-server") // name
-                .mockResolvedValueOnce("Test MCP server") // description
-                .mockResolvedValueOnce("/test/path1,/test/path2"); // allowed paths
-
-            await program.parseAsync(["node", "test", "mcp", "add", "node", "test-server.js"]);
-
-            // Verify input was called with correct prompts
-            expect(mockInput).toHaveBeenCalledTimes(3);
-            expect(mockInput).toHaveBeenNthCalledWith(1, expect.objectContaining({
-                message: "Server name:",
-                validate: expect.any(Function),
-            }));
-            expect(mockInput).toHaveBeenNthCalledWith(2, expect.objectContaining({
-                message: "Description (optional):",
-            }));
-            expect(mockInput).toHaveBeenNthCalledWith(3, expect.objectContaining({
-                message: "Allowed paths (optional, comma-separated):",
-            }));
+            await program.parseAsync(["node", "test", "mcp", "add", "test-server", "node", "test-server.js", "--paths", "/test/path1,/test/path2"]);
 
             expect(configService.saveProjectMCP).toHaveBeenCalledWith(
                 process.cwd(),  // The actual implementation uses process.cwd()
@@ -128,7 +109,6 @@ describe("MCP add command", () => {
                         "test-server": {
                             command: "node",
                             args: ["test-server.js"],
-                            description: "Test MCP server",
                             allowedPaths: ["/test/path1", "/test/path2"],
                         },
                     },
@@ -138,6 +118,24 @@ describe("MCP add command", () => {
 
             expect(mockConsoleLog).toHaveBeenCalledWith(
                 expect.stringContaining("Added MCP server 'test-server' to project configuration")
+            );
+        });
+
+        it("should validate server name format", async () => {
+            const { configService } = await import("@/services/ConfigService");
+            (configService.projectConfigExists as any).mockResolvedValue(true);
+            (configService.getProjectPath as any).mockReturnValue("/test/project");
+            (configService.loadTenexMCP as any).mockResolvedValue({
+                servers: {},
+                enabled: true,
+            });
+
+            await expect(
+                program.parseAsync(["node", "test", "mcp", "add", "invalid-name!", "node", "test.js"])
+            ).rejects.toThrow();
+
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                expect.stringContaining("Name can only contain letters, numbers, hyphens, and underscores")
             );
         });
 
@@ -155,24 +153,20 @@ describe("MCP add command", () => {
                 enabled: true,
             });
 
-            // Mock console.error to capture the error message
             await expect(
-                program.parseAsync(["node", "test", "mcp", "add", "node", "new.js"])
+                program.parseAsync(["node", "test", "mcp", "add", "existing-server", "node", "new.js"])
             ).rejects.toThrow();
 
-            // The server will check if name exists and fail during input validation
-            const inputCall = mockInput.mock.calls[0];
-            if (inputCall && inputCall[0].validate) {
-                const validation = inputCall[0].validate("existing-server");
-                expect(validation).toBe("Server 'existing-server' already exists");
-            }
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                expect.stringContaining("MCP server 'existing-server' already exists")
+            );
         });
 
         it("should validate command exists", async () => {
             mockWhich.mockResolvedValue(null);
 
             await expect(
-                program.parseAsync(["node", "test", "mcp", "add", "nonexistent-command"])
+                program.parseAsync(["node", "test", "mcp", "add", "test-server", "nonexistent-command"])
             ).rejects.toThrow();
 
             expect(mockConsoleError).toHaveBeenCalledWith(
@@ -186,7 +180,6 @@ describe("MCP add command", () => {
 
             for (const cmd of specialCommands) {
                 // Reset mocks
-                mockInput.mockReset();
                 mockWhich.mockReset();
                 (configService.projectConfigExists as any).mockResolvedValue(true);
                 (configService.getProjectPath as any).mockReturnValue("/test/project");
@@ -196,12 +189,7 @@ describe("MCP add command", () => {
                 });
                 (configService.saveProjectMCP as any).mockResolvedValue(undefined);
                 
-                mockInput
-                    .mockResolvedValueOnce(`${cmd}-server`)
-                    .mockResolvedValueOnce("")
-                    .mockResolvedValueOnce("");
-
-                await program.parseAsync(["node", "test", "mcp", "add", cmd, "some-package"]);
+                await program.parseAsync(["node", "test", "mcp", "add", `${cmd}-server`, cmd, "some-package"]);
 
                 // Should not call which for special commands
                 expect(mockWhich).not.toHaveBeenCalled();
@@ -218,15 +206,10 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockResolvedValue(undefined);
 
-            mockInput
-                .mockResolvedValueOnce("test-server")
-                .mockResolvedValueOnce("")
-                .mockResolvedValueOnce("");
-
-            await program.parseAsync(["node", "test", "mcp", "add", "node", "test.js"]);
+            await program.parseAsync(["node", "test", "mcp", "add", "test-server", "node", "test.js"]);
 
             expect(configService.saveProjectMCP).toHaveBeenCalledWith(
-                "/test/project",
+                process.cwd(),
                 {
                     servers: {
                         "test-server": {
@@ -249,15 +232,10 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockResolvedValue(undefined);
 
-            mockInput
-                .mockResolvedValueOnce("test-server")
-                .mockResolvedValueOnce("")
-                .mockResolvedValueOnce(" /path1 , /path2 , /path3 ");
-
-            await program.parseAsync(["node", "test", "mcp", "add", "node", "test.js"]);
+            await program.parseAsync(["node", "test", "mcp", "add", "test-server", "node", "test.js", "--paths", " /path1 , /path2 , /path3 "]);
 
             expect(configService.saveProjectMCP).toHaveBeenCalledWith(
-                "/test/project",
+                process.cwd(),
                 expect.objectContaining({
                     servers: expect.objectContaining({
                         "test-server": expect.objectContaining({
@@ -267,10 +245,8 @@ describe("MCP add command", () => {
                 })
             );
         });
-    });
 
-    describe("command-line mode", () => {
-        it("should add server with command-line arguments", async () => {
+        it("should add server with options", async () => {
             const { configService } = await import("@/services/ConfigService");
             (configService.projectConfigExists as any).mockResolvedValue(true);
             (configService.getProjectPath as any).mockReturnValue("/test/project");
@@ -280,28 +256,25 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockResolvedValue(undefined);
 
-            mockInput
-                .mockResolvedValueOnce("test-server")
-                .mockResolvedValueOnce("Test server")
-                .mockResolvedValueOnce("/path1,/path2");
-
             await program.parseAsync([
                 "node",
                 "test",
                 "mcp",
                 "add",
+                "test-server",
                 "node",
                 "test.js",
+                "--paths",
+                "/path1,/path2",
             ]);
 
             expect(configService.saveProjectMCP).toHaveBeenCalledWith(
-                "/test/project",
+                process.cwd(),
                 {
                     servers: {
                         "test-server": {
                             command: "node",
                             args: ["test.js"],
-                            description: "Test server",
                             allowedPaths: ["/path1", "/path2"],
                         },
                     },
@@ -319,16 +292,12 @@ describe("MCP add command", () => {
             });
             (configService.saveGlobalMCP as any).mockResolvedValue(undefined);
 
-            mockInput
-                .mockResolvedValueOnce("global-server")
-                .mockResolvedValueOnce("")
-                .mockResolvedValueOnce("");
-
             await program.parseAsync([
                 "node",
                 "test",
                 "mcp",
                 "add",
+                "global-server",
                 "node",
                 "global.js",
                 "--global",
@@ -349,16 +318,12 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockResolvedValue(undefined);
 
-            mockInput
-                .mockResolvedValueOnce("complex-server")
-                .mockResolvedValueOnce("")
-                .mockResolvedValueOnce("");
-
             await program.parseAsync([
                 "node",
                 "test",
                 "mcp",
                 "add",
+                "complex-server",
                 "python",
                 "-m",
                 "server",
@@ -369,7 +334,7 @@ describe("MCP add command", () => {
             ]);
 
             expect(configService.saveProjectMCP).toHaveBeenCalledWith(
-                "/test/project",
+                process.cwd(),
                 expect.objectContaining({
                     servers: expect.objectContaining({
                         "complex-server": {
@@ -395,14 +360,13 @@ describe("MCP add command", () => {
                 enabled: true,
             });
 
-            mockInput.mockResolvedValueOnce("existing");
-
             await expect(
                 program.parseAsync([
                     "node",
                     "test",
                     "mcp",
                     "add",
+                    "existing",
                     "node",
                     "new.js",
                 ])
@@ -433,14 +397,10 @@ describe("MCP add command", () => {
     });
 
     describe("error handling", () => {
-        it("should handle no command provided", async () => {
+        it("should handle missing arguments", async () => {
             await expect(
                 program.parseAsync(["node", "test", "mcp", "add"])
             ).rejects.toThrow();
-
-            expect(mockConsoleError).toHaveBeenCalledWith(
-                expect.stringContaining("No command provided")
-            );
         });
 
         it("should handle save errors", async () => {
@@ -453,13 +413,8 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockRejectedValue(new Error("Save error"));
 
-            mockInput
-                .mockResolvedValueOnce("test-server")
-                .mockResolvedValueOnce("")
-                .mockResolvedValueOnce("");
-
             await expect(
-                program.parseAsync(["node", "test", "mcp", "add", "node", "test.js"])
+                program.parseAsync(["node", "test", "mcp", "add", "test-server", "node", "test.js"])
             ).rejects.toThrow();
 
             expect(mockConsoleError).toHaveBeenCalledWith(
@@ -477,21 +432,15 @@ describe("MCP add command", () => {
             });
             (configService.saveProjectMCP as any).mockResolvedValue(undefined);
 
-            mockInput
-                .mockResolvedValueOnce("first-server")
-                .mockResolvedValueOnce("First server")
-                .mockResolvedValueOnce("");
-
-            await program.parseAsync(["node", "test", "mcp", "add", "node", "first.js"]);
+            await program.parseAsync(["node", "test", "mcp", "add", "first-server", "node", "first.js"]);
 
             expect(configService.saveProjectMCP).toHaveBeenCalledWith(
-                "/test/project",
+                process.cwd(),
                 {
                     servers: {
                         "first-server": {
                             command: "node",
                             args: ["first.js"],
-                            description: "First server",
                         },
                     },
                     enabled: true,

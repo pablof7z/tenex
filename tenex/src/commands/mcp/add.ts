@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { input } from "@inquirer/prompts";
 import { logger } from "@/utils/logger";
 import { configService } from "@/services/ConfigService";
 import type { MCPServerConfig } from "@/services/config/types";
@@ -12,69 +11,74 @@ interface AddOptions {
 
 export const addCommand = new Command("add")
     .description("Add a new MCP server")
-    .argument("[command...]", "Command with arguments to run the MCP server")
+    .argument("<name>", "Name for the MCP server")
+    .argument("<command...>", "Command and arguments to run the MCP server")
     .option("--project", "Add to project configuration (default if in project)")
     .option("--global", "Add to global configuration")
-    .action(async (commandArgs: string[], options: AddOptions) => {
+    .option("-p, --paths <paths>", "Allowed paths (comma-separated)")
+    .option("-e, --env <vars...>", "Environment variables (KEY=VALUE format)")
+    .allowUnknownOption()
+    .action(async (name: string, commandArgs: string[], options: AddOptions & { paths?: string; env?: string[] }) => {
         try {
-            // Parse command and args
-            let command: string;
-            let args: string[] = [];
-            
+            // Parse command and args from the array
             if (commandArgs.length === 0) {
                 logger.error("No command provided");
-                logger.info("Usage: tenex mcp add <command> [args...]");
-                logger.info("Example: tenex mcp add npx -y @modelcontextprotocol/server-filesystem /path/to/dir");
+                logger.info("Usage: tenex mcp add <name> <command> [args...]");
+                logger.info("Example: tenex mcp add nostrbook npx -y xjsr @nostrbook/mcp");
                 process.exit(1);
             }
             
-            command = commandArgs[0] as string; // Safe because we checked length above
-            args = commandArgs.slice(1);
+            const command = commandArgs[0] as string; // Safe because we checked length above
+            const args = commandArgs.slice(1);
+
+            // Validate name
+            if (!/^[a-zA-Z0-9-_]+$/.test(name)) {
+                logger.error("Name can only contain letters, numbers, hyphens, and underscores");
+                process.exit(1);
+            }
 
             // Validate command exists (skip for npx, npm, etc.)
             const skipValidation = ["npx", "npm", "node", "python", "python3", "ruby", "sh", "bash"];
             if (!skipValidation.includes(command)) {
-                const commandPath = await which(command);
-                if (!commandPath) {
+                try {
+                    const commandPath = await which(command);
+                    if (!commandPath) {
+                        logger.error(`Command not found: ${command}`);
+                        logger.info("Make sure the command is installed and in your PATH");
+                        process.exit(1);
+                    }
+                } catch {
                     logger.error(`Command not found: ${command}`);
                     logger.info("Make sure the command is installed and in your PATH");
                     process.exit(1);
                 }
             }
 
-            // Prompt for server name
-            const name = await input({
-                message: "Server name:",
-                validate: (value) => {
-                    const trimmed = value.trim();
-                    if (!trimmed) return "Name is required";
-                    if (!/^[a-zA-Z0-9-_]+$/.test(trimmed)) {
-                        return "Name can only contain letters, numbers, hyphens, and underscores";
+            // Parse allowed paths if provided
+            const allowedPaths = options.paths
+                ? options.paths.split(",").map(p => p.trim()).filter(p => p.length > 0)
+                : [];
+
+            // Parse environment variables if provided
+            const envVars: Record<string, string> = {};
+            if (options.env && options.env.length > 0) {
+                for (const envVar of options.env) {
+                    const [key, ...valueParts] = envVar.split("=");
+                    if (!key || valueParts.length === 0) {
+                        logger.error(`Invalid environment variable format: ${envVar}`);
+                        logger.info("Environment variables must be in KEY=VALUE format");
+                        process.exit(1);
                     }
-                    return true;
-                },
-            });
-
-            // Prompt for description
-            const description = await input({
-                message: "Description (optional):",
-            });
-
-            // Prompt for allowed paths
-            const allowedPathsInput = await input({
-                message: "Allowed paths (optional, comma-separated):",
-            });
-            const allowedPaths = allowedPathsInput
-                .split(",")
-                .map(p => p.trim())
-                .filter(p => p.length > 0);
+                    envVars[key] = valueParts.join("=");
+                }
+            }
 
             // Create server config
             const serverConfig: MCPServerConfig = {
                 command,
                 args,
-                ...(description && { description }),
                 ...(allowedPaths.length > 0 && { allowedPaths }),
+                ...(Object.keys(envVars).length > 0 && { env: envVars }),
             };
 
             // Determine where to save
@@ -123,11 +127,11 @@ export const addCommand = new Command("add")
             }
 
             logger.info(`Command: ${command} ${args.join(" ")}`);
-            if (description) {
-                logger.info(`Description: ${description}`);
-            }
             if (allowedPaths.length > 0) {
                 logger.info(`Allowed paths: ${allowedPaths.join(", ")}`);
+            }
+            if (Object.keys(envVars).length > 0) {
+                logger.info(`Environment variables: ${Object.keys(envVars).join(", ")}`);
             }
         } catch (error) {
             logger.error("Failed to add MCP server:", error);

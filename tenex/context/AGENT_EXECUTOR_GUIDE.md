@@ -116,9 +116,9 @@ The `AgentExecutor` is a central service instantiated and used primarily by the 
 -   **Input**: The process is initiated by a triggering `NDKEvent` from the `EventHandler`.
 -   **Output**: The `AgentExecutor` is a prolific event publisher, generating a sequence of events to create a rich, real-time user experience:
     1.  `kind:24111` (Typing Start): Published immediately upon starting execution.
-    2.  `kind:1` (Partial Replies): Multiple `GenericReply` events are published via `BufferedStreamPublisher`, tagged with `["streaming", "true"]` and `["partial", "true"]`.
-    3.  `kind:7777` (Tool Status): The `ReasonActLoop` publishes custom events to signal the start and completion of tool executions.
-    4.  `kind:1` (Final Reply): A final `GenericReply` is published containing the complete response, LLM metadata, and tags for handoff or phase transition.
+    2.  `kind:1111` (Partial Replies): Multiple `GenericReply` events are published via `BufferedStreamPublisher`, tagged with `["streaming", "true"]` and `["partial", "true"]`.
+    3.  `kind:1111` (Tool Status): The `ReasonActLoop` publishes custom events to signal the start and completion of tool executions.
+    4.  `kind:1111` (Final Reply): A final `GenericReply` is published containing the complete response, LLM metadata, and tags for handoff or phase transition.
     5.  `kind:24112` (Typing Stop): Published at the very end of execution.
 
 ---
