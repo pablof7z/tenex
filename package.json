@@ -2,7 +2,13 @@
     "name": "tenex",
     "version": "1.0.0",
     "private": true,
-    "workspaces": ["tenex", "web-client", "mcp", "cli-client", "e2e-framework"],
+    "workspaces": [
+        "tenex",
+        "web-client",
+        "mcp",
+        "cli-client",
+        "e2e-framework"
+    ],
     "scripts": {
         "build": "bun run build:all",
         "build:all": "bun workspaces foreach run build",
@@ -18,6 +24,7 @@
         "typescript": "^5.8.3"
     },
     "dependencies": {
+        "@anthropic-ai/claude-code": "^1.0.35",
         "@nostr-dev-kit/ndk": "^2.14.32"
     }
 }

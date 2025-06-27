@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
+import { ClaudeTaskOrchestrator } from "@/tools/claude/ClaudeTaskOrchestrator";
+import { ClaudeToNostrTranslator } from "@/tools/claude/ClaudeToNostrTranslator";
 import { getNDK } from "@/nostr/ndkClient";
 import type { Tool, ToolExecutionContext, ToolResult } from "../types";
 import { parseToolParams } from "../utils";
@@ -41,16 +43,18 @@ export const claudeCodeTool: Tool = {
 
             const { prompt, mode = "run" } = parseResult.data;
 
-            // Use TaskPublisher to ensure all claude_code executions are tracked
+            // Create instances
             const ndk = getNDK();
             const taskPublisher = new TaskPublisher(ndk);
+            const translator = new ClaudeToNostrTranslator();
+            const orchestrator = new ClaudeTaskOrchestrator(taskPublisher, translator);
 
-            // Get conversation metadata for branch and conversation root
+            // Get conversation metadata
             const branch = context.conversation?.metadata?.branch;
             const conversationRootEventId = context.conversation?.history[0]?.id;
 
-            // Execute through TaskPublisher for consistent Nostr tracking
-            const { task, result } = await taskPublisher.executeWithTask({
+            // Execute
+            const result = await orchestrator.execute({
                 prompt,
                 projectPath: context.projectPath,
                 title: `Claude Code ${mode === "plan" ? "Planning" : "Execution"} (via ${context.agentName})`,
@@ -59,26 +63,27 @@ export const claudeCodeTool: Tool = {
                 conversation: context.conversation,
             });
 
-            // Convert ClaudeCodeResult to ToolResult
+            // Convert result
             if (result.success) {
                 return {
                     success: true,
-                    output: result.assistantMessages.join("\n\n"),
+                    output: "Claude Code execution completed",
                     metadata: {
                         sessionId: result.sessionId,
                         totalCost: result.totalCost,
                         messageCount: result.messageCount,
                         duration: result.duration,
-                        taskId: task.id,
+                        taskId: result.task.id,
                     },
                 };
             }
+            
             return {
                 success: false,
                 error: result.error || "Claude Code execution failed",
                 metadata: {
                     sessionId: result.sessionId,
-                    taskId: task.id,
+                    taskId: result.task.id,
                 },
             };
         } catch (error: unknown) {
