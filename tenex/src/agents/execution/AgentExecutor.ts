@@ -5,13 +5,13 @@ import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
 import type { LLMMetadata } from "@/nostr/types";
-import { PromptBuilder } from "@/prompts";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import {
     buildHistoryMessages,
     getLatestUserMessage,
     needsCurrentUserMessage,
 } from "@/prompts/utils/messageBuilder";
+import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
 import { getProjectContext } from "@/services";
 import { getTool } from "@/tools/registry";
 import type {
@@ -255,6 +255,7 @@ export class AgentExecutor {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : String(error),
+                response: `Error: ${error instanceof Error ? error.message : String(error)}`,
             };
         }
     }
@@ -282,64 +283,22 @@ export class AgentExecutor {
 
         const messages: Message[] = [];
 
-        // Build system prompt with all agent and phase context
-        const systemPromptBuilder = new PromptBuilder()
-            .add("agent-system-prompt", {
-                agent: context.agent,
-                phase: context.phase,
-                projectTitle: tagMap.get("title") || "Untitled Project",
-                projectRepository: tagMap.get("repo") || "No repository",
-            })
-            .add("available-agents", {
-                agents: availableAgents,
-                currentAgentPubkey: context.agent.pubkey,
-            })
-            .add("project-inventory-context", {
-                phase: context.phase,
-            })
-            // Move phase context and constraints to system prompt
-            .add("phase-context", {
-                phase: context.phase,
-                phaseMetadata: context.conversation.metadata,
-                conversation: context.conversation,
-            })
-            .add("phase-constraints", {
-                phase: context.phase,
-            })
-            .add("retrieved-lessons", {
-                agent: context.agent,
-                phase: context.phase,
-                conversation: context.conversation,
-                agentLessons: projectCtx.agentLessons,
-            })
-            .add("learn-tool-directive", {
-                hasLearnTool: context.agent.tools?.includes("learn") ?? false,
-            })
-            .add("mcp-tools", {
-                enabled: true,
-            });
+        // Get MCP tools for the prompt
+        const mcpTools = await mcpService.getAvailableTools();
 
-        // Add PM-specific routing instructions for PM agents
-        if (context.agent.isPMAgent) {
-            systemPromptBuilder.add("pm-routing-instructions", {}).add("pm-handoff-guidance", {});
-
-            // Add Claude Code report fragment if we have one
-            if (context.additionalContext?.claudeCodeReport) {
-                systemPromptBuilder.add("claude-code-report", {
-                    phase: context.phase,
-                    previousPhase: context.previousPhase,
-                    claudeCodeReport: context.additionalContext.claudeCodeReport,
-                });
-            }
-        } else {
-            // Add expertise boundaries for specialist agents
-            systemPromptBuilder.add("expertise-boundaries", {
-                agentRole: context.agent.role || "specialist",
-                isPMAgent: false,
-            });
-        }
-
-        const systemPrompt = systemPromptBuilder.build();
+        // Build system prompt using the shared function
+        const systemPrompt = buildSystemPrompt({
+            agent: context.agent,
+            phase: context.phase,
+            projectTitle: tagMap.get("title") || "Untitled Project",
+            projectRepository: tagMap.get("repo"),
+            availableAgents,
+            conversation: context.conversation,
+            agentLessons: projectCtx.agentLessons,
+            mcpTools,
+            claudeCodeReport: context.additionalContext?.claudeCodeReport,
+        });
+        
         messages.push(new Message("system", systemPrompt));
 
         // Add conversation history as proper messages
@@ -446,6 +405,7 @@ export class AgentExecutor {
         tools?: Tool[],
         publisher?: NostrPublisher
     ): Promise<ReasonActResult> {
+        const tracingLogger = createTracingLogger(tracingContext, "agent");
         let finalResponse: CompletionResponse | undefined;
         let finalContent = "";
         const allToolResults: ToolExecutionResult[] = [];
@@ -508,6 +468,16 @@ export class AgentExecutor {
                     // The ReasonActLoop always publishes responses when it completes
                     wasPublished = true;
                     break;
+
+                case "error":
+                    // Handle streaming error explicitly
+                    tracingLogger.error("Stream reported error", {
+                        agentName: context.agent.name,
+                        error: event.error,
+                    });
+                    // Set error content and throw to be caught by outer try/catch
+                    finalContent = event.error || "An error occurred during processing";
+                    throw new Error(`Streaming failed: ${event.error}`);
             }
         }
 

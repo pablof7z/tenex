@@ -1,6 +1,7 @@
 import type { Phase } from "@/conversations/phases";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
-import type { NostrPublisher, StreamPublisher } from "@/nostr/NostrPublisher";
+import type { NostrPublisher } from "@/nostr/NostrPublisher";
+import { type StreamPublisher } from "@/nostr/NostrPublisher";
 import type { LLMMetadata } from "@/nostr/types";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type {
@@ -143,6 +144,7 @@ export class ReasonActLoop {
         let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
         let finalResponse: CompletionResponse | undefined;
         let fullContent = "";
+        let streamPublisher: StreamPublisher | undefined;
 
         tracingLogger.info("🔄 Starting streaming execution", {
             agent: context.agentName,
@@ -173,7 +175,7 @@ export class ReasonActLoop {
             });
 
             // Create stream publisher from NostrPublisher if provided
-            const streamPublisher = publisher?.createStreamPublisher();
+            streamPublisher = publisher?.createStreamPublisher();
             if (!streamPublisher) {
                 tracingLogger.info("No publisher provided - streaming without publishing", {
                     agent: context.agentName
@@ -351,10 +353,44 @@ export class ReasonActLoop {
                 error: error instanceof Error ? error.message : String(error),
             });
 
+            // Publish error message to user instead of empty content
+            if (publisher && streamPublisher && !streamPublisher.isFinalized()) {
+                try {
+                    const errorMessage = `I encountered an error while processing your request: ${
+                        error instanceof Error ? error.message : String(error)
+                    }`;
+                    
+                    // Add error content to stream and finalize with error
+                    streamPublisher.addContent(errorMessage);
+                    await streamPublisher.finalize({});
+                } catch (publishError) {
+                    tracingLogger.error("Failed to publish error message", {
+                        agent: context.agentName,
+                        error: publishError instanceof Error ? publishError.message : String(publishError),
+                    });
+                }
+            } else if (publisher && !streamPublisher) {
+                // If no stream was started, publish error directly
+                try {
+                    const errorMessage = `I encountered an error while processing your request: ${
+                        error instanceof Error ? error.message : String(error)
+                    }`;
+                    await publisher.publishError(errorMessage);
+                } catch (publishError) {
+                    tracingLogger.error("Failed to publish error message", {
+                        agent: context.agentName,
+                        error: publishError instanceof Error ? publishError.message : String(publishError),
+                    });
+                }
+            }
+
             yield {
                 type: "error",
                 error: error instanceof Error ? error.message : String(error),
             };
+
+            // Re-throw to ensure caller knows about the failure
+            throw error;
         }
     }
 }
