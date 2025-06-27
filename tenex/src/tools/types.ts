@@ -28,53 +28,55 @@ export type ToolOutput =
     | object // Structured data
     | null;
 
-// Specific metadata for handoff tool
-export interface HandoffMetadata {
-    handoff: {
-        to: "user" | string; // 'user' or agent pubkey
-        toName: string;
-        message?: string;
+// Continue tool metadata - replaces both HandoffMetadata and PhaseTransitionMetadata
+export interface ContinueMetadata {
+    routingDecision: {
+        phase?: Phase;
+        destination: string;     // Agent pubkey or "user"
+        destinationName: string; // Human-readable name
+        reason: string;
+        message: string;
     };
 }
 
-// Specific metadata for phase transition tool
-export interface PhaseTransitionMetadata {
-    phaseTransition: {
-        from: Phase;
-        to: Phase;
-        message: string;
-        reason?: string;
+// Complete tool metadata
+export interface CompleteMetadata {
+    completion: {
+        response: string;
+        nextAgent: string; // PM pubkey or "user"
     };
 }
 
 // Type guard functions
-export function isHandoffMetadata(metadata: unknown): metadata is HandoffMetadata {
+export function isContinueMetadata(metadata: unknown): metadata is ContinueMetadata {
     return (
         metadata !== null &&
         typeof metadata === "object" &&
-        "handoff" in metadata &&
-        metadata.handoff !== null &&
-        typeof metadata.handoff === "object" &&
-        "to" in metadata.handoff &&
-        typeof metadata.handoff.to === "string" &&
-        "toName" in metadata.handoff &&
-        typeof metadata.handoff.toName === "string"
+        "routingDecision" in metadata &&
+        metadata.routingDecision !== null &&
+        typeof metadata.routingDecision === "object" &&
+        "destination" in metadata.routingDecision &&
+        typeof metadata.routingDecision.destination === "string" &&
+        "destinationName" in metadata.routingDecision &&
+        typeof metadata.routingDecision.destinationName === "string" &&
+        "reason" in metadata.routingDecision &&
+        typeof metadata.routingDecision.reason === "string" &&
+        "message" in metadata.routingDecision &&
+        typeof metadata.routingDecision.message === "string"
     );
 }
 
-export function isPhaseTransitionMetadata(metadata: unknown): metadata is PhaseTransitionMetadata {
+export function isCompleteMetadata(metadata: unknown): metadata is CompleteMetadata {
     return (
         metadata !== null &&
         typeof metadata === "object" &&
-        "phaseTransition" in metadata &&
-        metadata.phaseTransition !== null &&
-        typeof metadata.phaseTransition === "object" &&
-        "from" in metadata.phaseTransition &&
-        typeof metadata.phaseTransition.from === "string" &&
-        "to" in metadata.phaseTransition &&
-        typeof metadata.phaseTransition.to === "string" &&
-        "message" in metadata.phaseTransition &&
-        typeof metadata.phaseTransition.message === "string"
+        "completion" in metadata &&
+        metadata.completion !== null &&
+        typeof metadata.completion === "object" &&
+        "response" in metadata.completion &&
+        typeof metadata.completion.response === "string" &&
+        "nextAgent" in metadata.completion &&
+        typeof metadata.completion.nextAgent === "string"
     );
 }
 
@@ -100,7 +102,7 @@ export interface ToolResult {
     success: boolean;
     output?: string;
     error?: string;
-    metadata?: ToolExecutionMetadata | HandoffMetadata | PhaseTransitionMetadata;
+    metadata?: ToolExecutionMetadata | ContinueMetadata | CompleteMetadata;
 }
 
 // Plugin parameter type from multi-llm-ts
@@ -146,7 +148,7 @@ export interface ToolExecutionResult {
     output?: ToolOutput;
     error?: string;
     duration: number;
-    metadata?: ToolExecutionMetadata | HandoffMetadata | PhaseTransitionMetadata;
+    metadata?: ToolExecutionMetadata | ContinueMetadata | CompleteMetadata;
     toolName?: string;
 }
 

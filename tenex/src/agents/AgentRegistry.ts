@@ -11,6 +11,7 @@ import { PM_AGENT_DEFINITION } from "./projectAgentDefinition";
 import { getNDK } from "@/nostr";
 import { getProjectContext, isProjectContextInitialized } from "@/services";
 import { getDefaultToolsForAgent } from "./constants";
+import { getBuiltInAgents } from "./builtInAgents";
 
 export class AgentRegistry {
     private agents: Map<string, Agent> = new Map();
@@ -42,6 +43,9 @@ export class AgentRegistry {
             for (const [slug, _registryEntry] of Object.entries(this.registry)) {
                 await this.loadAgentBySlug(slug);
             }
+
+            // Load built-in agents
+            await this.ensureBuiltInAgents();
 
             logger.info(`Loaded ${this.agents.size} agents into runtime`);
         } catch (error) {
@@ -350,6 +354,29 @@ export class AgentRegistry {
 
         if (def.llmConfig !== undefined && typeof def.llmConfig !== "string") {
             throw new Error("Agent llmConfig must be a string");
+        }
+    }
+
+    /**
+     * Ensure built-in agents are loaded
+     */
+    private async ensureBuiltInAgents(): Promise<void> {
+        const builtInAgents = getBuiltInAgents();
+        
+        for (const def of builtInAgents) {
+            // Use ensureAgent just like any other agent
+            const agent = await this.ensureAgent(def.slug, {
+                name: def.name,
+                role: def.role,
+                instructions: def.instructions || "",
+                tools: def.tools,
+                llmConfig: def.llmConfig || DEFAULT_AGENT_LLM_CONFIG
+            });
+            
+            // Mark as built-in after creation
+            if (agent) {
+                agent.isBuiltIn = true;
+            }
         }
     }
 }

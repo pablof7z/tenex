@@ -4,13 +4,13 @@ import type { NostrPublisher, StreamPublisher } from "@/nostr/NostrPublisher";
 import type { LLMMetadata } from "@/nostr/types";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type {
-    HandoffMetadata,
-    PhaseTransitionMetadata,
+    ContinueMetadata,
+    CompleteMetadata,
     ToolExecutionMetadata,
     ToolExecutionResult,
     ToolOutput,
 } from "@/tools/types";
-import { isHandoffMetadata, isPhaseTransitionMetadata } from "@/tools/types";
+import { isContinueMetadata, isCompleteMetadata } from "@/tools/types";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -36,8 +36,8 @@ export interface ReasonActResult {
     finalContent: string;
     toolExecutions: number;
     allToolResults?: ToolExecutionResult[]; // Array of actual tool execution results
-    handoffMetadata?: HandoffMetadata;
-    phaseTransitionMetadata?: PhaseTransitionMetadata;
+    continueMetadata?: ContinueMetadata;
+    completeMetadata?: CompleteMetadata;
     wasPublished?: boolean; // Track if response was published during streaming
 }
 
@@ -61,8 +61,8 @@ export class ReasonActLoop {
     ): Promise<ReasonActResult> {
         const tracingLogger = createTracingLogger(tracingContext, "agent");
         const allToolResults: ToolExecutionResult[] = [];
-        let handoffMetadata: HandoffMetadata | undefined;
-        let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+        let continueMetadata: ContinueMetadata | undefined;
+        let completeMetadata: CompleteMetadata | undefined;
 
         // Native function calls are already executed by multi-llm-ts
         if (initialResponse.toolCalls && initialResponse.toolCalls.length > 0) {
@@ -89,10 +89,10 @@ export class ReasonActLoop {
 
                 // Check for special metadata
                 if (toolCall.result?.metadata) {
-                    if (isHandoffMetadata(toolCall.result.metadata)) {
-                        handoffMetadata = toolCall.result.metadata;
-                    } else if (isPhaseTransitionMetadata(toolCall.result.metadata)) {
-                        phaseTransitionMetadata = toolCall.result.metadata;
+                    if (isContinueMetadata(toolCall.result.metadata)) {
+                        continueMetadata = toolCall.result.metadata;
+                    } else if (isCompleteMetadata(toolCall.result.metadata)) {
+                        completeMetadata = toolCall.result.metadata;
                     }
                 }
             }
@@ -124,8 +124,8 @@ export class ReasonActLoop {
             finalContent: initialResponse.content || "",
             toolExecutions: initialResponse.toolCalls?.length || 0,
             allToolResults,
-            handoffMetadata,
-            phaseTransitionMetadata,
+            continueMetadata,
+            completeMetadata,
             wasPublished: !!(context.eventToReply && context.agent.signer && initialLLMMetadata && initialResponse.toolCalls?.length),
         };
     }
@@ -139,8 +139,8 @@ export class ReasonActLoop {
     ): AsyncIterable<StreamEvent> {
         const tracingLogger = createTracingLogger(tracingContext, "agent");
         const allToolResults: ToolExecutionResult[] = [];
-        let handoffMetadata: HandoffMetadata | undefined;
-        let phaseTransitionMetadata: PhaseTransitionMetadata | undefined;
+        let continueMetadata: ContinueMetadata | undefined;
+        let completeMetadata: CompleteMetadata | undefined;
         let finalResponse: CompletionResponse | undefined;
         let fullContent = "";
 
@@ -241,17 +241,18 @@ export class ReasonActLoop {
                         // Check for special metadata
                         if (resultWithMetadata?.metadata) {
                             const metadata = resultWithMetadata.metadata;
-                            if (isHandoffMetadata(metadata)) {
-                                handoffMetadata = metadata;
-                                tracingLogger.info("🤝 Handoff detected in streaming", {
-                                    to: metadata.handoff.to,
-                                    toName: metadata.handoff.toName,
+                            if (isContinueMetadata(metadata)) {
+                                continueMetadata = metadata;
+                                tracingLogger.info("🔄 Continue routing detected in streaming", {
+                                    destination: metadata.routingDecision.destination,
+                                    destinationName: metadata.routingDecision.destinationName,
+                                    phase: metadata.routingDecision.phase,
                                 });
-                            } else if (isPhaseTransitionMetadata(metadata)) {
-                                phaseTransitionMetadata = metadata;
-                                tracingLogger.info("🔄 Phase transition detected in streaming", {
-                                    from: metadata.phaseTransition.from,
-                                    to: metadata.phaseTransition.to,
+                            } else if (isCompleteMetadata(metadata)) {
+                                completeMetadata = metadata;
+                                tracingLogger.info("✅ Complete detected in streaming", {
+                                    nextAgent: metadata.completion.nextAgent,
+                                    hasResponse: !!metadata.completion.response,
                                 });
                             }
                         }
@@ -317,22 +318,25 @@ export class ReasonActLoop {
                 // Finalize the stream with metadata
                 await streamPublisher.finalize({
                     llmMetadata,
-                    phaseTransition: phaseTransitionMetadata,
-                    handoff: handoffMetadata,
-                    nextAgent: context.nextAgent || handoffMetadata?.handoff.to
+                    continueMetadata,
+                    completeMetadata,
+                    nextAgent: context.nextAgent || continueMetadata?.routingDecision.destination || completeMetadata?.completion.nextAgent
                 });
                 
-                if (phaseTransitionMetadata) {
-                    tracingLogger.debug("Published final response for phase transition", {
+                if (continueMetadata) {
+                    tracingLogger.debug("Published final response with continue routing", {
                         agent: context.agentName,
-                        fromPhase: phaseTransitionMetadata.phaseTransition.from,
-                        toPhase: phaseTransitionMetadata.phaseTransition.to,
-                        hasHandoff: !!handoffMetadata,
+                        destination: continueMetadata.routingDecision.destination,
+                        phase: continueMetadata.routingDecision.phase,
+                    });
+                } else if (completeMetadata) {
+                    tracingLogger.debug("Published final response with completion", {
+                        agent: context.agentName,
+                        nextAgent: completeMetadata.completion.nextAgent,
                     });
                 } else {
                     tracingLogger.debug("Published final response on stream completion", {
                         agent: context.agentName,
-                        hasHandoff: !!handoffMetadata,
                     });
                 }
             }
