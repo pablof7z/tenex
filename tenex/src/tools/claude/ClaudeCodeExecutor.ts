@@ -1,12 +1,13 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { ClaudeParser, type ClaudeCodeMessage } from "@/utils/claude/ClaudeParser";
+import type { SDKMessage } from "@anthropic-ai/claude-code";
+import { ClaudeStreamHandler, type StreamMetrics } from "./ClaudeStreamHandler";
 import { logger } from "@/utils/logger";
 
 export interface ClaudeCodeExecutorOptions {
     prompt: string;
     projectPath: string;
     timeout?: number;
-    onMessage?: (message: ClaudeCodeMessage) => void | Promise<void>;
+    abortSignal?: AbortSignal;
+    onMessage?: (message: SDKMessage) => void | Promise<void>;
     onError?: (error: Error) => void;
     onComplete?: (result: ClaudeCodeResult) => void;
 }
@@ -23,140 +24,88 @@ export interface ClaudeCodeResult {
 }
 
 /**
- * ClaudeCodeExecutor - Responsible ONLY for spawning and managing the Claude Code process
- *
- * Single Responsibility: Execute Claude Code CLI and stream parsed messages to callbacks
- * - Does NOT publish Nostr events
- * - Does NOT handle business logic
- * - Does NOT decide what to do with messages
- *
- * The caller decides what to do with the messages via callbacks
+ * Executes Claude Code using the official SDK
+ * Single Responsibility: Execute Claude Code and stream messages
  */
 export class ClaudeCodeExecutor {
-    private process?: ChildProcess;
-    private parser: ClaudeParser;
-    private stdout = "";
     private startTime: number;
+    private abortController: AbortController;
 
     constructor(private options: ClaudeCodeExecutorOptions) {
-        this.parser = new ClaudeParser(options.onMessage);
         this.startTime = Date.now();
-    }
-
-    /**
-     * Execute Claude Code CLI with the provided prompt
-     * Returns a promise that resolves when the process completes
-     */
-    async execute(): Promise<ClaudeCodeResult> {
-        return new Promise((resolve, reject) => {
-            const args = [
-                "-p",
-                "--dangerously-skip-permissions",
-                "--model",
-                "sonnet",
-                "--output-format",
-                "stream-json",
-                "--verbose",
-                this.options.prompt,
-            ];
-
-            logger.info("🚀 Spawning Claude Code process", {
-                cwd: this.options.projectPath,
-                prompt:
-                    this.options.prompt.substring(0, 100) +
-                    (this.options.prompt.length > 100 ? "..." : ""),
-                timeout: this.options.timeout || "none",
-                model: "sonnet",
+        this.abortController = new AbortController();
+        
+        // Link external abort signal if provided
+        if (options.abortSignal) {
+            options.abortSignal.addEventListener('abort', () => {
+                this.abortController.abort(options.abortSignal!.reason);
             });
-
-            this.process = spawn("claude", args, {
-                cwd: this.options.projectPath,
-                env: { ...process.env },
-                stdio: ["ignore", "pipe", "inherit"], // ignore stdin, pipe stdout, inherit stderr
-            });
-
-            // Set encoding for better string handling
-            if (this.process.stdout) {
-                this.process.stdout.setEncoding("utf8");
-            }
-
-            // Handle stdout - parse JSONL messages
-            this.process.stdout?.on("data", (chunk: string) => {
-                this.stdout += chunk;
-
-                // Parse lines and fire callbacks
-                this.parser.parseLines(chunk);
-            });
-
-            // stderr is inherited, so it will show directly in console
-
-            // Handle process errors
-            this.process.on("error", (error) => {
-                const err = new Error(`Failed to spawn Claude Code: ${error.message}`);
-                this.options.onError?.(err);
-                reject(err);
-            });
-
-            // Handle process completion
-            this.process.on("close", (code) => {
-                const duration = Date.now() - this.startTime;
-                const result: ClaudeCodeResult = {
-                    success: code === 0,
-                    output: this.stdout,
-                    error: code !== 0 ? `Claude Code exited with code ${code}` : undefined,
-                    sessionId: this.parser.getSessionId(),
-                    totalCost: this.parser.getTotalCost(),
-                    messageCount: this.parser.getMessageCount(),
-                    duration,
-                    assistantMessages: this.parser.getAssistantMessages(),
-                };
-
-                logger.info(code === 0 ? "✅ Claude Code completed" : "❌ Claude Code failed", {
-                    exitCode: code,
-                    duration,
-                    sessionId: result.sessionId,
-                    totalCost: result.totalCost,
-                    messageCount: result.messageCount,
-                    assistantMessagesCount: result.assistantMessages.length,
-                });
-
-                if (code !== 0) {
-                    const error = new Error(`Claude Code exited with code ${code}`);
-                    this.options.onError?.(error);
-                    reject(error);
-                } else {
-                    this.options.onComplete?.(result);
-                    resolve(result);
-                }
-            });
-
-            // Handle timeout if specified
-            if (this.options.timeout) {
-                setTimeout(() => {
-                    if (this.process && !this.process.killed) {
-                        this.process.kill("SIGTERM");
-                        const error = new Error("Claude Code execution timed out");
-                        this.options.onError?.(error);
-                        reject(error);
-                    }
-                }, this.options.timeout);
-            }
-        });
-    }
-
-    /**
-     * Kill the Claude Code process if it's still running
-     */
-    kill(): void {
-        if (this.process && !this.process.killed) {
-            this.process.kill("SIGTERM");
         }
     }
 
-    /**
-     * Check if the process is still running
-     */
+    async execute(): Promise<ClaudeCodeResult> {
+        let result: { messages: SDKMessage[], metrics: StreamMetrics } | undefined;
+        let error: string | undefined;
+
+        try {
+            // Set timeout if specified
+            if (this.options.timeout) {
+                const timeoutId = setTimeout(() => {
+                    this.abortController.abort(new Error('Timeout'));
+                }, this.options.timeout);
+                
+                // Clear timeout if aborted early
+                this.abortController.signal.addEventListener('abort', () => {
+                    clearTimeout(timeoutId);
+                });
+            }
+
+            // Use shared stream handler
+            result = await ClaudeStreamHandler.processStream({
+                prompt: this.options.prompt,
+                projectPath: this.options.projectPath,
+                abortController: this.abortController,
+                onMessage: this.options.onMessage,
+            });
+
+            const duration = Date.now() - this.startTime;
+            const executionResult: ClaudeCodeResult = {
+                success: true,
+                output: result.messages.map(m => JSON.stringify(m)).join('\n'),
+                sessionId: result.metrics.sessionId,
+                totalCost: result.metrics.totalCost,
+                messageCount: result.metrics.messageCount,
+                duration,
+                assistantMessages: result.metrics.assistantMessages,
+            };
+
+            this.options.onComplete?.(executionResult);
+            return executionResult;
+
+        } catch (err) {
+            const duration = Date.now() - this.startTime;
+            error = err instanceof Error ? err.message : 'Unknown error';
+            
+            this.options.onError?.(err as Error);
+
+            return {
+                success: false,
+                output: result?.messages.map(m => JSON.stringify(m)).join('\n') || '',
+                error,
+                sessionId: result?.metrics?.sessionId,
+                totalCost: result?.metrics?.totalCost || 0,
+                messageCount: result?.metrics?.messageCount || 0,
+                duration,
+                assistantMessages: result?.metrics?.assistantMessages || [],
+            };
+        }
+    }
+
+    kill(): void {
+        this.abortController.abort();
+    }
+
     isRunning(): boolean {
-        return this.process ? !this.process.killed : false;
+        return !this.abortController.signal.aborted;
     }
 }
