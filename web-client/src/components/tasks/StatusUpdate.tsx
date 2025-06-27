@@ -13,6 +13,7 @@ import {
     Play,
     CheckCircle,
     Settings,
+    Reply,
 } from "lucide-react";
 import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -36,9 +37,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
 interface StatusUpdateProps {
     event: NDKEvent;
+    onReply?: (event: NDKEvent) => void;
 }
 
-export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdateProps) {
+export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: StatusUpdateProps) {
     const profile = useProfileValue(event.pubkey);
     const currentPubkey = useNDKCurrentPubkey();
     const { formatRelativeTime } = useTimeFormat();
@@ -437,6 +439,17 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                             </div>
                         )}
                         <PTaggedAvatars />
+                        {/* Reply button */}
+                        {onReply && (
+                            <button
+                                type="button"
+                                onClick={() => onReply(event)}
+                                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
+                                title="Reply to this message"
+                            >
+                                <Reply className="w-3.5 h-3.5" />
+                            </button>
+                        )}
                         {/* More options dropdown for user messages */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -515,6 +528,17 @@ export const StatusUpdate = memo(function StatusUpdate({ event }: StatusUpdatePr
                         </span>
                         {/* P-tagged avatars */}
                         <PTaggedAvatars />
+                        {/* Reply button */}
+                        {onReply && (
+                            <button
+                                type="button"
+                                onClick={() => onReply(event)}
+                                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
+                                title="Reply to this message"
+                            >
+                                <Reply className="w-3.5 h-3.5" />
+                            </button>
+                        )}
                         {/* LLM Metadata Icon - shown when metadata exists */}
                         {getLLMMetadata() && (
                             <button

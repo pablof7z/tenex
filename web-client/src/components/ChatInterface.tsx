@@ -24,7 +24,7 @@ import { ChatTypingIndicator } from "./chat/ChatTypingIndicator";
 import { VoiceMessageDialog } from "./dialogs/VoiceMessageDialog";
 import { AgentDiscoveryCard } from "./common/AgentDiscoveryCard";
 import { CommandExecutionCard } from "./common/CommandExecutionCard";
-import { StatusUpdate } from "./tasks/StatusUpdate";
+import { MessageWithReplies } from "./MessageWithReplies";
 import { TaskCard } from "./tasks/TaskCard";
 import { Button } from "./ui/button";
 
@@ -33,7 +33,6 @@ interface ChatInterfaceProps {
     task?: NDKTask;
     inputPlaceholder?: string;
     allowInput?: boolean;
-    onReplyToTask?: (taskId: string) => void;
     className?: string;
     // New props for thread mode
     project?: NDKProject;
@@ -47,11 +46,9 @@ interface ChatInterfaceProps {
 const MessageList = memo(
     ({
         messages,
-        onMessageClick,
         onTaskClick,
     }: {
         messages: NDKEvent[];
-        onMessageClick?: (event: NDKEvent) => void;
         onTaskClick?: (task: NDKTask) => void;
     }) => {
         return (
@@ -87,23 +84,12 @@ const MessageList = memo(
                         );
                     }
 
-                    // For all other events, render as status update
+                    // For all other events, render as message with replies
                     return (
-                        <div
+                        <MessageWithReplies
                             key={event.id}
-                            onClick={() => onMessageClick?.(event)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    onMessageClick?.(event);
-                                }
-                            }}
-                            className={onMessageClick ? "cursor-pointer" : ""}
-                            tabIndex={onMessageClick ? 0 : undefined}
-                            role={onMessageClick ? "button" : undefined}
-                        >
-                            <StatusUpdate event={event} />
-                        </div>
+                            event={event}
+                        />
                     );
                 })}
             </div>
@@ -118,7 +104,6 @@ export function ChatInterface({
     task,
     inputPlaceholder = "Add a comment...",
     allowInput = true,
-    onReplyToTask,
     className = "",
     project,
     threadId,
@@ -215,7 +200,7 @@ export function ChatInterface({
                 textareaRef.current?.focus();
             }, 100);
         }
-    }, [isThreadMode]);
+    }, [isThreadMode, textareaRef]);
 
     // Subscribe to existing thread if we have a threadId (but not for 'new' threads)
     const existingThread = useEvent(threadId && threadId !== "new" ? threadId : false);
@@ -600,16 +585,6 @@ export function ChatInterface({
         [handleMentionKeyDown, handleSendMessage]
     );
 
-    const handleStatusUpdateClick = useCallback(
-        (event: NDKEvent) => {
-            // Get the task ID this status update is related to
-            const relatedTaskId = event.tags?.find((tag) => tag[0] === "e")?.[1];
-            if (relatedTaskId && onReplyToTask) {
-                onReplyToTask(relatedTaskId);
-            }
-        },
-        [onReplyToTask]
-    );
 
     return (
         <div className={`bg-background flex flex-col ${className}`}>
@@ -666,7 +641,6 @@ export function ChatInterface({
                     ) : statusUpdates.length > 0 ? (
                         <MessageList
                             messages={statusUpdates}
-                            onMessageClick={handleStatusUpdateClick}
                             onTaskClick={(task) => setSelectedTask(task)}
                         />
                     ) : (
