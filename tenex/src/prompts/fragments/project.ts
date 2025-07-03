@@ -12,6 +12,45 @@ interface InventoryContextArgs {
     inventoryContent?: string; // Optional to support both old and new usage
 }
 
+// Helper function to get project files (excluding dot files/dirs)
+function getProjectFiles(): { files: string[]; isEmpty: boolean } {
+    const projectFiles: string[] = [];
+    let isEmpty = true;
+
+    try {
+        const projectDir = process.cwd();
+        const entries = fs.readdirSync(projectDir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            // Skip dot files/dirs and node_modules
+            if (entry.name.startsWith(".") || entry.name === "node_modules") {
+                continue;
+            }
+            
+            isEmpty = false;
+            
+            if (entry.isDirectory()) {
+                projectFiles.push(`${entry.name}/`);
+            } else {
+                projectFiles.push(entry.name);
+            }
+        }
+        
+        // Sort directories first, then files
+        projectFiles.sort((a, b) => {
+            const aIsDir = a.endsWith("/");
+            const bIsDir = b.endsWith("/");
+            if (aIsDir && !bIsDir) return -1;
+            if (!aIsDir && bIsDir) return 1;
+            return a.localeCompare(b);
+        });
+    } catch (error) {
+        logger.debug("Could not read project directory", { error });
+    }
+
+    return { files: projectFiles, isEmpty };
+}
+
 // Helper function to load inventory and context synchronously
 function loadProjectContextSync(phase: Phase): {
     inventoryContent: string | null;
@@ -77,8 +116,22 @@ This inventory helps you understand the project structure, significant files, an
 This is just a map for you to be quickly situated.
 `);
         } else {
-            parts.push(`## Project Context
-No project inventory is available yet. You should suggest to the user to create one as it will greatly improve how your understanding.`);
+            // Get project files to determine if this is a fresh project
+            const { files: projectFiles, isEmpty } = getProjectFiles();
+            
+            if (isEmpty) {
+                parts.push(`## Project Context
+This is a fresh project with no files yet.`);
+            } else {
+                parts.push(`## Project Context
+No project inventory is available yet. You should suggest to the user to create one as it will greatly improve your understanding of the codebase.
+
+### Current Project Structure
+Here are the files and directories in the project root:
+${projectFiles.map(f => `- ${f}`).join("\n")}
+
+Generating an inventory will provide a comprehensive overview of the project's architecture, significant files, and patterns.`);
+            }
         }
 
         // Add context files listing if available
