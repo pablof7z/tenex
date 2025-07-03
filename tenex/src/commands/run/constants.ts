@@ -2,7 +2,6 @@ import { EVENT_KINDS } from "@/llm/types";
 
 export const STATUS_KIND = EVENT_KINDS.PROJECT_STATUS;
 export const STATUS_INTERVAL_MS = 60000; // 60 seconds
-export const STARTUP_FILTER_MINUTES = 5;
 
 export function getEventKindName(kind: number): string {
     switch (kind) {

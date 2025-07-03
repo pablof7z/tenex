@@ -33,7 +33,7 @@ export const mcpToolsFragment: PromptFragment<MCPToolsArgs> = {
                 if (!toolsByServer.has(serverName)) {
                     toolsByServer.set(serverName, []);
                 }
-                toolsByServer.get(serverName)!.push(tool);
+                toolsByServer.get(serverName)?.push(tool);
             }
 
             // Generate markdown content

@@ -87,6 +87,17 @@ export class ProjectContext {
         return this.agents.get(slug);
     }
 
+    getAgentByPubkey(pubkey: Hexpubkey): Agent | undefined {
+        // Find the PM agent dynamically
+        for (const agent of this.agents.values()) {
+            if (agent.pubkey === pubkey) {
+                return agent;
+            }
+        }
+        
+        return undefined
+    }
+
     getProjectAgent(): Agent {
         // Find the PM agent dynamically
         for (const agent of this.agents.values()) {

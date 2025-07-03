@@ -22,7 +22,7 @@ export function calculateLessonMetrics(projectCtx: ProjectContext): LessonMetric
     const lessonsByPhase = new Map<string, number>();
     const keywordCounts = new Map<string, number>();
     let totalLength = 0;
-    let oldestTimestamp = Infinity;
+    let oldestTimestamp = Number.POSITIVE_INFINITY;
     let newestTimestamp = 0;
 
     for (const lesson of allLessons) {
@@ -65,7 +65,7 @@ export function calculateLessonMetrics(projectCtx: ProjectContext): LessonMetric
         lessonsByPhase,
         mostCommonKeywords,
         averageLessonLength: allLessons.length > 0 ? Math.round(totalLength / allLessons.length) : 0,
-        oldestLesson: oldestTimestamp !== Infinity ? new Date(oldestTimestamp * 1000) : undefined,
+        oldestLesson: oldestTimestamp !== Number.POSITIVE_INFINITY ? new Date(oldestTimestamp * 1000) : undefined,
         newestLesson: newestTimestamp > 0 ? new Date(newestTimestamp * 1000) : undefined,
     };
 }

@@ -1,5 +1,5 @@
-import type { SDKMessage } from "@anthropic-ai/claude-code";
-import { ClaudeStreamHandler, type StreamMetrics } from "./ClaudeStreamHandler";
+import { query, type SDKMessage } from "@anthropic-ai/claude-code";
+import type { TextBlock, ContentBlock } from "@anthropic-ai/sdk/resources/messages/messages";
 import { logger } from "@/utils/logger";
 
 export interface ClaudeCodeExecutorOptions {
@@ -7,25 +7,22 @@ export interface ClaudeCodeExecutorOptions {
     projectPath: string;
     timeout?: number;
     abortSignal?: AbortSignal;
-    onMessage?: (message: SDKMessage) => void | Promise<void>;
-    onError?: (error: Error) => void;
-    onComplete?: (result: ClaudeCodeResult) => void;
 }
 
 export interface ClaudeCodeResult {
     success: boolean;
-    output: string;
-    error?: string;
     sessionId?: string;
-    totalCost?: number;
-    messageCount?: number;
-    duration?: number;
+    totalCost: number;
+    messageCount: number;
+    duration: number;
     assistantMessages: string[];
+    error?: string;
 }
 
 /**
- * Executes Claude Code using the official SDK
- * Single Responsibility: Execute Claude Code and stream messages
+ * Low-level executor for Claude Code SDK
+ * Single Responsibility: Execute Claude Code and stream raw SDK messages
+ * Has NO knowledge of Nostr or tasks
  */
 export class ClaudeCodeExecutor {
     private startTime: number;
@@ -38,67 +35,115 @@ export class ClaudeCodeExecutor {
         // Link external abort signal if provided
         if (options.abortSignal) {
             options.abortSignal.addEventListener('abort', () => {
-                this.abortController.abort(options.abortSignal!.reason);
+                this.abortController.abort(options.abortSignal?.reason);
             });
         }
     }
 
-    async execute(): Promise<ClaudeCodeResult> {
-        let result: { messages: SDKMessage[], metrics: StreamMetrics } | undefined;
-        let error: string | undefined;
+    /**
+     * Execute Claude Code and stream SDK messages
+     * @yields Raw SDKMessage events from the Claude Code SDK
+     * @returns Final execution result with metrics
+     */
+    async *execute(): AsyncGenerator<SDKMessage, ClaudeCodeResult, unknown> {
+        const metrics: {
+            sessionId?: string;
+            totalCost: number;
+            messageCount: number;
+            assistantMessages: string[];
+        } = {
+            totalCost: 0,
+            messageCount: 0,
+            assistantMessages: [],
+        };
 
         try {
             // Set timeout if specified
+            let timeoutId: NodeJS.Timeout | undefined;
             if (this.options.timeout) {
-                const timeoutId = setTimeout(() => {
+                timeoutId = setTimeout(() => {
                     this.abortController.abort(new Error('Timeout'));
                 }, this.options.timeout);
                 
                 // Clear timeout if aborted early
                 this.abortController.signal.addEventListener('abort', () => {
-                    clearTimeout(timeoutId);
+                    if (timeoutId) clearTimeout(timeoutId);
                 });
             }
 
-            // Use shared stream handler
-            result = await ClaudeStreamHandler.processStream({
+            // Stream messages from Claude Code SDK
+            for await (const message of query({
                 prompt: this.options.prompt,
-                projectPath: this.options.projectPath,
                 abortController: this.abortController,
-                onMessage: this.options.onMessage,
-            });
+                options: {
+                    cwd: this.options.projectPath,
+                    permissionMode: 'bypassPermissions',
+                }
+            })) {
+                // Extract metrics from messages
+                if (!metrics.sessionId && message.session_id) {
+                    metrics.sessionId = message.session_id;
+                }
+
+                if (message.type === 'assistant') {
+                    metrics.messageCount++;
+                    const content = this.extractTextContent(message);
+                    if (content) {
+                        metrics.assistantMessages.push(content);
+                    }
+                }
+
+                if (message.type === 'result' && 'total_cost_usd' in message) {
+                    metrics.totalCost = message.total_cost_usd;
+                }
+
+                // Yield the message to the caller
+                yield message;
+            }
+
+            // Clear timeout on success
+            if (timeoutId) clearTimeout(timeoutId);
 
             const duration = Date.now() - this.startTime;
-            const executionResult: ClaudeCodeResult = {
+            return {
                 success: true,
-                output: result.messages.map(m => JSON.stringify(m)).join('\n'),
-                sessionId: result.metrics.sessionId,
-                totalCost: result.metrics.totalCost,
-                messageCount: result.metrics.messageCount,
+                sessionId: metrics.sessionId,
+                totalCost: metrics.totalCost,
+                messageCount: metrics.messageCount,
                 duration,
-                assistantMessages: result.metrics.assistantMessages,
+                assistantMessages: metrics.assistantMessages,
             };
-
-            this.options.onComplete?.(executionResult);
-            return executionResult;
 
         } catch (err) {
             const duration = Date.now() - this.startTime;
-            error = err instanceof Error ? err.message : 'Unknown error';
+            const error = err instanceof Error ? err.message : 'Unknown error';
             
-            this.options.onError?.(err as Error);
+            logger.error('[ClaudeCodeExecutor] Execution failed', { error, duration });
 
             return {
                 success: false,
-                output: result?.messages.map(m => JSON.stringify(m)).join('\n') || '',
-                error,
-                sessionId: result?.metrics?.sessionId,
-                totalCost: result?.metrics?.totalCost || 0,
-                messageCount: result?.metrics?.messageCount || 0,
+                sessionId: metrics.sessionId,
+                totalCost: metrics.totalCost,
+                messageCount: metrics.messageCount,
                 duration,
-                assistantMessages: result?.metrics?.assistantMessages || [],
+                assistantMessages: metrics.assistantMessages,
+                error,
             };
         }
+    }
+
+    /**
+     * Extract text content from an assistant message
+     */
+    private extractTextContent(message: SDKMessage): string {
+        if (message.type !== 'assistant' || !message.message?.content) {
+            return '';
+        }
+
+        return message.message.content
+            .filter((c: ContentBlock): c is TextBlock => c.type === 'text')
+            .map((c: TextBlock) => c.text)
+            .join('');
     }
 
     kill(): void {

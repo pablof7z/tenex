@@ -89,7 +89,7 @@ export class ToolCallLogger {
         try {
             await this.ensureLogDirectory();
 
-            const requestId = this.generateRequestId(toolName, context.agentName);
+            const requestId = this.generateRequestId(toolName, context.agent.name);
             const durationMs = performance.endTime - performance.startTime;
             const timestamp = new Date().toISOString();
 
@@ -99,7 +99,7 @@ export class ToolCallLogger {
                 requestId,
 
                 // Context
-                agentName: context.agentName,
+                agentName: context.agent.name,
                 phase: context.phase,
                 conversationId: context.conversationId,
 

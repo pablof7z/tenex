@@ -37,8 +37,6 @@ export class EventHandler {
 
         // Initialize components
         await this.conversationManager.initialize();
-
-        logInfo("EventHandler initialized with direct PM agent routing");
     }
 
     async handleEvent(event: NDKEvent): Promise<void> {

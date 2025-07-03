@@ -3,7 +3,7 @@ import type { Tool, ToolExecutionContext, ToolResult } from "../types";
 import { logger } from "@/utils/logger";
 import { type Phase, ALL_PHASES } from "@/conversations/phases";
 import { parseToolParams } from "../utils";
-import { getProjectContext } from "@/services/ProjectContext";
+import { getProjectContext, type ProjectContext } from "@/services/ProjectContext";
 
 const ContinueArgsSchema = z.object({
     phase: z.enum(ALL_PHASES as [Phase, ...Phase[]]).optional(),
@@ -103,7 +103,7 @@ export const continueTool: Tool = {
         }
 
         // Handle routing to agent
-        let projectContext;
+        let projectContext: ProjectContext;
         try {
             projectContext = getProjectContext();
         } catch (_error) {

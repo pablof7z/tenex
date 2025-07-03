@@ -2,6 +2,7 @@ import { getProjectContext } from "@/services";
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKTask, NDKEvent } from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
+import type { Agent } from "@/agents/types";
 
 export interface TaskCreationOptions {
     title: string;
@@ -20,10 +21,15 @@ export interface TaskCompletionOptions {
 
 /**
  * Publishes NDKTask events to Nostr
- * Single Responsibility: Create and update task events on Nostr
+ * Single Responsibility: Manage the lifecycle of NDKTask events (create and complete)
  */
 export class TaskPublisher {
-    constructor(private ndk: NDK) {}
+    private currentTask?: NDKTask;
+
+    constructor(
+        private ndk: NDK,
+        private agent: Agent
+    ) {}
 
     async createTask(options: TaskCreationOptions): Promise<NDKTask> {
         const projectCtx = getProjectContext();
@@ -51,51 +57,88 @@ export class TaskPublisher {
             ["status", "pending"]
         );
 
-        await task.publish();
+        // Sign with the agent's signer
+        await task.sign(this.agent.signer);
+        
+        // we want to allow any message that prefaces the creation of this task to be published
+        setTimeout(task.publish, 500);
         logger.info("Published task", { taskId: task.id, title: task.title });
+        
+        // Store the task instance for future operations
+        this.currentTask = task;
         
         return task;
     }
 
-    async publishTaskUpdate(task: NDKTask, event: any): Promise<void> {
-        // Create reply event to the task
-        const reply = new NDKEvent(this.ndk);
-        reply.kind = event.kind || 1;
-        reply.content = event.content || '';
-        reply.tags = [
-            ["e", task.id, "", "reply"],
-            ...event.tags
-        ];
-
-        await reply.publish();
-    }
-
-    async completeTask(task: NDKTask, success: boolean, options: TaskCompletionOptions): Promise<void> {
-        // Update task status
-        task.tags = task.tags.filter(tag => tag[0] !== "status");
-        task.tags.push(["status", success ? "completed" : "failed"]);
-
-        // Add completion metadata
+    async completeTask(success: boolean, options: TaskCompletionOptions): Promise<void> {
+        if (!this.currentTask) {
+            throw new Error("No current task to complete. Call createTask first.");
+        }
+        
+        const task = this.currentTask;
+        const projectCtx = getProjectContext();
+        
+        // Create a completion status update as a reply to the task
+        const statusUpdate = task.reply();
+        statusUpdate.content = success 
+            ? "✅ Task completed successfully" 
+            : `❌ Task failed${options.error ? `: ${options.error}` : ''}`;
+        
+        // Add status and metadata tags
+        statusUpdate.tags.push(["status", success ? "completed" : "failed"]);
+        
         if (options.sessionId) {
-            task.tags.push(["claude-session", options.sessionId]);
+            statusUpdate.tags.push(["claude-session", options.sessionId]);
         }
         if (options.totalCost !== undefined) {
-            task.tags.push(["cost", options.totalCost.toString()]);
+            statusUpdate.tags.push(["cost", options.totalCost.toString()]);
         }
         if (options.duration !== undefined) {
-            task.tags.push(["duration", options.duration.toString()]);
+            statusUpdate.tags.push(["duration", options.duration.toString()]);
         }
         if (options.error) {
-            task.tags.push(["error", options.error]);
+            statusUpdate.tags.push(["error", options.error]);
         }
-
-        await task.publish();
-        logger.info("Task completed", {
+        
+        // Add project tag
+        statusUpdate.tag(projectCtx.project);
+        
+        // Sign with the agent's signer and publish
+        await statusUpdate.sign(this.agent.signer);
+        await statusUpdate.publish();
+        
+        logger.info("Published task completion status", {
             taskId: task.id,
             success,
             sessionId: options.sessionId,
             cost: options.totalCost,
             duration: options.duration,
+        });
+    }
+
+    async publishTaskProgress(content: string): Promise<void> {
+        if (!this.currentTask) {
+            throw new Error("No current task for progress updates. Call createTask first.");
+        }
+        
+        const task = this.currentTask;
+        const projectCtx = getProjectContext();
+        
+        // Create a proper reply using the task event
+        const progressUpdate = task.reply();
+        progressUpdate.content = content;
+        progressUpdate.tags.push(["status", "progress"]);
+        
+        // Add project tag
+        progressUpdate.tag(projectCtx.project);
+        
+        // Sign with the agent's signer
+        await progressUpdate.sign(this.agent.signer);
+        await progressUpdate.publish();
+        
+        logger.debug("Published task progress", {
+            taskId: task.id,
+            contentLength: content.length
         });
     }
 }

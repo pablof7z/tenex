@@ -72,13 +72,29 @@ export class ProjectManager implements IProjectManager {
             // Create project structure (without nsec in config)
             await this.createProjectStructure(projectPath, projectData);
 
-            // Initialize agent registry and create PM agent
+            // Initialize agent registry
             const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
             const agentRegistry = new AgentRegistry(projectPath);
+
+            // Initialize ProjectContext early with empty agents map
+            const ndkProject = await this.fetchProject(naddr, ndk);
+            setProjectContext(ndkProject, new Map());
+
+            // Create PM agent (now ProjectContext is available for event publishing)
             await agentRegistry.createPMAgent("project-manager", projectNsec);
 
             // Fetch and save agent definitions
             await this.fetchAndSaveAgentDefinitions(projectPath, projectData, ndk);
+
+            // Update ProjectContext with all loaded agents
+            await agentRegistry.loadFromProject();
+            const agentMap = agentRegistry.getAllAgentsMap();
+            const loadedAgents = new Map();
+            for (const [slug, agent] of agentMap.entries()) {
+                agent.slug = slug;
+                loadedAgents.set(slug, agent);
+            }
+            setProjectContext(ndkProject, loadedAgents);
 
             // Check if LLM configuration is needed
             await this.checkAndRunLLMConfigWizard(projectPath);
@@ -259,7 +275,9 @@ export class ProjectManager implements IProjectManager {
                     const agentData = {
                         name: agent.title,
                         role: agent.role,
+                        description: agent.description,
                         instructions: agent.instructions,
+                        tools: []
                     };
                     await fs.writeFile(filePath, JSON.stringify(agentData, null, 2));
                     logger.info("Saved agent definition", { eventId, name: agent.title });
@@ -271,6 +289,7 @@ export class ProjectManager implements IProjectManager {
                     await agentRegistry.ensureAgent(slug, {
                         name: agent.title,
                         role: agent.role,
+                        description: agent.description,
                         instructions: agent.instructions,
                         eventId: eventId,
                         tools: [], // Will use default tools from getDefaultToolsForAgent
@@ -372,8 +391,8 @@ export class ProjectManager implements IProjectManager {
                 title: event.tagValue("title") || "Unnamed Agent",
                 description: event.tagValue("description") || "",
                 role: event.tagValue("role") || "assistant",
-                instructions: event.tagValue("instructions") || "",
-                version: event.tagValue("version") || "1.0.0",
+                instructions: event.content || "",
+                version: event.tagValue("ver") || "1.0.0",
                 created_at: event.created_at,
                 pubkey: event.pubkey,
             };

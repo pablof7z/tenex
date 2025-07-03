@@ -77,10 +77,10 @@ export const generateInventoryTool: Tool = {
 
             // Prepare options if agent context is available
             const options =
-                context.agentSigner && context.conversationRootEventId
+                context.agent && context.conversationRootEventId
                     ? {
                           conversationRootEventId: context.conversationRootEventId,
-                          agentSigner: context.agentSigner,
+                          agent: context.agent,
                           focusFiles
                       }
                     : { focusFiles };

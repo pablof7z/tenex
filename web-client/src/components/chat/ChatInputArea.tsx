@@ -31,22 +31,28 @@ const AgentMentionDropdown = ({
     return (
         <div className="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto bg-popover border border-border rounded-md shadow-md z-50">
             <div className="p-1">
-                {agents.map((agent, index) => (
-                    <button
-                        key={agent.pubkey}
-                        type="button"
-                        onClick={() => onSelect(agent)}
-                        onMouseDown={(e) => e.preventDefault()} // Prevent blur on click
-                        className={`w-full text-left px-3 py-2 text-sm rounded flex items-center gap-2 transition-colors ${
-                            index === selectedIndex
-                                ? "bg-accent text-accent-foreground"
-                                : "hover:bg-accent/50"
-                        }`}
-                    >
-                        <AtSign className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{agent.name}</span>
-                    </button>
-                ))}
+                {agents.length > 0 ? (
+                    agents.map((agent, index) => (
+                        <button
+                            key={agent.pubkey}
+                            type="button"
+                            onClick={() => onSelect(agent)}
+                            onMouseDown={(e) => e.preventDefault()} // Prevent blur on click
+                            className={`w-full text-left px-3 py-2 text-sm rounded flex items-center gap-2 transition-colors ${
+                                index === selectedIndex
+                                    ? "bg-accent text-accent-foreground"
+                                    : "hover:bg-accent/50"
+                            }`}
+                        >
+                            <AtSign className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{agent.name}</span>
+                        </button>
+                    ))
+                ) : (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No agents available
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -85,7 +91,7 @@ export const ChatInputArea = forwardRef<HTMLTextAreaElement, ChatInputAreaProps>
                         />
 
                         {/* Agent mention dropdown */}
-                        {showAgentMenu && filteredAgents.length > 0 && (
+                        {showAgentMenu && (
                             <AgentMentionDropdown
                                 agents={filteredAgents}
                                 selectedIndex={selectedAgentIndex}

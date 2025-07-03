@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
 import { ClaudeTaskOrchestrator } from "@/tools/claude/ClaudeTaskOrchestrator";
-import { ClaudeToNostrTranslator } from "@/tools/claude/ClaudeToNostrTranslator";
 import { getNDK } from "@/nostr/ndkClient";
 import type { Tool, ToolExecutionContext, ToolResult } from "../types";
 import { parseToolParams } from "../utils";
@@ -13,7 +12,7 @@ const ClaudeCodeArgsSchema = z.object({
 
 export const claudeCodeTool: Tool = {
     name: "claude_code",
-    description: "Use Claude Code (CLI tool) to perform complex coding tasks",
+    description: "Use Claude Code to perform complex coding tasks",
     parameters: [
         {
             name: "prompt",
@@ -45,9 +44,8 @@ export const claudeCodeTool: Tool = {
 
             // Create instances
             const ndk = getNDK();
-            const taskPublisher = new TaskPublisher(ndk);
-            const translator = new ClaudeToNostrTranslator();
-            const orchestrator = new ClaudeTaskOrchestrator(taskPublisher, translator);
+            const taskPublisher = new TaskPublisher(ndk, context.agent);
+            const orchestrator = new ClaudeTaskOrchestrator(taskPublisher);
 
             // Get conversation metadata
             const branch = context.conversation?.metadata?.branch;
@@ -57,7 +55,7 @@ export const claudeCodeTool: Tool = {
             const result = await orchestrator.execute({
                 prompt,
                 projectPath: context.projectPath,
-                title: `Claude Code ${mode === "plan" ? "Planning" : "Execution"} (via ${context.agentName})`,
+                title: `Claude Code ${mode === "plan" ? "Planning" : "Execution"} (via ${context.agent.name})`,
                 branch,
                 conversationRootEventId,
                 conversation: context.conversation,

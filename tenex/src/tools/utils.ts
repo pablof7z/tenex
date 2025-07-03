@@ -1,5 +1,5 @@
 import { resolve, isAbsolute, relative } from "node:path";
-import { z } from "zod";
+import type { z } from "zod";
 import type { ToolResult } from "./types";
 
 /**

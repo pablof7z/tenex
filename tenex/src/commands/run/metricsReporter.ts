@@ -9,7 +9,7 @@ export class MetricsReporter {
     private intervalId?: NodeJS.Timeout;
     private readonly intervalMs: number;
 
-    constructor(intervalMinutes: number = 30) {
+    constructor(intervalMinutes = 30) {
         this.intervalMs = intervalMinutes * 60 * 1000;
     }
 

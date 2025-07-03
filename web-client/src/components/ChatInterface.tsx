@@ -47,9 +47,11 @@ const MessageList = memo(
     ({
         messages,
         onTaskClick,
+        project,
     }: {
         messages: NDKEvent[];
         onTaskClick?: (task: NDKTask) => void;
+        project: NDKProject;
     }) => {
         return (
             <div className="space-y-1">
@@ -89,6 +91,7 @@ const MessageList = memo(
                         <MessageWithReplies
                             key={event.id}
                             event={event}
+                            project={project}
                         />
                     );
                 })}
@@ -613,10 +616,11 @@ export function ChatInterface({
                 <div className="p-2">
                     {/* Show thread messages if in thread mode, otherwise show status updates */}
                     {isThreadMode ? (
-                        threadMessages && threadMessages.length > 0 ? (
+                        threadMessages && threadMessages.length > 0 && project ? (
                             <MessageList
                                 messages={threadMessages}
                                 onTaskClick={(task) => setSelectedTask(task)}
+                                project={project}
                             />
                         ) : threadId && threadId !== "new" && !currentThreadEvent ? (
                             // Loading state for existing thread
@@ -638,10 +642,11 @@ export function ChatInterface({
                                 </h3>
                             </div>
                         )
-                    ) : statusUpdates.length > 0 ? (
+                    ) : statusUpdates.length > 0 && project ? (
                         <MessageList
                             messages={statusUpdates}
                             onTaskClick={(task) => setSelectedTask(task)}
+                            project={project}
                         />
                     ) : (
                         <div className="text-center py-12">

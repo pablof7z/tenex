@@ -41,6 +41,7 @@ export interface ResponseOptions {
 // Options for flushing stream content
 export interface FlushOptions {
     isToolCall?: boolean;
+    toolName?: string;
 }
 
 // Metadata for finalizing stream
@@ -52,7 +53,7 @@ export interface FinalizeMetadata {
 }
 
 export class NostrPublisher {
-    constructor(private readonly context: NostrPublisherContext) {}
+    constructor(public readonly context: NostrPublisherContext) {}
 
     async publishResponse(options: ResponseOptions): Promise<NDKEvent> {
         try {
@@ -130,23 +131,18 @@ export class NostrPublisher {
 
     async publishTypingIndicator(state: "start" | "stop"): Promise<NDKEvent> {
         try {
+            const { agent } = this.context;
+
             const event = new NDKEvent(this.context.ndk);
             event.kind = state === "start" ? EVENT_KINDS.TYPING_INDICATOR : EVENT_KINDS.TYPING_INDICATOR_STOP;
-            event.content = "";
-            
-            // Add conversation references
-            event.tag(["E", this.context.conversation.id]);
-            event.tag(["e", this.context.triggeringEvent.id]);
-            
-            // Add agent identifier for typing indicators
-            const d = `${this.context.agent.pubkey}:${this.context.conversation.id}`;
-            event.tag(["d", d]);
-            event.tag(["conversation", this.context.conversation.id]);
-            event.tag(["agent", this.context.agent.pubkey]);
+            event.content = state === 'start' ? `${agent.name} is typing` : "";
             
             // Add base tags (project, phase)
             this.addBaseTags(event);
-            
+
+            // Add conversation references
+            event.tag(["e", this.context.conversation.id]);
+
             await event.sign(this.context.agent.signer);
             await event.publish();
             
@@ -235,16 +231,8 @@ export class NostrPublisher {
         return new StreamPublisher(this);
     }
 
-    // Protected method for StreamPublisher to use
-    protected _createBaseReply(): NDKEvent {
-        const reply = this.context.triggeringEvent.reply();
-        this.addBaseTags(reply);
-        this.cleanPTags(reply);
-        return reply;
-    }
-
     // Private helper methods
-    private createBaseReply(): NDKEvent {
+    public createBaseReply(): NDKEvent {
         const reply = this.context.triggeringEvent.reply();
         this.addBaseTags(reply);
         this.cleanPTags(reply);
@@ -261,39 +249,11 @@ export class NostrPublisher {
         // Always add execution time tag
         const totalSeconds = getTotalExecutionTimeSeconds(this.context.conversation);
         event.tag([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
-        
-        // Add conversation root if not already present
-        const conversationRoot = this.context.conversation.history[0];
-        if (conversationRoot && !event.tags.some(tag => 
-            tag[0] === "e" && tag[1] === conversationRoot.id && tag[3] === "root"
-        )) {
-            event.tag(["e", conversationRoot.id, "", "root"]);
-        }
     }
 
     private cleanPTags(event: NDKEvent): void {
-        // For non-PM agents, ensure the reply p-tags the original invoker to hand control back
-        let invokerPubkey: string | undefined;
-        
-        if (!this.context.agent.isPMAgent) {
-            // Get the pubkey of whoever invoked this agent (from the triggering event)
-            invokerPubkey = this.context.triggeringEvent.pubkey;
-            
-            if (!invokerPubkey) {
-                logger.warn(
-                    "Could not determine invoker pubkey for non-PM agent reply. Response will not be p-tagged and may stall conversation.", 
-                    { agent: this.context.agent.name }
-                );
-            }
-        }
-        
         // Remove all p-tags added by NDK's reply() method to ensure clean routing
         event.tags = event.tags.filter(tag => tag[0] !== "p");
-        
-        // For non-PM agents, add back the invoker's p-tag to yield control back
-        if (invokerPubkey) {
-            event.tag(["p", invokerPubkey]);
-        }
     }
 
     private addLLMMetadata(event: NDKEvent, metadata?: LLMMetadata): void {
@@ -331,8 +291,11 @@ export class NostrPublisher {
         } else if (completeMetadata) {
             event.tag(["routing", "complete"]);
         }
-        event.tag(["phase-transition", "true"]);
-        event.tag(["phase-from", phaseTransition.phaseTransition.from]);
+        // Only add phase-transition tag if we have routing metadata
+        if (continueMetadata || completeMetadata) {
+            event.tag(["phase-transition", "true"]);
+            event.tag(["phase-from", this.context.conversation.phase]);
+        }
     }
 }
 
@@ -354,7 +317,7 @@ export class StreamPublisher {
 
         try {
             // Use the protected method to create a pre-tagged reply
-            const reply = (this.publisher as any)._createBaseReply();
+            const reply = this.publisher.createBaseReply();
 
             // Add streaming tags
             this.sequence++;
@@ -362,26 +325,26 @@ export class StreamPublisher {
             reply.tag(["partial", "true"]);
             reply.tag(["sequence", this.sequence.toString()]);
             
-            if (options?.isToolCall) {
-                reply.tag(["trigger", "tool_call"]);
+            if (options?.isToolCall && options?.toolName) {
+                reply.tag(["tool_call", options.toolName]);
             }
 
             reply.content = this.contentBuffer;
             
-            await reply.sign(this.publisher['context'].agent.signer);
+            await reply.sign(this.publisher.context.agent.signer);
             await reply.publish();
             
             logger.debug("Flushed streaming content", {
                 sequence: this.sequence,
                 contentLength: this.contentBuffer.length,
-                agent: this.publisher['context'].agent.name
+                agent: this.publisher.context.agent.name
             });
             
             this.contentBuffer = "";
         } catch (error) {
             logger.error("Failed to flush streaming content", {
                 sequence: this.sequence,
-                agent: this.publisher['context'].agent.name,
+                agent: this.publisher.context.agent.name,
                 error: error instanceof Error ? error.message : String(error)
             });
             throw error;
@@ -394,8 +357,9 @@ export class StreamPublisher {
         }
 
         try {
-            // Flush any remaining content
-            if (this.contentBuffer) {
+            // Only flush remaining content if we've had tool calls
+            // Otherwise we'll create duplicate events (one from flush, one from publishResponse)
+            if (this.contentBuffer && this.sequence > 0) {
                 await this.flush();
             }
 
@@ -410,13 +374,13 @@ export class StreamPublisher {
             logger.debug("Finalized streaming response", {
                 totalSequences: this.sequence,
                 fullContentLength: this.fullContent.length,
-                agent: this.publisher['context'].agent.name
+                agent: this.publisher.context.agent.name
             });
             
             return finalEvent;
         } catch (error) {
             logger.error("Failed to finalize streaming response", {
-                agent: this.publisher['context'].agent.name,
+                agent: this.publisher.context.agent.name,
                 error: error instanceof Error ? error.message : String(error)
             });
             throw error;

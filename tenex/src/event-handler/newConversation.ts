@@ -29,10 +29,30 @@ export const handleNewConversation = async (
         const projectCtx = getProjectContext();
         const pmAgent = projectCtx.getProjectAgent();
 
-        // Execute with PM agent to handle routing
+        // Check for p-tags to determine target agent
+        const pTags = event.tags.filter((tag) => tag[0] === "p");
+        const mentionedPubkeys = pTags
+            .map((tag) => tag[1])
+            .filter((pubkey): pubkey is string => !!pubkey);
+
+        let targetAgent = pmAgent; // Default to PM agent
+
+        // If there are p-tags, check if any match system agents
+        if (mentionedPubkeys.length > 0) {
+            for (const pubkey of mentionedPubkeys) {
+                const agent = Array.from(projectCtx.agents.values()).find(a => a.pubkey === pubkey);
+                if (agent) {
+                    targetAgent = agent;
+                    logInfo(chalk.cyan(`Routing to p-tagged agent: ${agent.name}`));
+                    break;
+                }
+            }
+        }
+
+        // Execute with the appropriate agent
         await context.agentExecutor.execute(
             {
-                agent: pmAgent,
+                agent: targetAgent,
                 conversation,
                 phase: conversation.phase,
             },

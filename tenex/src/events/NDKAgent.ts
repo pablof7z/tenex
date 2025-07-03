@@ -70,13 +70,13 @@ export class NDKAgent extends NDKEvent {
     }
 
     get version(): number {
-        const val = this.tagValue("version");
+        const val = this.tagValue("ver");
         if (val === undefined) return 1; // Default version if not specified
         return Number.parseInt(val);
     }
 
     set version(value: number) {
-        this.removeTag("version");
-        this.tags.push(["version", value.toString()]);
+        this.removeTag("ver");
+        this.tags.push(["ver", value.toString()]);
     }
 }

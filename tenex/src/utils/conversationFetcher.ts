@@ -1,5 +1,6 @@
-import NDK, { NDKEvent, type NDKUser } from "@nostr-dev-kit/ndk";
-import { getProjectContext } from "@/services";
+import type NDK from "@nostr-dev-kit/ndk";
+import type { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
+import { getProjectContext, type ProjectContext } from "@/services";
 import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
 import chalk from "chalk";
 
@@ -18,31 +19,24 @@ interface ConversationTree {
 }
 
 export async function fetchConversation(
-    neventStr: string,
+    bech32Event: string,
     ndk: NDK,
     projectPath: string
 ): Promise<string> {
     // Fetch the event directly using the nevent string
-    const initialEvent = await ndk.fetchEvent(neventStr);
-    if (!initialEvent) {
-        throw new Error(`Event ${neventStr} not found`);
+    const inputEvent = await ndk.fetchEvent(bech32Event);
+    if (!inputEvent) {
+        throw new Error(`Event ${bech32Event} not found`);
     }
-    
-    const eventId = initialEvent.id;
     
     // Get project context to identify human user
     const projectCtx = getProjectContext();
     const humanPubkey = projectCtx.project.pubkey;
     
-    // Check if this is a reply by looking for "E" tag (uppercase for root reference)
-    let rootEventId = eventId;
-    const rootTag = initialEvent.tags.find((tag: string[]) => tag[0] === "E");
-    if (rootTag && rootTag[1]) {
-        rootEventId = rootTag[1];
-    }
+    // Get the root event Id (it's either E-tagged or then we already have it).
+    const rootEventId = inputEvent.tagValue("E") ?? inputEvent.id;
     
-    // Always fetch fresh from relays (ignore cache)
-    const events = await fetchConversationFromRelays(ndk, rootEventId, initialEvent);
+    const events = await fetchAllEventsInConversation(ndk, rootEventId);
     
     // Fetch profiles for all participants
     const participants = await fetchParticipantProfiles(events, ndk, projectCtx);
@@ -54,58 +48,23 @@ export async function fetchConversation(
     return formatConversationMarkdown(tree, humanPubkey);
 }
 
-async function fetchConversationFromRelays(
+async function fetchAllEventsInConversation(
     ndk: NDK,
     rootEventId: string,
-    initialEvent?: NDKEvent
 ): Promise<NDKEvent[]> {
-    const events: NDKEvent[] = [];
-    
-    // Fetch root event if we don't have it
-    if (!initialEvent || initialEvent.id !== rootEventId) {
-        const rootEvent = await ndk.fetchEvent(rootEventId);
-        if (rootEvent) {
-            events.push(rootEvent);
-        }
-    } else {
-        events.push(initialEvent);
-    }
-    
-    // Fetch all replies (kind 1111 with "E" tag pointing to root)
-    const replies = await ndk.fetchEvents({
-        kinds: [1111],
-        "#E": [rootEventId]
-    });
-    
-    // Also fetch other conversation-related events (lowercase e tags)
-    const otherReplies = await ndk.fetchEvents({
-        "#e": [rootEventId]
-    });
-    
-    // Fetch task-related events
-    const taskReplies = await ndk.fetchEvents({
-        kinds: [30231 as any], // NDKTask.kind
-        "#e": [rootEventId]
-    });
-    
-    // Combine all events
-    events.push(...Array.from(replies) as NDKEvent[]);
-    events.push(...Array.from(otherReplies) as NDKEvent[]);
-    events.push(...Array.from(taskReplies) as NDKEvent[]);
-    
-    // Remove duplicates
-    const uniqueEvents = Array.from(new Map(events.map(e => [e.id, e])).values());
-    
+    const events = await ndk.fetchEvents([
+        { ids: [rootEventId] },
+        { "#E": [rootEventId] }
+    ])
+
     // Sort by created_at
-    uniqueEvents.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
-    
-    return uniqueEvents;
+    return Array.from(events).sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
 }
 
 async function fetchParticipantProfiles(
     events: NDKEvent[],
     ndk: NDK,
-    projectCtx: any
+    projectCtx: ProjectContext
 ): Promise<Map<string, string>> {
     const participants = new Map<string, string>();
     const pubkeys = new Set<string>();
@@ -134,7 +93,7 @@ async function fetchParticipantProfiles(
             const user = ndk.getUser({ pubkey });
             await user.fetchProfile();
             const profile = user.profile;
-            const name = profile?.displayName || profile?.name || pubkey.slice(0, 8) + "...";
+            const name = profile?.displayName || profile?.name || pubkey;
             participants.set(pubkey, `@${name}`);
         } catch {
             participants.set(pubkey, `@${pubkey.slice(0, 8)}...`);
@@ -191,7 +150,7 @@ function buildConversationTree(
                 replies.set(parentId, []);
             }
             if (parentId) {
-                replies.get(parentId)!.push(conversationEvent);
+                replies.get(parentId)?.push(conversationEvent);
             }
         } else if (rootEvent && event.id !== rootEvent.event.id) {
             // Direct reply to root
@@ -200,7 +159,7 @@ function buildConversationTree(
                 replies.set(rootId, []);
             }
             if (rootId) {
-                replies.get(rootId)!.push(conversationEvent);
+                replies.get(rootId)?.push(conversationEvent);
             }
         }
     }
@@ -229,7 +188,7 @@ function formatConversationMarkdown(tree: ConversationTree, humanPubkey: string)
     
     lines.push("# Conversation Thread\n");
     
-    function formatEvent(event: ConversationEvent, indent: string = "") {
+    function formatEvent(event: ConversationEvent, indent = "") {
         const authorColor = event.isHuman ? chalk.green : chalk.cyan;
         const timestamp = event.timestamp.toLocaleString();
         
@@ -246,7 +205,7 @@ function formatConversationMarkdown(tree: ConversationTree, humanPubkey: string)
         // Format replies
         const eventReplies = event.event.id ? (tree.replies.get(event.event.id) || []) : [];
         for (const reply of eventReplies) {
-            formatEvent(reply, indent + "  ");
+            formatEvent(reply, `${indent}  `);
         }
     }
     

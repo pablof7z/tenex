@@ -36,10 +36,10 @@ export function useProjectAgents(projectTagId: string | undefined) {
         const latestEvent = sortedEvents[0];
         if (!latestEvent) return [];
 
-        // Extract agents from p-tags
+        // Extract agents from agent tags
         const agentList: ProjectAgent[] = [];
         for (const tag of latestEvent.tags) {
-            if (tag[0] === "p" && tag.length >= 3 && tag[1] && tag[2]) {
+            if (tag[0] === "agent" && tag.length >= 3 && tag[1] && tag[2]) {
                 agentList.push({
                     pubkey: tag[1],
                     name: tag[2],

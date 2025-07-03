@@ -1,5 +1,6 @@
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKProject } from "@nostr-dev-kit/ndk-svelte";
 import { ChevronDown, ChevronRight, Send, Reply } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
 import { EVENT_KINDS } from "../lib/constants";
@@ -8,6 +9,7 @@ import { Button } from "./ui/button";
 
 interface MessageWithRepliesProps {
     event: NDKEvent;
+    project: NDKProject;
 }
 
 // Simple reply component that doesn't have its own subscriptions
@@ -29,6 +31,7 @@ const ReplyMessage = memo(function ReplyMessage({
 
 export const MessageWithReplies = memo(function MessageWithReplies({
     event,
+    project,
 }: MessageWithRepliesProps) {
     const { ndk } = useNDK();
     const [showReplies, setShowReplies] = useState(false);
@@ -90,6 +93,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             const replyEvent = replyToEvent.reply();
             replyEvent.content = replyInput.trim();
             
+            // Add project tag
+            replyEvent.tags.push(["a", project.tagId()]);
+            
             await replyEvent.publish();
             
             setReplyInput("");
@@ -99,7 +105,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         } finally {
             setIsSending(false);
         }
-    }, [replyInput, ndk, replyToEvent, isSending]);
+    }, [replyInput, ndk, replyToEvent, isSending, project]);
 
     const handleKeyPress = useCallback(
         (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -232,6 +232,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
                     <ChatInterface
                         statusUpdates={selectedTaskUpdates}
                         task={selectedTaskId ? getTaskById(selectedTaskId) : undefined}
+                        project={selectedTaskId && getTaskById(selectedTaskId) ? getProjectForTask(getTaskById(selectedTaskId)!) : undefined}
                         inputPlaceholder={
                             selectedTaskId
                                 ? "Reply to this task..."

@@ -1,5 +1,4 @@
 import type { EventHandler } from "@/event-handler";
-import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getProjectContext } from "@/services";
 import {
     addProcessedEvent,
@@ -201,7 +200,6 @@ export class SubscriptionManager {
 
         // Log receipt
         if (event.kind !== EVENT_KINDS.PROJECT_STATUS) {
-            // Pass to event handler
             try {
                 await this.eventHandler.handleEvent(event);
             } catch (error) {

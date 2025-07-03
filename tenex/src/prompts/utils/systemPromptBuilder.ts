@@ -89,7 +89,10 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
         }
     } else {
         // Add expertise boundaries for non-PM agents
-        systemPromptBuilder.add("expertise-boundaries", {});
+        systemPromptBuilder.add("expertise-boundaries", {
+            agentRole: agent.role,
+            isPMAgent: false
+        });
     }
 
     return systemPromptBuilder.build();

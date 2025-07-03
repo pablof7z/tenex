@@ -93,23 +93,27 @@ async function handleReplyLogic(
     // Determine which agent should handle this event
     let targetAgent = pmAgent; // Default to PM agent
     
-    // Check if this is an agent-to-agent message (not from user)
-    if (!isEventFromUser(event)) {
-        // Find the first p-tagged system agent that isn't the author (prevent loops)
+    // Check for p-tagged agents regardless of sender
+    if (mentionedPubkeys.length > 0) {
+        // Find the first p-tagged system agent
         for (const pubkey of mentionedPubkeys) {
             const agent = Array.from(projectCtx.agents.values()).find(a => a.pubkey === pubkey);
-            if (agent && agent.pubkey !== event.pubkey) {
+            if (agent) {
+                // For non-user events, skip if agent is the author (prevent loops)
+                if (!isEventFromUser(event) && agent.pubkey === event.pubkey) {
+                    continue;
+                }
                 targetAgent = agent;
                 logger.info(`Routing to p-tagged agent: ${agent.name} (${agent.pubkey})`);
                 break;
             }
         }
-        
-        // If no valid target agent found, skip processing
-        if (targetAgent === pmAgent && !mentionedPubkeys.includes(pmAgent.pubkey)) {
-            logger.info("Event is not from user and doesn't p-tag any valid agent, skipping");
-            return;
-        }
+    }
+    
+    // For non-user events without valid p-tags, skip processing
+    if (!isEventFromUser(event) && targetAgent === pmAgent && !mentionedPubkeys.includes(pmAgent.pubkey)) {
+        logger.info("Event is not from user and doesn't p-tag any valid agent, skipping");
+        return;
     }
 
     // Execute with the appropriate agent

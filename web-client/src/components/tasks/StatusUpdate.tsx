@@ -104,13 +104,13 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
             );
         },
         ul({ children }) {
-            return <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>;
+            return <ul className="list-disc pl-6 my-2 space-y-1">{children}</ul>;
         },
         ol({ children }) {
-            return <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>;
+            return <ol className="list-decimal pl-6 my-2 space-y-1">{children}</ol>;
         },
         li({ children }) {
-            return <li className="ml-2">{children}</li>;
+            return <li className="pl-1">{children}</li>;
         },
         p({ children, ...props }) {
             // Process text nodes to replace entity placeholders
@@ -418,7 +418,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
             <div className="flex justify-end p-3">
                 <div className="max-w-[80%]">
                     <div className="bg-primary text-primary-foreground rounded-lg px-3 py-2">
-                        <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:text-primary-foreground prose-a:text-primary-foreground prose-a:underline prose-strong:text-primary-foreground prose-blockquote:text-primary-foreground/80 prose-blockquote:border-l-primary-foreground">
+                        <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:text-primary-foreground prose-a:text-primary-foreground prose-a:underline prose-strong:text-primary-foreground prose-blockquote:text-primary-foreground/80 prose-blockquote:border-l-primary-foreground prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-primary-foreground">
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={markdownComponents}
@@ -600,7 +600,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                     </div>
 
                     {/* Message content */}
-                    <div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary">
+                    <div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground">
                         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                             {processedContent.content}
                         </ReactMarkdown>

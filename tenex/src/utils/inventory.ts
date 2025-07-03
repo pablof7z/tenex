@@ -6,7 +6,7 @@ import { loadLLMRouter } from "@/llm";
 import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "./repomix.js";
 import { TaskPublisher, getNDK } from "@/nostr";
-import type { NDKTask, NDKEvent, NDKSigner } from "@nostr-dev-kit/ndk";
+import type { NDKTask, NDKEvent } from "@nostr-dev-kit/ndk";
 import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import "@/prompts"; // This ensures all fragments are registered
 
@@ -30,7 +30,7 @@ interface InventoryResult {
 
 interface InventoryGenerationOptions {
     conversationRootEventId?: string;
-    agentSigner?: NDKSigner;
+    agent?: import("@/agents/types").Agent;
     focusFiles?: Array<{ path: string; status: string }>;
 }
 
@@ -52,10 +52,10 @@ export async function generateInventory(
     let task: NDKTask | undefined;
     let taskPublisher: TaskPublisher | undefined;
 
-    if (options?.agentSigner) {
+    if (options?.agent) {
         const ndk = getNDK();
         if (ndk) {
-            taskPublisher = new TaskPublisher(ndk);
+            taskPublisher = new TaskPublisher(ndk, options.agent);
 
             task = await taskPublisher.createTask({
                 title: "Generating Project Inventory",
@@ -64,10 +64,8 @@ export async function generateInventory(
             });
 
             // Initial status update
-            await publishAgentUpdate(
+            await taskPublisher.publishTaskProgress(
                 task,
-                taskPublisher,
-                options.agentSigner,
                 "🔍 Getting a general sense of the project structure and architecture..."
             );
         }
@@ -84,13 +82,14 @@ export async function generateInventory(
         await fs.writeFile(inventoryPath, inventoryResult.content, "utf-8");
         logger.info("Main inventory saved", { inventoryPath });
 
-        if (task && taskPublisher) {
-            await taskPublisher.updateTask(task, {
-                status: "in-progress",
-                progress: 50,
-                message: "Main inventory generated, analyzing complex modules...",
-            });
-        }
+        // TODO: Replace with proper NostrPublisher approach
+        // if (task && taskPublisher) {
+        //     await taskPublisher.updateTask(task, {
+        //         status: "in-progress",
+        //         progress: 50,
+        //         message: "Main inventory generated, analyzing complex modules...",
+        //     });
+        // }
 
         // Step 4: Generate individual module guides for complex modules (max 10)
         const modulesToProcess = inventoryResult.complexModules.slice(0, 10);
@@ -103,25 +102,24 @@ export async function generateInventory(
             const definedModule: ComplexModule = module;
 
             try {
-                if (task && taskPublisher && options?.agentSigner) {
-                    await publishAgentUpdate(
+                if (task && taskPublisher) {
+                    await taskPublisher.publishTaskProgress(
                         task,
-                        taskPublisher,
-                        options.agentSigner,
                         `🔬 Inspecting complex module: ${definedModule.name} at ${definedModule.path}`
                     );
                 }
 
                 await generateModuleGuide(projectPath, definedModule, repomixResult.content);
 
-                if (task && taskPublisher) {
-                    const progress = 50 + Math.floor(((i + 1) / modulesToProcess.length) * 40);
-                    await taskPublisher.updateTask(task, {
-                        status: "in-progress",
-                        progress,
-                        message: `Generated guide for ${definedModule.name}`,
-                    });
-                }
+                // TODO: Replace with proper NostrPublisher approach
+                // if (task && taskPublisher) {
+                //     const progress = 50 + Math.floor(((i + 1) / modulesToProcess.length) * 40);
+                //     await taskPublisher.updateTask(task, {
+                //         status: "in-progress",
+                //         progress,
+                //         message: `Generated guide for ${definedModule.name}`,
+                //     });
+                // }
             } catch (error) {
                 logger.warn("Failed to generate module guide", {
                     module: definedModule.name,
@@ -131,17 +129,16 @@ export async function generateInventory(
         }
 
         // Final completion update
-        if (task && taskPublisher && options?.agentSigner) {
-            await taskPublisher.updateTask(task, {
-                status: "completed",
-                progress: 100,
-                message: `Inventory generation completed with ${modulesToProcess.length} complex module guides`,
-            });
+        if (task && taskPublisher) {
+            // TODO: Replace with proper NostrPublisher approach
+            // await taskPublisher.updateTask(task, {
+            //     status: "completed",
+            //     progress: 100,
+            //     message: `Inventory generation completed with ${modulesToProcess.length} complex module guides`,
+            // });
 
-            await publishAgentUpdate(
+            await taskPublisher.publishTaskProgress(
                 task,
-                taskPublisher,
-                options.agentSigner,
                 `✅ Project inventory generation completed!\n\n📋 Main inventory: ${inventoryPath}\n📚 Complex module guides: ${modulesToProcess.length} generated\n\nThe codebase is now thoroughly documented and ready for analysis.`
             );
         }
@@ -155,28 +152,6 @@ export async function generateInventory(
     }
 }
 
-/**
- * Publish an agent update as a reply to the task
- */
-async function publishAgentUpdate(
-    task: NDKTask,
-    _taskPublisher: TaskPublisher,
-    agentSigner: NDKSigner,
-    message: string
-): Promise<NDKEvent> {
-    const reply = task.reply();
-    reply.content = message;
-    reply.tags.push(["t", "agent-update"]);
-
-    // Tag the project
-    const projectCtx = getProjectContext();
-    reply.tag(projectCtx.project);
-
-    await reply.sign(agentSigner);
-    await reply.publish();
-
-    return reply;
-}
 
 /**
  * Generate main inventory and identify complex modules

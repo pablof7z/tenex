@@ -21,7 +21,7 @@ export async function runDebugConversation(nevent: string) {
         const conversationMarkdown = await fetchConversation(nevent, ndk, projectPath);
         
         // Display the conversation
-        console.log("\n" + conversationMarkdown);
+        console.log(`\n${conversationMarkdown}`);
         
         logInfo("Conversation displayed successfully");
     } catch (err) {

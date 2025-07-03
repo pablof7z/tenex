@@ -57,7 +57,7 @@ export const learnTool: Tool = {
             const { lesson, keywords } = parseResult.data;
 
             logger.info("🎓 Agent recording new lesson", {
-                agent: context.agentName,
+                agent: context.agent.name,
                 agentPubkey: context.agent.pubkey,
                 title,
                 lessonLength: lesson.length,
@@ -70,7 +70,7 @@ export const learnTool: Tool = {
             // Check if agent signer is available
             if (!context.agentSigner) {
                 logger.warn("Agent signer not available, cannot publish lesson", {
-                    agent: context.agentName,
+                    agent: context.agent.name,
                 });
                 return {
                     success: false,
@@ -82,7 +82,7 @@ export const learnTool: Tool = {
             const ndk = getNDK();
             if (!ndk) {
                 logger.error("NDK instance not available", {
-                    agent: context.agentName,
+                    agent: context.agent.name,
                 });
                 return {
                     success: false,
@@ -129,7 +129,7 @@ export const learnTool: Tool = {
             await lessonEvent.publish();
 
             logger.info("✅ Successfully published agent lesson", {
-                agent: context.agentName,
+                agent: context.agent.name,
                 agentPubkey: context.agent.pubkey,
                 eventId: lessonEvent.id,
                 title,
@@ -152,7 +152,7 @@ export const learnTool: Tool = {
         } catch (error) {
             logger.error("❌ Learn tool failed", { 
                 error: error instanceof Error ? error.message : String(error),
-                agent: context.agentName,
+                agent: context.agent.name,
                 agentPubkey: context.agent.pubkey,
                 title,
                 phase: context.phase,

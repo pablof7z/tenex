@@ -3,7 +3,6 @@ import { EventHandler } from "@/event-handler";
 import { ProjectDisplay } from "@/commands/run/ProjectDisplay";
 import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
-import { STARTUP_FILTER_MINUTES } from "@/commands/run/constants";
 import { getNDK, shutdownNDK } from "@/nostr/ndkClient";
 import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import { formatError } from "@/utils/errors";
@@ -65,11 +64,6 @@ async function runProjectListener(projectPath: string, ndk: NDK) {
         // Start status publisher
         const statusPublisher = new StatusPublisher();
         await statusPublisher.startPublishing(projectPath);
-
-        logger.success(
-            `Project listener active. Monitoring events from the last ${STARTUP_FILTER_MINUTES} minutes.`
-        );
-        logger.info(chalk.green("\n✅ Ready to process events!\n"));
 
         // Set up graceful shutdown
         setupGracefulShutdown(async () => {

@@ -135,7 +135,6 @@ import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 export interface ToolExecutionContext {
     projectPath: string;
     conversationId: string;
-    agentName: string;
     phase: string;
     agent: Agent;
     conversation?: Conversation;
