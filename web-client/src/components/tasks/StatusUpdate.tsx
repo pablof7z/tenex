@@ -1,7 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNDKCurrentPubkey, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import {
-    Brain,
     Cpu,
     DollarSign,
     GitCommit,
@@ -192,7 +191,6 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
     };
 
     const getDisplayName = () => {
-        if (event.pubkey === currentPubkey) return "You";
         return profile?.displayName || profile?.name || `user_${event.pubkey.slice(0, 8)}`;
     };
 
@@ -202,18 +200,6 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
 
     const getCommitHash = () => {
         return event.tagValue("commit");
-    };
-
-    const getAgentName = () => {
-        return profile?.name || event.tagValue("agent") || "Agent";
-    };
-
-    const isUserMessage = () => {
-        return event.tagValue("t") === "task-comment" || event.pubkey === currentPubkey;
-    };
-
-    const isAgentUpdate = () => {
-        return !!event.tagValue("agent") || !!event.tagValue("confidence");
     };
 
     const getLLMMetadata = () => {
@@ -387,122 +373,45 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
     const isTaskDescription = event.tags?.some(tag => tag[0] === "task-description" && tag[1] === "true");
 
     if (isTaskDescription) {
-        // Task description - special blue styling
+        // Task description - Slack/Discord style with blue accent
         return (
-            <div className="bg-blue-50/50 border-b border-blue-100 p-4">
-                <div className="flex gap-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="flex gap-3 p-3 bg-blue-50/30 border-l-4 border-blue-500 rounded-lg">
+                {/* Icon */}
+                <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                         <MessageCircle className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm text-blue-900">
-                                Task Created
-                            </span>
-                            <span className="text-xs text-blue-600">
-                                {formatRelativeTime(event.created_at!)}
-                            </span>
-                        </div>
-                        <div className="text-sm text-blue-800 whitespace-pre-wrap leading-relaxed">
-                            {event.content}
-                        </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm text-blue-900">
+                            Task Created
+                        </span>
+                        <span className="text-xs text-blue-600">
+                            {formatRelativeTime(event.created_at!)}
+                        </span>
+                    </div>
+                    <div className="text-sm text-blue-800 whitespace-pre-wrap leading-relaxed">
+                        {event.content}
                     </div>
                 </div>
             </div>
         );
     }
 
-    if (isUserMessage()) {
-        // User message - align right, different styling
-        return (
-            <div className="flex justify-end p-3">
-                <div className="max-w-[80%]">
-                    <div className="bg-primary text-primary-foreground rounded-lg px-3 py-2">
-                        <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:text-primary-foreground prose-a:text-primary-foreground prose-a:underline prose-strong:text-primary-foreground prose-blockquote:text-primary-foreground/80 prose-blockquote:border-l-primary-foreground prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-primary-foreground">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={markdownComponents}
-                            >
-                                {processedContent.content}
-                            </ReactMarkdown>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end text-xs text-muted-foreground mt-1">
-                        <span>{formatRelativeTime(event.created_at!)}</span>
-                        {/* Phase indicator for user messages */}
-                        {getPhase() && (
-                            <div
-                                className={`flex items-center justify-center w-4 h-4 rounded-full ${getPhaseColor(getPhase())} text-white`}
-                                title={`Phase: ${getPhase()}`}
-                            >
-                                {getPhaseIcon(getPhase())}
-                            </div>
-                        )}
-                        <PTaggedAvatars />
-                        {/* Reply button */}
-                        {onReply && (
-                            <button
-                                type="button"
-                                onClick={() => onReply(event)}
-                                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
-                                title="Reply to this message"
-                            >
-                                <Reply className="w-3.5 h-3.5" />
-                            </button>
-                        )}
-                        {/* More options dropdown for user messages */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
-                                    title="Message options"
-                                >
-                                    <MoreHorizontal className="w-3.5 h-3.5" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-36">
-                                <DropdownMenuItem onClick={handleCopyId} className="cursor-pointer">
-                                    <Copy className="w-3.5 h-3.5 mr-2" />
-                                    Copy ID
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={handleCopyRawEvent}
-                                    className="cursor-pointer"
-                                >
-                                    <Copy className="w-3.5 h-3.5 mr-2" />
-                                    Copy Raw Event
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => setShowRawEventDialog(true)}
-                                    className="cursor-pointer"
-                                >
-                                    <Eye className="w-3.5 h-3.5 mr-2" />
-                                    View Raw
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Agent update - align left, original styling
+    // Unified message rendering
     return (
         <>
             <div className="flex gap-3 p-3 hover:bg-accent/50 rounded-lg transition-colors">
                 {/* Avatar */}
                 <div className="flex-shrink-0">
                     <Avatar className="w-8 h-8">
-                        <AvatarImage src={profile?.image} alt={profile?.name || "Agent"} />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-primary-foreground text-xs">
-                            {isAgentUpdate() ? (
-                                <Brain className="w-4 h-4" />
-                            ) : (
-                                profile?.name?.charAt(0).toUpperCase() ||
-                                event.pubkey.slice(0, 2).toUpperCase()
-                            )}
+                        <AvatarImage src={profile?.image} alt={profile?.name || "User"} />
+                        <AvatarFallback className="text-xs">
+                            {profile?.name?.charAt(0).toUpperCase() ||
+                                event.pubkey.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
                 </div>
@@ -512,7 +421,10 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                     {/* Header */}
                     <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-sm text-foreground">
-                            {isAgentUpdate() ? getAgentName() : getDisplayName()}
+                            {getDisplayName()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            {formatRelativeTime(event.created_at!)}
                         </span>
                         {/* Phase indicator */}
                         {getPhase() && (
@@ -523,10 +435,6 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                                 {getPhaseIcon(getPhase())}
                             </div>
                         )}
-                        <span className="text-xs text-muted-foreground">
-                            {formatRelativeTime(event.created_at!)}
-                        </span>
-                        {/* P-tagged avatars */}
                         <PTaggedAvatars />
                         {/* Reply button */}
                         {onReply && (
@@ -570,7 +478,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                                     onClick={handleCopyRawEvent}
                                     className="cursor-pointer"
                                 >
-                                    <Copy className="w-3.5 h-3.5 mr-2" />
+                                    <Copy className="w-3.5 h-3.5 mr-2 whitespace-nowrap" />
                                     Copy Raw Event
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -606,17 +514,15 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                         </ReactMarkdown>
                     </div>
 
-                    {/* Footer with commit info and LLM metadata */}
-                    <div className="flex flex-col gap-2">
-                        {getCommitHash() && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <GitCommit className="w-3 h-3" />
-                                <span className="font-mono bg-muted px-1.5 py-0.5 rounded">
-                                    {getCommitHash()?.slice(0, 7)}
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                    {/* Footer with commit info */}
+                    {getCommitHash() && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <GitCommit className="w-3 h-3" />
+                            <span className="font-mono bg-muted px-1.5 py-0.5 rounded">
+                                {getCommitHash()?.slice(0, 7)}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
