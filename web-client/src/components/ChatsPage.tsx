@@ -52,8 +52,8 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
         tasks.length > 0
             ? [
                   {
-                      kinds: [1111],
-                      "#E": tasks.map((t) => t.id),
+                      kinds: [1112],
+                      "#e": tasks.map((t) => t.id),
                   },
               ]
             : false,

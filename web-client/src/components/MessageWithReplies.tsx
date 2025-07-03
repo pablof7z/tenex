@@ -1,4 +1,4 @@
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKProject } from "@nostr-dev-kit/ndk-svelte";
 import { ChevronDown, ChevronRight, Send, Reply } from "lucide-react";
@@ -41,14 +41,12 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
     // Subscribe to ALL replies in the thread at once to avoid nested subscriptions
     const { events: allReplies } = useSubscribe(
-        showReplies && typeof event.filter === "function"
-            ? [
-                  {
-                      kinds: [EVENT_KINDS.GENERIC_REPLY],
-                      ...event.filter(),
-                  },
-              ]
-            : false,
+        event.kind === NDKKind.GenericReply ? [
+            {
+                kinds: [NDKKind.GenericReply],
+                ...event.filter(),
+            },
+        ] : false,
         {},
         [event.id, showReplies]
     );

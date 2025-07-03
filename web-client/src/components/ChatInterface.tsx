@@ -1,4 +1,4 @@
-import { type NDKKind, NDKTask } from "@nostr-dev-kit/ndk";
+import { NDKKind, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import {
     NDKEvent,
     type NDKProject,
@@ -237,11 +237,11 @@ export function ChatInterface({
 
     // Subscribe to thread messages when currentThreadEvent is available
     const { events: threadReplies } = useSubscribe(
-        currentThreadEvent && typeof currentThreadEvent.nip22Filter === "function"
+        currentThreadEvent && typeof currentThreadEvent.filter === "function"
             ? [
                   {
-                      kinds: [EVENT_KINDS.GENERIC_REPLY as NDKKind],
-                      ...currentThreadEvent.nip22Filter(),
+                      kinds: [NDKKind.GenericReply],
+                      ...currentThreadEvent.filter(),
                   },
               ]
             : false,
@@ -265,7 +265,7 @@ export function ChatInterface({
             ? [
                   {
                       kinds: [NDKTask.kind],
-                      "#E": [currentThreadEvent.id], // Tasks that E-tag this thread
+                      "#e": [currentThreadEvent.id], // Tasks that E-tag this thread
                   },
               ]
             : false,

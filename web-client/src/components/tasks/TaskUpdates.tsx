@@ -22,8 +22,8 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
         task
             ? [
                   {
-                      kinds: [1111],
-                      "#E": [task.id],
+                      kinds: [1112],
+                      "#e": [task.id],
                   },
               ]
             : false,
