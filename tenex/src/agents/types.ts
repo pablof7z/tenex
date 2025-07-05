@@ -50,20 +50,6 @@ export interface ToolCall {
   id?: string;
 }
 
-export interface AgentConfig {
-  name: string;
-  role: string;
-  description?: string;
-  instructions?: string;
-  useCriteria?: string;
-  nsec: string;
-  eventId?: string;
-  pubkey?: string;
-  tools?: string[]; // Made optional since we assign tools dynamically
-  mcp?: boolean; // Whether this agent has access to MCP tools
-  llmConfig?: string;
-}
-
 /**
  * Configuration load options
  */
@@ -83,6 +69,15 @@ export interface StoredAgentData {
   llmConfig?: string;
   tools?: string[];
   mcp?: boolean; // Whether this agent has access to MCP tools
+}
+
+/**
+ * Agent configuration including sensitive data from registry
+ */
+export interface AgentConfig extends StoredAgentData {
+  nsec: string; // Private key from agents.json registry
+  eventId?: string; // NDKAgent event ID if created from Nostr event
+  pubkey?: string; // Public key derived from nsec
 }
 
 /**

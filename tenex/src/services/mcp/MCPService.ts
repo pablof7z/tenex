@@ -198,9 +198,10 @@ export class MCPService {
     }
 
     // Store the client with the transport's subprocess
+    const transportWithProcess = transport as StdioTransportWithProcess;
     this.clients.set(name, {
       client,
-      process: (transport as any).process || (transport as any).subprocess,
+      process: transportWithProcess.process || transportWithProcess.subprocess,
       serverName: name,
       config,
     });
@@ -381,7 +382,7 @@ export class MCPService {
             resolve(undefined);
           }, 5000);
 
-          mcpClient.process!.once("exit", () => {
+          mcpClient.process?.once("exit", () => {
             clearTimeout(timeout);
             resolve(undefined);
           });

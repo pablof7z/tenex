@@ -122,7 +122,7 @@ export const createMilestoneTaskTool: Tool = {
         const agents = Array.from(projectCtx.agents.values());
         assignees.forEach((slug) => {
           const agent = agents.find((a) => a.slug === slug);
-          if (agent && agent.pubkey) {
+          if (agent?.pubkey) {
             task.tags.push(["p", agent.pubkey]);
             logger.debug("Added assignee to task", {
               agentSlug: slug,

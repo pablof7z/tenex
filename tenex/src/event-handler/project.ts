@@ -1,14 +1,13 @@
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
-import type NDK from "@nostr-dev-kit/ndk";
-import fs from "fs/promises";
 import { AgentRegistry } from "../agents/AgentRegistry";
 import type { Agent } from "../agents/types";
 import { getNDK } from "../nostr";
 import { getProjectContext, isProjectContextInitialized } from "../services/ProjectContext";
+import { fetchAgentDefinition } from "../utils/agentFetcher";
 import { logger } from "../utils/logger";
 import { toKebabCase } from "../utils/string";
-import { fetchAgentDefinition } from "../utils/agentFetcher";
 
 /**
  * Handles project update events by syncing agent definitions.
@@ -55,7 +54,7 @@ export async function handleProjectEvent(event: NDKEvent, projectPath: string): 
     }
 
     // Load agent registry
-    const agentRegistry = new AgentRegistry(projectPath);
+    const agentRegistry = new AgentRegistry(projectPath, false);
     await agentRegistry.loadFromProject();
 
     // Track which agents need to be added or updated
@@ -162,4 +161,3 @@ export async function handleProjectEvent(event: NDKEvent, projectPath: string): 
     logger.error("Failed to update agents from project event", { error });
   }
 }
-

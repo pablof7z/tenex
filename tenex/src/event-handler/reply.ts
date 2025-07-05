@@ -2,6 +2,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { Message } from "multi-llm-ts";
 import type { AgentExecutor } from "../agents/execution/AgentExecutor";
+import type { AgentExecutionContext } from "../agents/execution/types";
 import type { ConversationManager } from "../conversations";
 import { NostrPublisher } from "../nostr";
 import { isEventFromUser } from "../nostr/utils";
@@ -129,21 +130,22 @@ async function handleReplyLogic(
   if (conversation.phaseTransitions.length > 0) {
     const recentTransition =
       conversation.phaseTransitions[conversation.phaseTransitions.length - 1];
-    
-    logger.info(`[HANDOFF_DETECTION] Checking for recent handoff`, {
+    logger.info("[HANDOFF_DETECTION] Checking for recent handoff", {
       conversationId: conversation.id,
       targetAgent: targetAgent.slug,
       hasTransitions: conversation.phaseTransitions.length > 0,
-      recentTransition: recentTransition ? {
-        from: recentTransition.from,
-        to: recentTransition.to,
-        agentName: recentTransition.agentName,
-        timestamp: recentTransition.timestamp,
-        ageMs: Date.now() - recentTransition.timestamp,
-        hasHandoffInfo: !!recentTransition.summary
-      } : null
+      recentTransition: recentTransition
+        ? {
+            from: recentTransition.from,
+            to: recentTransition.to,
+            agentName: recentTransition.agentName,
+            timestamp: recentTransition.timestamp,
+            ageMs: Date.now() - recentTransition.timestamp,
+            hasHandoffInfo: !!recentTransition.summary,
+          }
+        : null,
     });
-    
+
     // If this transition was very recent (within last 30 seconds) and has handoff info
     if (
       recentTransition &&
@@ -151,17 +153,17 @@ async function handleReplyLogic(
       recentTransition.summary
     ) {
       handoff = recentTransition;
-      logger.info(`[HANDOFF_DETECTION] Found recent handoff for agent`, {
+      logger.info("[HANDOFF_DETECTION] Found recent handoff for agent", {
         targetAgent: targetAgent.slug,
         fromAgent: recentTransition.agentName,
         handoffAge: Date.now() - recentTransition.timestamp,
-        handoffMessage: recentTransition.message.substring(0, 100) + "..."
+        handoffMessage: `${recentTransition.message.substring(0, 100)}...`,
       });
     }
   }
 
   // Execute with the appropriate agent
-  const executionContext: any = {
+  const executionContext: AgentExecutionContext & { handoff?: typeof handoff } = {
     agent: targetAgent,
     conversation,
     phase: conversation.phase,
@@ -174,12 +176,12 @@ async function handleReplyLogic(
 
   // Add the user message to the target agent's context if this is from a user
   if (isEventFromUser(event) && event.content) {
-    logger.info(`[REPLY_HANDLER] Adding user message to agent context`, {
+    logger.info("[REPLY_HANDLER] Adding user message to agent context", {
       conversationId: conversation.id,
       targetAgent: targetAgent.slug,
-      userMessage: event.content.substring(0, 100) + "..."
+      userMessage: `${event.content.substring(0, 100)}...`,
     });
-    
+
     await conversationManager.addMessageToContext(
       conversation.id,
       targetAgent.slug,
@@ -273,7 +275,7 @@ async function handleDebugRoutingCommand(
       triggeringEvent: event,
     });
 
-    await publisher.publishError("⚠️ Debug routing failed: " + result.error);
+    await publisher.publishError(`⚠️ Debug routing failed: ${result.error}`);
 
     logger.error("Debug routing execution failed", {
       error: result.error,

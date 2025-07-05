@@ -1,4 +1,4 @@
-import type { Phase } from "../conversations/phases";
+import type { Agent } from "./types";
 import { analyze } from "../tools/implementations/analyze";
 import { claudeCodeTool } from "../tools/implementations/claudeCode";
 import { continueTool } from "../tools/implementations/continue";
@@ -10,27 +10,22 @@ import { writeContextFileTool } from "@/tools/implementations/writeContextFile";
 import { yieldBackTool } from "../tools/implementations/yieldBack";
 
 /**
- * Get all available tools for an agent based on their role and phase
+ * Get all available tools for an agent based on their role
  * All agents now have access to all tools except orchestrator-only tools
  */
-export function getDefaultToolsForAgent(
-  isOrchestrator: boolean,
-  phase?: Phase,
-  isBuiltIn?: boolean,
-  agentSlug?: string
-): string[] {
+export function getDefaultToolsForAgent(agent: Agent): string[] {
   let tools = [readFileTool.name, learnTool.name, analyze.name];
 
   // Built-in agents
-  if (isBuiltIn) {
-    if (isOrchestrator) {
+  if (agent.isBuiltIn) {
+    if (agent.isOrchestrator) {
       // Orchestrator agents get limited tools (no claude_code or shell)
       tools = [analyze.name, endConversationTool.name, continueTool.name, generateInventoryTool.name];
     } else {
       // Non-orchestrator agents use yield_back instead of complete
       tools.push(claudeCodeTool.name, yieldBackTool.name);
   
-      if (agentSlug === 'project-manager') {
+      if (agent.slug === 'project-manager') {
         tools.push(generateInventoryTool.name);
         tools.push(writeContextFileTool.name);
       }

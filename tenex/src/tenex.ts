@@ -3,6 +3,7 @@
 import { logger } from "@/utils/logger";
 // CLI entry point for TENEX
 import { Command } from "commander";
+import { agentCommand } from "./commands/agent/index";
 import { daemonCommand } from "./commands/daemon";
 import { runDebugSystemPrompt } from "./commands/debug/index";
 import { inventoryCommand } from "./commands/inventory/index";
@@ -16,6 +17,7 @@ const program = new Command();
 program.name("tenex").description("TENEX Command Line Interface").version("0.1.0");
 
 // Add main commands
+program.addCommand(agentCommand);
 program.addCommand(daemonCommand);
 program.addCommand(projectCommand);
 program.addCommand(setupCommand);

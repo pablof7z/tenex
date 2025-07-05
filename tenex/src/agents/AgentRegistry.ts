@@ -9,7 +9,7 @@ import { configService } from "@/services";
 import { getProjectContext, isProjectContextInitialized } from "@/services";
 import type { TenexAgents } from "@/services/config/types";
 import { logger } from "@/utils/logger";
-import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { getBuiltInAgents } from "./builtInAgents";
 import { getDefaultToolsForAgent } from "./constants";
 
@@ -19,32 +19,66 @@ export class AgentRegistry {
   private registryPath: string;
   private agentsDir: string;
   private registry: TenexAgents = {};
+  private globalRegistry: TenexAgents = {};
+  private isGlobal: boolean;
 
-  constructor(private projectPath: string) {
-    this.registryPath = path.join(projectPath, ".tenex", "agents.json");
-    this.agentsDir = path.join(projectPath, ".tenex", "agents");
+  constructor(private basePath: string, isGlobal = false) {
+    this.isGlobal = isGlobal;
+    // If basePath already includes .tenex, use it as is
+    if (basePath.endsWith(".tenex")) {
+      this.registryPath = path.join(basePath, "agents.json");
+      this.agentsDir = path.join(basePath, "agents");
+    } else {
+      this.registryPath = path.join(basePath, ".tenex", "agents.json");
+      this.agentsDir = path.join(basePath, ".tenex", "agents");
+    }
   }
 
   async loadFromProject(ndkProject?: import("@nostr-dev-kit/ndk").NDKProject): Promise<void> {
     // Ensure .tenex directory exists
-    await ensureDirectory(path.join(this.projectPath, ".tenex"));
+    const tenexDir = this.basePath.endsWith(".tenex") ? this.basePath : path.join(this.basePath, ".tenex");
+    await ensureDirectory(tenexDir);
     await ensureDirectory(this.agentsDir);
 
     // Load agents using ConfigService
     try {
-      this.registry = await configService.loadTenexAgents(path.join(this.projectPath, ".tenex"));
+      // Load global agents first if we're in a project context
+      if (!this.isGlobal) {
+        try {
+          this.globalRegistry = await configService.loadTenexAgents(configService.getGlobalPath());
+          logger.info(
+            `Loaded ${Object.keys(this.globalRegistry).length} global agents`,
+            { globalAgents: Object.keys(this.globalRegistry) }
+          );
+        } catch (error) {
+          logger.debug("No global agents found or failed to load", { error });
+          this.globalRegistry = {};
+        }
+      }
+
+      // Load project/local agents
+      this.registry = await configService.loadTenexAgents(tenexDir);
       logger.info(
         `Loaded agent registry with ${Object.keys(this.registry).length} agents via ConfigService`,
         {
           registryKeys: Object.keys(this.registry),
-          projectPath: this.projectPath,
+          basePath: this.basePath,
+          isGlobal: this.isGlobal,
         }
       );
 
-      // Load each agent from the registry
+      // Load global agents first (if in project context)
+      if (!this.isGlobal) {
+        for (const [slug, registryEntry] of Object.entries(this.globalRegistry)) {
+          logger.debug(`Loading global agent: ${slug}`, { registryEntry });
+          await this.loadAgentBySlug(slug, true);
+        }
+      }
+
+      // Load project/local agents (these can override global ones)
       for (const [slug, registryEntry] of Object.entries(this.registry)) {
         logger.debug(`Loading agent from registry: ${slug}`, { registryEntry });
-        await this.loadAgentBySlug(slug);
+        await this.loadAgentBySlug(slug, false);
       }
 
       // Load built-in agents
@@ -115,7 +149,7 @@ export class AgentRegistry {
         // For built-in agents, we don't save instructions to the JSON file
         // This ensures built-in agents always use the up-to-date instructions
         // from the code rather than potentially outdated instructions in the file
-        const { instructions, ...definitionWithoutInstructions } = agentDefinition;
+        const { instructions: _, ...definitionWithoutInstructions } = agentDefinition;
         await writeJsonFile(definitionPath, definitionWithoutInstructions);
       } else {
         await writeJsonFile(definitionPath, agentDefinition);
@@ -164,7 +198,7 @@ export class AgentRegistry {
           llmConfig: config.llmConfig,
         };
         if (isBuiltIn) {
-          const { instructions, ...definitionWithoutInstructions } = agentDefinition;
+          const { instructions: _, ...definitionWithoutInstructions } = agentDefinition;
           await writeJsonFile(definitionPath, definitionWithoutInstructions);
         } else {
           await writeJsonFile(definitionPath, agentDefinition);
@@ -192,7 +226,10 @@ export class AgentRegistry {
       }
     }
 
-    // Create Agent instance
+    // Determine if this is a built-in agent early
+    const isBuiltIn = getBuiltInAgents().some(builtIn => builtIn.slug === name);
+
+    // Create Agent instance with all properties set
     const agent: Agent = {
       name: agentName,
       pubkey,
@@ -201,28 +238,21 @@ export class AgentRegistry {
       instructions: agentDefinition.instructions,
       useCriteria: agentDefinition.useCriteria,
       llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-      tools: [], // Will be set after creation
+      tools: [], // Will be set next
       mcp: agentDefinition.mcp ?? !registryEntry.orchestratorAgent, // Default to true for non-orchestrator agents
       eventId: registryEntry.eventId,
       slug: name,
       isOrchestrator: registryEntry.orchestratorAgent,
+      isBuiltIn: isBuiltIn, // Set the isBuiltIn property here
     };
-
-    // Determine if this is a built-in agent
-    const isBuiltIn = getBuiltInAgents().some(builtIn => builtIn.slug === name);
 
     // Set tools - use explicit tools if configured, otherwise use defaults
     if (agentDefinition.tools !== undefined) {
       // User has explicitly defined the tools array (even if empty)
       agent.tools = agentDefinition.tools;
     } else {
-      // tools property is not in the JSON file, assign defaults
-      agent.tools = getDefaultToolsForAgent(
-        registryEntry.orchestratorAgent || false,
-        undefined,
-        isBuiltIn,
-        name
-      );
+      // Pass the complete agent object to the refactored function
+      agent.tools = getDefaultToolsForAgent(agent);
     }
 
     // Store in both maps
@@ -253,7 +283,11 @@ export class AgentRegistry {
   }
 
   private async saveRegistry(): Promise<void> {
-    await configService.saveProjectAgents(this.projectPath, this.registry);
+    if (this.isGlobal) {
+      await configService.saveGlobalAgents(this.registry);
+    } else {
+      await configService.saveProjectAgents(this.basePath, this.registry);
+    }
   }
 
   /**
@@ -306,6 +340,48 @@ export class AgentRegistry {
     }
 
     logger.info(`Removed agent ${agentSlugToRemove} (eventId: ${eventId})`);
+    return true;
+  }
+
+  /**
+   * Remove an agent by its slug
+   * This removes the agent from memory and deletes its definition file
+   */
+  async removeAgentBySlug(slug: string): Promise<boolean> {
+    const agent = this.agents.get(slug);
+    if (!agent) {
+      logger.warn(`Agent with slug ${slug} not found for removal`);
+      return false;
+    }
+
+    // Don't allow removing built-in agents
+    if (agent.isBuiltIn) {
+      logger.warn(`Cannot remove built-in agent ${slug}`);
+      return false;
+    }
+
+    // Remove from memory
+    this.agents.delete(slug);
+    this.agentsByPubkey.delete(agent.pubkey);
+
+    // Remove from registry
+    const registryEntry = this.registry[slug];
+    if (registryEntry) {
+      // Delete the agent definition file
+      try {
+        const filePath = path.join(this.agentsDir, registryEntry.file);
+        await fs.unlink(filePath);
+        logger.info(`Deleted agent definition file: ${filePath}`);
+      } catch (error) {
+        logger.warn("Failed to delete agent definition file", { error, slug });
+      }
+
+      // Remove from registry and save
+      delete this.registry[slug];
+      await this.saveRegistry();
+    }
+
+    logger.info(`Removed agent ${slug}`);
     return true;
   }
 
@@ -374,14 +450,20 @@ export class AgentRegistry {
     }
   }
 
-  async loadAgentBySlug(slug: string): Promise<Agent | null> {
-    const registryEntry = this.registry[slug];
+  async loadAgentBySlug(slug: string, fromGlobal = false): Promise<Agent | null> {
+    const registryToUse = fromGlobal ? this.globalRegistry : this.registry;
+    const registryEntry = registryToUse[slug];
     if (!registryEntry) {
       return null;
     }
 
+    // Determine the correct agents directory
+    const agentsDir = fromGlobal
+      ? path.join(configService.getGlobalPath(), "agents")
+      : this.agentsDir;
+
     // Load agent definition from file
-    const definitionPath = path.join(this.agentsDir, registryEntry.file);
+    const definitionPath = path.join(agentsDir, registryEntry.file);
     if (!(await fileExists(definitionPath))) {
       logger.error(`Agent definition file not found: ${definitionPath}`);
       return null;

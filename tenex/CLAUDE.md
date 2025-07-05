@@ -50,6 +50,24 @@ bun test path/to/test.ts
 bun run scripts/llm-log-tree.ts
 ```
 
+### Agent Management
+```bash
+# List all available agents
+tenex agent list           # Shows all agents (global and project)
+tenex agent list --global  # Shows only global agents
+tenex agent list --project # Shows only project agents
+
+# Add a new agent
+tenex agent add           # Interactive wizard (adds to project if in one, else global)
+tenex agent add --global  # Add to global configuration (~/.tenex)
+tenex agent add --project # Add to project configuration (must be in project)
+
+# Remove an agent
+tenex agent remove <name>           # Remove from current scope
+tenex agent remove <name> --global  # Remove from global configuration
+tenex agent remove <name> --project # Remove from project configuration
+```
+
 ## Architecture Overview
 
 ### Core Architecture Pattern
@@ -93,7 +111,9 @@ The system uses a **star topology** with the orchestrator as the central hub:
 ### Configuration
 - Global config: `~/.tenex/config.json`
 - Project config: `.tenex/config.json`
-- Agent definitions: `agents.json`
+- Agent definitions: 
+  - Global agents: `~/.tenex/agents/` (available to all projects)
+  - Project agents: `.tenex/agents/` (project-specific, can override global)
 - LLM configurations: `llms.json`
 - MCP servers: `mcp.json`
 

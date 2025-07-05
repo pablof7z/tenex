@@ -51,7 +51,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
     await ensureProjectInitialized(projectPath);
 
     // Load agent from registry
-    const agentRegistry = new AgentRegistry(projectPath);
+    const agentRegistry = new AgentRegistry(projectPath, false);
     await agentRegistry.loadFromProject();
     const agent = agentRegistry.getAgent(options.agent);
 

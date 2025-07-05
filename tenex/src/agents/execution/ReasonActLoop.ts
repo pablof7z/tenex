@@ -21,6 +21,15 @@ import type { Message } from "multi-llm-ts";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 
+interface StreamingState {
+  allToolResults: ToolExecutionResult[];
+  continueMetadata: ContinueMetadata | undefined;
+  completeMetadata: YieldBackMetadata | EndConversationMetadata | undefined;
+  finalResponse: CompletionResponse | undefined;
+  fullContent: string;
+  streamPublisher: StreamPublisher | undefined;
+}
+
 export interface ReasonActContext {
   projectPath: string;
   conversationId: string;
@@ -44,7 +53,10 @@ export interface ReasonActResult {
 export class ReasonActLoop {
   private static readonly MAX_ITERATIONS = 3;
 
-  constructor(private llmService: LLMService) {}
+  constructor(
+    private llmService: LLMService,
+    private conversationManager?: import("@/conversations/ConversationManager").ConversationManager
+  ) {}
 
   async *executeStreaming(
     context: ReasonActContext,
@@ -52,7 +64,7 @@ export class ReasonActLoop {
     tracingContext: TracingContext,
     publisher?: NostrPublisher,
     tools?: Tool[]
-  ): AsyncIterable<StreamEvent> {
+  ): AsyncGenerator<StreamEvent, ReasonActResult, unknown> {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
     const state = this.initializeStreamingState();
 
@@ -62,7 +74,14 @@ export class ReasonActLoop {
       const stream = this.createLLMStream(context, messages, tools);
       const streamPublisher = this.setupStreamPublisher(publisher, tracingLogger, context);
 
-      yield* this.processStreamEvents(stream, state, streamPublisher, publisher, tracingLogger);
+      yield* this.processStreamEvents(
+        stream,
+        state,
+        streamPublisher,
+        publisher,
+        tracingLogger,
+        context
+      );
 
       await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
       yield this.createFinalEvent(state);
@@ -76,9 +95,26 @@ export class ReasonActLoop {
       );
       throw error;
     }
+
+    // Return the final result
+    return {
+      finalResponse:
+        state.finalResponse ||
+        ({
+          content: state.fullContent,
+          toolCalls: [],
+          type: "text",
+        } as CompletionResponse),
+      finalContent: state.fullContent,
+      toolExecutions: state.allToolResults.length,
+      allToolResults: state.allToolResults,
+      continueMetadata: state.continueMetadata,
+      completeMetadata: state.completeMetadata,
+      wasPublished: !!state.streamPublisher,
+    };
   }
 
-  private initializeStreamingState() {
+  private initializeStreamingState(): StreamingState {
     return {
       allToolResults: [] as ToolExecutionResult[],
       continueMetadata: undefined as ContinueMetadata | undefined,
@@ -93,7 +129,7 @@ export class ReasonActLoop {
     tracingLogger: TracingLogger,
     context: ReasonActContext,
     tools?: Tool[]
-  ) {
+  ): void {
     tracingLogger.info("🔄 Starting ReasonActLoop", {
       agent: context.agent.name,
       phase: context.phase,
@@ -101,7 +137,11 @@ export class ReasonActLoop {
     });
   }
 
-  private createLLMStream(context: ReasonActContext, messages: Message[], tools?: Tool[]) {
+  private createLLMStream(
+    context: ReasonActContext,
+    messages: Message[],
+    tools?: Tool[]
+  ): ReturnType<LLMService["stream"]> {
     return this.llmService.stream({
       messages,
       options: {
@@ -126,7 +166,7 @@ export class ReasonActLoop {
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
     context: ReasonActContext
-  ) {
+  ): StreamPublisher | undefined {
     const streamPublisher = publisher?.createStreamPublisher();
     if (!streamPublisher) {
       tracingLogger.info("No publisher provided - streaming without publishing", {
@@ -141,7 +181,8 @@ export class ReasonActLoop {
     state: ReturnType<typeof this.initializeStreamingState>,
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
-    tracingLogger: TracingLogger
+    tracingLogger: TracingLogger,
+    context: ReasonActContext
   ): AsyncIterable<StreamEvent> {
     state.streamPublisher = streamPublisher;
 
@@ -157,24 +198,26 @@ export class ReasonActLoop {
           await this.handleToolStartEvent(event, streamPublisher, publisher, tracingLogger);
           break;
 
-        case "tool_complete":
+        case "tool_complete": {
           const isTerminal = await this.handleToolCompleteEvent(
             event,
             state,
             streamPublisher,
             publisher,
-            tracingLogger
+            tracingLogger,
+            context
           );
-          
+
           // If this was a terminal tool (continue, yield_back, or end_conversation), stop processing the stream
           if (isTerminal) {
             tracingLogger.info("Terminal tool detected - ending stream processing", {
               tool: event.tool,
-              type: event.tool === 'continue' ? 'routing' : 'completion',
+              type: event.tool === "continue" ? "routing" : "completion",
             });
             return; // Exit the stream processing loop
           }
           break;
+        }
 
         case "done":
           this.handleDoneEvent(event, state, tracingLogger);
@@ -189,9 +232,9 @@ export class ReasonActLoop {
 
   private handleContentEvent(
     event: { content: string },
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     streamPublisher?: StreamPublisher
-  ) {
+  ): void {
     state.fullContent += event.content;
     streamPublisher?.addContent(event.content);
   }
@@ -201,7 +244,7 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger
-  ) {
+  ): Promise<void> {
     await streamPublisher?.flush();
 
     if (publisher) {
@@ -221,19 +264,20 @@ export class ReasonActLoop {
     state: ReturnType<typeof this.initializeStreamingState>,
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
-    tracingLogger: TracingLogger
+    tracingLogger: TracingLogger,
+    context: ReasonActContext
   ): Promise<boolean> {
     const toolResult = this.extractToolResult(event);
     state.allToolResults.push(toolResult);
 
-    this.processToolMetadata(toolResult, state, tracingLogger);
+    this.processToolMetadata(toolResult, state, tracingLogger, context);
 
     await streamPublisher?.flush();
     await this.stopTypingIndicator(publisher, event.tool, tracingLogger);
-    
+
     // Check if this is a terminal tool (continue, yield_back, or end_conversation)
     const isTerminal = toolResult.success && (!!state.continueMetadata || !!state.completeMetadata);
-    
+
     return isTerminal;
   }
 
@@ -263,11 +307,10 @@ export class ReasonActLoop {
   private processToolMetadata(
     toolResult: ToolExecutionResult,
     state: ReturnType<typeof this.initializeStreamingState>,
-    tracingLogger: TracingLogger
-  ) {
+    tracingLogger: TracingLogger,
+    context: ReasonActContext
+  ): void {
     if (!toolResult.metadata) return;
-
-    console.log('CALLING PROCESS TOOL METADATA', toolResult);
 
     const metadata = toolResult.metadata;
     if (isContinueMetadata(metadata)) {
@@ -280,12 +323,25 @@ export class ReasonActLoop {
         });
         return;
       }
-      
+
       state.continueMetadata = metadata;
       tracingLogger.info("🔄 Continue routing detected in streaming", {
         destinations: metadata.routingDecision.destinations,
         phase: metadata.routingDecision.phase,
       });
+
+      // Increment continue call count for the current phase
+      if (this.conversationManager && context.conversationId && context.phase) {
+        this.conversationManager
+          .incrementContinueCallCount(context.conversationId, context.phase)
+          .catch((error) => {
+            tracingLogger.error("Failed to increment continue call count", {
+              error: error instanceof Error ? error.message : String(error),
+              conversationId: context.conversationId,
+              phase: context.phase,
+            });
+          });
+      }
     } else if (isYieldBackMetadata(metadata) || isEndConversationMetadata(metadata)) {
       state.completeMetadata = metadata;
       tracingLogger.info("✅ Complete detected in streaming", {
@@ -299,7 +355,7 @@ export class ReasonActLoop {
     publisher: NostrPublisher | undefined,
     tool: string,
     tracingLogger: TracingLogger
-  ) {
+  ): Promise<void> {
     if (!publisher) return;
 
     try {
@@ -314,9 +370,9 @@ export class ReasonActLoop {
 
   private handleDoneEvent(
     event: { response: CompletionResponse },
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     tracingLogger: TracingLogger
-  ) {
+  ): void {
     state.finalResponse = event.response;
     tracingLogger.debug("Received done event", {
       hasResponse: !!state.finalResponse,
@@ -335,7 +391,7 @@ export class ReasonActLoop {
     context: ReasonActContext,
     messages: Message[],
     tracingLogger: TracingLogger
-  ) {
+  ): Promise<void> {
     if (!streamPublisher || streamPublisher.isFinalized()) return;
 
     const llmMetadata = await this.buildLLMMetadata(
@@ -380,10 +436,10 @@ export class ReasonActLoop {
   }
 
   private logStreamFinalization(
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     context: ReasonActContext,
     tracingLogger: TracingLogger
-  ) {
+  ): void {
     if (state.continueMetadata) {
       tracingLogger.debug("Published final response with continue routing", {
         agent: context.agent.name,
@@ -402,7 +458,7 @@ export class ReasonActLoop {
     }
   }
 
-  private createFinalEvent(state: ReturnType<typeof this.initializeStreamingState>): StreamEvent {
+  private createFinalEvent(state: StreamingState): StreamEvent {
     return {
       type: "done",
       response: state.finalResponse || {
@@ -445,7 +501,7 @@ export class ReasonActLoop {
     errorMessage: string,
     tracingLogger: TracingLogger,
     context: ReasonActContext
-  ) {
+  ): Promise<void> {
     try {
       streamPublisher.addContent(errorMessage);
       await streamPublisher.finalize({});
@@ -462,7 +518,7 @@ export class ReasonActLoop {
     errorMessage: string,
     tracingLogger: TracingLogger,
     context: ReasonActContext
-  ) {
+  ): Promise<void> {
     try {
       await publisher.publishError(errorMessage);
     } catch (publishError) {

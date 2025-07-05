@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Phase } from "@/conversations/phases";
 import type { AgentContext, PhaseTransition } from "@/conversations/types";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
-import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
+import { getAgentSlugFromEvent, isEventFromUser } from "@/nostr/utils";
 import { getProjectContext } from "@/services";
 import {
   type TracingContext,
@@ -116,13 +116,13 @@ export class ConversationManager {
 
     const previousPhase = conversation.phase;
 
-    logger.info(`[PHASE_TRANSITION] Starting phase update`, {
+    logger.info("[PHASE_TRANSITION] Starting phase update", {
       conversationId: id,
       fromPhase: previousPhase,
       toPhase: phase,
       agentName,
       agentPubkey,
-      messagePreview: message.substring(0, 100) + "...",
+      messagePreview: `${message.substring(0, 100)}...`,
       hasReason: !!reason,
       hasSummary: !!summary,
     });
@@ -144,18 +144,18 @@ export class ConversationManager {
     if (previousPhase !== phase) {
       conversation.phase = phase;
       conversation.phaseStartedAt = Date.now();
-      
+
       // Clear readFiles when transitioning from REFLECTION back to CHAT
       // This starts a new conversation cycle with fresh file tracking
       if (previousPhase === "reflection" && phase === "chat") {
         const previousCount = conversation.metadata.readFiles?.length || 0;
-        delete conversation.metadata.readFiles;
-        logger.info(`[CONVERSATION] Cleared readFiles metadata on REFLECTION->CHAT transition`, {
+        conversation.metadata.readFiles = undefined;
+        logger.info("[CONVERSATION] Cleared readFiles metadata on REFLECTION->CHAT transition", {
           conversationId: id,
-          previousReadFiles: previousCount
+          previousReadFiles: previousCount,
         });
       }
-      
+
       tracingLogger.logTransition(previousPhase, phase, {
         message: `${message.substring(0, 100)}...`, // Log preview
         conversationTitle: conversation.title,
@@ -175,6 +175,49 @@ export class ConversationManager {
 
     // Save after phase update
     await this.persistence.save(conversation);
+  }
+
+  async incrementContinueCallCount(conversationId: string, phase: Phase): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    // Initialize continueCallCounts if not exists
+    if (!conversation.metadata.continueCallCounts) {
+      conversation.metadata.continueCallCounts = {
+        chat: 0,
+        brainstorm: 0,
+        plan: 0,
+        execute: 0,
+        review: 0,
+        chores: 0,
+        reflection: 0,
+      };
+    }
+
+    // Increment the count for the current phase
+    const currentCount = conversation.metadata.continueCallCounts[phase] || 0;
+    conversation.metadata.continueCallCounts[phase] = currentCount + 1;
+
+    logger.info("[CONTINUE_TRACKING] Incremented continue call count", {
+      conversationId,
+      phase,
+      newCount: currentCount + 1,
+      allCounts: conversation.metadata.continueCallCounts,
+    });
+
+    // Save after updating count
+    await this.persistence.save(conversation);
+  }
+
+  getContinueCallCount(conversationId: string, phase: Phase): number {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return 0;
+    }
+
+    return conversation.metadata.continueCallCounts?.[phase] || 0;
   }
 
   async addEvent(conversationId: string, event: NDKEvent): Promise<void> {
@@ -277,7 +320,7 @@ export class ConversationManager {
               conversation.agentContexts = new Map<string, AgentContext>();
             } else if (!(conversation.agentContexts instanceof Map)) {
               // Convert from plain object to Map if needed (after deserialization)
-              const contextsObj = conversation.agentContexts as any;
+              const contextsObj = conversation.agentContexts as Record<string, AgentContext>;
               conversation.agentContexts = new Map<string, AgentContext>(
                 Object.entries(contextsObj)
               );
@@ -383,17 +426,17 @@ export class ConversationManager {
     };
 
     conversation.agentContexts.set(agentSlug, context);
-    
+
     logger.info(`[AGENT_CONTEXT] Context created for agent: ${agentSlug}`, {
       conversationId,
       agentSlug,
       messageCount: context.messages.length,
-      messages: context.messages.map(m => ({
+      messages: context.messages.map((m) => ({
         role: m.role,
-        content: m.content.substring(0, 100) + "..."
-      }))
+        content: `${m.content.substring(0, 100)}...`,
+      })),
     });
-    
+
     return context;
   }
 
@@ -427,7 +470,7 @@ export class ConversationManager {
 
     context.messages.push(message);
     context.lastUpdate = new Date();
-    
+
     // logger.info(`[AGENT_CONTEXT] Message added to agent context`, {
     //   conversationId,
     //   agentSlug,
@@ -451,7 +494,9 @@ export class ConversationManager {
   getAgentContext(conversationId: string, agentSlug: string): AgentContext | undefined {
     const conversation = this.conversations.get(conversationId);
     if (!conversation) {
-      logger.warn(`[AGENT_CONTEXT] Conversation ${conversationId} not found when getting agent context`);
+      logger.warn(
+        `[AGENT_CONTEXT] Conversation ${conversationId} not found when getting agent context`
+      );
       return undefined;
     }
 
@@ -480,27 +525,27 @@ export class ConversationManager {
 
     // Find the timestamp of when this agent was last updated
     const lastUpdateTime = context.lastUpdate.getTime();
-    
-    logger.info(`[AGENT_CONTEXT] Synchronizing context for agent`, {
+
+    logger.info("[AGENT_CONTEXT] Synchronizing context for agent", {
       agentSlug,
       lastUpdate: context.lastUpdate.toISOString(),
-      currentMessages: context.messages.length
+      currentMessages: context.messages.length,
     });
 
     // Find all events that occurred after the agent's last update
     const missedEvents: NDKEvent[] = [];
-    
+
     for (const event of conversation.history) {
       // Check if event has a timestamp (created_at is in seconds, we need milliseconds)
       const eventTime = (event.created_at || 0) * 1000;
-      
+
       if (eventTime > lastUpdateTime) {
         missedEvents.push(event);
       }
     }
 
     // If there's a triggering event that's not in history yet, include it
-    if (triggeringEvent && !missedEvents.find(e => e.id === triggeringEvent.id)) {
+    if (triggeringEvent && !missedEvents.find((e) => e.id === triggeringEvent.id)) {
       const triggeringTime = (triggeringEvent.created_at || 0) * 1000;
       if (triggeringTime > lastUpdateTime) {
         missedEvents.push(triggeringEvent);
@@ -509,7 +554,7 @@ export class ConversationManager {
 
     logger.info(`[AGENT_CONTEXT] Found ${missedEvents.length} missed events`, {
       agentSlug,
-      missedEventIds: missedEvents.map(e => e.id)
+      missedEventIds: missedEvents.map((e) => e.id),
     });
 
     // Convert missed events to messages and add to context
@@ -518,10 +563,13 @@ export class ConversationManager {
 
       // Determine the sender
       const eventAgentSlug = getAgentSlugFromEvent(event);
-      
+
       // Skip if this is the agent's own message
       if (eventAgentSlug === agentSlug) {
-        logger.debug(`[AGENT_CONTEXT] Skipping agent's own message`, { agentSlug, eventId: event.id });
+        logger.debug(`[AGENT_CONTEXT] Skipping agent's own message`, {
+          agentSlug,
+          eventId: event.id,
+        });
         continue;
       }
 
@@ -534,7 +582,7 @@ export class ConversationManager {
         const projectCtx = getProjectContext();
         const sendingAgent = projectCtx.agents.get(eventAgentSlug);
         const senderName = sendingAgent ? sendingAgent.name : "another agent";
-        
+
         // Add a system message for attribution, then the actual content
         context.messages.push(new Message("system", `Message from ${senderName}:`));
         context.messages.push(new Message("user", event.content));
@@ -542,22 +590,22 @@ export class ConversationManager {
         // Unknown sender (shouldn't happen, but handle gracefully)
         context.messages.push(new Message("user", event.content));
       }
-      
-      logger.info(`[AGENT_CONTEXT] Added missed message to context`, {
+
+      logger.info("[AGENT_CONTEXT] Added missed message to context", {
         agentSlug,
         fromUser: isEventFromUser(event),
         fromAgent: eventAgentSlug,
-        messagePreview: event.content.substring(0, 100) + "..."
+        messagePreview: `${event.content.substring(0, 100)}...`,
       });
     }
 
     // Update the last update time
     context.lastUpdate = new Date();
-    
-    logger.info(`[AGENT_CONTEXT] Context synchronized`, {
+
+    logger.info("[AGENT_CONTEXT] Context synchronized", {
       agentSlug,
       totalMessages: context.messages.length,
-      newMessages: missedEvents.length
+      newMessages: missedEvents.length,
     });
 
     // Save the updated conversation
@@ -583,10 +631,8 @@ export class ConversationManager {
 
     // For new conversations, just pass the user message directly
     if (isNewConversation && triggeringEvent?.content) {
-      const messages: Message[] = [
-        new Message("user", triggeringEvent.content)
-      ];
-      
+      const messages: Message[] = [new Message("user", triggeringEvent.content)];
+
       const context: AgentContext = {
         agentSlug,
         messages,
@@ -595,7 +641,7 @@ export class ConversationManager {
       };
 
       conversation.agentContexts.set(agentSlug, context);
-      
+
       return context;
     }
 
@@ -618,8 +664,8 @@ export class ConversationManager {
     }
 
     // If we have a triggering event and it's not already in the summary, add it
-    if (triggeringEvent && triggeringEvent.content) {
-      const isInRecent = recentHistory.some(e => e.id === triggeringEvent.id);
+    if (triggeringEvent?.content) {
+      const isInRecent = recentHistory.some((e) => e.id === triggeringEvent.id);
       if (!isInRecent) {
         const sender = isEventFromUser(triggeringEvent) ? "User" : "Agent";
         summary += `${sender}: ${triggeringEvent.content}\n\n`;
@@ -637,14 +683,14 @@ export class ConversationManager {
     };
 
     const context = this.createAgentContext(conversationId, agentSlug, handoff);
-    
-    logger.info(`[AGENT_CONTEXT] Bootstrap completed for ongoing conversation`, {
+
+    logger.info("[AGENT_CONTEXT] Bootstrap completed for ongoing conversation", {
       conversationId,
       agentSlug,
       summaryLength: summary.length,
       handoffMessage: handoff.message,
     });
-    
+
     return context;
   }
 
@@ -679,11 +725,11 @@ export class ConversationManager {
 
     // Clear readFiles tracking
     if (conversation.metadata.readFiles) {
-      logger.info(`[CONVERSATION] Cleaning up readFiles metadata`, {
+      logger.info("[CONVERSATION] Cleaning up readFiles metadata", {
         conversationId,
-        fileCount: conversation.metadata.readFiles.length
+        fileCount: conversation.metadata.readFiles.length,
       });
-      delete conversation.metadata.readFiles;
+      conversation.metadata.readFiles = undefined;
     }
 
     // Could add cleanup for other temporary metadata here in the future
@@ -698,10 +744,10 @@ export class ConversationManager {
       return;
     }
 
-    logger.info(`[CONVERSATION] Completing conversation`, {
+    logger.info("[CONVERSATION] Completing conversation", {
       conversationId,
       title: conversation.title,
-      phase: conversation.phase
+      phase: conversation.phase,
     });
 
     // Clean up metadata

@@ -2,7 +2,7 @@ import type { ConversationManager } from "@/conversations/ConversationManager";
 import type { Phase } from "@/conversations/phases";
 import type { PhaseTransition } from "@/conversations/types";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
+import type { CompletionResponse, LLMService, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
 import type { LLMMetadata } from "@/nostr/types";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
@@ -21,13 +21,11 @@ import type {
   ToolExecutionMetadata,
   ToolExecutionResult,
   ToolOutput,
-  ToolResult,
   YieldBackMetadata,
 } from "@/tools/types";
 import { isContinueMetadata, isEndConversationMetadata, isYieldBackMetadata } from "@/tools/types";
 import {
   type TracingContext,
-  type TracingLogger,
   createAgentExecutionContext,
   createTracingContext,
   createTracingLogger,
@@ -53,7 +51,7 @@ export class AgentExecutor {
     private ndk: NDK,
     private conversationManager?: ConversationManager
   ) {
-    this.reasonActLoop = new ReasonActLoop(llmService);
+    this.reasonActLoop = new ReasonActLoop(llmService, conversationManager);
     this.projectCtx = getProjectContext();
   }
 
@@ -157,13 +155,13 @@ export class AgentExecutor {
       if (completeMetadata && this.conversationManager && !context.agent.isOrchestrator) {
         // When a non-orchestrator agent completes, create a handoff record for the orchestrator
         const { response, summary } = completeMetadata.completion;
-        
-        logger.info(`[AGENT_EXECUTOR] Creating handoff from completion tool`, {
+
+        logger.info("[AGENT_EXECUTOR] Creating handoff from completion tool", {
           fromAgent: context.agent.name,
           toOrchestrator: true,
-          summary: summary.substring(0, 100) + "..."
+          summary: `${summary.substring(0, 100)}...`,
         });
-        
+
         // Use updatePhase to create a handoff record without changing phase
         await this.conversationManager.updatePhase(
           context.conversation.id,
@@ -325,12 +323,12 @@ export class AgentExecutor {
         const handoff = (context as AgentExecutionContext & { handoff?: PhaseTransition }).handoff;
 
         if (handoff) {
-          logger.info(`[AGENT_EXECUTOR] Creating context from handoff`, {
+          logger.info("[AGENT_EXECUTOR] Creating context from handoff", {
             fromAgent: handoff.agentName,
             toAgent: context.agent.slug,
-            handoffMessage: handoff.message.substring(0, 100) + "..."
+            handoffMessage: `${handoff.message.substring(0, 100)}...`,
           });
-          
+
           // Create context with handoff information
           agentContext = this.conversationManager.createAgentContext(
             context.conversation.id,
@@ -338,10 +336,10 @@ export class AgentExecutor {
             handoff
           );
         } else {
-          logger.info(`[AGENT_EXECUTOR] Bootstrapping context for direct invocation`, {
-            agentSlug: context.agent.slug
+          logger.info("[AGENT_EXECUTOR] Bootstrapping context for direct invocation", {
+            agentSlug: context.agent.slug,
           });
-          
+
           // Bootstrap context for direct invocation (e.g., p-tag mention)
           agentContext = await this.conversationManager.bootstrapAgentContext(
             context.conversation.id,
@@ -351,11 +349,11 @@ export class AgentExecutor {
         }
       } else {
         // Context exists - synchronize with missed messages
-        logger.info(`[AGENT_EXECUTOR] Synchronizing existing context`, {
+        logger.info("[AGENT_EXECUTOR] Synchronizing existing context", {
           agentSlug: context.agent.slug,
-          currentMessages: agentContext.messages.length
+          currentMessages: agentContext.messages.length,
         });
-        
+
         await this.conversationManager.synchronizeAgentContext(
           context.conversation.id,
           context.agent.slug,
@@ -365,14 +363,14 @@ export class AgentExecutor {
 
       // Add the agent's isolated messages
       messages.push(...agentContext.messages);
-      
-      logger.info(`[AGENT_EXECUTOR] Final message state for agent`, {
+
+      logger.info("[AGENT_EXECUTOR] Final message state for agent", {
         agentSlug: context.agent.slug,
         totalMessages: messages.length,
-        messages: messages.map(m => ({
+        messages: messages.map((m) => ({
           role: m.role,
-          contentPreview: m.content.substring(0, 100) + "..."
-        }))
+          contentPreview: `${m.content.substring(0, 100)}...`,
+        })),
       });
     } else {
       // Fallback to old behavior if no ConversationManager
@@ -446,8 +444,6 @@ export class AgentExecutor {
     let completeMetadata: YieldBackMetadata | EndConversationMetadata | undefined;
     let wasPublished = false;
 
-    const lastMessage = messages[messages.length - 1];
-
     // Process the stream - ReasonActLoop handles all publishing
     const stream = this.reasonActLoop.executeStreaming(
       context,
@@ -460,7 +456,7 @@ export class AgentExecutor {
     for await (const event of stream) {
       // console.log("stream", {
       //   agent: context.agent.name,
-      //   messageContent: lastMessage?.content?.substring(0, 40),
+      //   messageContent: messages[messages.length - 1]?.content?.substring(0, 40),
       //   ...event,
       // });
       switch (event.type) {

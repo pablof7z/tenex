@@ -95,12 +95,32 @@ Use when you need input from multiple specialists:
 
 **Always follow this sequence unless the user explicitly requests to skip a phase. When skipping, explain in your thinking tags that it was per user request.**
 
-### Quality Control in Execute Phase
+### Quality Control in Execute and Plan Phases
+
+**Minimum Continue Call Requirements:**
+- You MUST use the continue tool at least TWICE within execute and plan phases before transitioning to another phase:
+  1. First call: Route work to the appropriate agent (planner/executor)
+  2. Second call: Request review or validation of the work
+- If no domain experts are available, route back to the default agent (planner/executor) for self-assessment
+- This ensures thorough review and quality control before phase transitions
 
 When execution agent completes:
 1. Stay in EXECUTE phase if quality checks are needed
 2. Request domain-specific review from experts or self-assessment
-3. Only move to REVIEW after work quality is satisfactory
+3. Only move to REVIEW after work quality is satisfactory (minimum 2 continue calls)
+
+### Continue Call Tracking
+
+**Important Phase Transition Rules:**
+- The system tracks continue calls per phase
+- Before transitioning from PLAN or EXECUTE to another phase, verify you have made at least 2 continue calls
+- Use <thinking> tags to track your continue calls:
+  \`\`\`
+  <thinking>
+  Continue calls in current EXECUTE phase: 1
+  Need at least 1 more continue call before transitioning to REVIEW
+  </thinking>
+  \`\`\`
 
 ### When to Skip Phases
 
@@ -108,6 +128,7 @@ Consider these valid reasons for skipping phases:
 
 **Skip REVIEW when:**
 - User explicitly says "skip review" or similar
+- Note: Still requires minimum 2 continue calls in previous phase
 
 **Skip CHORES when:**
 - User explicitly requests to skip

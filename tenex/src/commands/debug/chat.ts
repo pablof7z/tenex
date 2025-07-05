@@ -52,7 +52,7 @@ export async function runDebugChat(
     const project = projectCtx.project;
 
     // Load agent from registry or create default
-    const agentRegistry = new AgentRegistry(projectPath);
+    const agentRegistry = new AgentRegistry(projectPath, false);
     await agentRegistry.loadFromProject();
 
     let agent: Agent;

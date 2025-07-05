@@ -34,7 +34,9 @@ export interface ConversationMetadata {
   requirements?: string; // Captured requirements
   plan?: string; // Approved plan
   readFiles?: string[]; // Files read during this conversation (for write_context_file security)
-  [key: string]: unknown; // Extensible for phase-specific data
+  continueCallCounts?: Record<Phase, number>; // Track continue calls per phase
+  projectPath?: string; // Project path for debug commands
+  last_user_message?: string; // Last message from the user
 }
 
 export interface PhaseContext {

@@ -1,4 +1,4 @@
-import NDK from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "./logger";
 
 /**

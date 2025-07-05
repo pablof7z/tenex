@@ -1,5 +1,5 @@
-import { exec } from "child_process";
-import { promisify } from "util";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import { generateInventory, inventoryExists } from "@/utils/inventory";
 import { logger } from "@/utils/logger";
 import { z } from "zod";

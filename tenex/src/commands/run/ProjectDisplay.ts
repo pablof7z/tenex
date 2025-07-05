@@ -38,7 +38,7 @@ export class ProjectDisplay {
     logger.debug("Displaying agent configurations", {
       agentsSize: agents.size,
       agentKeys: Array.from(agents.keys()),
-      hasOrchestrator: projectCtx.orchestrator ? true : false,
+      hasOrchestrator: !!projectCtx.orchestrator,
       orchestratorName: projectCtx.orchestrator?.name,
     });
 

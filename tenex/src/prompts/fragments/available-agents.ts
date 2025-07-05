@@ -38,7 +38,7 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
         if (agent.useCriteria) {
           agentInfo += `\n  Use Criteria: ${agent.useCriteria}`;
         }
-        return agentInfo + "\n";
+        return `${agentInfo}\n`;
       })
       .join("\n\n");
 

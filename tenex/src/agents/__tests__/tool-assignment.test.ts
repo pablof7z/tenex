@@ -6,7 +6,12 @@ import { getBuiltInAgents } from "../builtInAgents";
 describe("Tool assignment", () => {
     describe("getDefaultToolsForAgent", () => {
         it("orchestrator agent should not have yield_back tool", () => {
-            const tools = getDefaultToolsForAgent(true, undefined, true, "orchestrator");
+            const mockAgent = {
+                isOrchestrator: true,
+                isBuiltIn: true,
+                slug: "orchestrator"
+            } as any;
+            const tools = getDefaultToolsForAgent(mockAgent);
             
             expect(tools).not.toContain("yield_back");
             expect(tools).toContain("analyze");
@@ -15,8 +20,19 @@ describe("Tool assignment", () => {
         });
 
         it("non-orchestrator built-in agents should have yield_back tool", () => {
-            const executorTools = getDefaultToolsForAgent(false, undefined, true, "executer");
-            const plannerTools = getDefaultToolsForAgent(false, undefined, true, "planner");
+            const mockExecutor = {
+                isOrchestrator: false,
+                isBuiltIn: true,
+                slug: "executer"
+            } as any;
+            const mockPlanner = {
+                isOrchestrator: false,
+                isBuiltIn: true,
+                slug: "planner"
+            } as any;
+            
+            const executorTools = getDefaultToolsForAgent(mockExecutor);
+            const plannerTools = getDefaultToolsForAgent(mockPlanner);
             
             expect(executorTools).toContain("yield_back");
             expect(executorTools).not.toContain("end_conversation");
@@ -28,9 +44,29 @@ describe("Tool assignment", () => {
         });
 
         it("custom agents should have yield_back tool", () => {
-            const tools = getDefaultToolsForAgent(false, undefined, false, "custom-agent");
+            const mockCustomAgent = {
+                isOrchestrator: false,
+                isBuiltIn: false,
+                slug: "custom-agent"
+            } as any;
+            const tools = getDefaultToolsForAgent(mockCustomAgent);
             
             expect(tools).toContain("yield_back");
+            expect(tools).not.toContain("end_conversation");
+            expect(tools).not.toContain("continue");
+        });
+
+        it("project-manager agent should have additional tools", () => {
+            const mockProjectManager = {
+                isOrchestrator: false,
+                isBuiltIn: true,
+                slug: "project-manager"
+            } as any;
+            const tools = getDefaultToolsForAgent(mockProjectManager);
+            
+            expect(tools).toContain("yield_back");
+            expect(tools).toContain("generate_inventory");
+            expect(tools).toContain("write_context_file");
             expect(tools).not.toContain("end_conversation");
             expect(tools).not.toContain("continue");
         });

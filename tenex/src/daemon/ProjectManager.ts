@@ -71,7 +71,7 @@ export class ProjectManager implements IProjectManager {
 
       // Initialize agent registry
       const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
-      const agentRegistry = new AgentRegistry(projectPath);
+      const agentRegistry = new AgentRegistry(projectPath, false);
 
       // Fetch the project - but don't set context yet
       const ndkProject = await this.fetchProject(naddr, ndk);
@@ -162,7 +162,7 @@ export class ProjectManager implements IProjectManager {
 
       // Load agents using AgentRegistry
       const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
-      const agentRegistry = new AgentRegistry(projectPath);
+      const agentRegistry = new AgentRegistry(projectPath, false);
       await agentRegistry.loadFromProject(project);
 
       // Get all agents from registry
@@ -275,7 +275,7 @@ export class ProjectManager implements IProjectManager {
 
     // Load the existing agents registry (which should contain the PM agent)
     const AgentRegistry = (await import("@/agents/AgentRegistry")).AgentRegistry;
-    const agentRegistry = new AgentRegistry(projectPath);
+    const agentRegistry = new AgentRegistry(projectPath, false);
     await agentRegistry.loadFromProject(ndkProject);
 
     for (const eventId of project.agentEventIds) {
