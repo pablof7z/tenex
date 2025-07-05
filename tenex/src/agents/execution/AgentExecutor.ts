@@ -32,7 +32,7 @@ import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import { ReasonActLoop } from "./ReasonActLoop";
 import type { ReasonActContext, ReasonActResult } from "./ReasonActLoop";
-import type { AgentExecutionContext, AgentExecutionResult } from "./types";
+import type { AgentExecutionContext, AgentExecutionContextWithHandoff, AgentExecutionResult } from "./types";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/orchestrator-routing";
 import "@/prompts/fragments/expertise-boundaries";
@@ -321,7 +321,7 @@ export class AgentExecutor {
       // If no context exists, this agent is being invoked for the first time
       if (!agentContext) {
         // Check if this is a handoff from another agent (will be set in execute method)
-        const handoff = (context as AgentExecutionContext & { handoff?: PhaseTransition }).handoff;
+        const handoff = (context as AgentExecutionContextWithHandoff).handoff;
 
         if (handoff) {
           logger.info("[AGENT_EXECUTOR] Creating context from handoff", {
@@ -374,7 +374,7 @@ export class AgentExecutor {
         })),
       });
     } else {
-      // Fallback to old behavior if no ConversationManager
+      // Build messages from conversation history
       const historyMessages = buildHistoryMessages(context.conversation.history);
       messages.push(...historyMessages);
 

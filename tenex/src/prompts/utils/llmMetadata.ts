@@ -44,10 +44,7 @@ export async function buildLLMMetadata(
   const userPrompt = messages.find((m) => m.role === "user")?.content;
 
   // Extract additional metadata if available
-  const responseWithModel = response as CompletionResponse & {
-    contextWindow?: number;
-    maxCompletionTokens?: number;
-  };
+  const responseWithMetadata = response as any;
 
   return {
     model,
@@ -55,8 +52,8 @@ export async function buildLLMMetadata(
     promptTokens: response.usage.prompt_tokens,
     completionTokens: response.usage.completion_tokens,
     totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
-    contextWindow: responseWithModel.contextWindow,
-    maxCompletionTokens: responseWithModel.maxCompletionTokens,
+    contextWindow: responseWithMetadata.contextWindow,
+    maxCompletionTokens: responseWithMetadata.maxCompletionTokens,
     systemPrompt,
     userPrompt,
     rawResponse: response.content,

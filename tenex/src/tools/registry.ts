@@ -11,19 +11,18 @@ import { yieldBackTool } from "./implementations/yieldBack";
 import type { Tool } from "./types";
 
 // Registry of all available tools
-const toolsMap = new Map<string, Tool<unknown, unknown>>([
-  ["read_file", readFileTool],
-  ["write_context_file", writeContextFileTool],
-  ["claude_code", claudeCodeTool],
-  // ["get_time", getTimeTool],
-  ["continue", continueTool],
-  ["yield_back", yieldBackTool],
-  ["end_conversation", endConversationTool],
-  ["analyze", analyze],
-  ["generate_inventory", generateInventoryTool],
-  ["learn", learnTool],
-  ["create_milestone_task", createMilestoneTaskTool],
-]);
+const toolsMap = new Map<string, Tool<unknown, unknown>>();
+toolsMap.set("read_file", readFileTool as Tool<unknown, unknown>);
+toolsMap.set("write_context_file", writeContextFileTool as Tool<unknown, unknown>);
+toolsMap.set("claude_code", claudeCodeTool as Tool<unknown, unknown>);
+// toolsMap.set("get_time", getTimeTool as Tool<unknown, unknown>);
+toolsMap.set("continue", continueTool as Tool<unknown, unknown>);
+toolsMap.set("yield_back", yieldBackTool as Tool<unknown, unknown>);
+toolsMap.set("end_conversation", endConversationTool as Tool<unknown, unknown>);
+toolsMap.set("analyze", analyze as Tool<unknown, unknown>);
+toolsMap.set("generate_inventory", generateInventoryTool as Tool<unknown, unknown>);
+toolsMap.set("learn", learnTool as Tool<unknown, unknown>);
+toolsMap.set("create_milestone_task", createMilestoneTaskTool as Tool<unknown, unknown>);
 
 export function getTool(name: string): Tool | undefined {
   return toolsMap.get(name);

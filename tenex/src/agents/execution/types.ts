@@ -1,6 +1,6 @@
 import type { Agent } from "@/agents/types";
 import type { Phase } from "@/conversations/phases";
-import type { Conversation } from "@/conversations/types";
+import type { Conversation, PhaseTransition } from "@/conversations/types";
 import type { LLMMetadata } from "@/nostr/types";
 import type { ToolExecutionResult } from "@/tools/types";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -26,4 +26,8 @@ export interface AgentExecutionResult {
   toolExecutions?: ToolExecutionResult[];
   error?: string;
   publishedEvent?: NDKEvent;
+}
+
+export interface AgentExecutionContextWithHandoff extends AgentExecutionContext {
+  handoff?: PhaseTransition;
 }

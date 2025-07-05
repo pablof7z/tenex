@@ -4,7 +4,7 @@ import type { StoredAgentData } from "../types";
  * Default orchestrator agent definition
  * This agent represents the orchestrator and has special capabilities
  * like phase transitions and project coordination.
- * Note: Tools are now assigned dynamically in AgentRegistry based on isOrchestrator flag
+ * Tools are assigned dynamically in AgentRegistry based on isOrchestrator flag
  */
 export const ORCHESTRATOR_AGENT_DEFINITION: StoredAgentData = {
   name: "Orchestrator",

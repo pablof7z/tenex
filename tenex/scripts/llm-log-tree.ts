@@ -85,18 +85,6 @@ function formatContentWithEnhancements(content: string, isSystemPrompt = false):
         formattedContent = formatMarkdown(formattedContent);
     }
 
-    // Handle <tool_use> blocks
-    formattedContent = formattedContent.replace(/<tool_use>([\s\S]*?)<\/tool_use>/g, (_match, jsonContent) => {
-        try {
-            const parsed = JSON.parse(jsonContent.trim());
-            const formatted = JSON.stringify(parsed, null, 2);
-            return (
-                chalk.gray("<tool_use>\n") + colorizeJSON(formatted) + chalk.gray("\n</tool_use>")
-            );
-        } catch {
-            return chalk.gray("<tool_use>") + jsonContent + chalk.gray("</tool_use>");
-        }
-    });
 
     return formattedContent;
 }

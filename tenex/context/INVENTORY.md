@@ -33,7 +33,7 @@ The repository is organized into several key directories, following a feature-ba
 *   `src/services/`: Provides singleton services for application-wide concerns, primarily configuration management (`ConfigService`) and a global project context (`ProjectContext`).
 *   `src/tools/`: Contains the definitions and implementations for all tools that agents can execute, such as `shell`, `readFile`, and the powerful `claude_code` and `analyze` tools.
 *   `src/tracing/`: A lightweight tracing and logging system to provide contextualized debugging information across the distributed flow of an agent interaction.
-*   `docs/`: Contains project documentation and design plans, notably the plan to migrate from XML-based tool use to native function calling.
+*   `docs/`: Contains project documentation and design plans.
 *   `scripts/`: Utility scripts for building the application, and for viewing and analyzing tool and LLM log files.
 *   `tests/`: Contains various test scripts for verifying model capabilities and the correct implementation of the native function calling system.
 

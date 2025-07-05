@@ -8,6 +8,8 @@
 
 import type { ToolExecutionResult, NonEmptyArray } from "@/tools/types";
 import { isNonEmptyArray } from "@/tools/core";
+import type { Phase } from "@/conversations/phases";
+import type { ControlFlow, Termination, ToolError, ValidationError, ExecutionError, SystemError } from "@/tools/core";
 
 /**
  * Serialized tool result that preserves type information
@@ -47,7 +49,13 @@ export interface SerializedToolResult {
         context?: { summary?: string };
       };
       // Additional properties for delegate/fork flows
-      [key: string]: any;
+      agents?: string[];
+      branches?: Array<{
+        agent: string;
+        message: string;
+      }>;
+      message?: string;
+      returnToOrchestrator?: boolean;
     };
     
     // Terminal tool data
@@ -148,27 +156,23 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
  * Deserialize a tool result from LLM transport back to typed form
  */
 export function deserializeToolResult(serialized: SerializedToolResult): ToolExecutionResult {
-  const base = {
-    kind: serialized.kind,
-    success: serialized.success,
-    duration: serialized.duration,
-  };
-
   switch (serialized.kind) {
     case "pure":
       return {
-        ...base,
         kind: "pure",
+        success: true,
         output: serialized.data.output,
-      } as ToolExecutionResult;
+        duration: serialized.duration,
+      };
       
     case "effect":
       return {
-        ...base,
         kind: "effect",
+        success: serialized.success,
         output: serialized.data.output,
-        error: serialized.data.error,
-      } as ToolExecutionResult;
+        error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
+        duration: serialized.duration,
+      };
       
     case "control":
       // Handle different control flow types
@@ -206,30 +210,147 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
             }
             deserializedFlow = {
               ...flow,
-              branches: flow.branches as NonEmptyArray<any>,
+              branches: flow.branches as NonEmptyArray<{
+                agent: string;
+                message: string;
+              }>,
             };
             break;
         }
       }
       
       return {
-        ...base,
         kind: "control",
-        flow: deserializedFlow,
-        error: serialized.data.error,
-      } as ToolExecutionResult;
+        success: serialized.success,
+        flow: deserializedFlow ? reconstructControlFlow(deserializedFlow) : undefined,
+        error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
+        duration: serialized.duration,
+      };
       
     case "terminal":
       return {
-        ...base,
         kind: "terminal",
-        termination: serialized.data.termination,
-        error: serialized.data.error,
-      } as ToolExecutionResult;
+        success: serialized.success,
+        termination: serialized.data.termination ? reconstructTermination(serialized.data.termination) : undefined,
+        error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
+        duration: serialized.duration,
+      };
       
     default:
       // This should never happen with proper type checking
       throw new Error(`Unknown tool result kind: ${serialized.kind}`);
+  }
+}
+
+/**
+ * Reconstruct a proper ControlFlow from serialized data
+ */
+function reconstructControlFlow(flow: any): ControlFlow {
+  switch (flow.type) {
+    case 'continue':
+      return {
+        type: 'continue',
+        routing: {
+          phase: flow.routing?.phase as Phase | undefined,
+          destinations: flow.routing?.destinations as NonEmptyArray<string>,
+          reason: flow.routing?.reason || '',
+          message: flow.routing?.message || '',
+          context: flow.routing?.context,
+        },
+      };
+    case 'delegate':
+      return {
+        type: 'delegate',
+        agents: flow.agents as NonEmptyArray<string>,
+        message: flow.message || '',
+        returnToOrchestrator: flow.returnToOrchestrator ?? true,
+      };
+    case 'fork':
+      return {
+        type: 'fork',
+        branches: flow.branches as NonEmptyArray<{
+          readonly agent: string;
+          readonly message: string;
+        }>,
+      };
+    default:
+      throw new Error(`Unknown control flow type: ${flow.type}`);
+  }
+}
+
+/**
+ * Reconstruct a proper Termination from serialized data
+ */
+function reconstructTermination(termination: any): Termination {
+  switch (termination.type) {
+    case 'yield_back':
+      return {
+        type: 'yield_back',
+        completion: termination.completion ? {
+          response: termination.completion.response || '',
+          summary: termination.completion.summary || '',
+          nextAgent: termination.completion.nextAgent || '',
+        } : {
+          response: '',
+          summary: '',
+          nextAgent: '',
+        },
+      };
+    case 'end_conversation':
+      return {
+        type: 'end_conversation',
+        result: termination.result ? {
+          response: termination.result.response || '',
+          summary: termination.result.summary || '',
+          success: termination.result.success ?? true,
+          artifacts: termination.result.artifacts,
+        } : {
+          response: '',
+          summary: '',
+          success: true,
+        },
+      };
+    default:
+      throw new Error(`Unknown termination type: ${termination.type}`);
+  }
+}
+
+/**
+ * Reconstruct a proper ToolError from serialized data
+ */
+function reconstructError(error: any): ToolError {
+  if (!error || typeof error !== 'object') {
+    return {
+      kind: 'system',
+      message: 'Unknown error',
+    };
+  }
+  
+  switch (error.kind) {
+    case 'validation':
+      return {
+        kind: 'validation',
+        field: error.field || 'unknown',
+        message: error.message || 'Validation error',
+      };
+    case 'execution':
+      return {
+        kind: 'execution',
+        tool: error.tool || 'unknown',
+        message: error.message || 'Execution error',
+        cause: error.cause,
+      };
+    case 'system':
+      return {
+        kind: 'system',
+        message: error.message || 'System error',
+        stack: error.stack,
+      };
+    default:
+      return {
+        kind: 'system',
+        message: error.message || 'Unknown error',
+      };
   }
 }
 
@@ -239,12 +360,18 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
 export function isSerializedToolResult(obj: unknown): obj is SerializedToolResult {
   if (!obj || typeof obj !== "object") return false;
   
-  const result = obj as Record<string, unknown>;
+  // Use property access without type assertion
+  const record = obj as Record<string, unknown>;
+  
+  // Type guard for kind
+  if (typeof record.kind !== "string") return false;
+  const validKinds = ["pure", "effect", "control", "terminal"];
+  if (!validKinds.includes(record.kind)) return false;
+  
+  // Check other required properties
   return (
-    typeof result.kind === "string" &&
-    ["pure", "effect", "control", "terminal"].includes(result.kind) &&
-    typeof result.success === "boolean" &&
-    typeof result.duration === "number" &&
-    result.data !== undefined
+    typeof record.success === "boolean" &&
+    typeof record.duration === "number" &&
+    record.data !== undefined
   );
 }

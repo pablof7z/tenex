@@ -121,7 +121,7 @@ The system uses a **star topology** with the orchestrator as the central hub:
 
 1. **No Direct Event Creation**: Always use NDK directly, don't wrap it
 2. **Feature-Based Organization**: Code is organized by feature/domain
-3. **Clean Code Only**: No backwards compatibility unless explicitly requested
+3. **Clean Code Only**: Write clean, maintainable code
 4. **Direct Modifications**: Modify existing code directly, don't extend or wrap
 5. **Clarity-Based Routing**: Orchestrator routes based on request clarity
 

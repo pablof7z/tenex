@@ -2,7 +2,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { Message } from "multi-llm-ts";
 import type { AgentExecutor } from "../agents/execution/AgentExecutor";
-import type { AgentExecutionContext } from "../agents/execution/types";
+import type { AgentExecutionContext, AgentExecutionContextWithHandoff } from "../agents/execution/types";
 import type { ConversationManager } from "../conversations";
 import { NostrPublisher } from "../nostr";
 import { isEventFromUser } from "../nostr/utils";
@@ -163,7 +163,7 @@ async function handleReplyLogic(
   }
 
   // Execute with the appropriate agent
-  const executionContext: AgentExecutionContext & { handoff?: typeof handoff } = {
+  const executionContext: AgentExecutionContextWithHandoff = {
     agent: targetAgent,
     conversation,
     phase: conversation.phase,

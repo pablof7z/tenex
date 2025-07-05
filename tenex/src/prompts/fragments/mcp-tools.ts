@@ -5,7 +5,7 @@ import type { Tool } from "@/tools/types";
 
 interface MCPToolsArgs {
   enabled?: boolean;
-  tools?: Tool[]; // Optional to support both old and new usage
+  tools?: Tool[]; // Optional tools parameter
 }
 
 export const mcpToolsFragment: PromptFragment<MCPToolsArgs> = {
