@@ -17,7 +17,7 @@ The `AgentExecutor` is the central engine that drives an agent's behavior. Its p
 Its key responsibilities include:
 - **Dynamic Prompt Construction**: Assembling a complex system prompt by combining multiple contextual "fragments" such as agent identity, conversation phase, project inventory, and available tools.
 - **LLM Interaction**: Managing the communication with the configured Large Language Model (LLM) via the `LLMService`.
-- **Tool Execution Orchestration**: Facilitating the use of tools by the LLM. It leverages the `ReasonActLoop` and the `multi-llm-ts` plugin system to handle native function calls, a significant architectural shift away from older XML-based tool parsing.
+- **Tool Execution Orchestration**: Facilitating the use of tools by the LLM. It leverages the `ReasonActLoop` and the `multi-llm-ts` plugin system to handle native function calls.
 - **Streaming Response Management**: Handling real-time streaming of the LLM's response, including partial text content and tool execution statuses, back to the user via Nostr.
 - **State Management and Flow Control**: Interpreting special metadata returned from tools (e.g., `handoff`, `switch_phase`) to control the conversation's flow and coordinating with the `ConversationManager` to update the conversation state.
 - **Nostr Event Publishing**: Publishing all relevant events to the Nostr network, including typing indicators, streaming messages, and the final response with associated metadata.
@@ -87,7 +87,7 @@ The `execute` method follows a well-defined, asynchronous data flow:
 #### Core Algorithms and Business Logic
 
 -   **Dynamic Prompting**: The `buildMessages` method implements the core logic for context-aware prompting. By combining fragments, it tailors the system prompt precisely to the agent's role, the conversation's current state, and the overall project context. This is the primary mechanism for guiding the agent's behavior.
--   **Streaming-First Execution**: The architecture has been refactored to be streaming-first. The `executeWithStreaming` method and its use of an async generator (`reasonActLoop.executeStreaming`) is the heart of the execution logic. This pattern allows for processing a mixed stream of text and tool calls in real-time.
+-   **Streaming-First Execution**: The architecture is streaming-first. The `executeWithStreaming` method and its use of an async generator (`reasonActLoop.executeStreaming`) is the heart of the execution logic. This pattern allows for processing a mixed stream of text and tool calls in real-time.
 -   **Metadata-Driven Flow Control**: Instead of hard-coding logic, the system uses a flexible, metadata-driven approach. Tools like `handoff` and `switch_phase` don't perform the action directly. Instead, they return a structured metadata object in their `ToolResult`. The `AgentExecutor` inspects this metadata and orchestrates the required action (e.g., setting the next responder, calling the `ConversationManager`). This decouples tool implementation from conversation flow control.
 
 #### Important Patterns and Design Decisions
@@ -134,7 +134,7 @@ The `AgentExecutor` is a central service instantiated and used primarily by the 
 
 #### Potential Areas for Improvement
 
-1.  **Result Processing**: The logic for processing tool results and extracting metadata is currently embedded within the `executeWithStreaming` loop. This could be refactored into a dedicated `ToolResultProcessor` class to simplify the main loop and improve separation of concerns.
+1.  **Result Processing**: The logic for processing tool results and extracting metadata is currently embedded within the `executeWithStreaming` loop. This could be extracted into a dedicated `ToolResultProcessor` class to simplify the main loop and improve separation of concerns.
 2.  **Dependency Management**: The module relies on several implicitly-available singletons or services (e.g., `getProjectContext`, `getNDK`). While convenient, this can make the class harder to test in isolation. Explicitly passing these dependencies into the constructor would make the data flow more transparent.
 
 #### Common Pitfalls and Gotchas
@@ -142,4 +142,4 @@ The `AgentExecutor` is a central service instantiated and used primarily by the 
 -   **Broken Flow Control**: If a tool like `handoff` or `switch_phase` has a bug and fails to return the correct metadata structure, the `AgentExecutor` will not be able to transition the agent or phase, potentially stalling the conversation.
 -   **Prompt Engineering Bugs**: Since the final prompt is assembled from many fragments, a bug in any single fragment can break the entire system prompt, leading to poor LLM performance.
 -   **Streaming Artifacts**: A bug in the `BufferedStreamPublisher` or the `executeWithStreaming` loop could cause jumbled, duplicated, or missing text in the user-facing stream.
--   **Tool Registration**: For an agent to use a tool, the tool must be correctly defined with the new `Tool` interface and registered in `src/tools/registry.ts`. Forgetting this step will make the tool invisible to the agent.
+-   **Tool Registration**: For an agent to use a tool, the tool must be correctly defined with the `Tool` interface and registered in `src/tools/registry.ts`. Forgetting this step will make the tool invisible to the agent.

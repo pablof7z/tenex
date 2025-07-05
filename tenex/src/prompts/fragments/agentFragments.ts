@@ -91,10 +91,6 @@ function getPhaseContext(phase: Phase, conversation?: Conversation): string | nu
   return null;
 }
 
-// Tool instructions are no longer needed with native function calling
-
-// Native function calling eliminates the need for tool use guidelines
-// The LLM now understands how to use tools through the native API
 
 // Register fragments
 fragmentRegistry.register(agentSystemPromptFragment);

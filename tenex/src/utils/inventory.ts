@@ -5,7 +5,7 @@ import { TaskPublisher, getNDK } from "@/nostr";
 import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import { configService, getProjectContext, isProjectContextInitialized } from "@/services";
 import { logger } from "@/utils/logger";
-import type { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk";
+import type { NDKTask } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import { generateRepomixOutput } from "./repomix.js";
 import "@/prompts"; // This ensures all fragments are registered
@@ -177,7 +177,6 @@ async function generateMainInventory(
   // Debug: Log the router configuration
   logger.debug("[inventory] LLM Router loaded", {
     availableConfigs: llmRouter.getConfigKeys(),
-    routerDefaults: (llmRouter as any).config?.defaults,
   });
 
   const userMessage = new Message("user", prompt);
@@ -268,20 +267,20 @@ function stripComplexModulesJson(content: string): string {
   const complexModulesSection = /At the end.*?```json\s*\n[\s\S]*?"complexModules"[\s\S]*?\n```/g;
 
   // Remove the entire complex modules JSON section
-  content = content.replace(complexModulesSection, "").trim();
+  let cleanedContent = content.replace(complexModulesSection, "").trim();
 
   // Also handle case where JSON block might appear without the instruction text
   const jsonBlockPattern = /```json\s*\n[\s\S]*?\n```/g;
-  const jsonMatches = content.match(jsonBlockPattern);
+  const jsonMatches = cleanedContent.match(jsonBlockPattern);
   if (jsonMatches) {
     for (const match of jsonMatches) {
       if (match.includes('"complexModules"')) {
-        content = content.replace(match, "").trim();
+        cleanedContent = cleanedContent.replace(match, "").trim();
       }
     }
   }
 
-  return content;
+  return cleanedContent;
 }
 
 /**
@@ -459,7 +458,7 @@ async function getInventoryPath(projectPath: string): Promise<string> {
 /**
  * Load project configuration
  */
-async function loadProjectConfig(projectPath: string) {
+async function loadProjectConfig(projectPath: string): Promise<{ paths?: { inventory?: string }; title?: string }> {
   try {
     if (isProjectContextInitialized()) {
       // Get config from ProjectContext if available

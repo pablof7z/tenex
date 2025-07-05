@@ -2,11 +2,12 @@ import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import { configService } from "@/services/ConfigService";
 import type { MCPServerConfig, TenexMCP } from "@/services/config/types";
-import type { PluginParameter, Tool, ToolResult } from "@/tools/types";
+import type { Tool } from "@/tools/types";
 import { logger } from "@/utils/logger";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
+import { adaptMCPTool } from "./MCPToolAdapter";
 
 interface MCPClient {
   client: Client;
@@ -250,64 +251,12 @@ export class MCPService {
   }
 
   private convertMCPToolToTenexTool(serverName: string, mcpTool: MCPTool): Tool {
-    // Create namespaced tool name
-    const namespacedName = `${serverName}/${mcpTool.name}`;
-
-    // Convert MCP JSON schema to PluginParameter array
-    const parameters: PluginParameter[] = [];
-
-    if (mcpTool.inputSchema?.properties) {
-      const required = mcpTool.inputSchema.required || [];
-
-      for (const [name, schema] of Object.entries(mcpTool.inputSchema.properties)) {
-        const param = schema as MCPToolProperty;
-        parameters.push({
-          name,
-          type: this.mapJsonSchemaType(param.type),
-          description: param.description || "",
-          required: required.includes(name),
-          ...(param.enum ? { enum: param.enum as string[] } : {}),
-        });
-      }
-    }
-
-    return {
-      name: namespacedName,
-      description: mcpTool.description || `Tool from ${serverName}`,
-      parameters,
-      execute: async (args: Record<string, unknown>, context) => {
-        try {
-          const result = await this.executeTool(serverName, mcpTool.name, args);
-          return {
-            success: true,
-            output: result, // Return raw result for better LLM handling
-          } as ToolResult;
-        } catch (error) {
-          return {
-            success: false,
-            error: String(error),
-          } as ToolResult;
-        }
-      },
-    };
-  }
-
-  private mapJsonSchemaType(jsonType: string): PluginParameter["type"] {
-    switch (jsonType) {
-      case "string":
-        return "string";
-      case "number":
-      case "integer":
-        return "number";
-      case "boolean":
-        return "boolean";
-      case "array":
-        return "array";
-      case "object":
-        return "object";
-      default:
-        return "string";
-    }
+    // Use the adapter to create a type-safe tool with Zod schemas
+    return adaptMCPTool(
+      mcpTool,
+      serverName,
+      (args) => this.executeTool(serverName, mcpTool.name, args)
+    );
   }
 
   async executeTool(

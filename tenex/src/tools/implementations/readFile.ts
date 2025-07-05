@@ -1,60 +1,53 @@
 import { readFile } from "node:fs/promises";
+import type { EffectTool } from "../types";
+import { suspend, createZodSchema } from "../types";
+import { resolveAndValidatePath } from "../utils";
 import { z } from "zod";
-import type { Tool, ToolExecutionContext, ToolResult } from "../types";
-import { parseToolParams, resolveAndValidatePath } from "../utils";
 
-const ReadFileArgsSchema = z.object({
-  path: z.string().min(1, "path must be a non-empty string"),
+const readFileSchema = z.object({
+  path: z.string().describe("The file path to read (absolute or relative to project root)"),
 });
 
-export const readFileTool: Tool = {
+type ReadFileInput = z.infer<typeof readFileSchema>;
+type ReadFileOutput = string;
+
+/**
+ * Read file tool - effect tool that reads files from filesystem
+ * Performs I/O side effects
+ */
+export const readFileTool: EffectTool<ReadFileInput, ReadFileOutput> = {
+  brand: { _brand: "effect" },
   name: "read_file",
   description: "Read a file from the filesystem",
-  parameters: [
-    {
-      name: "path",
-      type: "string",
-      description: "The file path to read (absolute or relative to project root)",
-      required: true,
-    },
-  ],
+  
+  parameters: createZodSchema(readFileSchema),
 
-  async execute(
-    params: Record<string, unknown>,
-    context: ToolExecutionContext
-  ): Promise<ToolResult> {
-    const parseResult = parseToolParams(ReadFileArgsSchema, params);
-    if (!parseResult.success) {
-      return parseResult.errorResult;
-    }
+  execute: (input, context) => {
+    const { path } = input.value;
 
-    const { path } = parseResult.data;
+    // Return an effect that describes the file read operation
+    return suspend(async () => {
+      try {
+        // Resolve path and ensure it's within project
+        const fullPath = resolveAndValidatePath(path, context.projectPath);
 
-    try {
-      // Resolve path and ensure it's within project
-      const fullPath = resolveAndValidatePath(path, context.projectPath);
-
-      const content = await readFile(fullPath, "utf-8");
-      
-      // Track this file as read in conversation metadata for write_context_file security
-      if (context.conversation) {
-        if (!context.conversation.metadata.readFiles) {
-          context.conversation.metadata.readFiles = [];
-        }
-        if (!context.conversation.metadata.readFiles.includes(fullPath)) {
-          context.conversation.metadata.readFiles.push(fullPath);
-        }
+        const content = await readFile(fullPath, "utf-8");
+        
+        // Note: File tracking has been moved to the interpreter layer
+        // This keeps the tool pure and focused on its primary responsibility
+        
+        return { ok: true, value: content };
+      } catch (error: unknown) {
+        return {
+          ok: false,
+          error: {
+            kind: "execution" as const,
+            tool: "read_file",
+            message: `Failed to read ${path}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            cause: error,
+          },
+        };
       }
-      
-      return {
-        success: true,
-        output: content,
-      };
-    } catch (error: unknown) {
-      return {
-        success: false,
-        error: `Failed to read ${path}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      };
-    }
+    });
   },
 };

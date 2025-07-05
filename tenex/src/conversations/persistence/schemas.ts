@@ -28,8 +28,10 @@ const ExecutionTimeSchema = z.object({
 
 // Message schema for agent contexts
 const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
+  role: z.enum(["user", "assistant", "system", "developer", "tool"]),
   content: z.string(),
+  reasoning: z.string().nullable().optional(),
+  attachments: z.array(z.any()).optional(),
 });
 
 const AgentContextSchema = z.object({

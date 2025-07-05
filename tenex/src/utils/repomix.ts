@@ -49,7 +49,7 @@ export async function generateRepomixOutput(projectPath: string): Promise<Repomi
     // Clean up on error
     try {
       unlinkSync(outputPath);
-    } catch (_e) {
+    } catch {
       // Ignore cleanup errors
     }
     throw error;

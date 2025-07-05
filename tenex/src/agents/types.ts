@@ -1,5 +1,6 @@
 import type { Phase } from "@/conversations/phases";
 import type { Conversation } from "@/conversations/types";
+import type { Tool } from "@/tools/types";
 import type { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 export interface AgentSummary {
@@ -16,7 +17,7 @@ export interface Agent {
   instructions?: string;
   useCriteria?: string; // Criteria for when this agent should be selected
   llmConfig: string;
-  tools: string[];
+  tools: Tool[]; // Actual tool instances
   mcp?: boolean; // Whether this agent has access to MCP tools (defaults to true except for orchestrator)
   eventId?: string; // NDKAgent event ID
   slug: string; // Agent slug/key from agents.json
@@ -67,7 +68,7 @@ export interface StoredAgentData {
   instructions?: string;
   useCriteria?: string;
   llmConfig?: string;
-  tools?: string[];
+  tools?: string[]; // Tool names in storage - converted to Tool instances at runtime
   mcp?: boolean; // Whether this agent has access to MCP tools
 }
 

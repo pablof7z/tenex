@@ -28,7 +28,7 @@ export const EXECUTION_TAGS = {
   NET_TIME: "net-time",
 } as const;
 
-// Claude-specific tags (for backwards compatibility)
+// Claude-specific tags
 export const CLAUDE_TAGS = {
   MESSAGE_TYPE: "claude-message-type",
   MESSAGE_ID: "claude-message-id",

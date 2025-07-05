@@ -1,7 +1,7 @@
-import { getAgentSlugFromEvent, isEventFromUser } from "@/nostr/utils";
+import { getAgentSlugFromEvent } from "@/nostr/utils";
 import { type ProjectContext, getProjectContext } from "@/services";
 import type NDK from "@nostr-dev-kit/ndk";
-import type { NDKEvent, NDKUser } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 
 interface ConversationEvent {
@@ -21,7 +21,7 @@ interface ConversationTree {
 export async function fetchConversation(
   bech32Event: string,
   ndk: NDK,
-  projectPath: string
+  _projectPath: string
 ): Promise<string> {
   // Fetch the event directly using the nevent string
   const inputEvent = await ndk.fetchEvent(bech32Event);
@@ -159,7 +159,7 @@ function buildConversationTree(
   }
 
   // Calculate depths
-  function setDepth(event: ConversationEvent, depth: number) {
+  function setDepth(event: ConversationEvent, depth: number): void {
     event.depth = depth;
     const eventReplies = event.event.id ? replies.get(event.event.id) || [] : [];
     for (const reply of eventReplies) {
@@ -171,8 +171,15 @@ function buildConversationTree(
     setDepth(rootEvent, 0);
   }
 
+  // Get the first event from the map if no root event found
+  const firstEvent = rootEvent || eventMap.values().next().value;
+  
+  if (!firstEvent) {
+    throw new Error("No events found in conversation tree");
+  }
+  
   return {
-    root: rootEvent || eventMap.values().next().value!,
+    root: firstEvent,
     replies,
   };
 }
@@ -182,7 +189,7 @@ function formatConversationMarkdown(tree: ConversationTree, humanPubkey: string)
 
   lines.push("# Conversation Thread\n");
 
-  function formatEvent(event: ConversationEvent, indent = "") {
+  function formatEvent(event: ConversationEvent, indent = ""): void {
     const authorColor = event.isHuman ? chalk.green : chalk.cyan;
     const timestamp = event.timestamp.toLocaleString();
 

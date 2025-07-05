@@ -6,7 +6,7 @@ import { getNDK } from "@/nostr";
 import { EXECUTION_TAGS } from "@/nostr/tags";
 import type { LLMMetadata } from "@/nostr/types";
 import { getProjectContext } from "@/services";
-import type { ContinueMetadata, EndConversationMetadata, YieldBackMetadata } from "@/tools/types";
+import type { ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
 import { logger } from "@/utils/logger";
 import type NDK from "@nostr-dev-kit/ndk";
 import {
@@ -37,16 +37,16 @@ export interface NostrPublisherContext {
 export interface ResponseOptions {
   content: string;
   llmMetadata?: LLMMetadata;
-  continueMetadata?: ContinueMetadata;
-  completeMetadata?: YieldBackMetadata | EndConversationMetadata;
+  continueMetadata?: ContinueFlow;
+  completeMetadata?: YieldBack | EndConversation;
   additionalTags?: NDKTag[];
 }
 
 // Metadata for finalizing stream
 export interface FinalizeMetadata {
   llmMetadata?: LLMMetadata;
-  continueMetadata?: ContinueMetadata;
-  completeMetadata?: YieldBackMetadata | EndConversationMetadata;
+  continueMetadata?: ContinueFlow;
+  completeMetadata?: YieldBack | EndConversation;
 }
 
 export class NostrPublisher {
@@ -58,11 +58,14 @@ export class NostrPublisher {
 
       // Use the continue message if available, otherwise use the content
       // This ensures the next agent receives the actual instruction, not a placeholder
-      if (options.continueMetadata?.routingDecision.message) {
-        reply.content = options.continueMetadata.routingDecision.message;
-      } else if (options.completeMetadata?.completion.response) {
-        // If we have complete metadata with a response, use it
+      if (options.continueMetadata?.routing.message) {
+        reply.content = options.continueMetadata.routing.message;
+      } else if (options.completeMetadata?.type === "yield_back") {
+        // If we have yield_back metadata with a response, use it
         reply.content = options.completeMetadata.completion.response;
+      } else if (options.completeMetadata?.type === "end_conversation") {
+        // If we have end_conversation metadata with a response, use it
+        reply.content = options.completeMetadata.result.response;
       } else {
         reply.content = options.content;
       }
@@ -81,19 +84,23 @@ export class NostrPublisher {
       });
 
       // Handle routing
-      if (options.continueMetadata?.routingDecision.destinations) {
+      if (options.continueMetadata?.routing.destinations) {
         // Add p-tags for all destination agents
-        const destinations = options.continueMetadata.routingDecision.destinations;
-        destinations.forEach((pubkey) => {
+        const destinations = options.continueMetadata.routing.destinations;
+        for (const pubkey of destinations) {
           reply.tag(["p", pubkey]);
-        });
-      } else if (options.completeMetadata?.completion.nextAgent?.trim()) {
-        // Handle complete metadata routing
+        }
+      } else if (options.completeMetadata?.type === "yield_back") {
+        // Handle yield_back routing
         reply.tag(["p", options.completeMetadata.completion.nextAgent]);
       }
 
       // Add any additional tags
-      options.additionalTags?.forEach((tag) => reply.tag(tag));
+      if (options.additionalTags) {
+        for (const tag of options.additionalTags) {
+          reply.tag(tag);
+        }
+      }
 
       // Sign and publish
       await reply.sign(this.context.agent.signer);
@@ -320,16 +327,16 @@ export class NostrPublisher {
     }
   }
 
-  private addRoutingMetadata(event: NDKEvent, continueMetadata?: ContinueMetadata): void {
+  private addRoutingMetadata(event: NDKEvent, continueMetadata?: ContinueFlow): void {
     if (continueMetadata) {
-      if (continueMetadata.routingDecision.phase) {
-        event.tag(["new-phase", continueMetadata.routingDecision.phase]);
+      if (continueMetadata.routing.phase) {
+        event.tag(["new-phase", continueMetadata.routing.phase]);
       }
     }
     // Only add phase-transition tag if phase is actually changing
     const isPhaseTransition =
-      continueMetadata?.routingDecision.phase &&
-      continueMetadata.routingDecision.phase !== this.context.conversation.phase;
+      continueMetadata?.routing.phase &&
+      continueMetadata.routing.phase !== this.context.conversation.phase;
     if (isPhaseTransition) {
       event.tag(["phase-from", this.context.conversation.phase]);
     }

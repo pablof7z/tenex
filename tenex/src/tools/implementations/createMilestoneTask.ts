@@ -3,8 +3,8 @@ import { getProjectContext } from "@/services/ProjectContext";
 import { logger } from "@/utils/logger";
 import { NDKTask } from "@nostr-dev-kit/ndk";
 import { z } from "zod";
-import type { Tool, ToolExecutionContext, ToolResult } from "../types";
-import { parseToolParams } from "../utils";
+import type { EffectTool } from "../types";
+import { createZodSchema, suspend } from "../types";
 
 const createMilestoneTaskSchema = z.object({
   title: z.string().describe("Title for the milestone task"),
@@ -15,86 +15,77 @@ const createMilestoneTaskSchema = z.object({
     .describe("Agent slugs to assign to this task (e.g., 'executor', 'planner')"),
 });
 
-export const createMilestoneTaskTool: Tool = {
+interface CreateMilestoneTaskInput {
+  title: string;
+  description: string;
+  assignees?: string[];
+}
+
+interface CreateMilestoneTaskOutput {
+  message: string;
+  eventId: string;
+  title: string;
+  descriptionLength: number;
+  assignees: string[] | undefined;
+}
+
+export const createMilestoneTaskTool: EffectTool<CreateMilestoneTaskInput, CreateMilestoneTaskOutput> = {
+  brand: { _brand: "effect" },
   name: "create_milestone_task",
   description:
     "Create a trackable milestone task for dividing complex work. Tasks can be assigned to specific agents and tracked for completion. Only available to orchestrator agents.",
-  parameters: [
-    {
-      name: "title",
-      type: "string",
-      description: "Title for the milestone task",
-      required: true,
-    },
-    {
-      name: "description",
-      type: "string",
-      description: "Detailed description of what needs to be accomplished",
-      required: true,
-    },
-    {
-      name: "assignees",
-      type: "array",
-      description:
-        "Agent slugs to assign to this task (e.g., ['executor'], ['planner', 'executor'])",
-      required: false,
-      items: {
-        name: "assignee",
-        type: "string",
-        description: "Agent slug",
-      },
-    },
-  ],
+  
+  parameters: createZodSchema(createMilestoneTaskSchema),
 
-  async execute(
-    params: Record<string, unknown>,
-    context: ToolExecutionContext
-  ): Promise<ToolResult> {
-    let title: string | undefined;
-    try {
-      const parseResult = parseToolParams(createMilestoneTaskSchema, params);
-      if (!parseResult.success) {
-        return parseResult.errorResult;
-      }
-      ({ title } = parseResult.data);
-      const { description, assignees } = parseResult.data;
+  execute: (input, context) => suspend(async () => {
+    const { title, description, assignees } = input.value;
 
-      logger.info("📋 Creating milestone task", {
-        agent: context.agent.name,
-        agentPubkey: context.agent.pubkey,
-        title,
-        descriptionLength: description.length,
-        assigneeCount: assignees?.length || 0,
-        phase: context.phase,
-        conversationId: context.conversationId,
+    logger.info("📋 Creating milestone task", {
+      agent: context.agentName,
+      agentPubkey: context.agentId,
+      title,
+      descriptionLength: description.length,
+      assigneeCount: assignees?.length || 0,
+      phase: context.phase,
+      conversationId: context.conversationId,
+    });
+
+    // Check if agent signer is available
+    const agentSigner = context.agentSigner;
+    if (!agentSigner) {
+      logger.warn("Agent signer not available, cannot create task", {
+        agent: context.agentName,
       });
+      return {
+        ok: false,
+        error: {
+          kind: "execution" as const,
+          tool: "create_milestone_task",
+          message: "Agent signer not available for creating task",
+        },
+      };
+    }
 
-      // Check if agent signer is available
-      if (!context.agentSigner) {
-        logger.warn("Agent signer not available, cannot create task", {
-          agent: context.agent.name,
-        });
-        return {
-          success: false,
-          error: "Agent signer not available for creating task",
-        };
-      }
+    // Get NDK instance
+    const ndk = getNDK();
+    if (!ndk) {
+      logger.error("NDK instance not available", {
+        agent: context.agentName,
+      });
+      return {
+        ok: false,
+        error: {
+          kind: "execution" as const,
+          tool: "create_milestone_task",
+          message: "NDK instance not available",
+        },
+      };
+    }
 
-      // Get NDK instance
-      const ndk = getNDK();
-      if (!ndk) {
-        logger.error("NDK instance not available", {
-          agent: context.agent.name,
-        });
-        return {
-          success: false,
-          error: "NDK instance not available",
-        };
-      }
+    // Get project context
+    const projectCtx = getProjectContext();
 
-      // Get project context
-      const projectCtx = getProjectContext();
-
+    try {
       // Create the task event
       const task = new NDKTask(ndk);
       task.title = title;
@@ -113,14 +104,14 @@ export const createMilestoneTaskTool: Tool = {
       task.tags.push(["phase", context.phase]);
 
       // If we're in a conversation, reference it as parent
-      if (context.conversation?.id) {
-        task.tags.push(["e", context.conversation.id, "", "reply"]);
+      if (context.conversationId) {
+        task.tags.push(["e", context.conversationId]);
       }
 
       // Add assignee tags if provided
       if (assignees && Array.isArray(assignees)) {
         const agents = Array.from(projectCtx.agents.values());
-        assignees.forEach((slug) => {
+        for (const slug of assignees) {
           const agent = agents.find((a) => a.slug === slug);
           if (agent?.pubkey) {
             task.tags.push(["p", agent.pubkey]);
@@ -133,16 +124,16 @@ export const createMilestoneTaskTool: Tool = {
               requestedSlug: slug,
             });
           }
-        });
+        }
       }
 
       // Sign and publish the event
-      await task.sign(context.agentSigner);
+      await task.sign(agentSigner);
       await task.publish();
 
       logger.info("✅ Successfully created milestone task", {
-        agent: context.agent.name,
-        agentPubkey: context.agent.pubkey,
+        agent: context.agentName,
+        agentPubkey: context.agentId,
         eventId: task.id,
         title,
         assigneeCount: assignees?.length || 0,
@@ -155,10 +146,12 @@ export const createMilestoneTaskTool: Tool = {
           ? `\nAssigned to: ${assignees.join(", ")}`
           : "\nNo specific assignees (available for any agent)";
 
+      const message = `✅ Milestone task created: "${title}"${assigneeText}\n\nTask ID: ${task.id}\n\nThe task is now available for the assigned agents to work on.`;
+
       return {
-        success: true,
-        output: `✅ Milestone task created: "${title}"${assigneeText}\n\nTask ID: ${task.id}\n\nThe task is now available for the assigned agents to work on.`,
-        metadata: {
+        ok: true,
+        value: {
+          message,
           eventId: task.id,
           title,
           descriptionLength: description.length,
@@ -168,17 +161,21 @@ export const createMilestoneTaskTool: Tool = {
     } catch (error) {
       logger.error("❌ Create milestone task tool failed", {
         error: error instanceof Error ? error.message : String(error),
-        agent: context.agent.name,
-        agentPubkey: context.agent.pubkey,
+        agent: context.agentName,
+        agentPubkey: context.agentId,
         title,
         phase: context.phase,
         conversationId: context.conversationId,
       });
+      
       return {
-        success: false,
-        output: "",
-        error: error instanceof Error ? error.message : String(error),
+        ok: false,
+        error: {
+          kind: "execution" as const,
+          tool: "create_milestone_task",
+          message: error instanceof Error ? error.message : String(error),
+        },
       };
     }
-  },
+  }),
 };

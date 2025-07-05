@@ -76,8 +76,6 @@ describe("Tool assignment", () => {
         it("should determine isBuiltIn before assigning tools", () => {
             // This test verifies that when creating an agent,
             // the isBuiltIn status is determined BEFORE calling getDefaultToolsForAgent
-            // Previously, agent.isBuiltIn was undefined when tools were assigned,
-            // causing built-in agents to be treated as custom agents
             
             const builtInSlugs = getBuiltInAgents().map(a => a.slug);
             

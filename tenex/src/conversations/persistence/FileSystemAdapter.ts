@@ -45,12 +45,15 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
       if (conversation.agentContexts) {
         for (const [key, context] of conversation.agentContexts.entries()) {
           agentContextsObj[key] = {
-            ...context,
+            agentSlug: context.agentSlug,
             messages: context.messages.map((msg) => ({
               role: msg.role,
               content: msg.content,
+              reasoning: msg.reasoning,
+              attachments: msg.attachments,
             })),
-            lastUpdate: context.lastUpdate.toISOString(),
+            tokenCount: context.tokenCount,
+            lastUpdate: context.lastUpdate instanceof Date ? context.lastUpdate.toISOString() : context.lastUpdate,
           };
         }
       }
@@ -107,7 +110,14 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
         for (const [agentSlug, contextData] of Object.entries(data.agentContexts)) {
           const context: AgentContext = {
             agentSlug: contextData.agentSlug,
-            messages: contextData.messages.map((msg) => new Message(msg.role, msg.content)),
+            messages: contextData.messages.map((msg) => {
+              const message = new Message(msg.role, msg.content || null);
+              if (msg.reasoning) message.reasoning = msg.reasoning;
+              if (msg.attachments) {
+                msg.attachments.forEach(att => message.attach(att));
+              }
+              return message;
+            }),
             tokenCount: contextData.tokenCount,
             lastUpdate: new Date(contextData.lastUpdate),
           };

@@ -5,7 +5,7 @@ export type ShutdownHandler = (signal: string) => Promise<void>;
 export function setupGracefulShutdown(shutdownHandler: ShutdownHandler): void {
   let isShuttingDown = false;
 
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string): Promise<void> => {
     if (isShuttingDown) return;
     isShuttingDown = true;
 

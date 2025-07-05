@@ -1,9 +1,8 @@
 import type { AgentConfig } from "@/agents/types";
-import { NDKAgent } from "@/events/NDKAgent";
 import { EVENT_KINDS } from "@/llm";
 import { logger } from "@/utils/logger";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKEvent, NDKKind, type NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { NDKEvent, type NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 /**
  * Service for publishing agent-related Nostr events

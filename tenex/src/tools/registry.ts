@@ -4,7 +4,6 @@ import { continueTool } from "./implementations/continue";
 import { createMilestoneTaskTool } from "./implementations/createMilestoneTask";
 import { endConversationTool } from "./implementations/endConversation";
 import { generateInventoryTool } from "./implementations/generateInventory";
-import { getTimeTool } from "./implementations/getTime";
 import { learnTool } from "./implementations/learn";
 import { readFileTool } from "./implementations/readFile";
 import { writeContextFileTool } from "./implementations/writeContextFile";
@@ -12,7 +11,7 @@ import { yieldBackTool } from "./implementations/yieldBack";
 import type { Tool } from "./types";
 
 // Registry of all available tools
-const toolsMap = new Map<string, Tool>([
+const toolsMap = new Map<string, Tool<unknown, unknown>>([
   ["read_file", readFileTool],
   ["write_context_file", writeContextFileTool],
   ["claude_code", claudeCodeTool],
@@ -28,4 +27,14 @@ const toolsMap = new Map<string, Tool>([
 
 export function getTool(name: string): Tool | undefined {
   return toolsMap.get(name);
+}
+
+export function getTools(names: string[]): Tool[] {
+  return names
+    .map(name => toolsMap.get(name))
+    .filter((tool): tool is Tool => tool !== undefined);
+}
+
+export function getAllTools(): Tool[] {
+  return Array.from(toolsMap.values());
 }

@@ -123,10 +123,9 @@ The system uses a **star topology** with the orchestrator as the central hub:
 2. **Feature-Based Organization**: Code is organized by feature/domain
 3. **Clean Code Only**: No backwards compatibility unless explicitly requested
 4. **Direct Modifications**: Modify existing code directly, don't extend or wrap
-5. **Clarity-Based Routing**: Orchestrator routes based on request clarity, not complexity
+5. **Clarity-Based Routing**: Orchestrator routes based on request clarity
 
 ### Control Flow
-After the ongoing refactor (see ORCHESTRATOR_CONTROL_FLOW_PLAN.md):
 - Well-defined requests: Skip PLAN, go directly to EXECUTE
 - Ambiguous requests: Go through PLAN phase first
 - Vague requests: Start with BRAINSTORM phase

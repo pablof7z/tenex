@@ -1,23 +1,34 @@
 import { NostrPublisher } from "@/nostr/NostrPublisher";
 import { getToolLogger } from "@/tools/toolLogger";
 import type {
-  PluginParameter as TenexPluginParameter,
   Tool,
   ToolExecutionContext,
+  ToolExecutor,
+  ToolError,
+  ToolExecutionResult,
+} from "@/tools/types";
+import { 
+  createToolExecutor, 
+  matchToolResult,
 } from "@/tools/types";
 import { logger } from "@/utils/logger";
-import { Plugin, type PluginExecutionContext, type PluginParameter } from "multi-llm-ts";
+import { Plugin, type PluginExecutionContext, type PluginParameter as MultiLLMPluginParameter } from "multi-llm-ts";
+import { serializeToolResult } from "./ToolResult";
 
 /**
  * Adapter that converts TENEX Tool to multi-llm-ts Plugin
- * Follows SRP: Only responsible for bridging between Tool and Plugin interfaces
+ * Handles all tool types: Pure, Effect, Control, Terminal
  */
 export class ToolPlugin extends Plugin {
+  private readonly executor: ToolExecutor;
+
   constructor(
     private readonly tool: Tool,
     private readonly tenexContext: ToolExecutionContext
   ) {
     super();
+    // Create executor with appropriate capabilities
+    this.executor = createToolExecutor(tenexContext);
   }
 
   serializeInTools(): boolean {
@@ -36,17 +47,40 @@ export class ToolPlugin extends Plugin {
     return this.tool.description;
   }
 
-  getParameters(): PluginParameter[] {
-    // Convert TENEX parameters to multi-llm-ts parameters
-    return this.tool.parameters.map(
-      (param: TenexPluginParameter): PluginParameter => ({
-        name: param.name,
-        type: param.type,
-        description: param.description,
-        required: param.required,
-        ...(param.enum ? { enum: param.enum } : {}),
-      })
-    );
+  getParameters(): MultiLLMPluginParameter[] {
+    // Extract parameter info from schema shape
+    const shape = this.tool.parameters.shape;
+    
+    if (shape.type === "object" && shape.properties) {
+      return Object.entries(shape.properties).map(([name, prop]) => {
+        const param: MultiLLMPluginParameter = {
+          name,
+          type: this.mapSchemaTypeToPluginType(prop.type),
+          description: prop.description,
+          required: true, // TODO: Handle optional fields from schema
+        };
+        
+        if (prop.type === "string" && prop.enum) {
+          param.enum = [...prop.enum]; // Convert readonly to mutable
+        }
+        
+        return param;
+      });
+    }
+    
+    // Fallback for non-object schemas
+    return [];
+  }
+
+  private mapSchemaTypeToPluginType(schemaType: string): "string" | "number" | "boolean" | "object" | "array" {
+    switch (schemaType) {
+      case "string": return "string";
+      case "number": return "number";
+      case "boolean": return "boolean";
+      case "array": return "array";
+      case "object": return "object";
+      default: return "string";
+    }
   }
 
   getPreparationDescription(_tool: string): string {
@@ -106,9 +140,52 @@ export class ToolPlugin extends Plugin {
     }
 
     try {
-      // Execute the tool with TENEX context
-      const result = await this.tool.execute(parameters, this.tenexContext);
+      // Execute the tool using the new type-safe executor
+      const result = await this.executor.execute(this.tool, parameters);
       const endTime = Date.now();
+
+      // Serialize the typed result for transport through LLM layer
+      const serializedResult = serializeToolResult(result);
+      
+      // Create a human-readable output message
+      const outputMessage = matchToolResult(result, {
+        pure: (r) => String(r.output),
+        effect: (r) => r.success && r.output !== undefined ? String(r.output) : "",
+        control: (r) => {
+          if (!r.success || !r.flow) return "Control flow failed";
+          if (r.flow.type === "continue") {
+            return `Routing to ${r.flow.routing.destinations.length} agents`;
+          }
+          return `Control flow: ${r.flow.type}`;
+        },
+        terminal: (r) => {
+          if (!r.success || !r.termination) return "Termination failed";
+          if (r.termination.type === "yield_back") {
+            return r.termination.completion.response;
+          } else if (r.termination.type === "end_conversation") {
+            return r.termination.result.response;
+          }
+          return "Execution terminated";
+        },
+      });
+
+      // Extract error message if present (error is not on all result types)
+      const errorMessage = matchToolResult(result, {
+        pure: () => undefined,
+        effect: (r) => r.error ? this.formatError(r.error) : undefined,
+        control: (r) => r.error ? this.formatError(r.error) : undefined,
+        terminal: (r) => r.error ? this.formatError(r.error) : undefined,
+      });
+
+      // Return both serialized result and human-readable output
+      const processedResult = {
+        success: result.success,
+        output: outputMessage,
+        error: errorMessage,
+        duration: result.duration,
+        // Include the full typed result for ReasonActLoop
+        __typedResult: serializedResult,
+      };
 
       // Log the successful tool execution
       const toolLogger = getToolLogger();
@@ -117,12 +194,7 @@ export class ToolPlugin extends Plugin {
           this.tool.name,
           parameters,
           this.tenexContext,
-          {
-            success: result.success,
-            output: result.output,
-            error: result.error,
-            duration: endTime - startTime,
-          },
+          result,  // Pass the original typed result
           {
             startTime,
             endTime,
@@ -130,10 +202,40 @@ export class ToolPlugin extends Plugin {
         );
       }
 
-      return result;
+      // Publish completion status
+      if (publisher && processedResult.success) {
+        try {
+          await publisher.publishToolStatus({
+            tool: this.tool.name,
+            status: "completed",
+            result: processedResult,
+            duration: result.duration,
+          });
+        } catch (publishError) {
+          logger.error("Failed to publish tool completion", {
+            tool: this.tool.name,
+            error: publishError instanceof Error ? publishError.message : String(publishError),
+          });
+        }
+      }
+
+      return processedResult;
     } catch (error) {
       const endTime = Date.now();
       const duration = endTime - startTime;
+
+      // Create an error result for logging
+      const errorResult: ToolExecutionResult = {
+        kind: "effect",
+        success: false,
+        output: undefined,
+        error: {
+          kind: "execution",
+          tool: this.tool.name,
+          message: error instanceof Error ? error.message : String(error),
+        },
+        duration,
+      };
 
       // Log the failed tool execution
       const toolLogger = getToolLogger();
@@ -142,11 +244,7 @@ export class ToolPlugin extends Plugin {
           this.tool.name,
           parameters,
           this.tenexContext,
-          {
-            success: false,
-            error: error instanceof Error ? error.message : String(error),
-            duration,
-          },
+          errorResult,
           {
             startTime,
             endTime,
@@ -160,7 +258,7 @@ export class ToolPlugin extends Plugin {
           await publisher.publishToolStatus({
             tool: this.tool.name,
             status: "failed",
-            error: error instanceof Error ? error.message : String(error),
+            error: errorResult.error ? this.formatError(errorResult.error) : "Unknown error",
             duration,
           });
 
@@ -180,6 +278,17 @@ export class ToolPlugin extends Plugin {
 
       // Re-throw the original error
       throw error;
+    }
+  }
+
+  private formatError(error: ToolError): string {
+    switch (error.kind) {
+      case "validation":
+        return `Validation error in field '${error.field}': ${error.message}`;
+      case "execution":
+        return `Execution error in tool '${error.tool}': ${error.message}`;
+      case "system":
+        return `System error: ${error.message}`;
     }
   }
 }

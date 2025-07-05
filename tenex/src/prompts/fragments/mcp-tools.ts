@@ -48,10 +48,11 @@ export const mcpToolsFragment: PromptFragment<MCPToolsArgs> = {
           content += `${tool.description}\n`;
 
           // Add parameter information if available
-          if (tool.parameters && tool.parameters.length > 0) {
+          if (tool.parameters && tool.parameters.shape.type === "object" && tool.parameters.shape.properties) {
             content += "\nParameters:\n";
-            for (const param of tool.parameters) {
-              content += `  - ${param.name} (${param.type})${param.required ? " *required*" : ""}: ${param.description}\n`;
+            for (const [paramName, paramSchema] of Object.entries(tool.parameters.shape.properties)) {
+              const paramDescription = paramSchema.description || "No description";
+              content += `  - ${paramName} (${paramSchema.type}): ${paramDescription}\n`;
             }
           }
           content += "\n";

@@ -3,73 +3,55 @@ import { logger } from "@/utils/logger";
 import { generateRepomixOutput } from "@/utils/repomix";
 import { Message } from "multi-llm-ts";
 import { z } from "zod";
-import type { Tool, ToolExecutionContext, ToolResult } from "../types";
-import { parseToolParams } from "../utils";
+import type { EffectTool } from "../types";
+import { createZodSchema, suspend } from "../types";
 
 const analyzeSchema = z.object({
-  prompt: z.string().describe("The analysis prompt or question about the codebase"),
+  prompt: z.string().min(1).describe("The analysis prompt or question about the codebase"),
 });
 
-export const analyze: Tool = {
+interface AnalyzeInput {
+  prompt: string;
+}
+
+interface AnalyzeOutput {
+  analysis: string;
+  repoSize: number;
+}
+
+export const analyze: EffectTool<AnalyzeInput, AnalyzeOutput> = {
+  brand: { _brand: "effect" },
   name: "analyze",
   description: "Analyze the entire codebase using repomix to provide context-aware insights",
-  parameters: [
-    {
-      name: "prompt",
-      type: "string",
-      description: "The analysis prompt or question about the codebase",
-      required: true,
-    },
-  ],
+  
+  parameters: createZodSchema(analyzeSchema),
 
-  async execute(
-    params: Record<string, unknown>,
-    context: ToolExecutionContext
-  ): Promise<ToolResult> {
+  execute: (input, context) => suspend(async () => {
+    const { prompt } = input.value;
+    
+    logger.info("Running analyze tool", { prompt });
+
+    // Publish custom typing indicator (disabled for now - ExecutionContext doesn't have these properties)
+    // TODO: Add typing indicator support
+
+    let repomixResult;
     try {
-      const parseResult = parseToolParams(analyzeSchema, params);
-      if (!parseResult.success) {
-        return parseResult.errorResult;
-      }
-      const { prompt } = parseResult.data;
+      repomixResult = await generateRepomixOutput(context.projectPath);
+    } catch (error) {
+      return {
+        ok: false,
+        error: {
+          kind: "execution" as const,
+          tool: "analyze",
+          message: `Failed to generate repomix output: ${error instanceof Error ? error.message : String(error)}`,
+          cause: error,
+        },
+      };
+    }
 
-      logger.info("Running analyze tool", { prompt });
-
-      // Publish custom typing indicator
-      if (context.triggeringEvent && context.agent && context.conversation) {
-        try {
-          const { NostrPublisher } = await import("@/nostr/NostrPublisher");
-          const { EVENT_KINDS } = await import("@/llm/types");
-          const publisher = new NostrPublisher({
-            conversation: context.conversation,
-            agent: context.agent,
-            triggeringEvent: context.triggeringEvent,
-          });
-
-          // Create a custom typing indicator event
-          const typingEvent = publisher.createBaseReply();
-          typingEvent.kind = EVENT_KINDS.TYPING_INDICATOR;
-          typingEvent.content = `Analyzing repository to ${prompt.toLowerCase()}`;
-          
-          await typingEvent.sign(context.agent.signer!);
-          await typingEvent.publish();
-
-          logger.debug("Published custom typing indicator for analyze tool", {
-            content: typingEvent.content,
-            agent: context.agent.name,
-          });
-        } catch (error) {
-          logger.warn("Failed to publish typing indicator for analyze tool", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-
-      const repomixResult = await generateRepomixOutput(context.projectPath);
-
-      try {
-        // Prepare the prompt for the LLM
-        const analysisPrompt = `You are analyzing a codebase. Here is the complete repository content in XML format from repomix:
+    try {
+      // Prepare the prompt for the LLM
+      const analysisPrompt = `You are analyzing a codebase. Here is the complete repository content in XML format from repomix:
 
 <repository>
 ${repomixResult.content}
@@ -81,91 +63,47 @@ ${prompt}
 
 Provide a clear, structured response focused on the specific question asked.`;
 
-        // Call the LLM with the analyze-specific configuration
-        const llmRouter = await loadLLMRouter(context.projectPath);
-        const userMessage = new Message("user", analysisPrompt);
-        const response = await llmRouter.complete({
-          messages: [userMessage],
-          options: {
-            temperature: 0.3,
-            maxTokens: 4000,
-            configName: "defaults.analyze",
-          },
-        });
+      // Call the LLM with the analyze-specific configuration
+      const llmRouter = await loadLLMRouter(context.projectPath);
+      const userMessage = new Message("user", analysisPrompt);
+      const response = await llmRouter.complete({
+        messages: [userMessage],
+        options: {
+          temperature: 0.3,
+          maxTokens: 4000,
+          configName: "defaults.analyze",
+        },
+      });
 
-        logger.info("Analysis completed successfully");
+      logger.info("Analysis completed successfully");
 
-        // Stop typing indicator
-        if (context.triggeringEvent && context.agent && context.conversation) {
-          try {
-            const { NostrPublisher } = await import("@/nostr/NostrPublisher");
-            const { EVENT_KINDS } = await import("@/llm/types");
-            const publisher = new NostrPublisher({
-              conversation: context.conversation,
-              agent: context.agent,
-              triggeringEvent: context.triggeringEvent,
-            });
+      // Stop typing indicator (disabled for now)
+      // TODO: Add typing indicator support
 
-            // Create typing indicator stop event
-            const stopTypingEvent = publisher.createBaseReply();
-            stopTypingEvent.kind = EVENT_KINDS.TYPING_INDICATOR_STOP;
-            stopTypingEvent.content = "";
-            
-            await stopTypingEvent.sign(context.agent.signer!);
-            await stopTypingEvent.publish();
-
-            logger.debug("Published typing indicator stop for analyze tool", {
-              agent: context.agent.name,
-            });
-          } catch (error) {
-            logger.warn("Failed to publish typing indicator stop for analyze tool", {
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
-        }
-
-        return {
-          success: true,
-          output: response.content || "",
-          metadata: {
-            repoSize: repomixResult.size,
-          },
-        };
-      } finally {
-        repomixResult.cleanup();
-      }
+      return {
+        ok: true,
+        value: {
+          analysis: response.content || "",
+          repoSize: repomixResult.size,
+        },
+      };
     } catch (error) {
       logger.error("Analyze tool failed", { error });
       
-      // Stop typing indicator on error
-      if (context.triggeringEvent && context.agent && context.conversation) {
-        try {
-          const { NostrPublisher } = await import("@/nostr/NostrPublisher");
-          const { EVENT_KINDS } = await import("@/llm/types");
-          const publisher = new NostrPublisher({
-            conversation: context.conversation,
-            agent: context.agent,
-            triggeringEvent: context.triggeringEvent,
-          });
-
-          const stopTypingEvent = publisher.createBaseReply();
-          stopTypingEvent.kind = EVENT_KINDS.TYPING_INDICATOR_STOP;
-          stopTypingEvent.content = "";
-          
-          await stopTypingEvent.sign(context.agent.signer!);
-          await stopTypingEvent.publish();
-        } catch (publishError) {
-          logger.warn("Failed to publish typing indicator stop on error", {
-            error: publishError instanceof Error ? publishError.message : String(publishError),
-          });
-        }
-      }
+      // Stop typing indicator on error (disabled for now)
+      // TODO: Add typing indicator support
       
       return {
-        success: false,
-        output: "",
-        error: error instanceof Error ? error.message : String(error),
+        ok: false,
+        error: {
+          kind: "execution" as const,
+          tool: "analyze",
+          message: error instanceof Error ? error.message : String(error),
+          cause: error,
+        },
       };
+    } finally {
+      repomixResult.cleanup();
     }
-  },
+  }),
 };

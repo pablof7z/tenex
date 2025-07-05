@@ -108,7 +108,7 @@ describe("AgentRegistry", () => {
             expect(developer).toBeDefined();
             expect(developer?.name).toBe("Developer");
             expect(developer?.role).toBe("Software Developer");
-            expect(developer?.tools).toEqual(["read_file", "analyze"]);
+            expect(developer?.tools.map(t => t.name)).toEqual(["read_file", "analyze"]);
 
             // Ensure agent reviewer
             const reviewer = await registry.ensureAgent("reviewer", {

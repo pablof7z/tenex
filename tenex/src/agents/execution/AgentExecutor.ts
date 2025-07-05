@@ -14,16 +14,12 @@ import {
 import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
 import { type ProjectContext, getProjectContext } from "@/services";
 import { mcpService } from "@/services/mcp/MCPService";
-import { getTool } from "@/tools/registry";
 import type {
-  ContinueMetadata,
-  EndConversationMetadata,
-  ToolExecutionMetadata,
+  ContinueFlow,
+  EndConversation,
   ToolExecutionResult,
-  ToolOutput,
-  YieldBackMetadata,
+  YieldBack,
 } from "@/tools/types";
-import { isContinueMetadata, isEndConversationMetadata, isYieldBackMetadata } from "@/tools/types";
 import {
   type TracingContext,
   createAgentExecutionContext,
@@ -95,8 +91,7 @@ export class AgentExecutor {
       await publisher.publishTypingIndicator("start");
 
       // Get tools for response processing - use agent's configured tools
-      const toolNames = context.agent.tools || [];
-      const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
+      const tools = context.agent.tools || [];
 
       // Add MCP tools if available and agent has MCP access
       let allTools = tools;
@@ -124,8 +119,8 @@ export class AgentExecutor {
       const finalResponse = streamResult.finalResponse;
       const finalContent = streamResult.finalContent;
       const allToolResults = streamResult.allToolResults || [];
-      const continueMetadata = streamResult.continueMetadata;
-      const completeMetadata = streamResult.completeMetadata;
+      const continueFlow = streamResult.continueFlow;
+      const termination = streamResult.termination;
 
       // Build metadata with final response from ReasonActLoop
       const llmMetadata = await buildLLMMetadata(finalResponse, messages);
@@ -133,45 +128,51 @@ export class AgentExecutor {
       // 6. Process routing decisions
       let phaseTransition: string | undefined;
 
-      if (continueMetadata) {
-        phaseTransition = continueMetadata.routingDecision.phase;
+      if (continueFlow) {
+        phaseTransition = continueFlow.routing.phase;
 
         // Handle phase transition in conversation manager with enhanced handoff
         if (this.conversationManager && phaseTransition) {
           await this.conversationManager.updatePhase(
             context.conversation.id,
             phaseTransition as Phase,
-            continueMetadata.routingDecision.message,
+            continueFlow.routing.message,
             context.agent.pubkey,
             context.agent.name,
-            continueMetadata.routingDecision.reason,
+            continueFlow.routing.reason,
             // Enhanced handoff fields - the agent should have provided these
-            continueMetadata.routingDecision.summary
+            typeof continueFlow.routing.context === 'object' && 
+            continueFlow.routing.context !== null &&
+            'summary' in continueFlow.routing.context
+              ? String(continueFlow.routing.context.summary)
+              : undefined
           );
         }
       }
 
       // Handle yield_back/end_conversation tool metadata as a same-phase handoff
-      if (completeMetadata && this.conversationManager && !context.agent.isOrchestrator) {
+      if (termination && this.conversationManager && !context.agent.isOrchestrator) {
         // When a non-orchestrator agent completes, create a handoff record for the orchestrator
-        const { response, summary } = completeMetadata.completion;
+        if (termination.type === "yield_back") {
+          const { response, summary } = termination.completion;
 
-        logger.info("[AGENT_EXECUTOR] Creating handoff from completion tool", {
-          fromAgent: context.agent.name,
-          toOrchestrator: true,
-          summary: `${summary.substring(0, 100)}...`,
-        });
+          logger.info("[AGENT_EXECUTOR] Creating handoff from completion tool", {
+            fromAgent: context.agent.name,
+            toOrchestrator: true,
+            summary: `${summary.substring(0, 100)}...`,
+          });
 
-        // Use updatePhase to create a handoff record without changing phase
-        await this.conversationManager.updatePhase(
-          context.conversation.id,
-          context.phase, // Keep the same phase
-          response, // The response becomes the handoff message
-          context.agent.pubkey,
-          context.agent.name,
-          `Task completed by ${context.agent.name}`,
-          summary // Pass the detailed summary to the orchestrator
-        );
+          // Use updatePhase to create a handoff record without changing phase
+          await this.conversationManager.updatePhase(
+            context.conversation.id,
+            context.phase, // Keep the same phase
+            response, // The response becomes the handoff message
+            context.agent.pubkey,
+            context.agent.name,
+            `Task completed by ${context.agent.name}`,
+            summary // Pass the detailed summary to the orchestrator
+          );
+        }
       }
 
       // Add the agent's response to their context
@@ -200,8 +201,8 @@ export class AgentExecutor {
           context,
           triggeringEvent,
           finalContent,
-          continueMetadata,
-          completeMetadata,
+          continueFlow,
+          termination,
           llmMetadata,
           tracingContext,
           phaseTransition
@@ -396,8 +397,8 @@ export class AgentExecutor {
     context: AgentExecutionContext,
     triggeringEvent: NDKEvent,
     content: string,
-    continueMetadata?: ContinueMetadata,
-    completeMetadata?: YieldBackMetadata | EndConversationMetadata,
+    continueFlow?: ContinueFlow,
+    termination?: YieldBack | EndConversation,
     llmMetadata?: LLMMetadata,
     tracingContext?: TracingContext,
     phaseTransition?: string
@@ -417,8 +418,8 @@ export class AgentExecutor {
 
     const event = await publisher.publishResponse({
       content,
-      continueMetadata,
-      completeMetadata,
+      continueMetadata: continueFlow,
+      completeMetadata: termination,
       llmMetadata,
       additionalTags,
     });
@@ -440,8 +441,8 @@ export class AgentExecutor {
     let finalResponse: CompletionResponse | undefined;
     let finalContent = "";
     const allToolResults: ToolExecutionResult[] = [];
-    let continueMetadata: ContinueMetadata | undefined;
-    let completeMetadata: YieldBackMetadata | EndConversationMetadata | undefined;
+    let continueFlow: ContinueFlow | undefined;
+    let termination: YieldBack | EndConversation | undefined;
     let wasPublished = false;
 
     // Process the stream - ReasonActLoop handles all publishing
@@ -465,58 +466,37 @@ export class AgentExecutor {
           break;
 
         case "tool_complete": {
-          // Extract tool result and metadata
-          const resultWithMetadata = event.result as
-            | {
-                metadata?: unknown;
-                success?: boolean;
-                error?: string;
-              }
-            | null
-            | undefined;
+          // Parse the raw result to get the ToolExecutionResult
+          const toolResult = event.result as ToolExecutionResult;
+          allToolResults.push(toolResult);
 
           // Check if tool execution failed and publish error
-          if (resultWithMetadata?.success === false && resultWithMetadata?.error && publisher) {
+          if (!toolResult.success && toolResult.error && publisher) {
             try {
               await publisher.publishError(
-                `Tool "${event.tool}" failed: ${resultWithMetadata.error}`
+                `Tool "${event.tool}" failed: ${toolResult.error.message}`
               );
               tracingLogger.info("Published tool error to conversation", {
                 tool: event.tool,
-                error: resultWithMetadata.error,
+                error: toolResult.error.message,
               });
             } catch (error) {
               tracingLogger.error("Failed to publish tool error", {
                 tool: event.tool,
-                originalError: resultWithMetadata.error,
+                originalError: toolResult.error.message,
                 publishError: error instanceof Error ? error.message : String(error),
               });
             }
           }
 
-          const toolResult: ToolExecutionResult = {
-            success: resultWithMetadata?.success ?? true,
-            output: event.result as ToolOutput,
-            duration: 0,
-            toolName: event.tool,
-            metadata: resultWithMetadata?.metadata as
-              | ToolExecutionMetadata
-              | ContinueMetadata
-              | YieldBackMetadata
-              | EndConversationMetadata
-              | undefined,
-          };
-
-          allToolResults.push(toolResult);
-
-          // Check for special metadata
-          if (resultWithMetadata?.metadata) {
-            const metadata = resultWithMetadata.metadata;
-            if (isContinueMetadata(metadata)) {
-              continueMetadata = metadata;
-            } else if (isYieldBackMetadata(metadata) || isEndConversationMetadata(metadata)) {
-              completeMetadata = metadata;
+          // Extract control flow and termination from tool results
+          if (toolResult.kind === "control" && toolResult.success && toolResult.flow) {
+            // Only accept ContinueFlow, not other control flow types
+            if (toolResult.flow.type === "continue") {
+              continueFlow = toolResult.flow;
             }
+          } else if (toolResult.kind === "terminal" && toolResult.success && toolResult.termination) {
+            termination = toolResult.termination;
           }
           break;
         }
@@ -546,8 +526,8 @@ export class AgentExecutor {
       finalContent,
       toolExecutions: allToolResults.length,
       allToolResults,
-      continueMetadata,
-      completeMetadata,
+      continueFlow,
+      termination,
       wasPublished,
     };
   }

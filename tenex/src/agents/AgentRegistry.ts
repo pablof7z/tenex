@@ -247,13 +247,13 @@ export class AgentRegistry {
     };
 
     // Set tools - use explicit tools if configured, otherwise use defaults
-    if (agentDefinition.tools !== undefined) {
-      // User has explicitly defined the tools array (even if empty)
-      agent.tools = agentDefinition.tools;
-    } else {
-      // Pass the complete agent object to the refactored function
-      agent.tools = getDefaultToolsForAgent(agent);
-    }
+    const toolNames = agentDefinition.tools !== undefined 
+      ? agentDefinition.tools 
+      : getDefaultToolsForAgent(agent);
+    
+    // Convert tool names to Tool instances
+    const { getTools } = await import("@/tools/registry");
+    agent.tools = getTools(toolNames);
 
     // Store in both maps
     this.agents.set(name, agent);

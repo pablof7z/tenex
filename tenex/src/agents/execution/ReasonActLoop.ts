@@ -1,30 +1,28 @@
 import type { Phase } from "@/conversations/phases";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
-import type { StreamPublisher } from "@/nostr/NostrPublisher";
-import type { LLMMetadata } from "@/nostr/types";
+import { StreamPublisher } from "@/nostr/NostrPublisher";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type {
-  ContinueMetadata,
-  EndConversationMetadata,
-  ToolExecutionMetadata,
   ToolExecutionResult,
-  ToolOutput,
-  YieldBackMetadata,
+  ContinueFlow,
+  YieldBack,
+  EndConversation,
 } from "@/tools/types";
-import { isContinueMetadata, isEndConversationMetadata, isYieldBackMetadata } from "@/tools/types";
+import { matchToolResult } from "@/tools/types";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import type { Message } from "multi-llm-ts";
+import { deserializeToolResult, isSerializedToolResult } from "@/llm/ToolResult";
 
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 
 interface StreamingState {
   allToolResults: ToolExecutionResult[];
-  continueMetadata: ContinueMetadata | undefined;
-  completeMetadata: YieldBackMetadata | EndConversationMetadata | undefined;
+  continueFlow: ContinueFlow | undefined;
+  termination: YieldBack | EndConversation | undefined;
   finalResponse: CompletionResponse | undefined;
   fullContent: string;
   streamPublisher: StreamPublisher | undefined;
@@ -44,10 +42,10 @@ export interface ReasonActResult {
   finalResponse: CompletionResponse;
   finalContent: string;
   toolExecutions: number;
-  allToolResults?: ToolExecutionResult[]; // Array of actual tool execution results
-  continueMetadata?: ContinueMetadata;
-  completeMetadata?: YieldBackMetadata | EndConversationMetadata;
-  wasPublished?: boolean; // Track if response was published during streaming
+  allToolResults?: ToolExecutionResult[];
+  continueFlow?: ContinueFlow;
+  termination?: YieldBack | EndConversation;
+  wasPublished?: boolean;
 }
 
 export class ReasonActLoop {
@@ -108,20 +106,20 @@ export class ReasonActLoop {
       finalContent: state.fullContent,
       toolExecutions: state.allToolResults.length,
       allToolResults: state.allToolResults,
-      continueMetadata: state.continueMetadata,
-      completeMetadata: state.completeMetadata,
+      continueFlow: state.continueFlow,
+      termination: state.termination,
       wasPublished: !!state.streamPublisher,
     };
   }
 
   private initializeStreamingState(): StreamingState {
     return {
-      allToolResults: [] as ToolExecutionResult[],
-      continueMetadata: undefined as ContinueMetadata | undefined,
-      completeMetadata: undefined as YieldBackMetadata | EndConversationMetadata | undefined,
-      finalResponse: undefined as CompletionResponse | undefined,
+      allToolResults: [],
+      continueFlow: undefined,
+      termination: undefined,
+      finalResponse: undefined,
       fullContent: "",
-      streamPublisher: undefined as StreamPublisher | undefined,
+      streamPublisher: undefined,
     };
   }
 
@@ -155,9 +153,15 @@ export class ReasonActLoop {
         phase: context.phase,
         agent: context.agent,
         conversation: context.conversation,
-        agentSigner: context.agent.signer,
-        conversationRootEventId: context.conversation.history[0]?.id,
+        conversationRootEventId: context.conversation.id,
         triggeringEvent: context.eventToReply,
+        // Enhanced context for tool system
+        agentId: context.agent.pubkey,
+        agentName: context.agent.name,
+        isOrchestrator: context.agent.isOrchestrator,
+        availableAgents: [], // TODO: Pass available agents
+        orchestratorPubkey: "", // TODO: Get orchestrator pubkey
+        userPubkey: "", // TODO: Get user pubkey from conversation
       },
     });
   }
@@ -167,23 +171,23 @@ export class ReasonActLoop {
     tracingLogger: TracingLogger,
     context: ReasonActContext
   ): StreamPublisher | undefined {
-    const streamPublisher = publisher?.createStreamPublisher();
-    if (!streamPublisher) {
-      tracingLogger.info("No publisher provided - streaming without publishing", {
-        agent: context.agent.name,
-      });
-    }
+    if (!publisher) return undefined;
+    
+    const streamPublisher = new StreamPublisher(publisher);
+    tracingLogger.info("Stream publisher initialized", {
+      agent: context.agent.name,
+    });
     return streamPublisher;
   }
 
   private async *processStreamEvents(
     stream: AsyncIterable<StreamEvent>,
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
     context: ReasonActContext
-  ): AsyncIterable<StreamEvent> {
+  ): AsyncGenerator<StreamEvent> {
     state.streamPublisher = streamPublisher;
 
     for await (const event of stream) {
@@ -195,7 +199,7 @@ export class ReasonActLoop {
           break;
 
         case "tool_start":
-          await this.handleToolStartEvent(event, streamPublisher, publisher, tracingLogger);
+          await this.handleToolStartEvent(streamPublisher, publisher, event.tool, tracingLogger);
           break;
 
         case "tool_complete": {
@@ -208,13 +212,13 @@ export class ReasonActLoop {
             context
           );
 
-          // If this was a terminal tool (continue, yield_back, or end_conversation), stop processing the stream
+          // If this was a terminal tool, stop processing the stream
           if (isTerminal) {
             tracingLogger.info("Terminal tool detected - ending stream processing", {
               tool: event.tool,
-              type: event.tool === "continue" ? "routing" : "completion",
+              type: state.continueFlow ? "routing" : "completion",
             });
-            return; // Exit the stream processing loop
+            return;
           }
           break;
         }
@@ -224,7 +228,7 @@ export class ReasonActLoop {
           break;
 
         case "error":
-          tracingLogger.error("Streaming error", { error: event.error });
+          this.handleErrorEvent(event, state, streamPublisher, tracingLogger);
           break;
       }
     }
@@ -240,232 +244,201 @@ export class ReasonActLoop {
   }
 
   private async handleToolStartEvent(
-    event: { tool: string },
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
+    toolName: string,
     tracingLogger: TracingLogger
   ): Promise<void> {
     await streamPublisher?.flush();
-
-    if (publisher) {
-      try {
-        await publisher.publishTypingIndicator("start");
-      } catch (error) {
-        tracingLogger.info("Failed to publish typing indicator", {
-          tool: event.tool,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
+    await this.publishTypingIndicator(publisher, toolName, tracingLogger);
   }
 
   private async handleToolCompleteEvent(
     event: { tool: string; result: unknown },
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
     context: ReasonActContext
   ): Promise<boolean> {
-    const toolResult = this.extractToolResult(event);
+    const toolResult = this.parseToolResult(event);
     state.allToolResults.push(toolResult);
 
-    this.processToolMetadata(toolResult, state, tracingLogger, context);
+    this.processToolResult(toolResult, state, tracingLogger, context);
 
     await streamPublisher?.flush();
     await this.stopTypingIndicator(publisher, event.tool, tracingLogger);
 
-    // Check if this is a terminal tool (continue, yield_back, or end_conversation)
-    const isTerminal = toolResult.success && (!!state.continueMetadata || !!state.completeMetadata);
+    // Check if this is a terminal tool
+    const isTerminal = this.isTerminalResult(toolResult);
 
     return isTerminal;
   }
 
-  private extractToolResult(event: { tool: string; result: unknown }): ToolExecutionResult {
-    const resultWithMetadata = event.result as
-      | {
-          metadata?: unknown;
-          success?: boolean;
-        }
-      | null
-      | undefined;
+  private parseToolResult(event: { tool: string; result: unknown }): ToolExecutionResult {
+    // Check if we have a typed result from ToolPlugin
+    if (!event.result || typeof event.result !== "object") {
+      throw new Error(`Tool '${event.tool}' returned invalid result format`);
+    }
+    
+    const result = event.result as Record<string, unknown>;
+    
+    // Tool results must include the typed result
+    if (!result.__typedResult || !isSerializedToolResult(result.__typedResult)) {
+      throw new Error(
+        `Tool '${event.tool}' returned invalid result format. Missing or invalid __typedResult.`
+      );
+    }
 
-    return {
-      success: true,
-      output: event.result as ToolOutput,
-      duration: 0,
-      toolName: event.tool,
-      metadata: resultWithMetadata?.metadata as
-        | ToolExecutionMetadata
-        | ContinueMetadata
-        | YieldBackMetadata
-        | EndConversationMetadata
-        | undefined,
-    };
+    return deserializeToolResult(result.__typedResult);
   }
 
-  private processToolMetadata(
+  private processToolResult(
     toolResult: ToolExecutionResult,
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     tracingLogger: TracingLogger,
     context: ReasonActContext
   ): void {
-    if (!toolResult.metadata) return;
-
-    const metadata = toolResult.metadata;
-    if (isContinueMetadata(metadata)) {
-      // For continue metadata, we should only process the first one
-      // Additional continue calls are errors - the agent should have stopped after the first
-      if (state.continueMetadata) {
-        tracingLogger.info("⚠️ Multiple continue calls detected - ignoring additional calls", {
-          existingDestinations: state.continueMetadata.routingDecision.destinations,
-          newDestinations: metadata.routingDecision.destinations,
-        });
-        return;
-      }
-
-      state.continueMetadata = metadata;
-      tracingLogger.info("🔄 Continue routing detected in streaming", {
-        destinations: metadata.routingDecision.destinations,
-        phase: metadata.routingDecision.phase,
-      });
-
-      // Increment continue call count for the current phase
-      if (this.conversationManager && context.conversationId && context.phase) {
-        this.conversationManager
-          .incrementContinueCallCount(context.conversationId, context.phase)
-          .catch((error) => {
-            tracingLogger.error("Failed to increment continue call count", {
-              error: error instanceof Error ? error.message : String(error),
-              conversationId: context.conversationId,
-              phase: context.phase,
+    matchToolResult(toolResult, {
+      pure: () => {
+        // Pure tools don't affect control flow
+      },
+      effect: () => {
+        // Effect tools don't affect control flow
+      },
+      control: (r) => {
+        if (r.success && r.flow && r.flow.type === "continue") {
+          // Only process the first continue
+          if (state.continueFlow) {
+            tracingLogger.info("⚠️ Multiple continue calls detected - ignoring additional calls", {
+              existingDestinations: state.continueFlow.routing.destinations,
+              newDestinations: r.flow.routing.destinations,
             });
+            return;
+          }
+
+          state.continueFlow = r.flow;
+          tracingLogger.info("🔄 Continue routing detected in streaming", {
+            destinations: r.flow.routing.destinations,
+            phase: r.flow.routing.phase,
           });
-      }
-    } else if (isYieldBackMetadata(metadata) || isEndConversationMetadata(metadata)) {
-      state.completeMetadata = metadata;
-      tracingLogger.info("✅ Complete detected in streaming", {
-        nextAgent: metadata.completion.nextAgent,
-        hasResponse: !!metadata.completion.response,
-      });
-    }
+
+          // Increment continue call count
+          if (this.conversationManager && context.conversationId && context.phase) {
+            this.conversationManager
+              .incrementContinueCallCount(context.conversationId, context.phase)
+              .catch((error) => {
+                tracingLogger.error("Failed to increment continue call count", {
+                  error: error instanceof Error ? error.message : String(error),
+                  conversationId: context.conversationId,
+                  phase: context.phase,
+                });
+              });
+          }
+        }
+      },
+      terminal: (r) => {
+        if (r.success && r.termination) {
+          state.termination = r.termination;
+          tracingLogger.info("✅ Termination detected in streaming", {
+            type: r.termination.type,
+            hasResponse: r.termination.type === "yield_back" 
+              ? !!r.termination.completion.response
+              : !!r.termination.result.response,
+          });
+        }
+      },
+    });
   }
 
-  private async stopTypingIndicator(
-    publisher: NostrPublisher | undefined,
-    tool: string,
-    tracingLogger: TracingLogger
-  ): Promise<void> {
-    if (!publisher) return;
-
-    try {
-      await publisher.publishTypingIndicator("stop");
-    } catch (error) {
-      tracingLogger.info("Failed to publish typing indicator stop", {
-        tool,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  private isTerminalResult(result: ToolExecutionResult): boolean {
+    return matchToolResult(result, {
+      pure: () => false,
+      effect: () => false,
+      control: (r) => r.success && !!r.flow,
+      terminal: (r) => r.success && !!r.termination,
+    });
   }
 
   private handleDoneEvent(
-    event: { response: CompletionResponse },
+    event: { response?: CompletionResponse },
     state: StreamingState,
     tracingLogger: TracingLogger
   ): void {
     state.finalResponse = event.response;
-    tracingLogger.debug("Received done event", {
-      hasResponse: !!state.finalResponse,
-      hasUsage: !!state.finalResponse?.usage,
-      usage: state.finalResponse?.usage,
-      model:
-        "model" in state.finalResponse && typeof state.finalResponse.model === "string"
-          ? state.finalResponse.model
-          : undefined,
+    tracingLogger.info("Stream completed", {
+      contentLength: state.fullContent.length,
+      hasResponse: !!event.response,
     });
+  }
+
+  private handleErrorEvent(
+    event: { error: string },
+    state: StreamingState,
+    streamPublisher: StreamPublisher | undefined,
+    tracingLogger: TracingLogger
+  ): void {
+    tracingLogger.error("Stream error", { error: event.error });
+    state.fullContent += `\n\nError: ${event.error}`;
+    streamPublisher?.addContent(`\n\nError: ${event.error}`);
   }
 
   private async finalizeStream(
     streamPublisher: StreamPublisher | undefined,
-    state: ReturnType<typeof this.initializeStreamingState>,
+    state: StreamingState,
     context: ReasonActContext,
     messages: Message[],
     tracingLogger: TracingLogger
   ): Promise<void> {
     if (!streamPublisher || streamPublisher.isFinalized()) return;
 
-    const llmMetadata = await this.buildLLMMetadata(
-      state.finalResponse,
-      messages,
-      tracingLogger,
-      context
-    );
+    const llmMetadata = state.finalResponse
+      ? await buildLLMMetadata(state.finalResponse, messages)
+      : undefined;
+
+    // Convert flow/termination to metadata for finalization
+    const metadata: Record<string, unknown> = {};
+    if (state.continueFlow) {
+      metadata.continueMetadata = {
+        routingDecision: state.continueFlow.routing,
+      };
+    } else if (state.termination) {
+      if (state.termination.type === "yield_back") {
+        metadata.completeMetadata = {
+          completion: state.termination.completion,
+        };
+      } else if (state.termination.type === "end_conversation") {
+        metadata.completeMetadata = {
+          completion: {
+            response: state.termination.result.response,
+            summary: state.termination.result.summary,
+            nextAgent: context.conversation.history[0]?.pubkey || "",
+          },
+        };
+      }
+    }
 
     await streamPublisher.finalize({
       llmMetadata,
-      continueMetadata: state.continueMetadata,
-      completeMetadata: state.completeMetadata,
+      ...metadata,
     });
 
-    this.logStreamFinalization(state, context, tracingLogger);
-  }
-
-  private async buildLLMMetadata(
-    finalResponse: CompletionResponse | undefined,
-    messages: Message[],
-    tracingLogger: TracingLogger,
-    context: ReasonActContext
-  ): Promise<LLMMetadata | undefined> {
-    if (!finalResponse) {
-      tracingLogger.info("No final response received from stream - LLM metadata will be missing", {
-        agent: context.agent.name,
-      });
-      return undefined;
-    }
-
-    const llmMetadata = await buildLLMMetadata(finalResponse, messages);
-    tracingLogger.debug("Built LLM metadata for final response", {
-      hasMetadata: !!llmMetadata,
-      model: llmMetadata?.model,
-      cost: llmMetadata?.cost,
-      promptTokens: llmMetadata?.promptTokens,
-      completionTokens: llmMetadata?.completionTokens,
+    tracingLogger.info("Stream finalized", {
+      hasLLMMetadata: !!llmMetadata,
+      hasContinueFlow: !!state.continueFlow,
+      hasTermination: !!state.termination,
     });
-
-    return llmMetadata;
-  }
-
-  private logStreamFinalization(
-    state: StreamingState,
-    context: ReasonActContext,
-    tracingLogger: TracingLogger
-  ): void {
-    if (state.continueMetadata) {
-      tracingLogger.debug("Published final response with continue routing", {
-        agent: context.agent.name,
-        destinations: state.continueMetadata.routingDecision.destinations,
-        phase: state.continueMetadata.routingDecision.phase,
-      });
-    } else if (state.completeMetadata) {
-      tracingLogger.debug("Published final response with completion", {
-        agent: context.agent.name,
-        nextAgent: state.completeMetadata.completion.nextAgent,
-      });
-    } else {
-      tracingLogger.debug("Published final response on stream completion", {
-        agent: context.agent.name,
-      });
-    }
   }
 
   private createFinalEvent(state: StreamingState): StreamEvent {
     return {
       type: "done",
       response: state.finalResponse || {
+        type: "text",
         content: state.fullContent,
         toolCalls: [],
       },
-    } as StreamEvent;
+    };
   }
 
   private async *handleStreamingError(
@@ -474,21 +447,23 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     tracingLogger: TracingLogger,
     context: ReasonActContext
-  ): AsyncIterable<StreamEvent> {
-    tracingLogger.error("Streaming execution failed", {
-      agent: context.agent.name,
+  ): AsyncGenerator<StreamEvent> {
+    tracingLogger.error("Streaming error", {
       error: error instanceof Error ? error.message : String(error),
+      agent: context.agent.name,
     });
 
-    const errorMessage = `I encountered an error while processing your request: ${
-      error instanceof Error ? error.message : String(error)
-    }`;
-
-    if (publisher && streamPublisher && !streamPublisher.isFinalized()) {
-      await this.publishStreamError(streamPublisher, errorMessage, tracingLogger, context);
-    } else if (publisher && !streamPublisher) {
-      await this.publishDirectError(publisher, errorMessage, tracingLogger, context);
+    if (streamPublisher && !streamPublisher.isFinalized()) {
+      try {
+        await streamPublisher.finalize({});
+      } catch (finalizeError) {
+        tracingLogger.error("Failed to finalize stream on error", {
+          error: finalizeError instanceof Error ? finalizeError.message : String(finalizeError),
+        });
+      }
     }
+
+    await this.stopTypingIndicator(publisher, "error", tracingLogger);
 
     yield {
       type: "error",
@@ -496,35 +471,38 @@ export class ReasonActLoop {
     };
   }
 
-  private async publishStreamError(
-    streamPublisher: StreamPublisher,
-    errorMessage: string,
-    tracingLogger: TracingLogger,
-    context: ReasonActContext
+  private async publishTypingIndicator(
+    publisher: NostrPublisher | undefined,
+    toolName: string,
+    tracingLogger: TracingLogger
   ): Promise<void> {
+    if (!publisher) return;
+
     try {
-      streamPublisher.addContent(errorMessage);
-      await streamPublisher.finalize({});
-    } catch (publishError) {
-      tracingLogger.error("Failed to publish error message", {
-        agent: context.agent.name,
-        error: publishError instanceof Error ? publishError.message : String(publishError),
+      await publisher.publishTypingIndicator("start");
+      tracingLogger.debug(`Typing indicator started for tool: ${toolName}`);
+    } catch (error) {
+      tracingLogger.error("Failed to publish typing indicator", {
+        tool: toolName,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  private async publishDirectError(
-    publisher: NostrPublisher,
-    errorMessage: string,
-    tracingLogger: TracingLogger,
-    context: ReasonActContext
+  private async stopTypingIndicator(
+    publisher: NostrPublisher | undefined,
+    toolName: string,
+    tracingLogger: TracingLogger
   ): Promise<void> {
+    if (!publisher) return;
+
     try {
-      await publisher.publishError(errorMessage);
-    } catch (publishError) {
-      tracingLogger.error("Failed to publish error message", {
-        agent: context.agent.name,
-        error: publishError instanceof Error ? publishError.message : String(publishError),
+      await publisher.publishTypingIndicator("stop");
+      tracingLogger.debug(`Typing indicator stopped for tool: ${toolName}`);
+    } catch (error) {
+      tracingLogger.error("Failed to stop typing indicator", {
+        tool: toolName,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }

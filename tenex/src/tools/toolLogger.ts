@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { ToolExecutionContext, ToolExecutionResult } from "./types";
+import type { ToolExecutionContext, ToolExecutionResult, ToolError } from "./types";
+import { matchToolResult } from "./types";
 
 export interface ToolCallLogEntry {
   timestamp: string;
@@ -110,20 +111,10 @@ export class ToolCallLogger {
 
         // Result
         status: result.success ? "success" : "error",
-        output:
-          typeof result.output === "string"
-            ? result.output
-            : result.output
-              ? JSON.stringify(result.output)
-              : undefined,
-        outputLength:
-          typeof result.output === "string"
-            ? result.output.length
-            : result.output
-              ? JSON.stringify(result.output).length
-              : undefined,
-        error: result.error,
-        metadata: result.metadata as Record<string, unknown> | undefined,
+        output: this.extractOutput(result),
+        outputLength: this.extractOutput(result)?.length,
+        error: this.extractError(result),
+        metadata: this.extractMetadata(result),
 
         // Performance
         performance: {
@@ -150,6 +141,49 @@ export class ToolCallLogger {
     } catch (logError) {
       // Don't let logging errors break the main flow
       console.error("[Tool Logger] Failed to log tool call:", logError);
+    }
+  }
+
+  private extractOutput(result: ToolExecutionResult): string | undefined {
+    return matchToolResult(result, {
+      pure: (r) => String(r.output),
+      effect: (r) => r.success && r.output !== undefined ? String(r.output) : undefined,
+      control: (r) => r.success && r.flow ? `Control flow: ${r.flow.type}` : undefined,
+      terminal: (r) => {
+        if (!r.success || !r.termination) return undefined;
+        return r.termination.type === "yield_back" 
+          ? r.termination.completion.response
+          : r.termination.result.response;
+      },
+    });
+  }
+
+  private extractError(result: ToolExecutionResult): string | undefined {
+    return matchToolResult(result, {
+      pure: () => undefined, // Pure tools never have errors
+      effect: (r) => r.error ? this.formatError(r.error) : undefined,
+      control: (r) => r.error ? this.formatError(r.error) : undefined,
+      terminal: (r) => r.error ? this.formatError(r.error) : undefined,
+    });
+  }
+
+  private extractMetadata(result: ToolExecutionResult): Record<string, unknown> | undefined {
+    return matchToolResult(result, {
+      pure: () => undefined,
+      effect: () => undefined,
+      control: (r) => r.success && r.flow ? ({ flow: r.flow } as Record<string, unknown>) : undefined,
+      terminal: (r) => r.success && r.termination ? ({ termination: r.termination } as Record<string, unknown>) : undefined,
+    });
+  }
+
+  private formatError(error: ToolError): string {
+    switch (error.kind) {
+      case "validation":
+        return `Validation error in ${error.field}: ${error.message}`;
+      case "execution":
+        return `Execution error in ${error.tool}: ${error.message}`;
+      case "system":
+        return `System error: ${error.message}`;
     }
   }
 }

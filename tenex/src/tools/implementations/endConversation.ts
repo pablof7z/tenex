@@ -1,65 +1,33 @@
 import { logger } from "@/utils/logger";
+import type { TerminalTool } from "../types";
+import { pure, createZodSchema } from "../types";
 import { z } from "zod";
-import type { Tool, ToolExecutionContext, ToolResult, EndConversationMetadata } from "../types";
-import { parseToolParams } from "../utils";
 
-const EndConversationArgsSchema = z.object({
+const endConversationSchema = z.object({
   response: z.string().describe("Final response to the user summarizing the conversation outcome"),
-  summary: z.string().describe("Comprehensive summary of the entire conversation (if different from response)").optional(),
+  summary: z.string().optional().describe("Comprehensive summary of the entire conversation (if different from response)"),
 });
 
-// Re-export from types
-export type { EndConversationMetadata } from "../types";
-
-export const endConversationTool: Tool = {
+/**
+ * End conversation tool - orchestrator-only tool to conclude conversations
+ * Returns final response to the user
+ */
+export const endConversationTool: TerminalTool<{
+  response: string;
+  summary?: string;
+}> = {
+  brand: { _brand: "terminal" },
   name: "end_conversation",
   description: "Conclude the conversation and return final response to the user",
-  parameters: [
-    {
-      name: "response",
-      type: "string",
-      description: "Final response to the user summarizing the conversation outcome",
-      required: true,
-    },
-    {
-      name: "summary",
-      type: "string", 
-      description: "Comprehensive summary of the entire conversation (if different from response)",
-      required: false,
-    },
-  ],
+  
+  parameters: createZodSchema(endConversationSchema),
 
-  async execute(
-    params: Record<string, unknown>,
-    context: ToolExecutionContext
-  ): Promise<ToolResult> {
-    const parseResult = parseToolParams(EndConversationArgsSchema, params);
-    if (!parseResult.success) {
-      return parseResult.errorResult;
-    }
+  execute: (input, context) => {
+    const { response, summary } = input.value;
 
-    const { response, summary } = parseResult.data;
+    // TypeScript ensures this is a terminal context with userPubkey
+    // The executor will have already validated this is an orchestrator
 
-    // This tool should only be used by orchestrator agents
-    if (!context.agent?.isOrchestrator) {
-      return {
-        success: false,
-        error: "Only orchestrator agents can use 'end_conversation'. Use 'yield_back' to return control to the orchestrator.",
-      };
-    }
-
-    // Orchestrator completes to user (conversation root)
-    const rootEvent = context.conversation?.history[0];
-    if (!rootEvent || !rootEvent.pubkey) {
-      return {
-        success: false,
-        error: "Cannot route to user: root event or author pubkey not found",
-      };
-    }
-    
-    const nextAgent = rootEvent.pubkey;
-    const nextAgentName = "user";
-    
     logger.info("📬 Orchestrator concluding conversation", {
       tool: "end_conversation",
       conversationId: context.conversationId,
@@ -68,25 +36,21 @@ export const endConversationTool: Tool = {
     // Log the completion
     logger.info("✅ Conversation concluded", {
       tool: "end_conversation",
-      agent: context.agent?.name || "unknown",
-      agentPubkey: context.agent?.pubkey || "unknown",
-      returningTo: nextAgentName,
+      agent: context.agentName,
+      agentId: context.agentId,
+      returningTo: "user",
       hasResponse: !!response,
       conversationId: context.conversationId,
     });
 
-    const metadata: EndConversationMetadata = {
-      completion: {
+    // Return properly typed termination
+    return pure({
+      type: "end_conversation",
+      result: {
         response,
         summary: summary || response, // Use summary if provided, otherwise use response
-        nextAgent,
+        success: true, // Can add logic to determine success based on context
       },
-    };
-
-    return {
-      success: true,
-      output: `Conversation concluded${response ? `: ${response}` : ""}. Returning to ${nextAgentName}.`,
-      metadata,
-    };
+    });
   },
 };
