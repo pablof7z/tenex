@@ -252,10 +252,8 @@ export class MCPService {
 
   private convertMCPToolToTenexTool(serverName: string, mcpTool: MCPTool): Tool {
     // Use the adapter to create a type-safe tool with Zod schemas
-    return adaptMCPTool(
-      mcpTool,
-      serverName,
-      (args) => this.executeTool(serverName, mcpTool.name, args)
+    return adaptMCPTool(mcpTool, serverName, (args) =>
+      this.executeTool(serverName, mcpTool.name, args)
     );
   }
 

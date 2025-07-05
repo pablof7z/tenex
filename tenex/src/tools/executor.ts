@@ -23,7 +23,7 @@ import { logger } from "@/utils/logger";
 /**
  * Result of executing a tool
  */
-export type ToolExecutionResult<T = unknown> = 
+export type ToolExecutionResult<T = unknown> =
   | PureToolResult<T>
   | EffectToolResult<T>
   | ControlToolResult
@@ -76,17 +76,18 @@ export class ToolExecutor {
   /**
    * Execute a tool with the given input
    */
-  async execute<I, O>(
-    tool: Tool<I, O>,
-    input: unknown
-  ): Promise<ToolExecutionResult<O>> {
+  async execute<I, O>(tool: Tool<I, O>, input: unknown): Promise<ToolExecutionResult<O>> {
     const startTime = Date.now();
 
     try {
       // Validate input
       const validationResult = tool.parameters.validate(input);
       if (!validationResult.ok) {
-        return this.createErrorResult(tool, validationResult.error, startTime) as ToolExecutionResult<O>;
+        return this.createErrorResult(
+          tool,
+          validationResult.error,
+          startTime
+        ) as ToolExecutionResult<O>;
       }
 
       const validatedInput = validationResult.value;
@@ -95,17 +96,16 @@ export class ToolExecutor {
       if (isPureTool(tool)) {
         const result = this.executePureTool(tool, validatedInput, startTime);
         return Promise.resolve(result as ToolExecutionResult<O>);
-      } else if (isEffectTool(tool)) {
+      }if (isEffectTool(tool)) {
         return this.executeEffectTool(tool, validatedInput, startTime);
-      } else if (isControlTool(tool)) {
+      }if (isControlTool(tool)) {
         return this.executeControlTool(tool, validatedInput, startTime);
-      } else if (isTerminalTool(tool)) {
+      }if (isTerminalTool(tool)) {
         return this.executeTerminalTool(tool, validatedInput, startTime);
-      } else {
+      }
         // This should never happen due to exhaustive type checking
         const _exhaustiveCheck: never = tool;
-        throw new Error(`Unknown tool type`);
-      }
+        throw new Error("Unknown tool type");
     } catch (error) {
       logger.error("Tool execution failed", {
         tool: tool.name,
@@ -159,14 +159,13 @@ export class ToolExecutor {
         output: result.value,
         duration: Date.now() - startTime,
       };
-    } else {
+    }
       return {
         kind: "effect",
         success: false,
         error: result.error,
         duration: Date.now() - startTime,
       };
-    }
   }
 
   /**
@@ -201,14 +200,13 @@ export class ToolExecutor {
         flow: result.value,
         duration: Date.now() - startTime,
       };
-    } else {
+    }
       return {
         kind: "control",
         success: false,
         error: result.error,
         duration: Date.now() - startTime,
       };
-    }
   }
 
   /**
@@ -243,14 +241,13 @@ export class ToolExecutor {
         termination: result.value,
         duration: Date.now() - startTime,
       };
-    } else {
+    }
       return {
         kind: "terminal",
         success: false,
         error: result.error,
         duration: Date.now() - startTime,
       };
-    }
   }
 
   /**
@@ -266,13 +263,12 @@ export class ToolExecutor {
     if (isPureTool(tool)) {
       // Pure tools should never fail at runtime, this indicates a bug
       throw new Error(`Pure tool ${tool.name} failed: ${error.message}`);
-    } else if (isEffectTool(tool)) {
+    }if (isEffectTool(tool)) {
       return { kind: "effect", success: false, error, duration };
-    } else if (isControlTool(tool)) {
+    }if (isControlTool(tool)) {
       return { kind: "control", success: false, error, duration };
-    } else {
-      return { kind: "terminal", success: false, error, duration };
     }
+      return { kind: "terminal", success: false, error, duration };
   }
 
   /**

@@ -5,7 +5,10 @@ import { z } from "zod";
 
 const endConversationSchema = z.object({
   response: z.string().describe("Final response to the user summarizing the conversation outcome"),
-  summary: z.string().optional().describe("Comprehensive summary of the entire conversation (if different from response)"),
+  summary: z
+    .string()
+    .optional()
+    .describe("Comprehensive summary of the entire conversation (if different from response)"),
 });
 
 /**
@@ -19,7 +22,7 @@ export const endConversationTool: TerminalTool<{
   brand: { _brand: "terminal" },
   name: "end_conversation",
   description: "Conclude the conversation and return final response to the user",
-  
+
   parameters: createZodSchema(endConversationSchema),
 
   execute: (input, context) => {

@@ -99,7 +99,10 @@ function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } 
 }
 
 // Helper function to load inventory and context synchronously
-function loadProjectContextSync(phase: Phase, isProjectManager: boolean): {
+function loadProjectContextSync(
+  phase: Phase,
+  isProjectManager: boolean
+): {
   inventoryContent: string | null;
   projectContent: string | null;
   contextFiles: string[];
@@ -137,7 +140,9 @@ function loadProjectContextSync(phase: Phase, isProjectManager: boolean): {
     const contextDir = path.join(process.cwd(), "context");
     if (fs.existsSync(contextDir)) {
       const files = fs.readdirSync(contextDir);
-      contextFiles = files.filter((f) => f.endsWith(".md") && f !== "INVENTORY.md" && f !== "PROJECT.md");
+      contextFiles = files.filter(
+        (f) => f.endsWith(".md") && f !== "INVENTORY.md" && f !== "PROJECT.md"
+      );
     }
   } catch (error) {
     // Context directory may not exist

@@ -6,7 +6,10 @@ import { z } from "zod";
 
 const yieldBackSchema = z.object({
   response: z.string().describe("Detailed summary of what was accomplished"),
-  summary: z.string().optional().describe("Comprehensive summary of work done (if different from response)"),
+  summary: z
+    .string()
+    .optional()
+    .describe("Comprehensive summary of work done (if different from response)"),
 });
 
 /**
@@ -20,7 +23,7 @@ export const yieldBackTool: TerminalTool<{
   brand: { _brand: "terminal" },
   name: "yield_back",
   description: "Return control to the orchestrator after completing assigned task",
-  
+
   parameters: createZodSchema(yieldBackSchema),
 
   execute: (input, context) => {
@@ -31,7 +34,7 @@ export const yieldBackTool: TerminalTool<{
 
     const projectContext = getProjectContext();
     const orchestratorAgent = projectContext.getProjectAgent();
-    
+
     // Validate orchestrator pubkey matches
     if (context.orchestratorPubkey !== orchestratorAgent.pubkey) {
       logger.warn("Orchestrator pubkey mismatch", {

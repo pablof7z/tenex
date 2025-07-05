@@ -42,7 +42,9 @@ export const agentRemoveCommand = new Command("remove")
       }
 
       // Load the appropriate registry
-      const registryPath = useProject ? projectPath : configService.getGlobalPath().replace("/.tenex", "");
+      const registryPath = useProject
+        ? projectPath
+        : configService.getGlobalPath().replace("/.tenex", "");
       const registry = new AgentRegistry(registryPath, !useProject);
       await registry.loadFromProject();
 
@@ -51,7 +53,7 @@ export const agentRemoveCommand = new Command("remove")
       if (!agent) {
         const location = useProject ? "project" : "global";
         logger.error(`Agent "${name}" not found in ${location} configuration`);
-        
+
         // If we defaulted to project, suggest checking global
         if (useProject && !options.project) {
           logger.info("Try using --global flag to remove from global configuration");
@@ -79,7 +81,7 @@ export const agentRemoveCommand = new Command("remove")
       }
 
       // Remove the agent
-      const removed = agent.eventId 
+      const removed = agent.eventId
         ? await registry.removeAgentByEventId(agent.eventId)
         : await registry.removeAgentBySlug(agent.slug);
 

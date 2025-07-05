@@ -27,7 +27,9 @@ export const agentListCommand = new Command("list")
 
       // Validate options
       if (options.project && !isProject) {
-        logger.error("Not in a TENEX project directory. Remove --project flag or run from a project.");
+        logger.error(
+          "Not in a TENEX project directory. Remove --project flag or run from a project."
+        );
         process.exit(1);
       }
 
@@ -40,7 +42,7 @@ export const agentListCommand = new Command("list")
           const globalPath = configService.getGlobalPath().replace("/.tenex", "");
           const globalRegistry = new AgentRegistry(globalPath, true);
           await globalRegistry.loadFromProject();
-          
+
           const globalAgents = globalRegistry.getAllAgents();
           if (globalAgents.length > 0) {
             logger.info("Global agents:");
@@ -73,16 +75,16 @@ export const agentListCommand = new Command("list")
           const globalPath = configService.getGlobalPath().replace("/.tenex", "");
           const globalRegistry = new AgentRegistry(globalPath, true);
           await globalRegistry.loadFromProject();
-          const globalAgentSlugs = new Set(globalRegistry.getAllAgents().map(a => a.slug));
-          
+          const globalAgentSlugs = new Set(globalRegistry.getAllAgents().map((a) => a.slug));
+
           // Load project registry
           const projectRegistry = new AgentRegistry(projectPath, false);
           await projectRegistry.loadFromProject();
-          
+
           const projectAgents = projectRegistry.getAllAgents();
           const projectOnlyAgents: Agent[] = [];
           const overriddenAgents: Agent[] = [];
-          
+
           // Categorize agents
           for (const agent of projectAgents) {
             if (!agent.isBuiltIn) {
@@ -93,10 +95,10 @@ export const agentListCommand = new Command("list")
               }
             }
           }
-          
+
           if (projectOnlyAgents.length > 0 || overriddenAgents.length > 0) {
             logger.info("Project agents:");
-            
+
             // Show project-specific agents first
             for (const agent of projectOnlyAgents) {
               logger.info(`  - ${agent.slug}: ${agent.name}`);
@@ -105,7 +107,7 @@ export const agentListCommand = new Command("list")
                 logger.info(`    Event ID: ${agent.eventId}`);
               }
             }
-            
+
             // Show overridden agents
             if (overriddenAgents.length > 0) {
               logger.info("");

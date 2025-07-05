@@ -173,11 +173,11 @@ function buildConversationTree(
 
   // Get the first event from the map if no root event found
   const firstEvent = rootEvent || eventMap.values().next().value;
-  
+
   if (!firstEvent) {
     throw new Error("No events found in conversation tree");
   }
-  
+
   return {
     root: firstEvent,
     replies,

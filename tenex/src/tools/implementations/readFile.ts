@@ -19,7 +19,7 @@ export const readFileTool: EffectTool<ReadFileInput, ReadFileOutput> = {
   brand: { _brand: "effect" },
   name: "read_file",
   description: "Read a file from the filesystem",
-  
+
   parameters: createZodSchema(readFileSchema),
 
   execute: (input, context) => {
@@ -32,10 +32,10 @@ export const readFileTool: EffectTool<ReadFileInput, ReadFileOutput> = {
         const fullPath = resolveAndValidatePath(path, context.projectPath);
 
         const content = await readFile(fullPath, "utf-8");
-        
+
         // Note: File tracking is handled by the interpreter layer
         // This keeps the tool pure and focused on its primary responsibility
-        
+
         return { ok: true, value: content };
       } catch (error: unknown) {
         return {

@@ -298,7 +298,7 @@ export class ProjectManager implements IProjectManager {
             },
             ndkProject
           );
-          
+
           logger.info("Saved agent definition", { eventId, name: agent.title });
         }
       } catch (error) {
@@ -317,7 +317,6 @@ export class ProjectManager implements IProjectManager {
       return false;
     }
   }
-
 
   private async checkAndRunLLMConfigWizard(projectPath: string): Promise<void> {
     try {

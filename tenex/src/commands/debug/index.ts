@@ -10,7 +10,6 @@ import { ensureProjectInitialized } from "@/utils/projectInitialization";
 import chalk from "chalk";
 import { formatMarkdown, colorizeJSON } from "@/utils/formatting";
 
-
 // Format content with enhancements
 function formatContentWithEnhancements(content: string, isSystemPrompt = false): string {
   let formattedContent = content.replace(/\\n/g, "\n");
@@ -61,7 +60,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
       console.log(chalk.white("Role:"), agent.role);
       console.log(chalk.white("Phase:"), options.phase);
       if (agent.tools && agent.tools.length > 0) {
-        console.log(chalk.white("Tools:"), agent.tools.map(t => t.name).join(", "));
+        console.log(chalk.white("Tools:"), agent.tools.map((t) => t.name).join(", "));
       }
     } else {
       console.log(chalk.yellow(`Note: Agent '${options.agent}' not found in registry`));

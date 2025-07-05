@@ -53,7 +53,10 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
               attachments: msg.attachments,
             })),
             tokenCount: context.tokenCount,
-            lastUpdate: context.lastUpdate instanceof Date ? context.lastUpdate.toISOString() : context.lastUpdate,
+            lastUpdate:
+              context.lastUpdate instanceof Date
+                ? context.lastUpdate.toISOString()
+                : context.lastUpdate,
           };
         }
       }
@@ -114,7 +117,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
               const message = new Message(msg.role, msg.content || null);
               if (msg.reasoning) message.reasoning = msg.reasoning;
               if (msg.attachments) {
-                msg.attachments.forEach(att => message.attach(att));
+                msg.attachments.forEach((att) => message.attach(att));
               }
               return message;
             }),

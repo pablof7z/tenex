@@ -1,6 +1,6 @@
 /**
  * First-principles type system for TENEX tools
- * 
+ *
  * Core philosophy:
  * - Effects as values
  * - Type safety through algebraic data types
@@ -19,11 +19,7 @@ import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
  * An Effect represents a computation that may fail or perform side effects.
  * This is similar to IO monad in Haskell or ZIO in Scala.
  */
-export type Effect<E, A> = 
-  | Pure<A>
-  | Failure<E>
-  | FlatMap<E, unknown, A>
-  | Suspend<E, A>;
+export type Effect<E, A> = Pure<A> | Failure<E> | FlatMap<E, unknown, A> | Suspend<E, A>;
 
 interface Pure<A> {
   readonly _tag: "Pure";
@@ -47,7 +43,7 @@ interface Suspend<E, A> {
 }
 
 // Result type for fallible operations
-export type Result<E, A> = 
+export type Result<E, A> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly error: E };
 
@@ -58,10 +54,18 @@ export type Result<E, A> =
 /**
  * Brand types for compile-time tool category enforcement
  */
-export interface PureBrand { readonly _brand: "pure"; }
-export interface EffectBrand { readonly _brand: "effect"; }
-export interface ControlBrand { readonly _brand: "control"; }
-export interface TerminalBrand { readonly _brand: "terminal"; }
+export interface PureBrand {
+  readonly _brand: "pure";
+}
+export interface EffectBrand {
+  readonly _brand: "effect";
+}
+export interface ControlBrand {
+  readonly _brand: "control";
+}
+export interface TerminalBrand {
+  readonly _brand: "terminal";
+}
 
 /**
  * Context types with different capabilities
@@ -119,7 +123,8 @@ export interface PureTool<Input, Output> extends BaseTool<PureBrand, Input, Outp
 /**
  * Effect tool - may perform side effects
  */
-export interface EffectTool<Input, Output, E = ToolError> extends BaseTool<EffectBrand, Input, Output> {
+export interface EffectTool<Input, Output, E = ToolError>
+  extends BaseTool<EffectBrand, Input, Output> {
   readonly execute: (input: Validated<Input>, context: ExecutionContext) => Effect<E, Output>;
 }
 
@@ -127,20 +132,26 @@ export interface EffectTool<Input, Output, E = ToolError> extends BaseTool<Effec
  * Control tool - affects execution flow (orchestrator only)
  */
 export interface ControlTool<Input> extends BaseTool<ControlBrand, Input, ControlFlow> {
-  readonly execute: (input: Validated<Input>, context: ControlContext) => Effect<ToolError, ControlFlow>;
+  readonly execute: (
+    input: Validated<Input>,
+    context: ControlContext
+  ) => Effect<ToolError, ControlFlow>;
 }
 
 /**
  * Terminal tool - ends agent execution
  */
 export interface TerminalTool<Input> extends BaseTool<TerminalBrand, Input, Termination> {
-  readonly execute: (input: Validated<Input>, context: TerminalContext) => Effect<ToolError, Termination>;
+  readonly execute: (
+    input: Validated<Input>,
+    context: TerminalContext
+  ) => Effect<ToolError, Termination>;
 }
 
 /**
  * Union of all tool types
  */
-export type Tool<I = unknown, O = unknown> = 
+export type Tool<I = unknown, O = unknown> =
   | PureTool<I, O>
   | EffectTool<I, O>
   | ControlTool<I>
@@ -153,10 +164,7 @@ export type Tool<I = unknown, O = unknown> =
 /**
  * Control flow decisions that affect execution
  */
-export type ControlFlow = 
-  | ContinueFlow
-  | DelegateFlow
-  | ForkFlow;
+export type ControlFlow = ContinueFlow | DelegateFlow | ForkFlow;
 
 export interface ContinueFlow {
   readonly type: "continue";
@@ -189,9 +197,7 @@ export interface RoutingDecision {
 /**
  * Termination types that end execution
  */
-export type Termination = 
-  | YieldBack
-  | EndConversation;
+export type Termination = YieldBack | EndConversation;
 
 export interface YieldBack {
   readonly type: "yield_back";
@@ -225,7 +231,7 @@ export interface ParameterSchema<T> {
   readonly validate: (input: unknown) => Result<ValidationError, Validated<T>>;
 }
 
-export type SchemaShape = 
+export type SchemaShape =
   | { type: "string"; description: string; enum?: ReadonlyArray<string> }
   | { type: "number"; description: string; min?: number; max?: number }
   | { type: "boolean"; description: string }
@@ -242,10 +248,7 @@ export interface Validated<T> {
 // Error Types
 // ============================================================================
 
-export type ToolError = 
-  | ValidationError
-  | ExecutionError
-  | SystemError;
+export type ToolError = ValidationError | ExecutionError | SystemError;
 
 export interface ValidationError {
   readonly kind: "validation";
@@ -276,19 +279,19 @@ export interface NonEmptyArray<T> extends ReadonlyArray<T> {
 }
 
 // Type guards
-export const isPureTool = <I, O>(tool: Tool<I, O>): tool is PureTool<I, O> => 
+export const isPureTool = <I, O>(tool: Tool<I, O>): tool is PureTool<I, O> =>
   tool.brand._brand === "pure";
 
-export const isEffectTool = <I, O>(tool: Tool<I, O>): tool is EffectTool<I, O> => 
+export const isEffectTool = <I, O>(tool: Tool<I, O>): tool is EffectTool<I, O> =>
   tool.brand._brand === "effect";
 
-export const isControlTool = <I>(tool: Tool<I, unknown>): tool is ControlTool<I> => 
+export const isControlTool = <I>(tool: Tool<I, unknown>): tool is ControlTool<I> =>
   tool.brand._brand === "control";
 
-export const isTerminalTool = <I>(tool: Tool<I, unknown>): tool is TerminalTool<I> => 
+export const isTerminalTool = <I>(tool: Tool<I, unknown>): tool is TerminalTool<I> =>
   tool.brand._brand === "terminal";
 
-export const isNonEmptyArray = <T>(array: ReadonlyArray<T>): array is NonEmptyArray<T> => 
+export const isNonEmptyArray = <T>(array: ReadonlyArray<T>): array is NonEmptyArray<T> =>
   array.length > 0;
 
 // ============================================================================
@@ -320,9 +323,7 @@ export const flatMap = <E, A, B>(
 });
 
 // Convenience functions
-export const map = <E, A, B>(
-  effect: Effect<E, A>,
-  f: (a: A) => B
-): Effect<E, B> => flatMap(effect, (a) => pure(f(a)));
+export const map = <E, A, B>(effect: Effect<E, A>, f: (a: A) => B): Effect<E, B> =>
+  flatMap(effect, (a) => pure(f(a)));
 
 export const chain = flatMap; // Alias for functional programmers

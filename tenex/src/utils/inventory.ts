@@ -458,7 +458,9 @@ async function getInventoryPath(projectPath: string): Promise<string> {
 /**
  * Load project configuration
  */
-async function loadProjectConfig(projectPath: string): Promise<{ paths?: { inventory?: string }; title?: string }> {
+async function loadProjectConfig(
+  projectPath: string
+): Promise<{ paths?: { inventory?: string }; title?: string }> {
   try {
     if (isProjectContextInitialized()) {
       // Get config from ProjectContext if available

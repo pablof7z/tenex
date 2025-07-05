@@ -27,7 +27,9 @@ export function resolveAndValidatePath(filePath: string, projectPath: string): s
 export function parseToolParams<T extends z.ZodTypeAny>(
   schema: T,
   params: unknown
-): { success: true; data: z.infer<T> } | { success: false; errorResult: { success: false; error: string } } {
+):
+  | { success: true; data: z.infer<T> }
+  | { success: false; errorResult: { success: false; error: string } } {
   const parsed = schema.safeParse(params);
   if (!parsed.success) {
     return {

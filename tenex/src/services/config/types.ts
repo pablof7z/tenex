@@ -63,7 +63,15 @@ export const TenexAgentsSchema = z.record(
 export interface TenexLLMs {
   configurations: {
     [namedConfig: string]: {
-      provider: "anthropic" | "openai" | "google" | "ollama" | "mistral" | "groq" | "openrouter" | "deepseek";
+      provider:
+        | "anthropic"
+        | "openai"
+        | "google"
+        | "ollama"
+        | "mistral"
+        | "groq"
+        | "openrouter"
+        | "deepseek";
       model: string;
       temperature?: number;
       maxTokens?: number;

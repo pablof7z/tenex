@@ -3,13 +3,7 @@
  */
 
 import { z } from "zod";
-import type { 
-  ParameterSchema, 
-  SchemaShape, 
-  Validated, 
-  ValidationError, 
-  Result 
-} from "./core";
+import type { ParameterSchema, SchemaShape, Validated, ValidationError, Result } from "./core";
 
 // MCP schema type definitions
 interface MCPPropertyDefinition {
@@ -50,12 +44,12 @@ function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
       type: "string",
       description: schema.description || "String parameter",
     };
-  } else if (schema instanceof z.ZodNumber) {
+  }if (schema instanceof z.ZodNumber) {
     // Get min/max from the schema definition more safely
     const def = schema._def as z.ZodNumberDef;
     let min: number | undefined;
     let max: number | undefined;
-    
+
     if (def.checks) {
       for (const check of def.checks) {
         if (check.kind === "min") {
@@ -65,26 +59,26 @@ function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
         }
       }
     }
-    
+
     return {
       type: "number",
       description: schema.description || "Number parameter",
       min,
       max,
     };
-  } else if (schema instanceof z.ZodBoolean) {
+  }if (schema instanceof z.ZodBoolean) {
     return {
       type: "boolean",
       description: schema.description || "Boolean parameter",
     };
-  } else if (schema instanceof z.ZodArray) {
+  }if (schema instanceof z.ZodArray) {
     const arrayDef = schema._def as z.ZodArrayDef;
     return {
       type: "array",
       description: schema.description || "Array parameter",
       items: zodToSchemaShape(arrayDef.type),
     };
-  } else if (schema instanceof z.ZodObject) {
+  }if (schema instanceof z.ZodObject) {
     const properties: Record<string, SchemaShape> = {};
     const objectDef = schema._def as z.ZodObjectDef;
     const shape = objectDef.shape();
@@ -96,16 +90,15 @@ function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
       description: schema.description || "Object parameter",
       properties,
     };
-  } else if (schema instanceof z.ZodOptional) {
+  }if (schema instanceof z.ZodOptional) {
     const optionalDef = schema._def as z.ZodOptionalDef;
     return zodToSchemaShape(optionalDef.innerType);
-  } else {
+  }
     // Fallback for unknown types
     return {
       type: "string",
       description: "Unknown parameter type",
     };
-  }
 }
 
 /**
@@ -116,14 +109,14 @@ export function createZodSchema<T>(schema: z.ZodType<T>): ParameterSchema<T> {
     shape: zodToSchemaShape(schema),
     validate: (input: unknown): Result<ValidationError, Validated<T>> => {
       const result = schema.safeParse(input);
-      
+
       if (result.success) {
         return {
           ok: true,
           value: { _brand: "validated", value: result.data },
         };
       }
-      
+
       // Extract the first error for simplicity
       const firstError = result.error.errors[0];
       if (!firstError) {
@@ -151,10 +144,7 @@ export function createZodSchema<T>(schema: z.ZodType<T>): ParameterSchema<T> {
 /**
  * Helper function to create schemas with descriptions
  */
-export function withDescription<T extends z.ZodType<unknown>>(
-  schema: T,
-  description: string
-): T {
+export function withDescription<T extends z.ZodType<unknown>>(schema: T, description: string): T {
   return schema.describe(description);
 }
 
@@ -166,32 +156,34 @@ export const ToolSchemas = {
    * File path schema with validation
    */
   filePath: (description = "File path") =>
-    z.string().describe(description).refine(
-      (path) => !path.includes(".."),
-      "Path must not contain directory traversal"
-    ),
+    z
+      .string()
+      .describe(description)
+      .refine((path) => !path.includes(".."), "Path must not contain directory traversal"),
 
   /**
    * Command schema with safety checks
    */
   command: (description = "Shell command") =>
-    z.string().describe(description).refine(
-      (cmd) => !cmd.includes("rm -rf"),
-      "Dangerous commands are not allowed"
-    ),
+    z
+      .string()
+      .describe(description)
+      .refine((cmd) => !cmd.includes("rm -rf"), "Dangerous commands are not allowed"),
 
   /**
    * Phase schema
    */
   phase: () =>
-    z.enum(["chat", "brainstorm", "plan", "execute", "review", "chores", "reflection"])
+    z
+      .enum(["chat", "brainstorm", "plan", "execute", "review", "chores", "reflection"])
       .describe("Conversation phase"),
 
   /**
    * Agent pubkey schema
    */
   agentPubkey: () =>
-    z.string()
+    z
+      .string()
       .length(64)
       .regex(/^[0-9a-f]{64}$/)
       .describe("Agent public key"),
@@ -199,14 +191,12 @@ export const ToolSchemas = {
   /**
    * Non-empty string
    */
-  nonEmptyString: (description = "Non-empty string") =>
-    z.string().min(1).describe(description),
+  nonEmptyString: (description = "Non-empty string") => z.string().min(1).describe(description),
 
   /**
    * Optional field helper
    */
-  optional: <T extends z.ZodType<unknown>>(schema: T) =>
-    schema.optional(),
+  optional: <T extends z.ZodType<unknown>>(schema: T) => schema.optional(),
 
   /**
    * Array with at least one element
@@ -224,12 +214,12 @@ export function mcpSchemaToZod(mcpSchema: MCPSchema): z.ZodType<unknown> {
   }
 
   const zodShape: Record<string, z.ZodType<unknown>> = {};
-  
+
   for (const [propName, propDef] of Object.entries(mcpSchema.properties)) {
     const isRequired = mcpSchema.required?.includes(propName) ?? false;
-    
+
     let zodField: z.ZodType<unknown>;
-    
+
     switch (propDef.type) {
       case "string":
         zodField = z.string();
@@ -243,7 +233,7 @@ export function mcpSchemaToZod(mcpSchema: MCPSchema): z.ZodType<unknown> {
           zodField = (zodField as z.ZodString).max(propDef.maxLength);
         }
         break;
-        
+
       case "number":
       case "integer":
         zodField = propDef.type === "integer" ? z.number().int() : z.number();
@@ -254,11 +244,11 @@ export function mcpSchemaToZod(mcpSchema: MCPSchema): z.ZodType<unknown> {
           zodField = (zodField as z.ZodNumber).max(propDef.maximum);
         }
         break;
-        
+
       case "boolean":
         zodField = z.boolean();
         break;
-        
+
       case "array": {
         const itemSchema = propDef.items ? mcpPropertyToZod(propDef.items) : z.unknown();
         let arrayField = z.array(itemSchema);
@@ -271,7 +261,7 @@ export function mcpSchemaToZod(mcpSchema: MCPSchema): z.ZodType<unknown> {
         zodField = arrayField;
         break;
       }
-        
+
       case "object":
         if (propDef.properties) {
           zodField = mcpSchemaToZod({
@@ -282,18 +272,18 @@ export function mcpSchemaToZod(mcpSchema: MCPSchema): z.ZodType<unknown> {
           zodField = z.record(z.unknown());
         }
         break;
-        
+
       default:
         zodField = z.unknown();
     }
-    
+
     if (propDef.description) {
       zodField = zodField.describe(propDef.description);
     }
-    
+
     zodShape[propName] = isRequired ? zodField : zodField.optional();
   }
-  
+
   return z.object(zodShape);
 }
 

@@ -91,7 +91,6 @@ function getPhaseContext(phase: Phase, conversation?: Conversation): string | nu
   return null;
 }
 
-
 // Register fragments
 fragmentRegistry.register(agentSystemPromptFragment);
 fragmentRegistry.register(phaseContextFragment);

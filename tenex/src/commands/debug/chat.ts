@@ -166,16 +166,22 @@ export async function runDebugChat(
           console.log(chalk.gray("\nTools executed:"));
           result.toolExecutions.forEach((toolResult, idx) => {
             // Extract tool name from error if available
-            const toolName = 
-              (toolResult.kind === "effect" && toolResult.error?.kind === "execution") ? toolResult.error.tool :
-              (toolResult.kind === "control" && toolResult.error?.kind === "execution") ? toolResult.error.tool :
-              (toolResult.kind === "terminal" && toolResult.error?.kind === "execution") ? toolResult.error.tool :
-              toolResult.kind;
-            const errorMsg = 
-              (toolResult.kind === "effect" && toolResult.error) ? toolResult.error.message :
-              (toolResult.kind === "control" && toolResult.error) ? toolResult.error.message :
-              (toolResult.kind === "terminal" && toolResult.error) ? toolResult.error.message :
-              "";
+            const toolName =
+              toolResult.kind === "effect" && toolResult.error?.kind === "execution"
+                ? toolResult.error.tool
+                : toolResult.kind === "control" && toolResult.error?.kind === "execution"
+                  ? toolResult.error.tool
+                  : toolResult.kind === "terminal" && toolResult.error?.kind === "execution"
+                    ? toolResult.error.tool
+                    : toolResult.kind;
+            const errorMsg =
+              toolResult.kind === "effect" && toolResult.error
+                ? toolResult.error.message
+                : toolResult.kind === "control" && toolResult.error
+                  ? toolResult.error.message
+                  : toolResult.kind === "terminal" && toolResult.error
+                    ? toolResult.error.message
+                    : "";
             console.log(
               chalk.gray(
                 `  ${idx + 1}. ${toolName} ${toolResult.success ? "✓" : "✗"}${errorMsg ? `: ${errorMsg}` : ""}`
@@ -302,16 +308,22 @@ export async function runDebugChat(
             console.log(chalk.gray("\nTools executed:"));
             for (const toolResult of result.toolExecutions) {
               // Extract tool name from error if available
-              const toolName = 
-                (toolResult.kind === "effect" && toolResult.error?.kind === "execution") ? toolResult.error.tool :
-                (toolResult.kind === "control" && toolResult.error?.kind === "execution") ? toolResult.error.tool :
-                (toolResult.kind === "terminal" && toolResult.error?.kind === "execution") ? toolResult.error.tool :
-                toolResult.kind;
-              const errorMsg = 
-                (toolResult.kind === "effect" && toolResult.error) ? toolResult.error.message :
-                (toolResult.kind === "control" && toolResult.error) ? toolResult.error.message :
-                (toolResult.kind === "terminal" && toolResult.error) ? toolResult.error.message :
-                "";
+              const toolName =
+                toolResult.kind === "effect" && toolResult.error?.kind === "execution"
+                  ? toolResult.error.tool
+                  : toolResult.kind === "control" && toolResult.error?.kind === "execution"
+                    ? toolResult.error.tool
+                    : toolResult.kind === "terminal" && toolResult.error?.kind === "execution"
+                      ? toolResult.error.tool
+                      : toolResult.kind;
+              const errorMsg =
+                toolResult.kind === "effect" && toolResult.error
+                  ? toolResult.error.message
+                  : toolResult.kind === "control" && toolResult.error
+                    ? toolResult.error.message
+                    : toolResult.kind === "terminal" && toolResult.error
+                      ? toolResult.error.message
+                      : "";
               console.log(
                 chalk.gray(
                   `  - ${toolName} ${toolResult.success ? "✓" : "✗"}${errorMsg ? `: ${errorMsg}` : ""}`

@@ -25,31 +25,16 @@ export interface ToolExecutionContext {
   agentSigner?: NDKPrivateKeySigner;
   conversationRootEventId?: string;
   triggeringEvent?: NDKEvent;
-  
+
   // Agent identification
   agentId: string;
   agentName: string;
-  
+
   // For control context
   isOrchestrator?: boolean;
   availableAgents?: AgentInfo[];
-  
+
   // For terminal context
   orchestratorPubkey?: string;
   userPubkey?: string;
-}
-
-
-// Tool invocation for pattern matching
-export interface ToolInvocation {
-  toolName: string;
-  action: string;
-  parameters: Record<string, unknown>;
-  rawMatch: string;
-}
-
-// Pattern types
-export interface ToolPattern {
-  pattern: RegExp;
-  parser: (match: RegExpMatchArray) => ToolInvocation | null;
 }

@@ -1,7 +1,7 @@
 /**
  * Serializable representation of tool execution results
  * Preserves type information across LLM boundaries
- * 
+ *
  * This is the required format for all tool results passed through
  * the LLM layer to maintain type safety.
  */
@@ -18,18 +18,18 @@ import type { ControlFlow, Termination, ToolError } from "@/tools/core";
 export interface SerializedToolResult {
   /** The kind of tool result - preserves the discriminated union type */
   kind: "pure" | "effect" | "control" | "terminal";
-  
+
   /** Whether the tool execution was successful */
   success: boolean;
-  
+
   /** Tool execution duration in milliseconds */
   duration: number;
-  
+
   /** The actual result data - type depends on kind */
   data: {
     // Pure tool data
     output?: unknown;
-    
+
     // Effect tool data
     error?: {
       kind: "validation" | "execution" | "system";
@@ -37,7 +37,7 @@ export interface SerializedToolResult {
       field?: string;
       tool?: string;
     };
-    
+
     // Control tool data
     flow?: {
       type: "continue" | "delegate" | "fork";
@@ -57,7 +57,7 @@ export interface SerializedToolResult {
       message?: string;
       returnToOrchestrator?: boolean;
     };
-    
+
     // Terminal tool data
     termination?: {
       type: "yield_back" | "end_conversation";
@@ -91,7 +91,7 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
         ...base,
         data: { output: result.output },
       };
-      
+
     case "effect":
       return {
         ...base,
@@ -100,7 +100,7 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
           error: result.error,
         },
       };
-      
+
     case "control": {
       // Handle different control flow types
       let serializedFlow = undefined;
@@ -132,7 +132,7 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
             break;
         }
       }
-      
+
       return {
         ...base,
         data: {
@@ -141,7 +141,7 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
         },
       };
     }
-      
+
     case "terminal":
       return {
         ...base,
@@ -165,7 +165,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
         output: serialized.data.output,
         duration: serialized.duration,
       };
-      
+
     case "effect":
       return {
         kind: "effect",
@@ -174,7 +174,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
         error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
         duration: serialized.duration,
       };
-      
+
     case "control": {
       // Handle different control flow types
       let deserializedFlow: ControlFlow | undefined = undefined;
@@ -216,12 +216,12 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
             }
             deserializedFlow = {
               type: "fork",
-              branches: flow.branches as NonEmptyArray<{ agent: string; message: string; }>,
+              branches: flow.branches as NonEmptyArray<{ agent: string; message: string }>,
             };
             break;
         }
       }
-      
+
       return {
         kind: "control",
         success: serialized.success,
@@ -230,7 +230,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
         duration: serialized.duration,
       };
     }
-      
+
     case "terminal":
       return {
         kind: "terminal",
@@ -239,7 +239,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
         error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
         duration: serialized.duration,
       };
-      
+
     default:
       // This should never happen with proper type checking
       throw new Error(`Unknown tool result kind: ${serialized.kind}`);
@@ -250,39 +250,39 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
  * Reconstruct a proper ToolError from serialized data
  */
 function reconstructError(error: unknown): ToolError {
-  if (!error || typeof error !== 'object') {
+  if (!error || typeof error !== "object") {
     return {
-      kind: 'system',
-      message: 'Unknown error',
+      kind: "system",
+      message: "Unknown error",
     };
   }
-  
-  const errorObj = error as any;
-  
+
+  const errorObj = error as Record<string, unknown>;
+
   switch (errorObj.kind) {
-    case 'validation':
+    case "validation":
       return {
-        kind: 'validation',
-        field: errorObj.field || 'unknown',
-        message: errorObj.message || 'Validation error',
+        kind: "validation",
+        field: typeof errorObj.field === "string" ? errorObj.field : "unknown",
+        message: typeof errorObj.message === "string" ? errorObj.message : "Validation error",
       };
-    case 'execution':
+    case "execution":
       return {
-        kind: 'execution',
-        tool: errorObj.tool || 'unknown',
-        message: errorObj.message || 'Execution error',
+        kind: "execution",
+        tool: typeof errorObj.tool === "string" ? errorObj.tool : "unknown",
+        message: typeof errorObj.message === "string" ? errorObj.message : "Execution error",
         cause: errorObj.cause,
       };
-    case 'system':
+    case "system":
       return {
-        kind: 'system',
-        message: errorObj.message || 'System error',
-        stack: errorObj.stack,
+        kind: "system",
+        message: typeof errorObj.message === "string" ? errorObj.message : "System error",
+        stack: typeof errorObj.stack === "string" ? errorObj.stack : undefined,
       };
     default:
       return {
-        kind: 'system',
-        message: errorObj.message || 'Unknown error',
+        kind: "system",
+        message: typeof errorObj.message === "string" ? errorObj.message : "Unknown error",
       };
   }
 }
@@ -292,15 +292,15 @@ function reconstructError(error: unknown): ToolError {
  */
 export function isSerializedToolResult(obj: unknown): obj is SerializedToolResult {
   if (!obj || typeof obj !== "object") return false;
-  
+
   // Safe property access
   const record = Object(obj);
-  
+
   // Type guard for kind
   if (typeof record.kind !== "string") return false;
   const validKinds = ["pure", "effect", "control", "terminal"];
   if (!validKinds.includes(record.kind)) return false;
-  
+
   // Check other required properties
   return (
     typeof record.success === "boolean" &&

@@ -7,12 +7,13 @@ import type {
   ToolError,
   ToolExecutionResult,
 } from "@/tools/types";
-import { 
-  createToolExecutor, 
-  matchToolResult,
-} from "@/tools/types";
+import { createToolExecutor, matchToolResult } from "@/tools/types";
 import { logger } from "@/utils/logger";
-import { Plugin, type PluginExecutionContext, type PluginParameter as MultiLLMPluginParameter } from "multi-llm-ts";
+import {
+  Plugin,
+  type PluginExecutionContext,
+  type PluginParameter as MultiLLMPluginParameter,
+} from "multi-llm-ts";
 import { serializeToolResult } from "./ToolResult";
 
 /**
@@ -50,7 +51,7 @@ export class ToolPlugin extends Plugin {
   getParameters(): MultiLLMPluginParameter[] {
     // Extract parameter info from schema shape
     const shape = this.tool.parameters.shape;
-    
+
     if (shape.type === "object" && shape.properties) {
       return Object.entries(shape.properties).map(([name, prop]) => {
         const param: MultiLLMPluginParameter = {
@@ -59,27 +60,35 @@ export class ToolPlugin extends Plugin {
           description: prop.description,
           required: true, // TODO: Handle optional fields from schema
         };
-        
+
         if (prop.type === "string" && prop.enum) {
           param.enum = [...prop.enum]; // Convert readonly to mutable
         }
-        
+
         return param;
       });
     }
-    
+
     // Fallback for non-object schemas
     return [];
   }
 
-  private mapSchemaTypeToPluginType(schemaType: string): "string" | "number" | "boolean" | "object" | "array" {
+  private mapSchemaTypeToPluginType(
+    schemaType: string
+  ): "string" | "number" | "boolean" | "object" | "array" {
     switch (schemaType) {
-      case "string": return "string";
-      case "number": return "number";
-      case "boolean": return "boolean";
-      case "array": return "array";
-      case "object": return "object";
-      default: return "string";
+      case "string":
+        return "string";
+      case "number":
+        return "number";
+      case "boolean":
+        return "boolean";
+      case "array":
+        return "array";
+      case "object":
+        return "object";
+      default:
+        return "string";
     }
   }
 
@@ -146,11 +155,11 @@ export class ToolPlugin extends Plugin {
 
       // Serialize the typed result for transport through LLM layer
       const serializedResult = serializeToolResult(result);
-      
+
       // Create a human-readable output message
       const outputMessage = matchToolResult(result, {
         pure: (r) => String(r.output),
-        effect: (r) => r.success && r.output !== undefined ? String(r.output) : "",
+        effect: (r) => (r.success && r.output !== undefined ? String(r.output) : ""),
         control: (r) => {
           if (!r.success || !r.flow) return "Control flow failed";
           if (r.flow.type === "continue") {
@@ -162,7 +171,7 @@ export class ToolPlugin extends Plugin {
           if (!r.success || !r.termination) return "Termination failed";
           if (r.termination.type === "yield_back") {
             return r.termination.completion.response;
-          } else if (r.termination.type === "end_conversation") {
+          }if (r.termination.type === "end_conversation") {
             return r.termination.result.response;
           }
           return "Execution terminated";
@@ -172,9 +181,9 @@ export class ToolPlugin extends Plugin {
       // Extract error message if present (error is not on all result types)
       const errorMessage = matchToolResult(result, {
         pure: () => undefined,
-        effect: (r) => r.error ? this.formatError(r.error) : undefined,
-        control: (r) => r.error ? this.formatError(r.error) : undefined,
-        terminal: (r) => r.error ? this.formatError(r.error) : undefined,
+        effect: (r) => (r.error ? this.formatError(r.error) : undefined),
+        control: (r) => (r.error ? this.formatError(r.error) : undefined),
+        terminal: (r) => (r.error ? this.formatError(r.error) : undefined),
       });
 
       // Return both serialized result and human-readable output
@@ -194,7 +203,7 @@ export class ToolPlugin extends Plugin {
           this.tool.name,
           parameters,
           this.tenexContext,
-          result,  // Pass the original typed result
+          result, // Pass the original typed result
           {
             startTime,
             endTime,
@@ -240,16 +249,10 @@ export class ToolPlugin extends Plugin {
       // Log the failed tool execution
       const toolLogger = getToolLogger();
       if (toolLogger) {
-        await toolLogger.logToolCall(
-          this.tool.name,
-          parameters,
-          this.tenexContext,
-          errorResult,
-          {
-            startTime,
-            endTime,
-          }
-        );
+        await toolLogger.logToolCall(this.tool.name, parameters, this.tenexContext, errorResult, {
+          startTime,
+          endTime,
+        });
       }
 
       // Publish tool failure status

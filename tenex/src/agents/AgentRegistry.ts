@@ -22,7 +22,10 @@ export class AgentRegistry {
   private globalRegistry: TenexAgents = {};
   private isGlobal: boolean;
 
-  constructor(private basePath: string, isGlobal = false) {
+  constructor(
+    private basePath: string,
+    isGlobal = false
+  ) {
     this.isGlobal = isGlobal;
     // If basePath already includes .tenex, use it as is
     if (basePath.endsWith(".tenex")) {
@@ -36,7 +39,9 @@ export class AgentRegistry {
 
   async loadFromProject(ndkProject?: import("@nostr-dev-kit/ndk").NDKProject): Promise<void> {
     // Ensure .tenex directory exists
-    const tenexDir = this.basePath.endsWith(".tenex") ? this.basePath : path.join(this.basePath, ".tenex");
+    const tenexDir = this.basePath.endsWith(".tenex")
+      ? this.basePath
+      : path.join(this.basePath, ".tenex");
     await ensureDirectory(tenexDir);
     await ensureDirectory(this.agentsDir);
 
@@ -46,10 +51,9 @@ export class AgentRegistry {
       if (!this.isGlobal) {
         try {
           this.globalRegistry = await configService.loadTenexAgents(configService.getGlobalPath());
-          logger.info(
-            `Loaded ${Object.keys(this.globalRegistry).length} global agents`,
-            { globalAgents: Object.keys(this.globalRegistry) }
-          );
+          logger.info(`Loaded ${Object.keys(this.globalRegistry).length} global agents`, {
+            globalAgents: Object.keys(this.globalRegistry),
+          });
         } catch (error) {
           logger.debug("No global agents found or failed to load", { error });
           this.globalRegistry = {};
@@ -138,7 +142,7 @@ export class AgentRegistry {
         useCriteria: config.useCriteria,
         llmConfig: config.llmConfig,
       };
-      
+
       // Only include tools if explicitly provided
       if (config.tools && config.tools.length > 0) {
         agentDefinition.tools = config.tools;
@@ -227,7 +231,7 @@ export class AgentRegistry {
     }
 
     // Determine if this is a built-in agent early
-    const isBuiltIn = getBuiltInAgents().some(builtIn => builtIn.slug === name);
+    const isBuiltIn = getBuiltInAgents().some((builtIn) => builtIn.slug === name);
 
     // Create Agent instance with all properties set
     const agent: Agent = {
@@ -247,10 +251,9 @@ export class AgentRegistry {
     };
 
     // Set tools - use explicit tools if configured, otherwise use defaults
-    const toolNames = agentDefinition.tools !== undefined 
-      ? agentDefinition.tools 
-      : getDefaultToolsForAgent(agent);
-    
+    const toolNames =
+      agentDefinition.tools !== undefined ? agentDefinition.tools : getDefaultToolsForAgent(agent);
+
     // Convert tool names to Tool instances
     const { getTools } = await import("@/tools/registry");
     agent.tools = getTools(toolNames);

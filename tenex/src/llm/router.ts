@@ -94,7 +94,10 @@ export class LLMRouter implements LLMService {
       model: config.model,
       agentName: context.agentName,
       messageCount: request.messages.length,
-      messages: request.messages.map(m => ({ content: m.content.substring(0, 50), role: m.role })),
+      messages: request.messages.map((m) => ({
+        content: m.content.substring(0, 50),
+        role: m.role,
+      })),
       requestId: `${configKey}-${Date.now()}`,
     });
 
@@ -156,8 +159,8 @@ export class LLMRouter implements LLMService {
 
       // Execute completion with API
       console.log(
-          "CALLING LLM ****COMPLETE****",
-          request.messages[request.messages.length - 1]?.content.substring(0, 100)
+        "CALLING LLM ****COMPLETE****",
+        request.messages[request.messages.length - 1]?.content.substring(0, 100)
       );
       response = await llm.complete(model, request.messages, {
         usage: true,
@@ -246,13 +249,13 @@ export class LLMRouter implements LLMService {
 
     const startTime = Date.now();
     logger.info("ℹ️ [LLM] Starting streaming request", {
-        model: config.model,
-        agentName: request.options?.agentName,
-        messageCount: request.messages.length,
-        messages: request.messages.map((m) => ({
-            content: m.content.substring(0, 50),
-            role: m.role,
-        })),
+      model: config.model,
+      agentName: request.options?.agentName,
+      messageCount: request.messages.length,
+      messages: request.messages.map((m) => ({
+        content: m.content.substring(0, 50),
+        role: m.role,
+      })),
     });
 
     try {
@@ -286,7 +289,10 @@ export class LLMRouter implements LLMService {
         throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
       }
 
-      console.log("CALLING LLM", request.messages[request.messages.length-1]?.content.substring(0, 100));
+      console.log(
+        "CALLING LLM",
+        request.messages[request.messages.length - 1]?.content.substring(0, 100)
+      );
 
       // Use generate() for streaming
       const stream = llm.generate(model, request.messages, {

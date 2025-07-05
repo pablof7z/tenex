@@ -147,11 +147,11 @@ export class ToolCallLogger {
   private extractOutput(result: ToolExecutionResult): string | undefined {
     return matchToolResult(result, {
       pure: (r) => String(r.output),
-      effect: (r) => r.success && r.output !== undefined ? String(r.output) : undefined,
-      control: (r) => r.success && r.flow ? `Control flow: ${r.flow.type}` : undefined,
+      effect: (r) => (r.success && r.output !== undefined ? String(r.output) : undefined),
+      control: (r) => (r.success && r.flow ? `Control flow: ${r.flow.type}` : undefined),
       terminal: (r) => {
         if (!r.success || !r.termination) return undefined;
-        return r.termination.type === "yield_back" 
+        return r.termination.type === "yield_back"
           ? r.termination.completion.response
           : r.termination.result.response;
       },
@@ -161,9 +161,9 @@ export class ToolCallLogger {
   private extractError(result: ToolExecutionResult): string | undefined {
     return matchToolResult(result, {
       pure: () => undefined, // Pure tools never have errors
-      effect: (r) => r.error ? this.formatError(r.error) : undefined,
-      control: (r) => r.error ? this.formatError(r.error) : undefined,
-      terminal: (r) => r.error ? this.formatError(r.error) : undefined,
+      effect: (r) => (r.error ? this.formatError(r.error) : undefined),
+      control: (r) => (r.error ? this.formatError(r.error) : undefined),
+      terminal: (r) => (r.error ? this.formatError(r.error) : undefined),
     });
   }
 
@@ -171,8 +171,12 @@ export class ToolCallLogger {
     return matchToolResult(result, {
       pure: () => undefined,
       effect: () => undefined,
-      control: (r) => r.success && r.flow ? ({ flow: r.flow } as Record<string, unknown>) : undefined,
-      terminal: (r) => r.success && r.termination ? ({ termination: r.termination } as Record<string, unknown>) : undefined,
+      control: (r) =>
+        r.success && r.flow ? ({ flow: r.flow } as Record<string, unknown>) : undefined,
+      terminal: (r) =>
+        r.success && r.termination
+          ? ({ termination: r.termination } as Record<string, unknown>)
+          : undefined,
     });
   }
 

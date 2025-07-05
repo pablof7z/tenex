@@ -20,11 +20,15 @@ interface ContinueInput {
 export const continueTool: ControlTool<ContinueInput> = {
   brand: { _brand: "control" },
   name: "continue",
-  description: "Route conversation to next phase/agent. REQUIRES either 'phase' or 'agents' parameter (or both). This is a terminal action - once called, the agent's turn ends and control is transferred.",
-  
+  description:
+    "Route conversation to next phase/agent. REQUIRES either 'phase' or 'agents' parameter (or both). This is a terminal action - once called, the agent's turn ends and control is transferred.",
+
   parameters: createZodSchema(
     z.object({
-      phase: z.enum(ALL_PHASES as readonly [Phase, ...Phase[]]).optional().describe("Target phase"),
+      phase: z
+        .enum(ALL_PHASES as readonly [Phase, ...Phase[]])
+        .optional()
+        .describe("Target phase"),
       agents: z.array(z.string()).optional().describe("Array of agent slugs or pubkeys"),
       reason: z.string().describe("Reason for this routing decision"),
       message: z.string().describe("Context/instructions for the destination agent"),
@@ -48,7 +52,7 @@ export const continueTool: ControlTool<ContinueInput> = {
           message: "Either 'agents' or 'phase' must be specified",
         });
       }
-      
+
       // Default agents based on phase
       switch (phase) {
         case "plan":

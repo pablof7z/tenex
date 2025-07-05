@@ -2,19 +2,19 @@
  * Effect interpreter for executing tool effects
  */
 
-import type { 
-  Effect, 
+import type {
+  Effect,
   Result,
   ExecutionContext,
   ControlContext,
   TerminalContext,
   ToolError,
-  SystemError
+  SystemError,
 } from "./core";
 import { pure, fail } from "./core";
-import { readFile, writeFile } from "fs/promises";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { readFile, writeFile } from "node:fs/promises";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import { logger } from "@/utils/logger";
 
 const execAsync = promisify(exec);

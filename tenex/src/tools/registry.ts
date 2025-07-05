@@ -29,9 +29,7 @@ export function getTool(name: string): Tool | undefined {
 }
 
 export function getTools(names: string[]): Tool[] {
-  return names
-    .map(name => toolsMap.get(name))
-    .filter((tool): tool is Tool => tool !== undefined);
+  return names.map((name) => toolsMap.get(name)).filter((tool): tool is Tool => tool !== undefined);
 }
 
 export function getAllTools(): Tool[] {

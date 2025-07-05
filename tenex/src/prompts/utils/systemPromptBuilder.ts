@@ -72,7 +72,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
       agentLessons: agentLessons || new Map(),
     })
     .add("learn-tool-directive", {
-      hasLearnTool: agent.tools?.some(tool => tool.name === "learn") ?? false,
+      hasLearnTool: agent.tools?.some((tool) => tool.name === "learn") ?? false,
     })
     .add("mcp-tools", {
       tools: mcpTools,

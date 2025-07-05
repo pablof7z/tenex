@@ -12,7 +12,7 @@ export const getTimeTool: PureTool<{}, string> = {
   brand: { _brand: "pure" },
   name: "get_time",
   description: "Get the current date and time in ISO 8601 format",
-  
+
   parameters: createZodSchema(getTimeSchema),
 
   execute: (_input) => {

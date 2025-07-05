@@ -8,17 +8,21 @@ describe("Tool Registry", () => {
         expect(readFileTool).toBeDefined();
         expect(readFileTool?.description).toContain("Read a file from the filesystem");
         expect(readFileTool?.parameters).toBeDefined();
+        expect(readFileTool?.parameters.shape).toBeDefined();
+        expect(readFileTool?.parameters.validate).toBeInstanceOf(Function);
         expect(readFileTool?.execute).toBeInstanceOf(Function);
 
         const analyzeTool = getTool("analyze");
         expect(analyzeTool).toBeDefined();
         expect(analyzeTool?.description).toBeDefined();
         expect(analyzeTool?.parameters).toBeDefined();
+        expect(analyzeTool?.parameters.shape).toBeDefined();
 
         const claudeCodeTool = getTool("claude_code");
         expect(claudeCodeTool).toBeDefined();
         expect(claudeCodeTool?.description).toContain("Use Claude Code");
-        expect(claudeCodeTool?.parameters).toHaveLength(2); // prompt and mode
+        expect(claudeCodeTool?.parameters).toBeDefined();
+        expect(claudeCodeTool?.parameters.shape).toBeDefined();
 
         const continueTool = getTool("continue");
         expect(continueTool).toBeDefined();
@@ -56,28 +60,34 @@ describe("Tool Registry", () => {
             expect(tool?.description).toBeDefined();
             expect(tool?.description.length).toBeGreaterThan(0);
             expect(tool?.parameters).toBeDefined();
-            expect(Array.isArray(tool?.parameters)).toBe(true);
+            expect(tool?.parameters.shape).toBeDefined();
+            expect(tool?.parameters.validate).toBeInstanceOf(Function);
             expect(tool?.execute).toBeInstanceOf(Function);
         }
     });
 
-    test("tool parameters should have proper structure", () => {
+    test("tool parameters should have proper validation", () => {
         const claudeCodeTool = getTool("claude_code");
-        expect(claudeCodeTool?.parameters).toEqual([
-            {
-                name: "prompt",
-                type: "string",
-                description: "The task or coding request for Claude Code to perform",
-                required: true,
-            },
-            {
-                name: "mode",
-                type: "string",
-                description:
-                    'Execution mode: "run" (default) executes immediately, "plan" creates a plan without executing',
-                required: false,
-                enum: ["run", "plan"],
-            },
-        ]);
+        expect(claudeCodeTool?.parameters).toBeDefined();
+        expect(claudeCodeTool?.parameters.shape).toBeDefined();
+        
+        // The shape for a ZodObject has type "object" and properties
+        expect(claudeCodeTool?.parameters.shape.type).toBe("object");
+        expect(claudeCodeTool?.parameters.shape.properties).toBeDefined();
+        expect(claudeCodeTool?.parameters.shape.properties?.prompt).toBeDefined();
+        expect(claudeCodeTool?.parameters.shape.properties?.mode).toBeDefined();
+        
+        // Test validation
+        const result = claudeCodeTool?.parameters.validate({
+            prompt: "Test prompt",
+            mode: "run"
+        });
+        expect(result?.ok).toBe(true);
+        
+        const invalidResult = claudeCodeTool?.parameters.validate({
+            prompt: "",
+            mode: "invalid"
+        });
+        expect(invalidResult?.ok).toBe(false);
     });
 });

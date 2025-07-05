@@ -3,12 +3,7 @@ import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/ty
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
 import { StreamPublisher } from "@/nostr/NostrPublisher";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
-import type {
-  ToolExecutionResult,
-  ContinueFlow,
-  YieldBack,
-  EndConversation,
-} from "@/tools/types";
+import type { ToolExecutionResult, ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
 import { matchToolResult } from "@/tools/types";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
@@ -78,7 +73,8 @@ export class ReasonActLoop {
         streamPublisher,
         publisher,
         tracingLogger,
-        context
+        context,
+        messages
       );
 
       await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
@@ -172,7 +168,7 @@ export class ReasonActLoop {
     context: ReasonActContext
   ): StreamPublisher | undefined {
     if (!publisher) return undefined;
-    
+
     const streamPublisher = new StreamPublisher(publisher);
     tracingLogger.info("Stream publisher initialized", {
       agent: context.agent.name,
@@ -186,7 +182,8 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
-    context: ReasonActContext
+    context: ReasonActContext,
+    messages: Message[]
   ): AsyncGenerator<StreamEvent> {
     state.streamPublisher = streamPublisher;
 
@@ -212,12 +209,16 @@ export class ReasonActLoop {
             context
           );
 
-          // If this was a terminal tool, stop processing the stream
+          // If this was a terminal tool, we need to finalize before returning
           if (isTerminal) {
-            tracingLogger.info("Terminal tool detected - ending stream processing", {
+            tracingLogger.info("Terminal tool detected - finalizing stream", {
               tool: event.tool,
               type: state.continueFlow ? "routing" : "completion",
             });
+            
+            // Finalize the stream with the current state before returning
+            await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
+            yield this.createFinalEvent(state);
             return;
           }
           break;
@@ -280,9 +281,9 @@ export class ReasonActLoop {
     if (!event.result || typeof event.result !== "object") {
       throw new Error(`Tool '${event.tool}' returned invalid result format`);
     }
-    
+
     const result = event.result as Record<string, unknown>;
-    
+
     // Tool results must include the typed result
     if (!result.__typedResult || !isSerializedToolResult(result.__typedResult)) {
       throw new Error(
@@ -342,9 +343,10 @@ export class ReasonActLoop {
           state.termination = r.termination;
           tracingLogger.info("✅ Termination detected in streaming", {
             type: r.termination.type,
-            hasResponse: r.termination.type === "yield_back" 
-              ? !!r.termination.completion.response
-              : !!r.termination.result.response,
+            hasResponse:
+              r.termination.type === "yield_back"
+                ? !!r.termination.completion.response
+                : !!r.termination.result.response,
           });
         }
       },

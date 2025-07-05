@@ -67,7 +67,9 @@ export const agentAddCommand = new Command("add")
         : configService.getGlobalPath();
 
       // Load existing registry
-      const registryPath = useProject ? projectPath : configService.getGlobalPath().replace("/.tenex", "");
+      const registryPath = useProject
+        ? projectPath
+        : configService.getGlobalPath().replace("/.tenex", "");
       const registry = new AgentRegistry(registryPath, !useProject);
       await registry.loadFromProject();
 
@@ -76,7 +78,7 @@ export const agentAddCommand = new Command("add")
       if (existingAgent) {
         throw new Error(`Agent with name "${name}" already exists`);
       }
-      
+
       // If creating a project agent, check if it would shadow a global one
       if (useProject) {
         try {
@@ -84,13 +86,13 @@ export const agentAddCommand = new Command("add")
           const globalRegistry = new AgentRegistry(globalPath, true);
           await globalRegistry.loadFromProject();
           const globalAgent = globalRegistry.getAgent(name) || globalRegistry.getAgentByName(name);
-          
+
           if (globalAgent && !globalAgent.isBuiltIn) {
             const confirmed = await confirm({
               message: `A global agent named "${name}" already exists. Do you want to create a project-specific version that will override it?`,
               default: false,
             });
-            
+
             if (!confirmed) {
               logger.info("Agent creation cancelled");
               process.exit(0);

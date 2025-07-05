@@ -20,12 +20,17 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
   if (agent.isBuiltIn) {
     if (agent.isOrchestrator) {
       // Orchestrator agents get limited tools (no claude_code or shell)
-      tools = [analyze.name, endConversationTool.name, continueTool.name, generateInventoryTool.name];
+      tools = [
+        analyze.name,
+        endConversationTool.name,
+        continueTool.name,
+        generateInventoryTool.name,
+      ];
     } else {
       // Non-orchestrator agents use yield_back instead of complete
       tools.push(claudeCodeTool.name, yieldBackTool.name);
-  
-      if (agent.slug === 'project-manager') {
+
+      if (agent.slug === "project-manager") {
         tools.push(generateInventoryTool.name);
         tools.push(writeContextFileTool.name);
       }

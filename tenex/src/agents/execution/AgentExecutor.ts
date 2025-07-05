@@ -14,12 +14,7 @@ import {
 import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
 import { type ProjectContext, getProjectContext } from "@/services";
 import { mcpService } from "@/services/mcp/MCPService";
-import type {
-  ContinueFlow,
-  EndConversation,
-  ToolExecutionResult,
-  YieldBack,
-} from "@/tools/types";
+import type { ContinueFlow, EndConversation, ToolExecutionResult, YieldBack } from "@/tools/types";
 import {
   type TracingContext,
   createAgentExecutionContext,
@@ -32,7 +27,11 @@ import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import { ReasonActLoop } from "./ReasonActLoop";
 import type { ReasonActContext, ReasonActResult } from "./ReasonActLoop";
-import type { AgentExecutionContext, AgentExecutionContextWithHandoff, AgentExecutionResult } from "./types";
+import type {
+  AgentExecutionContext,
+  AgentExecutionContextWithHandoff,
+  AgentExecutionResult,
+} from "./types";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/orchestrator-routing";
 import "@/prompts/fragments/expertise-boundaries";
@@ -141,9 +140,9 @@ export class AgentExecutor {
             context.agent.name,
             continueFlow.routing.reason,
             // Enhanced handoff fields - the agent should have provided these
-            typeof continueFlow.routing.context === 'object' && 
-            continueFlow.routing.context !== null &&
-            'summary' in continueFlow.routing.context
+            typeof continueFlow.routing.context === "object" &&
+              continueFlow.routing.context !== null &&
+              "summary" in continueFlow.routing.context
               ? String(continueFlow.routing.context.summary)
               : undefined
           );
@@ -495,7 +494,11 @@ export class AgentExecutor {
             if (toolResult.flow.type === "continue") {
               continueFlow = toolResult.flow;
             }
-          } else if (toolResult.kind === "terminal" && toolResult.success && toolResult.termination) {
+          } else if (
+            toolResult.kind === "terminal" &&
+            toolResult.success &&
+            toolResult.termination
+          ) {
             termination = toolResult.termination;
           }
           break;
