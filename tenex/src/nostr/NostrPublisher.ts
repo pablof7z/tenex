@@ -328,15 +328,41 @@ export class NostrPublisher {
   }
 
   private addRoutingMetadata(event: NDKEvent, continueMetadata?: ContinueFlow): void {
-    if (continueMetadata?.routing?.phase) {
-      event.tag(["new-phase", continueMetadata.routing.phase]);
+    if (!continueMetadata?.routing) return;
+
+    const { routing } = continueMetadata;
+
+    // Add phase information
+    if (routing.phase) {
+      event.tag(["new-phase", routing.phase]);
     }
+    
     // Only add phase-transition tag if phase is actually changing
     const isPhaseTransition =
-      continueMetadata?.routing?.phase &&
-      continueMetadata.routing.phase !== this.context.conversation.phase;
+      routing.phase &&
+      routing.phase !== this.context.conversation.phase;
     if (isPhaseTransition) {
       event.tag(["phase-from", this.context.conversation.phase]);
+    }
+
+    // Add routing reason
+    if (routing.reason) {
+      event.tag(["routing-reason", routing.reason]);
+    }
+
+    // Add routing message (instructions for next agent)
+    if (routing.message) {
+      event.tag(["routing-message", routing.message]);
+    }
+
+    // Add routing context summary if provided
+    if (routing.context && typeof routing.context.summary === "string") {
+      event.tag(["routing-summary", routing.context.summary]);
+    }
+
+    // Add destinations as a tag for debugging/tracing
+    if (routing.destinations && routing.destinations.length > 0) {
+      event.tag(["routing-destinations", routing.destinations.join(",")]);
     }
   }
 }
