@@ -1,8 +1,8 @@
 import { ALL_PHASES, type Phase } from "@/conversations/phases";
 import { type ProjectContext, getProjectContext } from "@/services/ProjectContext";
 import { logger } from "@/utils/logger";
-import type { ControlTool, NonEmptyArray } from "../types";
-import { pure, fail, createZodSchema } from "../types";
+import type { Tool, NonEmptyArray, ControlFlow } from "../types";
+import { success, failure, createZodSchema } from "../types";
 import { z } from "zod";
 
 /**
@@ -17,8 +17,7 @@ interface ContinueInput {
   summary?: string;
 }
 
-export const continueTool: ControlTool<ContinueInput> = {
-  brand: { _brand: "control" },
+export const continueTool: Tool<ContinueInput, ControlFlow> = {
   name: "continue",
   description:
     "Route conversation to next phase/agent. REQUIRES either 'phase' or 'agents' parameter (or both). This is a terminal action - once called, the agent's turn ends and control is transferred.",
@@ -36,17 +35,23 @@ export const continueTool: ControlTool<ContinueInput> = {
     })
   ),
 
-  execute: (input, context) => {
+  execute: async (input, context) => {
     const { phase, agents, reason, message, summary } = input.value;
 
-    // TypeScript ensures context.isOrchestrator is true
-    // No need for runtime check!
+    // Runtime check for orchestrator
+    if (!context.agent.isOrchestrator) {
+      return failure({
+        kind: "execution",
+        tool: "continue",
+        message: "Only orchestrator can use continue tool",
+      });
+    }
 
     // Determine agents based on phase if not provided
     let targetAgents = agents;
     if (!targetAgents || targetAgents.length === 0) {
       if (!phase) {
-        return fail({
+        return failure({
           kind: "validation",
           field: "agents/phase",
           message: "Either 'agents' or 'phase' must be specified",
@@ -65,7 +70,7 @@ export const continueTool: ControlTool<ContinueInput> = {
           targetAgents = ["project-manager"];
           break;
         default:
-          return fail({
+          return failure({
             kind: "validation",
             field: "phase",
             message: `No default agent for phase '${phase}'. Please specify agents explicitly.`,
@@ -78,7 +83,7 @@ export const continueTool: ControlTool<ContinueInput> = {
     try {
       projectContext = getProjectContext();
     } catch {
-      return fail({
+      return failure({
         kind: "system",
         message: "Project context not available",
       });
@@ -93,8 +98,8 @@ export const continueTool: ControlTool<ContinueInput> = {
       if (agent.length === 64 && /^[0-9a-f]{64}$/i.test(agent)) {
         // Check if agent is already a pubkey (64-char hex)
         // Prevent routing to self
-        if (agent === context.agentId) {
-          return fail({
+        if (agent === context.agent.pubkey) {
+          return failure({
             kind: "validation",
             field: "agents",
             message: "Cannot route to self",
@@ -107,8 +112,8 @@ export const continueTool: ControlTool<ContinueInput> = {
         const agentDef = projectContext.agents.get(agent);
         if (!agentDef) {
           invalidAgents.push(agent);
-        } else if (agentDef.pubkey === context.agentId) {
-          return fail({
+        } else if (agentDef.pubkey === context.agent.pubkey) {
+          return failure({
             kind: "validation",
             field: "agents",
             message: `Cannot route to self (${agent})`,
@@ -122,7 +127,7 @@ export const continueTool: ControlTool<ContinueInput> = {
 
     if (invalidAgents.length > 0) {
       const availableAgents = Array.from(projectContext.agents.keys()).join(", ");
-      return fail({
+      return failure({
         kind: "validation",
         field: "agents",
         message: `Agents not found: ${invalidAgents.join(", ")}. Available agents: ${availableAgents}`,
@@ -130,7 +135,7 @@ export const continueTool: ControlTool<ContinueInput> = {
     }
 
     if (validPubkeys.length === 0) {
-      return fail({
+      return failure({
         kind: "validation",
         field: "agents",
         message: "No valid target agents found",
@@ -139,20 +144,40 @@ export const continueTool: ControlTool<ContinueInput> = {
 
     logger.info("Continue tool routing", {
       phase,
-      destinations: validPubkeys,
+      agents: validPubkeys,
       names: validNames,
       reason,
     });
 
     // We know validPubkeys is non-empty due to check above
-    const destinations = validPubkeys as unknown as NonEmptyArray<string>;
+    const targetAgentPubkeys = validPubkeys as unknown as NonEmptyArray<string>;
+
+    // Publish the routing event directly
+    await context.publisher.publishResponse({
+      content: message,
+      continueMetadata: {
+        type: "continue",
+        routing: {
+          phase,
+          agents: targetAgentPubkeys,
+          reason,
+          message,
+          context: summary ? { summary } : undefined,
+        }
+      }
+    });
+
+    logger.info("Continue tool published routing event", {
+      agents: validPubkeys,
+      phase,
+    });
 
     // Return properly typed control flow
-    return pure({
+    return success({
       type: "continue",
       routing: {
         phase,
-        destinations,
+        agents: targetAgentPubkeys,
         reason,
         message,
         context: summary ? { summary } : undefined,

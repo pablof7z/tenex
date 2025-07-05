@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type { ToolExecutionContext, ToolExecutionResult, ToolError } from "./types";
-import { matchToolResult } from "./types";
 
 export interface ToolCallLogEntry {
   timestamp: string;
@@ -145,39 +144,48 @@ export class ToolCallLogger {
   }
 
   private extractOutput(result: ToolExecutionResult): string | undefined {
-    return matchToolResult(result, {
-      pure: (r) => String(r.output),
-      effect: (r) => (r.success && r.output !== undefined ? String(r.output) : undefined),
-      control: (r) => (r.success && r.flow ? `Control flow: ${r.flow.type}` : undefined),
-      terminal: (r) => {
-        if (!r.success || !r.termination) return undefined;
-        return r.termination.type === "yield_back"
-          ? r.termination.completion.response
-          : r.termination.result.response;
-      },
-    });
+    if (!result.success || result.output === undefined) {
+      return undefined;
+    }
+
+    const output = result.output as any;
+    
+    // Check if it's a control flow result
+    if (output.type === "continue" && output.routing) {
+      return `Control flow: ${output.type}`;
+    }
+    // Check if it's a termination result
+    if (output.type === "yield_back" && output.completion) {
+      return output.completion.response;
+    }
+    if (output.type === "end_conversation" && output.result) {
+      return output.result.response;
+    }
+    
+    // Regular tool output
+    return String(result.output);
   }
 
   private extractError(result: ToolExecutionResult): string | undefined {
-    return matchToolResult(result, {
-      pure: () => undefined, // Pure tools never have errors
-      effect: (r) => (r.error ? this.formatError(r.error) : undefined),
-      control: (r) => (r.error ? this.formatError(r.error) : undefined),
-      terminal: (r) => (r.error ? this.formatError(r.error) : undefined),
-    });
+    return result.error ? this.formatError(result.error) : undefined;
   }
 
   private extractMetadata(result: ToolExecutionResult): Record<string, unknown> | undefined {
-    return matchToolResult(result, {
-      pure: () => undefined,
-      effect: () => undefined,
-      control: (r) =>
-        r.success && r.flow ? ({ flow: r.flow } as Record<string, unknown>) : undefined,
-      terminal: (r) =>
-        r.success && r.termination
-          ? ({ termination: r.termination } as Record<string, unknown>)
-          : undefined,
-    });
+    if (!result.success || !result.output) {
+      return undefined;
+    }
+
+    const output = result.output as any;
+    
+    // Return metadata for special result types
+    if (output.type === "continue" && output.routing) {
+      return { flow: output };
+    }
+    if ((output.type === "yield_back" && output.completion) || (output.type === "end_conversation" && output.result)) {
+      return { termination: output };
+    }
+    
+    return undefined;
   }
 
   private formatError(error: ToolError): string {

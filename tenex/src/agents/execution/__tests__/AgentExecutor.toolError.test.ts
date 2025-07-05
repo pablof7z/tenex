@@ -50,7 +50,7 @@ describe("AgentExecutor - Tool Error Publishing", () => {
 
         // Verify publishError was called with the correct error message
         expect(mockPublisher.publishError).toHaveBeenCalledWith(
-            'Tool "continue" failed: Destinations not found: user. Available agents: executer, planner, project-manager, orchestrator, yagni'
+            'Tool "continue" failed: Agents not found: user. Available agents: executer, planner, project-manager, orchestrator, yagni'
         );
         expect(mockPublisher.publishError).toHaveBeenCalledTimes(1);
     });

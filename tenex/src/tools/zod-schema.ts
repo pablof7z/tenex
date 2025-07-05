@@ -29,7 +29,12 @@ interface MCPSchema {
 /**
  * Convert a Zod schema to our SchemaShape format
  */
-function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
+function zodToSchemaShape(schema: z.ZodType<unknown>, isOptional = false): SchemaShape {
+  if (schema instanceof z.ZodOptional) {
+    const optionalDef = schema._def as z.ZodOptionalDef;
+    return zodToSchemaShape(optionalDef.innerType, true);
+  }
+  
   if (schema instanceof z.ZodString) {
     // For enum values, we need to check if it's a ZodEnum
     if (schema instanceof z.ZodEnum) {
@@ -38,11 +43,13 @@ function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
         type: "string",
         description: schema.description || "String parameter",
         enum: enumSchema.options,
+        required: !isOptional,
       };
     }
     return {
       type: "string",
       description: schema.description || "String parameter",
+      required: !isOptional,
     };
   }if (schema instanceof z.ZodNumber) {
     // Get min/max from the schema definition more safely
@@ -65,11 +72,13 @@ function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
       description: schema.description || "Number parameter",
       min,
       max,
+      required: !isOptional,
     };
   }if (schema instanceof z.ZodBoolean) {
     return {
       type: "boolean",
       description: schema.description || "Boolean parameter",
+      required: !isOptional,
     };
   }if (schema instanceof z.ZodArray) {
     const arrayDef = schema._def as z.ZodArrayDef;
@@ -77,27 +86,33 @@ function zodToSchemaShape(schema: z.ZodType<unknown>): SchemaShape {
       type: "array",
       description: schema.description || "Array parameter",
       items: zodToSchemaShape(arrayDef.type),
+      required: !isOptional,
     };
   }if (schema instanceof z.ZodObject) {
     const properties: Record<string, SchemaShape> = {};
     const objectDef = schema._def as z.ZodObjectDef;
     const shape = objectDef.shape();
+    const required: string[] = [];
+    
     for (const [key, value] of Object.entries(shape)) {
-      properties[key] = zodToSchemaShape(value as z.ZodType<unknown>);
+      const propShape = zodToSchemaShape(value as z.ZodType<unknown>);
+      properties[key] = propShape;
+      if (propShape.required !== false) {
+        required.push(key);
+      }
     }
     return {
       type: "object",
       description: schema.description || "Object parameter",
       properties,
+      required,
     };
-  }if (schema instanceof z.ZodOptional) {
-    const optionalDef = schema._def as z.ZodOptionalDef;
-    return zodToSchemaShape(optionalDef.innerType);
   }
     // Fallback for unknown types
     return {
       type: "string",
       description: "Unknown parameter type",
+      required: !isOptional,
     };
 }
 
@@ -223,7 +238,7 @@ export function mcpSchemaToZod(mcpSchema: MCPSchema): z.ZodType<unknown> {
     switch (propDef.type) {
       case "string":
         zodField = z.string();
-        if (propDef.enum) {
+        if (propDef.enum && propDef.enum.length > 0) {
           zodField = z.enum(propDef.enum as [string, ...string[]]);
         }
         if (propDef.minLength) {

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import type { EffectTool } from "../types";
-import { suspend, createZodSchema } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 import { resolveAndValidatePath } from "../utils";
 import { z } from "zod";
 
@@ -15,39 +15,32 @@ type ReadFileOutput = string;
  * Read file tool - effect tool that reads files from filesystem
  * Performs I/O side effects
  */
-export const readFileTool: EffectTool<ReadFileInput, ReadFileOutput> = {
-  brand: { _brand: "effect" },
+export const readFileTool: Tool<ReadFileInput, ReadFileOutput> = {
   name: "read_file",
   description: "Read a file from the filesystem",
 
   parameters: createZodSchema(readFileSchema),
 
-  execute: (input, context) => {
+  execute: async (input, context) => {
     const { path } = input.value;
 
-    // Return an effect that describes the file read operation
-    return suspend(async () => {
-      try {
-        // Resolve path and ensure it's within project
-        const fullPath = resolveAndValidatePath(path, context.projectPath);
+    try {
+      // Resolve path and ensure it's within project
+      const fullPath = resolveAndValidatePath(path, context.projectPath);
 
-        const content = await readFile(fullPath, "utf-8");
+      const content = await readFile(fullPath, "utf-8");
 
-        // Note: File tracking is handled by the interpreter layer
-        // This keeps the tool pure and focused on its primary responsibility
-
-        return { ok: true, value: content };
-      } catch (error: unknown) {
-        return {
-          ok: false,
-          error: {
-            kind: "execution" as const,
-            tool: "read_file",
-            message: `Failed to read ${path}: ${error instanceof Error ? error.message : "Unknown error"}`,
-            cause: error,
-          },
-        };
-      }
-    });
+      return { ok: true, value: content };
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error: {
+          kind: "execution" as const,
+          tool: "read_file",
+          message: `Failed to read ${path}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          cause: error,
+        },
+      };
+    }
   },
 };

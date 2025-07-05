@@ -1,4 +1,3 @@
-import path from "node:path";
 import * as readline from "node:readline";
 import { AgentRegistry } from "@/agents/AgentRegistry";
 import { AgentExecutor } from "@/agents/execution/AgentExecutor";
@@ -9,7 +8,6 @@ import type { Phase } from "@/conversations/phases";
 import type { Conversation } from "@/conversations/types";
 import { createAgentAwareLLMService, loadLLMRouter } from "@/llm";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import type { LLMService } from "@/llm/types";
 import { getNDK, initNDK } from "@/nostr/ndkClient";
 import { PromptBuilder } from "@/prompts";
 import { getProjectContext } from "@/services";
@@ -29,7 +27,7 @@ interface DebugChatOptions {
 export async function runDebugChat(
   initialAgentName: string | undefined,
   options: DebugChatOptions
-) {
+): Promise<void> {
   try {
     const projectPath = process.cwd();
 
@@ -166,22 +164,8 @@ export async function runDebugChat(
           console.log(chalk.gray("\nTools executed:"));
           result.toolExecutions.forEach((toolResult, idx) => {
             // Extract tool name from error if available
-            const toolName =
-              toolResult.kind === "effect" && toolResult.error?.kind === "execution"
-                ? toolResult.error.tool
-                : toolResult.kind === "control" && toolResult.error?.kind === "execution"
-                  ? toolResult.error.tool
-                  : toolResult.kind === "terminal" && toolResult.error?.kind === "execution"
-                    ? toolResult.error.tool
-                    : toolResult.kind;
-            const errorMsg =
-              toolResult.kind === "effect" && toolResult.error
-                ? toolResult.error.message
-                : toolResult.kind === "control" && toolResult.error
-                  ? toolResult.error.message
-                  : toolResult.kind === "terminal" && toolResult.error
-                    ? toolResult.error.message
-                    : "";
+            const toolName = toolResult.error?.kind === "execution" ? toolResult.error.tool : "unknown";
+            const errorMsg = toolResult.error?.message || "";
             console.log(
               chalk.gray(
                 `  ${idx + 1}. ${toolName} ${toolResult.success ? "✓" : "✗"}${errorMsg ? `: ${errorMsg}` : ""}`
@@ -308,22 +292,8 @@ export async function runDebugChat(
             console.log(chalk.gray("\nTools executed:"));
             for (const toolResult of result.toolExecutions) {
               // Extract tool name from error if available
-              const toolName =
-                toolResult.kind === "effect" && toolResult.error?.kind === "execution"
-                  ? toolResult.error.tool
-                  : toolResult.kind === "control" && toolResult.error?.kind === "execution"
-                    ? toolResult.error.tool
-                    : toolResult.kind === "terminal" && toolResult.error?.kind === "execution"
-                      ? toolResult.error.tool
-                      : toolResult.kind;
-              const errorMsg =
-                toolResult.kind === "effect" && toolResult.error
-                  ? toolResult.error.message
-                  : toolResult.kind === "control" && toolResult.error
-                    ? toolResult.error.message
-                    : toolResult.kind === "terminal" && toolResult.error
-                      ? toolResult.error.message
-                      : "";
+              const toolName = toolResult.error?.kind === "execution" ? toolResult.error.tool : "unknown";
+              const errorMsg = toolResult.error?.message || "";
               console.log(
                 chalk.gray(
                   `  - ${toolName} ${toolResult.success ? "✓" : "✗"}${errorMsg ? `: ${errorMsg}` : ""}`

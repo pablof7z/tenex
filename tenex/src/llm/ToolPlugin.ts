@@ -7,7 +7,7 @@ import type {
   ToolError,
   ToolExecutionResult,
 } from "@/tools/types";
-import { createToolExecutor, matchToolResult } from "@/tools/types";
+import { createToolExecutor } from "@/tools/types";
 import { logger } from "@/utils/logger";
 import {
   Plugin,
@@ -18,7 +18,7 @@ import { serializeToolResult } from "./ToolResult";
 
 /**
  * Adapter that converts TENEX Tool to multi-llm-ts Plugin
- * Handles all tool types: Pure, Effect, Control, Terminal
+ * Handles all tool types with unified interface
  */
 export class ToolPlugin extends Plugin {
   private readonly executor: ToolExecutor;
@@ -28,8 +28,16 @@ export class ToolPlugin extends Plugin {
     private readonly tenexContext: ToolExecutionContext
   ) {
     super();
-    // Create executor with appropriate capabilities
-    this.executor = createToolExecutor(tenexContext);
+    // Map ToolExecutionContext to ExecutionContext
+    const executionContext = {
+      projectPath: tenexContext.projectPath,
+      conversationId: tenexContext.conversationId,
+      phase: tenexContext.phase,
+      agent: tenexContext.agent,
+      conversation: tenexContext.conversation,
+      publisher: tenexContext.publisher,
+    };
+    this.executor = createToolExecutor(executionContext);
   }
 
   serializeInTools(): boolean {
@@ -58,24 +66,22 @@ export class ToolPlugin extends Plugin {
           name,
           type: this.mapSchemaTypeToPluginType(prop.type),
           description: prop.description,
-          required: true, // TODO: Handle optional fields from schema
+          required: shape.required?.includes(name) ?? false,
         };
 
+        // Add enum values if present
         if (prop.type === "string" && prop.enum) {
-          param.enum = [...prop.enum]; // Convert readonly to mutable
+          param.enum = [...prop.enum];
         }
 
         return param;
       });
     }
 
-    // Fallback for non-object schemas
     return [];
   }
 
-  private mapSchemaTypeToPluginType(
-    schemaType: string
-  ): "string" | "number" | "boolean" | "object" | "array" {
+  private mapSchemaTypeToPluginType(schemaType: string): "string" | "number" | "boolean" | "array" | "object" {
     switch (schemaType) {
       case "string":
         return "string";
@@ -92,63 +98,18 @@ export class ToolPlugin extends Plugin {
     }
   }
 
-  getPreparationDescription(_tool: string): string {
-    return `Preparing ${this.tool.name}...`;
-  }
-
-  getRunningDescription(_tool: string, args: Record<string, unknown>): string {
-    const argsStr = Object.keys(args).length > 0 ? ` with ${JSON.stringify(args)}` : "";
-    return `Running ${this.tool.name}${argsStr}`;
-  }
-
-  getCompletedDescription(
-    _tool: string,
-    _args: Record<string, unknown>,
-    _results: unknown
-  ): string {
-    return `Completed ${this.tool.name}`;
-  }
-
-  async execute(
-    _context: PluginExecutionContext,
-    parameters: Record<string, unknown>
-  ): Promise<unknown> {
+  async execute(parameters: Record<string, unknown>, context: PluginExecutionContext): Promise<unknown> {
     const startTime = Date.now();
-    let publisher: NostrPublisher | undefined;
-
-    // Create publisher if we have the necessary context
-    if (
-      this.tenexContext.triggeringEvent &&
-      this.tenexContext.agent &&
-      this.tenexContext.conversation
-    ) {
-      try {
-        publisher = new NostrPublisher({
-          conversation: this.tenexContext.conversation,
-          agent: this.tenexContext.agent,
-          triggeringEvent: this.tenexContext.triggeringEvent,
-        });
-
-        await publisher.publishToolStatus({
-          tool: this.tool.name,
-          status: "starting",
-          args: parameters,
-        });
-
-        logger.debug("Published tool execution start", {
-          tool: this.tool.name,
-          agent: this.tenexContext.agent.name,
-        });
-      } catch (error) {
-        logger.error("Failed to publish tool execution start", {
-          tool: this.tool.name,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // Don't throw - tool execution should continue even if publishing fails
-      }
-    }
 
     try {
+      logger.debug(`Executing tool: ${this.tool.name}`, {
+        tool: this.tool.name,
+        parameters,
+        agentId: this.tenexContext.agent.pubkey,
+        conversationId: this.tenexContext.conversationId,
+        phase: this.tenexContext.phase,
+      });
+
       // Execute the tool using the type-safe executor
       const result = await this.executor.execute(this.tool, parameters);
       const endTime = Date.now();
@@ -157,34 +118,31 @@ export class ToolPlugin extends Plugin {
       const serializedResult = serializeToolResult(result);
 
       // Create a human-readable output message
-      const outputMessage = matchToolResult(result, {
-        pure: (r) => String(r.output),
-        effect: (r) => (r.success && r.output !== undefined ? String(r.output) : ""),
-        control: (r) => {
-          if (!r.success || !r.flow) return "Control flow failed";
-          if (r.flow.type === "continue") {
-            return `Routing to ${r.flow.routing.destinations.length} agents`;
-          }
-          return `Control flow: ${r.flow.type}`;
-        },
-        terminal: (r) => {
-          if (!r.success || !r.termination) return "Termination failed";
-          if (r.termination.type === "yield_back") {
-            return r.termination.completion.response;
-          }if (r.termination.type === "end_conversation") {
-            return r.termination.result.response;
-          }
-          return "Execution terminated";
-        },
-      });
+      let outputMessage = "";
+      if (result.success && result.output !== undefined) {
+        const output = result.output as any;
+        
+        // Check if it's a control flow result
+        if (output.type === "continue" && output.routing) {
+          outputMessage = `Routing to ${output.routing.destinations.length} agents`;
+        }
+        // Check if it's a termination result
+        else if (output.type === "yield_back" && output.completion) {
+          outputMessage = output.completion.response;
+        }
+        else if (output.type === "end_conversation" && output.result) {
+          outputMessage = output.result.response;
+        }
+        // Regular tool output
+        else {
+          outputMessage = String(result.output);
+        }
+      } else {
+        outputMessage = "";
+      }
 
-      // Extract error message if present (error is not on all result types)
-      const errorMessage = matchToolResult(result, {
-        pure: () => undefined,
-        effect: (r) => (r.error ? this.formatError(r.error) : undefined),
-        control: (r) => (r.error ? this.formatError(r.error) : undefined),
-        terminal: (r) => (r.error ? this.formatError(r.error) : undefined),
-      });
+      // Extract error message if present
+      const errorMessage = result.error ? this.formatError(result.error) : undefined;
 
       // Return both serialized result and human-readable output
       const processedResult = {
@@ -211,22 +169,13 @@ export class ToolPlugin extends Plugin {
         );
       }
 
-      // Publish completion status
-      if (publisher && processedResult.success) {
-        try {
-          await publisher.publishToolStatus({
-            tool: this.tool.name,
-            status: "completed",
-            result: processedResult,
-            duration: result.duration,
-          });
-        } catch (publishError) {
-          logger.error("Failed to publish tool completion", {
-            tool: this.tool.name,
-            error: publishError instanceof Error ? publishError.message : String(publishError),
-          });
-        }
-      }
+      logger.debug(`Tool execution completed: ${this.tool.name}`, {
+        tool: this.tool.name,
+        success: result.success,
+        duration: result.duration,
+        hasOutput: !!result.output,
+        hasError: !!result.error,
+      });
 
       return processedResult;
     } catch (error) {
@@ -235,7 +184,6 @@ export class ToolPlugin extends Plugin {
 
       // Create an error result for logging
       const errorResult: ToolExecutionResult = {
-        kind: "effect",
         success: false,
         output: undefined,
         error: {
@@ -255,43 +203,34 @@ export class ToolPlugin extends Plugin {
         });
       }
 
-      // Publish tool failure status
-      if (publisher) {
-        try {
-          await publisher.publishToolStatus({
-            tool: this.tool.name,
-            status: "failed",
-            error: errorResult.error ? this.formatError(errorResult.error) : "Unknown error",
-            duration,
-          });
+      logger.error(`Tool execution failed: ${this.tool.name}`, {
+        tool: this.tool.name,
+        error: error instanceof Error ? error.message : String(error),
+        duration,
+        parameters,
+      });
 
-          logger.debug("Published tool execution failure", {
-            tool: this.tool.name,
-            agent: this.tenexContext.agent.name,
-            error: error instanceof Error ? error.message : String(error),
-            duration,
-          });
-        } catch (publishError) {
-          logger.error("Failed to publish tool execution failure", {
-            tool: this.tool.name,
-            error: publishError instanceof Error ? publishError.message : String(publishError),
-          });
-        }
-      }
-
-      // Re-throw the original error
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        output: "",
+        error: errorMessage,
+        duration,
+        __typedResult: serializeToolResult(errorResult),
+      };
     }
   }
 
   private formatError(error: ToolError): string {
     switch (error.kind) {
       case "validation":
-        return `Validation error in field '${error.field}': ${error.message}`;
+        return `Validation error in ${error.field}: ${error.message}`;
       case "execution":
-        return `Execution error in tool '${error.tool}': ${error.message}`;
+        return `Execution error: ${error.message}`;
       case "system":
         return `System error: ${error.message}`;
+      default:
+        return `Unknown error: No details available`;
     }
   }
 }

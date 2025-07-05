@@ -1,7 +1,7 @@
 import { getProjectContext } from "@/services/ProjectContext";
 import { logger } from "@/utils/logger";
-import type { TerminalTool } from "../types";
-import { pure, createZodSchema } from "../types";
+import type { Tool, Termination } from "../types";
+import { success, createZodSchema } from "../types";
 import { z } from "zod";
 
 const yieldBackSchema = z.object({
@@ -16,17 +16,16 @@ const yieldBackSchema = z.object({
  * Yield back tool - non-orchestrator agents use this to return control
  * Implements the star topology where all agents complete back to orchestrator
  */
-export const yieldBackTool: TerminalTool<{
+export const yieldBackTool: Tool<{
   response: string;
   summary?: string;
-}> = {
-  brand: { _brand: "terminal" },
+}, Termination> = {
   name: "yield_back",
   description: "Return control to the orchestrator after completing assigned task",
 
   parameters: createZodSchema(yieldBackSchema),
 
-  execute: (input, context) => {
+  execute: async (input, context) => {
     const { response, summary } = input.value;
 
     // TypeScript ensures this is a terminal context with orchestratorPubkey
@@ -35,38 +34,55 @@ export const yieldBackTool: TerminalTool<{
     const projectContext = getProjectContext();
     const orchestratorAgent = projectContext.getProjectAgent();
 
-    // Validate orchestrator pubkey matches
-    if (context.orchestratorPubkey !== orchestratorAgent.pubkey) {
+    // Validate orchestrator pubkey matches project agent
+    if (orchestratorAgent.pubkey !== projectContext.orchestrator.pubkey) {
       logger.warn("Orchestrator pubkey mismatch", {
-        expected: orchestratorAgent.pubkey,
-        actual: context.orchestratorPubkey,
+        expected: projectContext.orchestrator.pubkey,
+        actual: orchestratorAgent.pubkey,
       });
     }
 
     logger.info("📬 Yielding control back to orchestrator (star topology)", {
       tool: "yield_back",
-      fromAgent: context.agentName,
+      fromAgent: context.agent.name,
       toOrchestrator: orchestratorAgent.name,
       conversationId: context.conversationId,
+    });
+
+    // Publish the completion event directly
+    await context.publisher.publishResponse({
+      content: response,
+      completeMetadata: {
+        type: "yield_back",
+        completion: {
+          response,
+          summary: summary || response,
+          nextAgent: orchestratorAgent.pubkey,
+        }
+      }
+    });
+
+    logger.info("Yield back published completion event", {
+      toOrchestrator: orchestratorAgent.pubkey,
     });
 
     // Log the completion
     logger.info("✅ Task completion signaled", {
       tool: "yield_back",
-      agent: context.agentName,
-      agentId: context.agentId,
+      agent: context.agent.name,
+      agentId: context.agent.pubkey,
       returningTo: orchestratorAgent.name,
       hasResponse: !!response,
       conversationId: context.conversationId,
     });
 
     // Return properly typed termination
-    return pure({
+    return success({
       type: "yield_back",
       completion: {
         response,
         summary: summary || response, // Use summary if provided, otherwise use response
-        nextAgent: context.orchestratorPubkey,
+        nextAgent: orchestratorAgent.pubkey,
       },
     });
   },

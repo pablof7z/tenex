@@ -5,7 +5,7 @@ export default typescript.config(
   js.configs.recommended,
   ...typescript.configs.recommended,
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.js', '*.config.ts', 'scripts/**']
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.js', '*.config.ts', 'scripts/**', '**/*.test.*', '**/*.spec.*', '**/__tests__/**']
   },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],

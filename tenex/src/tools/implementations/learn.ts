@@ -2,9 +2,11 @@ import { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { getNDK } from "@/nostr";
 import { getProjectContext } from "@/services/ProjectContext";
 import { logger } from "@/utils/logger";
+import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
+import { EXECUTION_TAGS } from "@/nostr/tags";
 import { z } from "zod";
-import type { EffectTool } from "../types";
-import { createZodSchema, suspend } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 
 const learnSchema = z.object({
   title: z.string().describe("Brief title/description of what this lesson is about"),
@@ -28,20 +30,18 @@ interface LearnOutput {
   lessonLength: number;
 }
 
-export const learnTool: EffectTool<LearnInput, LearnOutput> = {
-  brand: { _brand: "effect" },
+export const learnTool: Tool<LearnInput, LearnOutput> = {
   name: "learn",
   description: "Record an important lesson learned during execution that should be carried forward",
 
   parameters: createZodSchema(learnSchema),
 
-  execute: (input, context) =>
-    suspend(async () => {
+  execute: async (input, context) => {
       const { title, lesson, keywords } = input.value;
 
       logger.info("🎓 Agent recording new lesson", {
-        agent: context.agentName,
-        agentPubkey: context.agentId,
+        agent: context.agent.name,
+        agentPubkey: context.agent.pubkey,
         title,
         lessonLength: lesson.length,
         keywordCount: keywords?.length || 0,
@@ -51,10 +51,10 @@ export const learnTool: EffectTool<LearnInput, LearnOutput> = {
       });
 
       // Check if agent signer is available
-      const agentSigner = context.agentSigner;
+      const agentSigner = context.agent.signer;
       if (!agentSigner) {
         logger.warn("Agent signer not available, cannot publish lesson", {
-          agent: context.agentName,
+          agent: context.agent.name,
         });
         return {
           ok: false,
@@ -70,7 +70,7 @@ export const learnTool: EffectTool<LearnInput, LearnOutput> = {
       const ndk = getNDK();
       if (!ndk) {
         logger.error("NDK instance not available", {
-          agent: context.agentName,
+          agent: context.agent.name,
         });
         return {
           ok: false,
@@ -92,8 +92,7 @@ export const learnTool: EffectTool<LearnInput, LearnOutput> = {
         lessonEvent.lesson = lesson;
 
         // Add reference to the agent event if available
-        // TODO: Get agent eventId from context
-        const agentEventId = undefined;
+        const agentEventId = undefined; // Agent event ID not available in context
         if (agentEventId) {
           // Fetch the actual NDKAgent event
           const agentEventFilter = {
@@ -130,26 +129,23 @@ export const learnTool: EffectTool<LearnInput, LearnOutput> = {
           }
         }
 
-        // Add execution time tag if conversation available
-        // TODO: Get conversation from context
-        // if (context.conversation) {
-        //   const totalSeconds = getTotalExecutionTimeSeconds(context.conversation);
-        //   lessonEvent.tags.push([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
-        // }
+        // Add execution time tag
+        const totalSeconds = getTotalExecutionTimeSeconds(context.conversation);
+        lessonEvent.tags.push([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
 
         // Sign and publish the event
         await lessonEvent.sign(agentSigner);
         await lessonEvent.publish();
 
         logger.info("✅ Successfully published agent lesson", {
-          agent: context.agentName,
-          agentPubkey: context.agentId,
+          agent: context.agent.name,
+          agentPubkey: context.agent.pubkey,
           eventId: lessonEvent.id,
           title,
           keywords: keywords?.length || 0,
           phase: context.phase,
           projectId: projectCtx.project.tagId(),
-          totalLessonsForAgent: projectCtx.getLessonsForAgent(context.agentId).length,
+          totalLessonsForAgent: projectCtx.getLessonsForAgent(context.agent.pubkey).length,
           totalLessonsInProject: projectCtx.getAllLessons().length,
         });
 
@@ -167,8 +163,8 @@ export const learnTool: EffectTool<LearnInput, LearnOutput> = {
       } catch (error) {
         logger.error("❌ Learn tool failed", {
           error: error instanceof Error ? error.message : String(error),
-          agent: context.agentName,
-          agentPubkey: context.agentId,
+          agent: context.agent.name,
+          agentPubkey: context.agent.pubkey,
           title,
           phase: context.phase,
           conversationId: context.conversationId,
@@ -183,5 +179,5 @@ export const learnTool: EffectTool<LearnInput, LearnOutput> = {
           },
         };
       }
-    }),
+  },
 };

@@ -1,6 +1,5 @@
 import type { ConversationManager } from "@/conversations/ConversationManager";
 import type { Phase } from "@/conversations/phases";
-import type { PhaseTransition } from "@/conversations/types";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { CompletionResponse, LLMService, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
@@ -183,17 +182,24 @@ export class AgentExecutor {
         );
       }
 
-      // 8. Check if response was already published during streaming
+      // 8. Check if response was already published
       let publishedEvent: NDKEvent | undefined;
-      if (streamResult.wasPublished) {
-        tracingLogger.debug("Response already published during streaming", {
+      
+      // Routing tools (continue, yield_back, end_conversation) publish directly
+      const isRoutingTool = !!(continueFlow || termination);
+      
+      if (streamResult.wasPublished || isRoutingTool) {
+        tracingLogger.debug("Response already published", {
           agentName: context.agent.name,
+          reason: isRoutingTool ? "routing tool published directly" : "published during streaming",
+          hasRoutingFlow: !!continueFlow,
+          hasTermination: !!termination,
         });
         // We don't have the actual event ID from streaming, but we know it was published
         publishedEvent = undefined;
       } else {
         // Safety fallback for unexpected cases
-        tracingLogger.error("Response was not published during streaming - publishing now", {
+        tracingLogger.error("Response was not published - publishing now", {
           agentName: context.agent.name,
         });
         publishedEvent = await this.publishResponse(
@@ -489,17 +495,15 @@ export class AgentExecutor {
           }
 
           // Extract control flow and termination from tool results
-          if (toolResult.kind === "control" && toolResult.success && toolResult.flow) {
+          const output = toolResult.output as Record<string, unknown>;
+          if (toolResult.success && output?.type === "continue" && output?.routing) {
             // Only accept ContinueFlow, not other control flow types
-            if (toolResult.flow.type === "continue") {
-              continueFlow = toolResult.flow;
-            }
+            continueFlow = output as unknown as ContinueFlow;
           } else if (
-            toolResult.kind === "terminal" &&
             toolResult.success &&
-            toolResult.termination
+            (output?.type === "yield_back" || output?.type === "end_conversation")
           ) {
-            termination = toolResult.termination;
+            termination = output as unknown as (YieldBack | EndConversation);
           }
           break;
         }

@@ -84,10 +84,10 @@ export class NostrPublisher {
       });
 
       // Handle routing
-      if (options.continueMetadata?.routing?.destinations) {
+      if (options.continueMetadata?.routing?.agents) {
         // Add p-tags for all destination agents
-        const destinations = options.continueMetadata.routing.destinations;
-        for (const pubkey of destinations) {
+        const agents = options.continueMetadata.routing.agents;
+        for (const pubkey of agents) {
           reply.tag(["p", pubkey]);
         }
       } else if (options.completeMetadata?.type === "yield_back") {
@@ -360,9 +360,9 @@ export class NostrPublisher {
       event.tag(["routing-summary", routing.context.summary]);
     }
 
-    // Add destinations as a tag for debugging/tracing
-    if (routing.destinations && routing.destinations.length > 0) {
-      event.tag(["routing-destinations", routing.destinations.join(",")]);
+    // Add agents as a tag for debugging/tracing
+    if (routing.agents && routing.agents.length > 0) {
+      event.tag(["routing-agents", routing.agents.join(",")]);
     }
   }
 }

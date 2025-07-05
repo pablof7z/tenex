@@ -4,7 +4,6 @@ import type { NostrPublisher } from "@/nostr/NostrPublisher";
 import { StreamPublisher } from "@/nostr/NostrPublisher";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type { ToolExecutionResult, ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
-import { matchToolResult } from "@/tools/types";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -64,7 +63,7 @@ export class ReasonActLoop {
     this.logStreamingStart(tracingLogger, context, tools);
 
     try {
-      const stream = this.createLLMStream(context, messages, tools);
+      const stream = this.createLLMStream(context, messages, tools, publisher);
       const streamPublisher = this.setupStreamPublisher(publisher, tracingLogger, context);
 
       yield* this.processStreamEvents(
@@ -73,8 +72,7 @@ export class ReasonActLoop {
         streamPublisher,
         publisher,
         tracingLogger,
-        context,
-        messages
+        context
       );
 
       await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
@@ -134,7 +132,8 @@ export class ReasonActLoop {
   private createLLMStream(
     context: ReasonActContext,
     messages: Message[],
-    tools?: Tool[]
+    tools?: Tool[],
+    publisher?: NostrPublisher
   ): ReturnType<LLMService["stream"]> {
     return this.llmService.stream({
       messages,
@@ -149,15 +148,8 @@ export class ReasonActLoop {
         phase: context.phase,
         agent: context.agent,
         conversation: context.conversation,
-        conversationRootEventId: context.conversation.id,
+        publisher: publisher as NostrPublisher,
         triggeringEvent: context.eventToReply,
-        // Enhanced context for tool system
-        agentId: context.agent.pubkey,
-        agentName: context.agent.name,
-        isOrchestrator: context.agent.isOrchestrator,
-        availableAgents: [], // TODO: Pass available agents
-        orchestratorPubkey: "", // TODO: Get orchestrator pubkey
-        userPubkey: "", // TODO: Get user pubkey from conversation
       },
     });
   }
@@ -182,8 +174,7 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
-    context: ReasonActContext,
-    messages: Message[]
+    context: ReasonActContext
   ): AsyncGenerator<StreamEvent> {
     state.streamPublisher = streamPublisher;
 
@@ -209,15 +200,14 @@ export class ReasonActLoop {
             context
           );
 
-          // If this was a terminal tool, we need to finalize before returning
+          // If this was a terminal tool, the tool has already published - just return
           if (isTerminal) {
-            tracingLogger.info("Terminal tool detected - finalizing stream", {
+            tracingLogger.info("Terminal tool detected - event already published by tool", {
               tool: event.tool,
               type: state.continueFlow ? "routing" : "completion",
             });
             
-            // Finalize the stream with the current state before returning
-            await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
+            // Don't finalize - routing tools publish directly
             yield this.createFinalEvent(state);
             return;
           }
@@ -300,66 +290,75 @@ export class ReasonActLoop {
     tracingLogger: TracingLogger,
     context: ReasonActContext
   ): void {
-    matchToolResult(toolResult, {
-      pure: () => {
-        // Pure tools don't affect control flow
-      },
-      effect: () => {
-        // Effect tools don't affect control flow
-      },
-      control: (r) => {
-        if (r.success && r.flow && r.flow.type === "continue") {
-          // Only process the first continue
-          if (state.continueFlow) {
-            tracingLogger.info("⚠️ Multiple continue calls detected - ignoring additional calls", {
-              existingDestinations: state.continueFlow.routing.destinations,
-              newDestinations: r.flow.routing.destinations,
+    if (!toolResult.success || !toolResult.output) {
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const output = toolResult.output as any;
+
+    // Check if it's a continue flow
+    if (output.type === "continue" && output.routing) {
+      // Only process the first continue
+      if (state.continueFlow) {
+        tracingLogger.info("⚠️ Multiple continue calls detected - ignoring additional calls", {
+          existingAgents: state.continueFlow.routing.agents,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          newAgents: (output.routing as any).agents,
+        });
+        return;
+      }
+
+      state.continueFlow = output as ContinueFlow;
+      tracingLogger.info("🔄 Continue routing detected in streaming", {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        agents: (output.routing as any).agents,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        phase: (output.routing as any).phase,
+      });
+
+      // Increment continue call count
+      if (this.conversationManager && context.conversationId && context.phase) {
+        this.conversationManager
+          .incrementContinueCallCount(context.conversationId, context.phase)
+          .catch((error) => {
+            tracingLogger.error("Failed to increment continue call count", {
+              error: error instanceof Error ? error.message : String(error),
+              conversationId: context.conversationId,
+              phase: context.phase,
             });
-            return;
-          }
-
-          state.continueFlow = r.flow;
-          tracingLogger.info("🔄 Continue routing detected in streaming", {
-            destinations: r.flow.routing.destinations,
-            phase: r.flow.routing.phase,
           });
+      }
+    }
 
-          // Increment continue call count
-          if (this.conversationManager && context.conversationId && context.phase) {
-            this.conversationManager
-              .incrementContinueCallCount(context.conversationId, context.phase)
-              .catch((error) => {
-                tracingLogger.error("Failed to increment continue call count", {
-                  error: error instanceof Error ? error.message : String(error),
-                  conversationId: context.conversationId,
-                  phase: context.phase,
-                });
-              });
-          }
-        }
-      },
-      terminal: (r) => {
-        if (r.success && r.termination) {
-          state.termination = r.termination;
-          tracingLogger.info("✅ Termination detected in streaming", {
-            type: r.termination.type,
-            hasResponse:
-              r.termination.type === "yield_back"
-                ? !!r.termination.completion.response
-                : !!r.termination.result.response,
-          });
-        }
-      },
-    });
+    // Check if it's a termination (yield_back or end_conversation)
+    if (output.type === "yield_back" && output.completion) {
+      state.termination = output as YieldBack;
+      tracingLogger.info("✅ Termination detected in streaming", {
+        type: output.type,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        hasResponse: !!(output.completion as any).response,
+      });
+    } else if (output.type === "end_conversation" && output.result) {
+      state.termination = output as EndConversation;
+      tracingLogger.info("✅ Termination detected in streaming", {
+        type: output.type,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        hasResponse: !!(output.result as any).response,
+      });
+    }
   }
 
   private isTerminalResult(result: ToolExecutionResult): boolean {
-    return matchToolResult(result, {
-      pure: () => false,
-      effect: () => false,
-      control: (r) => r.success && !!r.flow,
-      terminal: (r) => r.success && !!r.termination,
-    });
+    if (!result.success || !result.output) {
+      return false;
+    }
+
+    const output = result.output as Record<string, unknown>;
+    // Check if it's a control flow or termination
+    return output.type === "continue" ||
+           output.type === "yield_back" ||
+           output.type === "end_conversation";
   }
 
   private handleDoneEvent(

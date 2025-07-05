@@ -3,8 +3,8 @@ import { promisify } from "node:util";
 import { generateInventory, inventoryExists } from "@/utils/inventory";
 import { logger } from "@/utils/logger";
 import { z } from "zod";
-import type { EffectTool } from "../types";
-import { createZodSchema, suspend } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 
 const execAsync = promisify(exec);
 
@@ -22,15 +22,13 @@ interface GenerateInventoryOutput {
   regenerated: boolean;
 }
 
-export const generateInventoryTool: EffectTool<GenerateInventoryInput, GenerateInventoryOutput> = {
-  brand: { _brand: "effect" },
+export const generateInventoryTool: Tool<GenerateInventoryInput, GenerateInventoryOutput> = {
   name: "generate_inventory",
   description: "Generate a comprehensive project inventory using repomix + LLM analysis",
 
   parameters: createZodSchema(generateInventorySchema),
 
-  execute: (input, context) =>
-    suspend(async () => {
+  execute: async (input, context) => {
       const { force = false } = input.value;
 
       logger.info("Agent requesting inventory generation", {
@@ -78,8 +76,11 @@ export const generateInventoryTool: EffectTool<GenerateInventoryInput, GenerateI
 
       try {
         // Prepare options if agent context is available
-        // TODO: Get agent and conversationRootEventId from context
-        const options = { focusFiles };
+        const options = { 
+          focusFiles,
+          agent: context.agent,
+          conversationRootEventId: context.conversation.id
+        };
 
         // Generate the inventory
         await generateInventory(context.projectPath, options);
@@ -115,5 +116,5 @@ The inventory provides comprehensive information about the codebase structure, s
           },
         };
       }
-    }),
+  },
 };

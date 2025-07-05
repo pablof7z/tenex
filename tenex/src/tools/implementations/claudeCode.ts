@@ -2,8 +2,8 @@ import { TaskPublisher } from "@/nostr/TaskPublisher";
 import { getNDK } from "@/nostr/ndkClient";
 import { ClaudeTaskOrchestrator } from "@/tools/claude/ClaudeTaskOrchestrator";
 import { z } from "zod";
-import type { EffectTool } from "../types";
-import { createZodSchema, suspend } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 
 const ClaudeCodeArgsSchema = z.object({
   prompt: z.string().min(1, "prompt must be a non-empty string"),
@@ -24,35 +24,24 @@ interface ClaudeCodeOutput {
   taskId: string;
 }
 
-export const claudeCodeTool: EffectTool<ClaudeCodeInput, ClaudeCodeOutput> = {
-  brand: { _brand: "effect" },
+export const claudeCodeTool: Tool<ClaudeCodeInput, ClaudeCodeOutput> = {
   name: "claude_code",
   description: "Use Claude Code to perform complex coding tasks",
 
   parameters: createZodSchema(ClaudeCodeArgsSchema),
 
-  execute: (input, context) =>
-    suspend(async () => {
+  execute: async (input, context) => {
       const { prompt, mode = "run" } = input.value;
 
       // Create instances
       const ndk = getNDK();
-      const agent = context.agent || {
-        name: context.agentName,
-        pubkey: context.agentId,
-        role: "Agent",
-        signer: context.agentSigner!,
-        llmConfig: "default",
-        tools: [],
-        slug: context.agentName.toLowerCase(),
-      };
+      const agent = context.agent;
       const taskPublisher = new TaskPublisher(ndk, agent);
       const orchestrator = new ClaudeTaskOrchestrator(taskPublisher);
 
       // Get conversation metadata
-      // TODO: Need to get conversation from context
       const branch = undefined;
-      const conversationRootEventId = context.conversationId;
+      const conversationRootEventId = context.conversation.id;
 
       // Enhance prompt for run mode to request comprehensive report
       const enhancedPrompt =
@@ -65,10 +54,10 @@ export const claudeCodeTool: EffectTool<ClaudeCodeInput, ClaudeCodeOutput> = {
         const result = await orchestrator.execute({
           prompt: enhancedPrompt,
           projectPath: context.projectPath,
-          title: `Claude Code ${mode === "plan" ? "Planning" : "Execution"} (via ${context.agentName})`,
+          title: `Claude Code ${mode === "plan" ? "Planning" : "Execution"} (via ${context.agent.name})`,
           branch,
           conversationRootEventId,
-          conversation: undefined, // TODO: Need to get conversation from context
+          conversation: context.conversation,
         });
 
         // Convert result
@@ -111,5 +100,5 @@ export const claudeCodeTool: EffectTool<ClaudeCodeInput, ClaudeCodeOutput> = {
           },
         };
       }
-    }),
+  },
 };

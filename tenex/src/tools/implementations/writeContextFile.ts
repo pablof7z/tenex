@@ -1,8 +1,8 @@
 import { mkdir, writeFile, access } from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import type { EffectTool, ToolError } from "../types";
-import { createZodSchema, suspend } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 
 const WriteContextFileArgsSchema = z.object({
   filename: z.string().min(1, "filename must be a non-empty string"),
@@ -18,16 +18,14 @@ interface WriteContextFileOutput {
   message: string;
 }
 
-export const writeContextFileTool: EffectTool<WriteContextFileInput, WriteContextFileOutput> = {
-  brand: { _brand: "effect" },
+export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileOutput> = {
   name: "write_context_file",
   description:
     "Write or update a specification file in the context/ directory. You must have read this file recently before writing to it.",
 
   parameters: createZodSchema(WriteContextFileArgsSchema),
 
-  execute: (input, context) =>
-    suspend<ToolError, WriteContextFileOutput>(async () => {
+  execute: async (input, context) => {
       const { filename, content } = input.value;
 
       // TODO: Implement agent role check when available in context
@@ -63,8 +61,7 @@ export const writeContextFileTool: EffectTool<WriteContextFileInput, WriteContex
         const fullPath = path.join(contextDir, filename);
 
         // Check if this file was recently read from persisted conversation metadata
-        // TODO: Get conversation from context
-        const wasRecentlyRead = false;
+        const wasRecentlyRead = false; // For now, we'll allow all writes since we can't track reads yet
 
         // If file exists and wasn't recently read, deny access
         if (!wasRecentlyRead) {
@@ -107,5 +104,5 @@ export const writeContextFileTool: EffectTool<WriteContextFileInput, WriteContex
           },
         };
       }
-    }),
+  },
 };

@@ -3,8 +3,8 @@ import { getProjectContext } from "@/services/ProjectContext";
 import { logger } from "@/utils/logger";
 import { NDKTask } from "@nostr-dev-kit/ndk";
 import { z } from "zod";
-import type { EffectTool } from "../types";
-import { createZodSchema, suspend } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 
 const createMilestoneTaskSchema = z.object({
   title: z.string().describe("Title for the milestone task"),
@@ -29,24 +29,22 @@ interface CreateMilestoneTaskOutput {
   assignees: string[] | undefined;
 }
 
-export const createMilestoneTaskTool: EffectTool<
+export const createMilestoneTaskTool: Tool<
   CreateMilestoneTaskInput,
   CreateMilestoneTaskOutput
 > = {
-  brand: { _brand: "effect" },
   name: "create_milestone_task",
   description:
     "Create a trackable milestone task for dividing complex work. Tasks can be assigned to specific agents and tracked for completion. Only available to orchestrator agents.",
 
   parameters: createZodSchema(createMilestoneTaskSchema),
 
-  execute: (input, context) =>
-    suspend(async () => {
+  execute: async (input, context) => {
       const { title, description, assignees } = input.value;
 
       logger.info("📋 Creating milestone task", {
-        agent: context.agentName,
-        agentPubkey: context.agentId,
+        agent: context.agent.name,
+        agentPubkey: context.agent.pubkey,
         title,
         descriptionLength: description.length,
         assigneeCount: assignees?.length || 0,
@@ -55,10 +53,10 @@ export const createMilestoneTaskTool: EffectTool<
       });
 
       // Check if agent signer is available
-      const agentSigner = context.agentSigner;
+      const agentSigner = context.agent.signer;
       if (!agentSigner) {
         logger.warn("Agent signer not available, cannot create task", {
-          agent: context.agentName,
+          agent: context.agent.name,
         });
         return {
           ok: false,
@@ -74,7 +72,7 @@ export const createMilestoneTaskTool: EffectTool<
       const ndk = getNDK();
       if (!ndk) {
         logger.error("NDK instance not available", {
-          agent: context.agentName,
+          agent: context.agent.name,
         });
         return {
           ok: false,
@@ -136,8 +134,8 @@ export const createMilestoneTaskTool: EffectTool<
         await task.publish();
 
         logger.info("✅ Successfully created milestone task", {
-          agent: context.agentName,
-          agentPubkey: context.agentId,
+          agent: context.agent.name,
+          agentPubkey: context.agent.pubkey,
           eventId: task.id,
           title,
           assigneeCount: assignees?.length || 0,
@@ -165,8 +163,8 @@ export const createMilestoneTaskTool: EffectTool<
       } catch (error) {
         logger.error("❌ Create milestone task tool failed", {
           error: error instanceof Error ? error.message : String(error),
-          agent: context.agentName,
-          agentPubkey: context.agentId,
+          agent: context.agent.name,
+          agentPubkey: context.agent.pubkey,
           title,
           phase: context.phase,
           conversationId: context.conversationId,
@@ -181,5 +179,5 @@ export const createMilestoneTaskTool: EffectTool<
           },
         };
       }
-    }),
+  },
 };

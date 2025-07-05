@@ -1,5 +1,4 @@
-import type { EffectTool, ExecutionContext, Tool } from "@/tools/types";
-import { suspend } from "@/tools/types";
+import type { Tool } from "@/tools/types";
 import { createZodSchema, mcpSchemaToZod } from "@/tools/zod-schema";
 import { logger } from "@/utils/logger";
 import { z } from "zod";
@@ -32,15 +31,13 @@ export function adaptMCPTool(
   // Create the parameter schema using our Zod adapter
   const parameters = createZodSchema(schemaWithDescription);
 
-  // Create an EffectTool that wraps the MCP tool
-  const tool: EffectTool<any, any> = {
-    brand: { _brand: "effect" },
+  // Create a Tool that wraps the MCP tool
+  const tool: Tool<any, any> = {
     name: namespacedName,
     description: mcpTool.description || `Tool from ${serverName}`,
     parameters,
 
-    execute: (input, context) =>
-      suspend(async () => {
+    execute: async (input) => {
         try {
           logger.debug(`Executing MCP tool: ${namespacedName}`, {
             serverName,
@@ -71,7 +68,7 @@ export function adaptMCPTool(
             },
           };
         }
-      }),
+    },
   };
 
   return tool;
@@ -81,7 +78,7 @@ export function adaptMCPTool(
  * Type-safe MCP tool with proper inference
  */
 export interface TypedMCPTool<TInput extends z.ZodType<any>>
-  extends EffectTool<z.infer<TInput>, any> {
+  extends Tool<z.infer<TInput>, any> {
   readonly inputSchema: TInput;
 }
 
@@ -98,14 +95,12 @@ export function createTypedMCPTool<TInput extends z.ZodType<any>>(config: {
   const namespacedName = `mcp__${config.serverName}__${config.name}`;
 
   const tool: TypedMCPTool<TInput> = {
-    brand: { _brand: "effect" },
     name: namespacedName,
     description: config.description || `Tool from ${config.serverName}`,
     parameters: createZodSchema(config.inputSchema),
     inputSchema: config.inputSchema,
 
-    execute: (input, context) =>
-      suspend(async () => {
+    execute: async (input) => {
         try {
           logger.debug(`Executing typed MCP tool: ${namespacedName}`, {
             serverName: config.serverName,
@@ -136,7 +131,7 @@ export function createTypedMCPTool<TInput extends z.ZodType<any>>(config: {
             },
           };
         }
-      }),
+    },
   };
 
   return tool;

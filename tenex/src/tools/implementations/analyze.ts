@@ -3,8 +3,8 @@ import { logger } from "@/utils/logger";
 import { generateRepomixOutput } from "@/utils/repomix";
 import { Message } from "multi-llm-ts";
 import { z } from "zod";
-import type { EffectTool } from "../types";
-import { createZodSchema, suspend } from "../types";
+import type { Tool } from "../types";
+import { createZodSchema } from "../types";
 
 const analyzeSchema = z.object({
   prompt: z.string().min(1).describe("The analysis prompt or question about the codebase"),
@@ -19,21 +19,23 @@ interface AnalyzeOutput {
   repoSize: number;
 }
 
-export const analyze: EffectTool<AnalyzeInput, AnalyzeOutput> = {
-  brand: { _brand: "effect" },
+export const analyze: Tool<AnalyzeInput, AnalyzeOutput> = {
   name: "analyze",
   description: "Analyze the entire codebase using repomix to provide context-aware insights",
 
   parameters: createZodSchema(analyzeSchema),
 
-  execute: (input, context) =>
-    suspend(async () => {
+  execute: async (input, context) => {
       const { prompt } = input.value;
 
       logger.info("Running analyze tool", { prompt });
 
-      // Publish custom typing indicator (disabled for now - ExecutionContext doesn't have these properties)
-      // TODO: Add typing indicator support
+      // Publish custom typing indicator
+      try {
+        await context.publisher.publishTypingIndicator("start");
+      } catch (error) {
+        logger.warn("Failed to publish typing indicator", { error });
+      }
 
       let repomixResult;
       try {
@@ -78,8 +80,12 @@ Provide a clear, structured response focused on the specific question asked.`;
 
         logger.info("Analysis completed successfully");
 
-        // Stop typing indicator (disabled for now)
-        // TODO: Add typing indicator support
+        // Stop typing indicator
+        try {
+          await context.publisher.publishTypingIndicator("stop");
+        } catch (error) {
+          logger.warn("Failed to stop typing indicator", { error });
+        }
 
         return {
           ok: true,
@@ -91,8 +97,12 @@ Provide a clear, structured response focused on the specific question asked.`;
       } catch (error) {
         logger.error("Analyze tool failed", { error });
 
-        // Stop typing indicator on error (disabled for now)
-        // TODO: Add typing indicator support
+        // Stop typing indicator on error
+        try {
+          await context.publisher.publishTypingIndicator("stop");
+        } catch (error) {
+          logger.warn("Failed to stop typing indicator", { error });
+        }
 
         return {
           ok: false,
@@ -106,5 +116,5 @@ Provide a clear, structured response focused on the specific question asked.`;
       } finally {
         repomixResult.cleanup();
       }
-    }),
+  },
 };

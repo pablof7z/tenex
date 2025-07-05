@@ -1,6 +1,6 @@
 import { logger } from "@/utils/logger";
-import type { TerminalTool } from "../types";
-import { pure, createZodSchema } from "../types";
+import type { Tool, Termination } from "../types";
+import { success, failure, createZodSchema } from "../types";
 import { z } from "zod";
 
 const endConversationSchema = z.object({
@@ -15,39 +15,59 @@ const endConversationSchema = z.object({
  * End conversation tool - orchestrator-only tool to conclude conversations
  * Returns final response to the user
  */
-export const endConversationTool: TerminalTool<{
+export const endConversationTool: Tool<{
   response: string;
   summary?: string;
-}> = {
-  brand: { _brand: "terminal" },
+}, Termination> = {
   name: "end_conversation",
   description: "Conclude the conversation and return final response to the user",
 
   parameters: createZodSchema(endConversationSchema),
 
-  execute: (input, context) => {
+  execute: async (input, context) => {
     const { response, summary } = input.value;
 
-    // TypeScript ensures this is a terminal context with userPubkey
-    // The executor will have already validated this is an orchestrator
+    // Runtime check for orchestrator
+    if (!context.agent.isOrchestrator) {
+      return failure({
+        kind: "execution",
+        tool: "end_conversation",
+        message: "Only orchestrator can end conversations",
+      });
+    }
 
     logger.info("📬 Orchestrator concluding conversation", {
       tool: "end_conversation",
       conversationId: context.conversationId,
     });
 
+    // Publish the final event directly
+    await context.publisher.publishResponse({
+      content: response,
+      completeMetadata: {
+        type: "end_conversation",
+        result: {
+          response,
+          summary: summary || response,
+          success: true,
+        }
+      }
+    });
+
+    logger.info("End conversation published final event");
+
     // Log the completion
     logger.info("✅ Conversation concluded", {
       tool: "end_conversation",
-      agent: context.agentName,
-      agentId: context.agentId,
+      agent: context.agent.name,
+      agentId: context.agent.pubkey,
       returningTo: "user",
       hasResponse: !!response,
       conversationId: context.conversationId,
     });
 
     // Return properly typed termination
-    return pure({
+    return success({
       type: "end_conversation",
       result: {
         response,

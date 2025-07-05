@@ -2,8 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 import { continueTool } from "../continue";
-import type { ToolExecutionContext, ControlContext, ControlToolResult } from "@/tools/types";
-import { EffectInterpreter, defaultCapabilities } from "@/tools/interpreter";
+import type { ExecutionContext, ControlToolResult } from "@/tools/types";
 import { createToolExecutor } from "@/tools/executor";
 
 // Mock dependencies
@@ -57,7 +56,7 @@ describe("continueTool - Phase-based routing", () => {
     isOrchestrator: true,
   };
 
-  const context: ToolExecutionContext & ControlContext = {
+  const context: ExecutionContext = {
     // Base context
     projectPath: "/test/project",
     conversationId: "test-conversation",
@@ -65,27 +64,18 @@ describe("continueTool - Phase-based routing", () => {
     
     // Execution context
     agent: mockOrchestrator,
-    agentId: mockOrchestrator.pubkey,
-    agentName: mockOrchestrator.name,
     
-    // Control context (orchestrator-specific)
-    isOrchestrator: true,
-    availableAgents: [
-      { pubkey: "planner-pubkey", name: "Planner", role: "Planner" },
-      { pubkey: "executer-pubkey", name: "Executer", role: "Executer" },
-      { pubkey: "pm-pubkey", name: "Project Manager", role: "Project Manager" },
-      { pubkey: "frontend-pubkey", name: "Frontend Expert", role: "Frontend Expert" },
-      { pubkey: "backend-pubkey", name: "Backend Expert", role: "Backend Expert" },
-    ],
-    
-    // Optional fields
+    // Required fields
     conversation: mockConversation,
+    publisher: {
+      publishResponse: mock(),
+    } as any,
     triggeringEvent: undefined,
   };
 
   // Helper function to execute tool and get result
   async function executeControl(input: any): Promise<ControlToolResult> {
-    const executor = createToolExecutor(context, defaultCapabilities);
+    const executor = createToolExecutor(context);
     const result = await executor.execute(continueTool, input);
     return result as ControlToolResult;
   }
@@ -101,7 +91,7 @@ describe("continueTool - Phase-based routing", () => {
       expect(result.success).toBe(true);
       expect(result.kind).toBe("control");
       expect(result.flow?.type).toBe("continue");
-      expect(result.flow?.routing.destinations).toEqual(["planner-pubkey"]);
+      expect(result.flow?.routing.agents).toEqual(["planner-pubkey"]);
       expect(result.flow?.routing.phase).toBe("plan");
       expect(result.flow?.routing.reason).toBe("Need to plan the architecture");
       expect(result.flow?.routing.message).toBe("Design the authentication system");
@@ -117,7 +107,7 @@ describe("continueTool - Phase-based routing", () => {
       expect(result.success).toBe(true);
       expect(result.kind).toBe("control");
       expect(result.flow?.type).toBe("continue");
-      expect(result.flow?.routing.destinations).toEqual(["executer-pubkey"]);
+      expect(result.flow?.routing.agents).toEqual(["executer-pubkey"]);
       expect(result.flow?.routing.phase).toBe("execute");
       expect(result.flow?.routing.reason).toBe("Ready to implement");
       expect(result.flow?.routing.message).toBe("Build the calculator");
@@ -133,7 +123,7 @@ describe("continueTool - Phase-based routing", () => {
       expect(result.success).toBe(true);
       expect(result.kind).toBe("control");
       expect(result.flow?.type).toBe("continue");
-      expect(result.flow?.routing.destinations).toEqual(["pm-pubkey"]);
+      expect(result.flow?.routing.agents).toEqual(["pm-pubkey"]);
       expect(result.flow?.routing.phase).toBe("reflection");
       expect(result.flow?.routing.reason).toBe("Analyze what was built");
       expect(result.flow?.routing.message).toBe("Reflect on the implementation");
@@ -177,7 +167,7 @@ describe("continueTool - Phase-based routing", () => {
       expect(result.success).toBe(true);
       expect(result.kind).toBe("control");
       expect(result.flow?.type).toBe("continue");
-      expect(result.flow?.routing.destinations).toEqual([
+      expect(result.flow?.routing.agents).toEqual([
         "frontend-pubkey",
         "backend-pubkey",
       ]);
@@ -228,7 +218,7 @@ describe("continueTool - Phase-based routing", () => {
       expect(result.flow?.type).toBe("continue");
       expect(result.flow?.routing).toMatchObject({
         phase: "execute",
-        destinations: ["executer-pubkey"],
+        agents: ["executer-pubkey"],
         reason: "Implementing feature",
         message: "Build the authentication system",
         context: {
@@ -242,7 +232,6 @@ describe("continueTool - Phase-based routing", () => {
     it("should fail when non-orchestrator tries to use continue", async () => {
       const nonOrchestratorContext = {
         ...context,
-        isOrchestrator: false,
         agent: {
           ...mockOrchestrator,
           isOrchestrator: false,
@@ -250,7 +239,7 @@ describe("continueTool - Phase-based routing", () => {
         },
       };
 
-      const executor = createToolExecutor(nonOrchestratorContext, defaultCapabilities);
+      const executor = createToolExecutor(nonOrchestratorContext);
       const result = await executor.execute(continueTool, {
         phase: "execute",
         reason: "Test",
@@ -260,7 +249,7 @@ describe("continueTool - Phase-based routing", () => {
       expect(result.success).toBe(false);
       expect(result.kind).toBe("control");
       expect(result.error?.kind).toBe("execution");
-      expect(result.error?.message).toBe("Control tools can only be executed by the orchestrator");
+      expect(result.error?.message).toBe("Only orchestrator can use continue tool");
     });
   });
 });
