@@ -278,10 +278,15 @@ export class LLMConfigEditor {
     const configs: LLMConfigWithName[] = [];
 
     for (const [key, value] of Object.entries(llmsConfig.configurations)) {
-      configs.push({
+      const config: LLMConfigWithName = {
         name: key,
-        ...value,
-      });
+        provider: value.provider,
+        model: value.model,
+        temperature: value.temperature,
+        maxTokens: value.maxTokens,
+        enableCaching: value.enableCaching,
+      };
+      configs.push(config);
     }
 
     return configs;

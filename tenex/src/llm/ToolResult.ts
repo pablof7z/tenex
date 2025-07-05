@@ -177,7 +177,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
       
     case "control": {
       // Handle different control flow types
-      let deserializedFlow = undefined;
+      let deserializedFlow: ControlFlow | undefined = undefined;
       if (serialized.data.flow) {
         const flow = serialized.data.flow;
         switch (flow.type) {
@@ -187,10 +187,13 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
               throw new Error("Continue flow must have non-empty destinations");
             }
             deserializedFlow = {
-              ...flow,
+              type: "continue",
               routing: {
-                ...flow.routing,
-                destinations: flow.routing.destinations,
+                phase: flow.routing.phase as Phase | undefined,
+                destinations: flow.routing.destinations as NonEmptyArray<string>,
+                reason: flow.routing.reason,
+                message: flow.routing.message,
+                context: flow.routing.context,
               },
             };
             break;
@@ -200,8 +203,10 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
               throw new Error("Delegate flow must have non-empty agents");
             }
             deserializedFlow = {
-              ...flow,
-              agents: flow.agents,
+              type: "delegate",
+              agents: flow.agents as NonEmptyArray<string>,
+              message: flow.message || "",
+              returnToOrchestrator: flow.returnToOrchestrator || false,
             };
             break;
           case "fork":
@@ -210,8 +215,8 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
               throw new Error("Fork flow must have non-empty branches");
             }
             deserializedFlow = {
-              ...flow,
-              branches: flow.branches,
+              type: "fork",
+              branches: flow.branches as NonEmptyArray<{ agent: string; message: string; }>,
             };
             break;
         }
@@ -230,7 +235,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
       return {
         kind: "terminal",
         success: serialized.success,
-        termination: serialized.data.termination,
+        termination: serialized.data.termination as Termination | undefined,
         error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
         duration: serialized.duration,
       };
@@ -252,30 +257,32 @@ function reconstructError(error: unknown): ToolError {
     };
   }
   
-  switch (error.kind) {
+  const errorObj = error as any;
+  
+  switch (errorObj.kind) {
     case 'validation':
       return {
         kind: 'validation',
-        field: error.field || 'unknown',
-        message: error.message || 'Validation error',
+        field: errorObj.field || 'unknown',
+        message: errorObj.message || 'Validation error',
       };
     case 'execution':
       return {
         kind: 'execution',
-        tool: error.tool || 'unknown',
-        message: error.message || 'Execution error',
-        cause: error.cause,
+        tool: errorObj.tool || 'unknown',
+        message: errorObj.message || 'Execution error',
+        cause: errorObj.cause,
       };
     case 'system':
       return {
         kind: 'system',
-        message: error.message || 'System error',
-        stack: error.stack,
+        message: errorObj.message || 'System error',
+        stack: errorObj.stack,
       };
     default:
       return {
         kind: 'system',
-        message: error.message || 'Unknown error',
+        message: errorObj.message || 'Unknown error',
       };
   }
 }
