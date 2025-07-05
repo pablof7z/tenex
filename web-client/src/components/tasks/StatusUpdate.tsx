@@ -1,5 +1,5 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { useNDKCurrentPubkey, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import {
     Cpu,
     DollarSign,
@@ -13,6 +13,8 @@ import {
     CheckCircle,
     Settings,
     Reply,
+    ChevronDown,
+    ChevronRight,
 } from "lucide-react";
 import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -41,20 +43,36 @@ interface StatusUpdateProps {
 
 export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: StatusUpdateProps) {
     const profile = useProfileValue(event.pubkey);
-    const currentPubkey = useNDKCurrentPubkey();
     const { formatRelativeTime } = useTimeFormat();
     const [showMetadataDialog, setShowMetadataDialog] = useState(false);
     const [showRawEventDialog, setShowRawEventDialog] = useState(false);
+    const [expandedThinkingBlocks, setExpandedThinkingBlocks] = useState<Set<number>>(new Set());
 
-    // Process content for Nostr entities
+    // Process content for Nostr entities and thinking blocks
     const processedContent = useMemo(() => {
-        const entities = findNostrEntities(event.content);
-        if (entities.length === 0) {
-            return { content: event.content, hasEntities: false };
-        }
-
-        // Replace nostr: links with markdown links that will be rendered as entity cards
         let processedText = event.content;
+        
+        // First, handle thinking blocks
+        const thinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/g;
+        const thinkingBlocks: string[] = [];
+        let thinkingMatch: RegExpExecArray | null;
+        
+        while ((thinkingMatch = thinkingRegex.exec(processedText)) !== null) {
+            thinkingBlocks.push(thinkingMatch[1]);
+        }
+        
+        // Replace thinking blocks with placeholders
+        let thinkingIndex = 0;
+        processedText = processedText.replace(thinkingRegex, () => {
+            const placeholder = `[THINKING_BLOCK:${thinkingIndex}]`;
+            thinkingIndex++;
+            return placeholder;
+        });
+        
+        // Then handle Nostr entities
+        const entities = findNostrEntities(processedText);
+        
+        // Replace nostr: links with markdown links that will be rendered as entity cards
         for (const entity of entities) {
             const nostrLink = `nostr:${entity.bech32}`;
             // Replace with a placeholder that won't be processed by markdown
@@ -64,7 +82,12 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
             );
         }
 
-        return { content: processedText, hasEntities: true, entities };
+        return { 
+            content: processedText, 
+            hasEntities: entities.length > 0, 
+            entities,
+            thinkingBlocks 
+        };
     }, [event.content]);
 
     // Custom components for ReactMarkdown
@@ -112,37 +135,94 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
             return <li className="pl-1">{children}</li>;
         },
         p({ children, ...props }) {
-            // Process text nodes to replace entity placeholders
+            // Process text nodes to replace entity and thinking block placeholders
             const processChildren = (children: ReactNode): ReactNode => {
                 if (typeof children === "string") {
-                    // Check for entity placeholders
-                    const entityRegex = /\[NOSTR_ENTITY:([^:]+):([^\]]+)\]/g;
+                    // Check for both entity and thinking block placeholders
+                    const combinedRegex = /\[NOSTR_ENTITY:([^:]+):([^\]]+)\]|\[THINKING_BLOCK:(\d+)\]/g;
                     const parts = [];
                     let lastIndex = 0;
                     let match: RegExpExecArray | null;
 
-                    match = entityRegex.exec(children);
-                    while (match !== null) {
-                        // Add text before the entity
+                    while ((match = combinedRegex.exec(children)) !== null) {
+                        // Add text before the placeholder
                         if (match.index > lastIndex) {
                             parts.push(children.slice(lastIndex, match.index));
                         }
 
-                        // Find the entity
-                        const bech32 = match[1];
-                        const entity = processedContent.entities?.find((e) => e.bech32 === bech32);
-                        if (entity) {
-                            parts.push(
-                                <NostrEntityCard
-                                    key={`entity-${bech32}`}
-                                    entity={entity}
-                                    className="inline-block mx-1 my-0.5"
-                                />
-                            );
+                        if (match[0].startsWith('[NOSTR_ENTITY:')) {
+                            // Handle Nostr entity
+                            const bech32 = match[1];
+                            const entity = processedContent.entities?.find((e) => e.bech32 === bech32);
+                            if (entity) {
+                                parts.push(
+                                    <NostrEntityCard
+                                        key={`entity-${bech32}`}
+                                        entity={entity}
+                                        className="inline-block mx-1 my-0.5"
+                                    />
+                                );
+                            }
+                        } else if (match[0].startsWith('[THINKING_BLOCK:')) {
+                            // Handle thinking block
+                            const thinkingIndex = parseInt(match[3], 10);
+                            const thinkingContent = processedContent.thinkingBlocks?.[thinkingIndex];
+                            if (thinkingContent !== undefined) {
+                                const isExpanded = expandedThinkingBlocks.has(thinkingIndex);
+                                const lines = thinkingContent.trim().split('\n');
+                                const hasMultipleLines = lines.length > 2;
+                                
+                                parts.push(
+                                    <div
+                                        key={`thinking-${thinkingIndex}`}
+                                        className="my-2 text-xs"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setExpandedThinkingBlocks(prev => {
+                                                    const newSet = new Set(prev);
+                                                    if (isExpanded) {
+                                                        newSet.delete(thinkingIndex);
+                                                    } else {
+                                                        newSet.add(thinkingIndex);
+                                                    }
+                                                    return newSet;
+                                                });
+                                            }}
+                                            className="flex items-center gap-1 text-muted-foreground hover:text-muted-foreground/80 transition-colors"
+                                        >
+                                            {isExpanded ? (
+                                                <ChevronDown className="w-3 h-3" />
+                                            ) : (
+                                                <ChevronRight className="w-3 h-3" />
+                                            )}
+                                            <span className="font-medium">Thinking process</span>
+                                            {!isExpanded && hasMultipleLines && (
+                                                <span className="text-muted-foreground/60 ml-1">
+                                                    ({lines.length} lines)
+                                                </span>
+                                            )}
+                                        </button>
+                                        {isExpanded ? (
+                                            <div className="mt-1 ml-4 p-2 bg-muted/30 rounded border border-muted-foreground/10">
+                                                <pre className="text-muted-foreground/70 whitespace-pre-wrap font-mono text-xs leading-relaxed">
+                                                    {thinkingContent.trim()}
+                                                </pre>
+                                            </div>
+                                        ) : (
+                                            hasMultipleLines && (
+                                                <div className="mt-1 ml-4 text-muted-foreground/60 font-mono">
+                                                    {lines[0].slice(0, 80)}{lines[0].length > 80 ? '...' : ''}
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                );
+                            }
                         }
 
                         lastIndex = match.index + match[0].length;
-                        match = entityRegex.exec(children);
                     }
 
                     // Add remaining text
@@ -278,7 +358,12 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
     };
 
     const getPhase = () => {
-        return event.tagValue("phase");
+        // For phase transitions, use new-phase; otherwise fall back to phase
+        return event.tagValue("new-phase") || event.tagValue("phase");
+    };
+
+    const getPhaseFrom = () => {
+        return event.tagValue("phase-from");
     };
 
     const getPhaseIcon = (phase: string | null) => {
@@ -428,11 +513,24 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                         </span>
                         {/* Phase indicator */}
                         {getPhase() && (
-                            <div
-                                className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhase())} text-white`}
-                                title={`Phase: ${getPhase()}`}
-                            >
-                                {getPhaseIcon(getPhase())}
+                            <div className="flex items-center gap-1">
+                                {getPhaseFrom() && (
+                                    <>
+                                        <div
+                                            className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhaseFrom())} text-white`}
+                                            title={`Previous phase: ${getPhaseFrom()}`}
+                                        >
+                                            {getPhaseIcon(getPhaseFrom())}
+                                        </div>
+                                        <span className="text-muted-foreground text-xs">→</span>
+                                    </>
+                                )}
+                                <div
+                                    className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhase())} text-white`}
+                                    title={getPhaseFrom() ? `Phase transition: ${getPhaseFrom()} → ${getPhase()}` : `Phase: ${getPhase()}`}
+                                >
+                                    {getPhaseIcon(getPhase())}
+                                </div>
                             </div>
                         )}
                         <PTaggedAvatars />

@@ -1,97 +1,97 @@
 import path from "node:path";
-import { EventHandler } from "@/event-handler";
 import { ProjectDisplay } from "@/commands/run/ProjectDisplay";
 import { StatusPublisher } from "@/commands/run/StatusPublisher";
 import { SubscriptionManager } from "@/commands/run/SubscriptionManager";
+import { EventHandler } from "@/event-handler";
+import { loadLLMRouter } from "@/llm";
 import { getNDK, shutdownNDK } from "@/nostr/ndkClient";
-import { ensureProjectInitialized } from "@/utils/projectInitialization";
+import { getProjectContext } from "@/services";
+import { mcpService } from "@/services/mcp/MCPService";
 import { formatError } from "@/utils/errors";
-import type NDK from "@nostr-dev-kit/ndk";
 import { logger } from "@/utils/logger";
+import { setupGracefulShutdown } from "@/utils/process";
+import { ensureProjectInitialized } from "@/utils/projectInitialization";
+import type NDK from "@nostr-dev-kit/ndk";
 import chalk from "chalk";
 import { Command } from "commander";
-import { getProjectContext } from "@/services";
-import { setupGracefulShutdown } from "@/utils/process";
-import { loadLLMRouter } from "@/llm";
-import { mcpService } from "@/services/mcp/MCPService";
 
 export const projectRunCommand = new Command("run")
-    .description("Run the TENEX agent orchestration system for the current project")
-    .option("-p, --path <path>", "Project path", process.cwd())
-    .action(async (options) => {
-        try {
-            const projectPath = path.resolve(options.path);
+  .description("Run the TENEX agent orchestration system for the current project")
+  .option("-p, --path <path>", "Project path", process.cwd())
+  .action(async (options) => {
+    try {
+      const projectPath = path.resolve(options.path);
 
-            // Initialize project context (includes NDK setup)
-            await ensureProjectInitialized(projectPath);
-            const ndk = getNDK();
+      // Initialize project context (includes NDK setup)
+      await ensureProjectInitialized(projectPath);
+      const ndk = getNDK();
 
-            // Display project information
-            const projectDisplay = new ProjectDisplay();
-            await projectDisplay.displayProjectInfo(projectPath);
+      // Display project information
+      const projectDisplay = new ProjectDisplay();
+      await projectDisplay.displayProjectInfo(projectPath);
 
-            // Start the project listener
-            await runProjectListener(projectPath, ndk);
-        } catch (err) {
-            const errorMessage = formatError(err);
-            logger.error(`Failed to start project: ${errorMessage}`);
-            process.exit(1);
-        }
-    });
+      // Start the project listener
+      await runProjectListener(projectPath, ndk);
+    } catch (err) {
+      const errorMessage = formatError(err);
+      logger.error(`Failed to start project: ${errorMessage}`);
+      process.exit(1);
+    }
+  });
 
 async function runProjectListener(projectPath: string, ndk: NDK) {
-    try {
-        const projectCtx = getProjectContext();
-        const project = projectCtx.project;
-        const titleTag = project.tagValue("title") || "Untitled Project";
-        const dTag = project.tagValue("d") || "";
-        logger.info(`Starting listener for project: ${titleTag} (${dTag})`);
+  try {
+    const projectCtx = getProjectContext();
+    const project = projectCtx.project;
+    const titleTag = project.tagValue("title") || "Untitled Project";
+    const dTag = project.tagValue("d") || "";
+    logger.info(`Starting listener for project: ${titleTag} (${dTag})`);
 
-        // Load LLM router
-        const llmService = await loadLLMRouter(projectPath);
+    // Load LLM router
+    const llmService = await loadLLMRouter(projectPath);
 
-        // Initialize MCP service
-        await mcpService.initialize(projectPath);
+    // Initialize MCP service
+    await mcpService.initialize(projectPath);
 
-        // Initialize event handler
-        const eventHandler = new EventHandler(projectPath, llmService, ndk);
-        await eventHandler.initialize();
+    // Initialize event handler
+    const eventHandler = new EventHandler(projectPath, llmService, ndk);
+    await eventHandler.initialize();
 
-        // Initialize subscription manager
-        const subscriptionManager = new SubscriptionManager(eventHandler, projectPath);
-        await subscriptionManager.start();
+    // Initialize subscription manager
+    const subscriptionManager = new SubscriptionManager(eventHandler, projectPath);
+    await subscriptionManager.start();
 
-        // Start status publisher
-        const statusPublisher = new StatusPublisher();
-        await statusPublisher.startPublishing(projectPath);
+    // Start status publisher
+    const statusPublisher = new StatusPublisher();
+    await statusPublisher.startPublishing(projectPath);
 
-        // Set up graceful shutdown
-        setupGracefulShutdown(async () => {
-            // Stop subscriptions first
-            await subscriptionManager.stop();
+    // Set up graceful shutdown
+    setupGracefulShutdown(async () => {
+      // Stop subscriptions first
+      await subscriptionManager.stop();
 
-            // Stop status publisher
-            statusPublisher.stopPublishing();
+      // Stop status publisher
+      statusPublisher.stopPublishing();
 
-            // Clean up event handler subscriptions
-            await eventHandler.cleanup();
+      // Clean up event handler subscriptions
+      await eventHandler.cleanup();
 
-            // Shutdown MCP service
-            await mcpService.shutdown();
+      // Shutdown MCP service
+      await mcpService.shutdown();
 
-            // Shutdown NDK singleton
-            await shutdownNDK();
+      // Shutdown NDK singleton
+      await shutdownNDK();
 
-            logger.info("Project shutdown complete");
-        });
+      logger.info("Project shutdown complete");
+    });
 
-        // Keep the process running
-        await new Promise(() => {
-            // This promise never resolves, keeping the listener active
-        });
-    } catch (err) {
-        const errorMessage = formatError(err);
-        logger.error(`Failed to run project listener: ${errorMessage}`);
-        throw err;
-    }
+    // Keep the process running
+    await new Promise(() => {
+      // This promise never resolves, keeping the listener active
+    });
+  } catch (err) {
+    const errorMessage = formatError(err);
+    logger.error(`Failed to run project listener: ${errorMessage}`);
+    throw err;
+  }
 }

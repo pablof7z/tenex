@@ -278,4 +278,13 @@
     .animate-typing-bounce {
         animation: typingBounce 1.4s infinite ease-in-out;
     }
+    
+    /* Animation delays for thinking block dots */
+    .delay-75 {
+        animation-delay: 75ms;
+    }
+    
+    .delay-150 {
+        animation-delay: 150ms;
+    }
 }

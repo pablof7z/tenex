@@ -1,4 +1,8 @@
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
+import { EXECUTOR_AGENT } from "./built-in/executor";
+import { ORCHESTRATOR_AGENT_DEFINITION } from "./built-in/orchestrator";
+import { PLANNER_AGENT } from "./built-in/planner";
+import { PROJECT_MANAGER_AGENT_DEFINITION } from "./built-in/project-manager";
 
 export interface BuiltInAgentDefinition {
   name: string;
@@ -8,40 +12,22 @@ export interface BuiltInAgentDefinition {
   llmConfig?: string;
 }
 
-export const EXECUTER_AGENT: BuiltInAgentDefinition = {
-  name: "Code Executor",
-  slug: "executer",
-  role: "Code Implementation Specialist",
-  instructions: `You are a code execution specialist.
-
-You receive requests either from the Project Manager (PM) or directly from users.
-The 'message' parameter contains the task you need to accomplish.
-
-Your role is to:
-- Execute the implementation task described in the message using the claude_code tool. Provide this verbatim to claude_code in execute mode.
-- When complete, use the 'complete' tool to return control to the PM
-- Include a brief summary of what you accomplished in the response parameter`,
-  llmConfig: DEFAULT_AGENT_LLM_CONFIG,
+export const PROJECT_MANAGER_BUILT_IN: BuiltInAgentDefinition = {
+  name: PROJECT_MANAGER_AGENT_DEFINITION.name,
+  slug: "project-manager",
+  role: PROJECT_MANAGER_AGENT_DEFINITION.role,
+  instructions: PROJECT_MANAGER_AGENT_DEFINITION.instructions || "",
+  llmConfig: PROJECT_MANAGER_AGENT_DEFINITION.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
 };
 
-export const PLANNER_AGENT: BuiltInAgentDefinition = {
-  name: "Planner",
-  slug: "planner",
-  role: "Planning Specialist",
-  instructions: `You are a planning specialist.
-
-You receive requests either from the Project Manager (PM) or directly from users.
-The 'message' parameter contains what you need to plan for.
-
-Your role is to:
-- Create high-level architectural plans using the claude_code tool in plan mode
-- Break down complex tasks into actionable steps
-- Consider architectural implications and design decisions
-- When complete, use the 'complete' tool to return control to the PM
-- Include the full plan in the response parameter`,
-  llmConfig: DEFAULT_AGENT_LLM_CONFIG,
+export const ORCHESTRATOR_BUILT_IN: BuiltInAgentDefinition = {
+  name: ORCHESTRATOR_AGENT_DEFINITION.name,
+  slug: "orchestrator",
+  role: ORCHESTRATOR_AGENT_DEFINITION.role,
+  instructions: ORCHESTRATOR_AGENT_DEFINITION.instructions || "",
+  llmConfig: ORCHESTRATOR_AGENT_DEFINITION.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
 };
 
 export function getBuiltInAgents(): BuiltInAgentDefinition[] {
-  return [EXECUTER_AGENT, PLANNER_AGENT];
+  return [EXECUTOR_AGENT, PLANNER_AGENT, PROJECT_MANAGER_BUILT_IN, ORCHESTRATOR_BUILT_IN];
 }

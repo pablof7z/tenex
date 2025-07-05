@@ -1,45 +1,45 @@
-import { fragmentRegistry } from "../core/FragmentRegistry";
-import type { PromptFragment } from "../core/types";
 import type { Phase } from "@/conversations/phases";
 import { PHASE_DEFINITIONS } from "@/conversations/phases";
+import { fragmentRegistry } from "../core/FragmentRegistry";
+import type { PromptFragment } from "../core/types";
 
 // Tool continuation prompt fragment - used by ReasonActLoop
 interface ToolContinuationPromptArgs {
-    processedContent: string;
+  processedContent: string;
 }
 
 export const toolContinuationPromptFragment: PromptFragment<ToolContinuationPromptArgs> = {
-    id: "tool-continuation-prompt",
-    priority: 10,
-    template: ({ processedContent }) => processedContent,
+  id: "tool-continuation-prompt",
+  priority: 10,
+  template: ({ processedContent }) => processedContent,
 };
 
 // Phase constraints fragment - used by AgentExecutor
 interface PhaseConstraintsArgs {
-    phase: string;
+  phase: string;
 }
 
 export const phaseConstraintsFragment: PromptFragment<PhaseConstraintsArgs> = {
-    id: "phase-constraints",
-    priority: 20,
-    template: ({ phase }) => {
-        const constraints = getPhaseConstraints(phase);
-        if (constraints.length === 0) return "";
+  id: "phase-constraints",
+  priority: 20,
+  template: ({ phase }) => {
+    const constraints = getPhaseConstraints(phase);
+    if (constraints.length === 0) return "";
 
-        return `## Phase Constraints
+    return `## Phase Constraints
 ${constraints.map((c) => `- ${c}`).join("\n")}`;
-    },
+  },
 };
 
 function getPhaseConstraints(phase: string): string[] {
-    const phaseDefinition = PHASE_DEFINITIONS[phase as Phase];
-    return phaseDefinition?.constraints || [];
+  const phaseDefinition = PHASE_DEFINITIONS[phase as Phase];
+  return phaseDefinition?.constraints || [];
 }
 
 // Dynamic instruction generation based on phase transition
 export function getPhaseTransitionInstructions(fromPhase: Phase, toPhase: Phase): string {
-    if (fromPhase === "chat" && toPhase === "plan") {
-        return `
+  if (fromPhase === "chat" && toPhase === "plan") {
+    return `
 ## Transitioning to PLAN Phase
 
 You are moving to planning because the task is complex and requires strategic thinking. In your transition message, include:
@@ -51,10 +51,10 @@ You are moving to planning because the task is complex and requires strategic th
 5. **Risk Areas**: Potential pitfalls or difficult aspects
 
 Remember: Only use planning for genuinely complex tasks. Simple tasks should go directly to execution.`;
-    }
+  }
 
-    if (fromPhase === "chat" && toPhase === "brainstorm") {
-        return `
+  if (fromPhase === "chat" && toPhase === "brainstorm") {
+    return `
 ## Transitioning to BRAINSTORM Phase
 
 You are moving to brainstorm mode because the user's request is broad, conceptual, or abstract. In your transition message, include:
@@ -66,10 +66,10 @@ You are moving to brainstorm mode because the user's request is broad, conceptua
 5. **Creative Possibilities**: Encourage imaginative solutions
 
 Focus on exploration rather than arriving at concrete requirements. Stay in brainstorm mode until the user explicitly asks to transition out.`;
-    }
+  }
 
-    if (fromPhase === "chat" && toPhase === "execute") {
-        return `
+  if (fromPhase === "chat" && toPhase === "execute") {
+    return `
 ## Transitioning to EXECUTE Phase (Skipping Planning)
 
 You are moving directly to execution because this task is straightforward. In your transition message, include:
@@ -80,10 +80,10 @@ You are moving directly to execution because this task is straightforward. In yo
 4. **Expected Outcome**: What the result should look like
 
 This is a simple task that doesn't require planning - proceed directly to implementation.`;
-    }
+  }
 
-    if (fromPhase === "plan" && toPhase === "execute") {
-        return `
+  if (fromPhase === "plan" && toPhase === "execute") {
+    return `
 ## Transitioning to EXECUTE Phase
 
 You are moving from planning to implementation. In your transition message, include:
@@ -95,10 +95,10 @@ You are moving from planning to implementation. In your transition message, incl
 5. **Acceptance Criteria**: How to verify each component
 
 This message will be sent directly to Claude Code for implementation.`;
-    }
+  }
 
-    if (fromPhase === "execute" && toPhase === "review") {
-        return `
+  if (fromPhase === "execute" && toPhase === "review") {
+    return `
 ## Transitioning to REVIEW Phase
 
 You are moving from implementation to review. In your transition message, include:
@@ -108,10 +108,10 @@ You are moving from implementation to review. In your transition message, includ
 3. **Tests Written**: Testing coverage
 4. **Known Issues**: Any problems or limitations
 5. **Review Focus**: Areas needing special attention`;
-    }
+  }
 
-    if (toPhase === "brainstorm") {
-        return `
+  if (toPhase === "brainstorm") {
+    return `
 ## Transitioning to BRAINSTORM Phase
 
 You are moving to brainstorm mode for open exploration. In your transition message, include:
@@ -122,10 +122,10 @@ You are moving to brainstorm mode for open exploration. In your transition messa
 4. **Questions to Consider**: Thought-provoking questions to guide exploration
 
 Embrace open-ended discussion and creative thinking. Don't rush to concrete solutions.`;
-    }
+  }
 
-    if (fromPhase === "brainstorm") {
-        return `
+  if (fromPhase === "brainstorm") {
+    return `
 ## Transitioning from BRAINSTORM Phase
 
 You are moving from brainstorm mode to ${toPhase}. In your transition message, include:
@@ -136,10 +136,10 @@ You are moving from brainstorm mode to ${toPhase}. In your transition message, i
 4. **Next Steps**: Clear direction for the ${toPhase} phase
 
 Transition the creative exploration into focused action.`;
-    }
+  }
 
-    if (fromPhase === "execute" && toPhase === "chores") {
-        return `
+  if (fromPhase === "execute" && toPhase === "chores") {
+    return `
 ## Transitioning to CHORES Phase
 
 You are moving to maintenance tasks after implementation. In your transition message:
@@ -149,10 +149,10 @@ You are moving to maintenance tasks after implementation. In your transition mes
 3. **Cleanup Tasks**: Any code organization needed
 
 The chores agent will check what files were modified and update documentation accordingly.`;
-    }
+  }
 
-    if (toPhase === "chores") {
-        return `
+  if (toPhase === "chores") {
+    return `
 ## Transitioning to CHORES Phase
 
 You are moving to maintenance and documentation tasks. In your transition message:
@@ -162,10 +162,10 @@ You are moving to maintenance and documentation tasks. In your transition messag
 3. **Maintenance Tasks**: Any cleanup or organization needed
 
 The chores agent will analyze recent changes and update project documentation.`;
-    }
+  }
 
-    // Default for other transitions
-    return `
+  // Default for other transitions
+  return `
 ## Phase Transition
 
 Provide a comprehensive summary of the work completed in the ${fromPhase} phase

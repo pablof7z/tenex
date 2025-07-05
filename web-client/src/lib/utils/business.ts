@@ -190,14 +190,6 @@ export const ValidationUtils = {
     },
 
     /**
-     * Check if string is a valid email
-     */
-    isValidEmail(email: string): boolean {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    },
-
-    /**
      * Check if string is not empty after trimming
      */
     isNonEmptyString(str: string): boolean {

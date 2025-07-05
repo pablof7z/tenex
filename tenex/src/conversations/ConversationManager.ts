@@ -1,307 +1,717 @@
 import path from "node:path";
-import {
-    type TracingContext,
-    createPhaseExecutionContext,
-    createTracingContext,
-    createTracingLogger,
-} from "@/tracing";
-import type { PhaseTransition } from "@/conversations/types";
 import type { Phase } from "@/conversations/phases";
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { logger } from "@/utils/logger";
+import type { AgentContext, PhaseTransition } from "@/conversations/types";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
+import { isEventFromUser, getAgentSlugFromEvent } from "@/nostr/utils";
+import { getProjectContext } from "@/services";
+import {
+  type TracingContext,
+  createPhaseExecutionContext,
+  createTracingContext,
+  createTracingLogger,
+} from "@/tracing";
+import { logger } from "@/utils/logger";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { Message } from "multi-llm-ts";
+import { ensureExecutionTimeInitialized, initializeExecutionTime } from "./executionTime";
 import { FileSystemAdapter } from "./persistence";
-import type { ConversationMetadata, Conversation } from "./types";
-import { isEventFromUser } from "@/nostr/utils";
-import { initializeExecutionTime, ensureExecutionTimeInitialized } from "./executionTime";
+import type { Conversation, ConversationMetadata } from "./types";
 
 export class ConversationManager {
-    private conversations: Map<string, Conversation> = new Map();
-    private conversationContexts: Map<string, TracingContext> = new Map();
-    private conversationsDir: string;
-    private persistence: FileSystemAdapter;
+  private conversations: Map<string, Conversation> = new Map();
+  private conversationContexts: Map<string, TracingContext> = new Map();
+  private conversationsDir: string;
+  private persistence: FileSystemAdapter;
 
-    constructor(private projectPath: string) {
-        this.conversationsDir = path.join(projectPath, ".tenex", "conversations");
-        this.persistence = new FileSystemAdapter(projectPath);
+  constructor(private projectPath: string) {
+    this.conversationsDir = path.join(projectPath, ".tenex", "conversations");
+    this.persistence = new FileSystemAdapter(projectPath);
+  }
+
+  getProjectPath(): string {
+    return this.projectPath;
+  }
+
+  async initialize(): Promise<void> {
+    await ensureDirectory(this.conversationsDir);
+    await this.persistence.initialize();
+
+    // Load existing conversations
+    await this.loadConversations();
+  }
+
+  async createConversation(event: NDKEvent): Promise<Conversation> {
+    const id = event.id;
+    if (!id) {
+      throw new Error("Event must have an ID to create a conversation");
+    }
+    const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Conversation";
+
+    // Create tracing context for this conversation
+    const tracingContext = createTracingContext(id);
+    this.conversationContexts.set(id, tracingContext);
+
+    const tracingLogger = createTracingLogger(tracingContext, "conversation");
+
+    const conversation: Conversation = {
+      id,
+      title,
+      phase: "chat", // All conversations start in chat phase
+      history: [event],
+      agentContexts: new Map<string, AgentContext>(), // Initialize empty agent contexts
+      phaseStartedAt: Date.now(),
+      metadata: {
+        summary: event.content,
+      },
+      phaseTransitions: [], // Initialize empty phase transitions array
+      executionTime: {
+        totalSeconds: 0,
+        isActive: false,
+        lastUpdated: Date.now(),
+      },
+    };
+
+    this.conversations.set(id, conversation);
+
+    tracingLogger.info(`Created new conversation: ${title}`, {
+      title,
+      phase: "chat",
+      event: "conversation_created",
+    });
+
+    // Save immediately after creation
+    await this.persistence.save(conversation);
+
+    return conversation;
+  }
+
+  getConversation(id: string): Conversation | undefined {
+    return this.conversations.get(id);
+  }
+
+  async updatePhase(
+    id: string,
+    phase: Phase,
+    message: string,
+    agentPubkey: string,
+    agentName: string,
+    reason?: string,
+    summary?: string
+  ): Promise<void> {
+    const conversation = this.conversations.get(id);
+    if (!conversation) {
+      throw new Error(`Conversation ${id} not found`);
     }
 
-    getProjectPath(): string {
-        return this.projectPath;
+    // Get or create tracing context
+    let tracingContext = this.conversationContexts.get(id);
+    if (!tracingContext) {
+      tracingContext = createTracingContext(id);
+      this.conversationContexts.set(id, tracingContext);
     }
 
-    async initialize(): Promise<void> {
-        await ensureDirectory(this.conversationsDir);
-        await this.persistence.initialize();
+    // Create phase execution context
+    const phaseContext = createPhaseExecutionContext(tracingContext, phase);
+    const tracingLogger = createTracingLogger(phaseContext, "conversation");
 
-        // Load existing conversations
-        await this.loadConversations();
-    }
+    const previousPhase = conversation.phase;
 
-    async createConversation(event: NDKEvent): Promise<Conversation> {
-        const id = event.id;
-        if (!id) {
-            throw new Error("Event must have an ID to create a conversation");
-        }
-        const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "Untitled Conversation";
+    logger.info(`[PHASE_TRANSITION] Starting phase update`, {
+      conversationId: id,
+      fromPhase: previousPhase,
+      toPhase: phase,
+      agentName,
+      agentPubkey,
+      messagePreview: message.substring(0, 100) + "...",
+      hasReason: !!reason,
+      hasSummary: !!summary,
+    });
 
-        // Create tracing context for this conversation
-        const tracingContext = createTracingContext(id);
-        this.conversationContexts.set(id, tracingContext);
+    // Create transition record even for same-phase handoffs
+    // This ensures handoff information is always persisted
+    const transition: PhaseTransition = {
+      from: previousPhase,
+      to: phase,
+      message,
+      timestamp: Date.now(),
+      agentPubkey,
+      agentName,
+      reason,
+      summary,
+    };
 
-        const tracingLogger = createTracingLogger(tracingContext, "conversation");
-        tracingLogger.startOperation("createConversation");
-
-        const conversation: Conversation = {
-            id,
-            title,
-            phase: "chat", // All conversations start in chat phase
-            history: [event],
-            phaseStartedAt: Date.now(),
-            metadata: {
-                summary: event.content,
-            },
-            phaseTransitions: [], // Initialize empty phase transitions array
-            executionTime: {
-                totalSeconds: 0,
-                isActive: false,
-                lastUpdated: Date.now(),
-            },
-        };
-
-        this.conversations.set(id, conversation);
-        
-        tracingLogger.info(`Created new conversation: ${title}`, {
-            title,
-            phase: "chat",
-            event: "conversation_created",
+    // Update conversation phase if it changed
+    if (previousPhase !== phase) {
+      conversation.phase = phase;
+      conversation.phaseStartedAt = Date.now();
+      
+      // Clear readFiles when transitioning from REFLECTION back to CHAT
+      // This starts a new conversation cycle with fresh file tracking
+      if (previousPhase === "reflection" && phase === "chat") {
+        const previousCount = conversation.metadata.readFiles?.length || 0;
+        delete conversation.metadata.readFiles;
+        logger.info(`[CONVERSATION] Cleared readFiles metadata on REFLECTION->CHAT transition`, {
+          conversationId: id,
+          previousReadFiles: previousCount
         });
+      }
+      
+      tracingLogger.logTransition(previousPhase, phase, {
+        message: `${message.substring(0, 100)}...`, // Log preview
+        conversationTitle: conversation.title,
+      });
+    } else {
+      // Log handoff within same phase
+      tracingLogger.info(`[CONVERSATION] Handoff within phase "${phase}"`, {
+        phase,
+        conversationTitle: conversation.title,
+        fromAgent: agentName,
+        message: `${message.substring(0, 100)}...`,
+      });
+    }
 
-        // Save immediately after creation
-        await this.persistence.save(conversation);
+    // Always push the transition (handoff) record
+    conversation.phaseTransitions.push(transition);
 
-        tracingLogger.completeOperation("createConversation");
+    // Save after phase update
+    await this.persistence.save(conversation);
+  }
 
+  async addEvent(conversationId: string, event: NDKEvent): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    // Get or create tracing context
+    let tracingContext = this.conversationContexts.get(conversationId);
+    if (!tracingContext) {
+      tracingContext = createTracingContext(conversationId);
+      this.conversationContexts.set(conversationId, tracingContext);
+    }
+
+    const tracingLogger = createTracingLogger(tracingContext, "conversation");
+
+    conversation.history.push(event);
+
+    // Update the conversation summary to include the latest message
+    // This ensures other parts of the system have access to updated context
+    if (event.content) {
+      const isUser = isEventFromUser(event);
+      if (isUser) {
+        // For user messages, update the summary to be more descriptive
+        conversation.metadata.summary = event.content;
+        conversation.metadata.last_user_message = event.content;
+      }
+
+      tracingLogger.logEventReceived(
+        event.id || "unknown",
+        isUser ? "user_message" : "agent_response",
+        {
+          phase: conversation.phase,
+          historyLength: conversation.history.length,
+        }
+      );
+    }
+
+    // Save after adding event
+    await this.persistence.save(conversation);
+  }
+
+  async updateMetadata(
+    conversationId: string,
+    metadata: Partial<ConversationMetadata>
+  ): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    conversation.metadata = {
+      ...conversation.metadata,
+      ...metadata,
+    };
+  }
+
+  getPhaseHistory(conversationId: string): NDKEvent[] {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return [];
+    }
+
+    // Return events from current phase only
+    // For now, return all events - phase filtering can be added later
+    // when we implement phase transition events
+    return conversation.history;
+  }
+
+  getAllConversations(): Conversation[] {
+    return Array.from(this.conversations.values());
+  }
+
+  getConversationByEvent(eventId: string): Conversation | undefined {
+    // Find conversation that contains this event
+    for (const conversation of this.conversations.values()) {
+      if (conversation.history.some((e) => e.id === eventId)) {
         return conversation;
+      }
     }
+    return undefined;
+  }
 
-    getConversation(id: string): Conversation | undefined {
-        return this.conversations.get(id);
-    }
+  // Persistence methods
+  private async loadConversations(): Promise<void> {
+    try {
+      const metadata = await this.persistence.list();
+      let _loadedCount = 0;
 
-    async updatePhase(
-        id: string,
-        phase: Phase,
-        message: string,
-        agentPubkey: string,
-        agentName: string,
-        reason?: string
-    ): Promise<void> {
-        const conversation = this.conversations.get(id);
-        if (!conversation) {
-            throw new Error(`Conversation ${id} not found`);
-        }
+      for (const meta of metadata) {
+        if (!meta.archived) {
+          const conversation = await this.persistence.load(meta.id);
+          if (conversation) {
+            // Ensure execution time is initialized for loaded conversations
+            ensureExecutionTimeInitialized(conversation);
 
-        // Get or create tracing context
-        let tracingContext = this.conversationContexts.get(id);
-        if (!tracingContext) {
-            tracingContext = createTracingContext(id);
-            this.conversationContexts.set(id, tracingContext);
-        }
-
-        // Create phase execution context
-        const phaseContext = createPhaseExecutionContext(tracingContext, phase);
-        const tracingLogger = createTracingLogger(phaseContext, "conversation");
-
-        const previousPhase = conversation.phase;
-
-        // Check if phase is actually changing
-        if (previousPhase === phase) {
-            // Log staying in same phase
-            tracingLogger.info(`[CONVERSATION] Staying in phase "${phase}"`, {
-                phase,
-                conversationTitle: conversation.title,
-                message: `${message.substring(0, 100)}...`,
-            });
-            return;
-        }
-
-        // Create phase transition record
-        const transition: PhaseTransition = {
-            from: previousPhase,
-            to: phase,
-            message,
-            timestamp: Date.now(),
-            agentPubkey,
-            agentName,
-            reason,
-        };
-
-        // Update conversation
-        conversation.phase = phase;
-        conversation.phaseStartedAt = Date.now();
-
-        conversation.phaseTransitions.push(transition);
-
-        tracingLogger.logTransition(previousPhase, phase, {
-            message: `${message.substring(0, 100)}...`, // Log preview
-            conversationTitle: conversation.title,
-        });
-
-        // Save after phase update
-        await this.persistence.save(conversation);
-    }
-
-    async addEvent(conversationId: string, event: NDKEvent): Promise<void> {
-        const conversation = this.conversations.get(conversationId);
-        if (!conversation) {
-            throw new Error(`Conversation ${conversationId} not found`);
-        }
-
-        // Get or create tracing context
-        let tracingContext = this.conversationContexts.get(conversationId);
-        if (!tracingContext) {
-            tracingContext = createTracingContext(conversationId);
-            this.conversationContexts.set(conversationId, tracingContext);
-        }
-
-        const tracingLogger = createTracingLogger(tracingContext, "conversation");
-
-        conversation.history.push(event);
-
-        // Update the conversation summary to include the latest message
-        // This ensures other parts of the system have access to updated context
-        if (event.content) {
-            const isUser = isEventFromUser(event);
-            if (isUser) {
-                // For user messages, update the summary to be more descriptive
-                conversation.metadata.summary = event.content;
-                conversation.metadata.last_user_message = event.content;
+            // Initialize agentContexts as a Map if not present (for backward compatibility)
+            if (!conversation.agentContexts) {
+              conversation.agentContexts = new Map<string, AgentContext>();
+            } else if (!(conversation.agentContexts instanceof Map)) {
+              // Convert from plain object to Map if needed (after deserialization)
+              const contextsObj = conversation.agentContexts as any;
+              conversation.agentContexts = new Map<string, AgentContext>(
+                Object.entries(contextsObj)
+              );
             }
 
-            tracingLogger.logEventReceived(
-                event.id || "unknown",
-                isUser ? "user_message" : "agent_response",
-                {
-                    phase: conversation.phase,
-                    historyLength: conversation.history.length,
-                }
-            );
+            this.conversations.set(meta.id, conversation);
+            _loadedCount++;
+          }
+        }
+      }
+    } catch (error) {
+      logger.error("Failed to load conversations", { error });
+    }
+  }
+
+  private async saveAllConversations(): Promise<void> {
+    const promises: Promise<void>[] = [];
+
+    for (const conversation of this.conversations.values()) {
+      promises.push(this.persistence.save(conversation));
+    }
+
+    await Promise.all(promises);
+  }
+
+  async saveConversation(conversationId: string): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (conversation) {
+      await this.persistence.save(conversation);
+    }
+  }
+
+  async archiveConversation(conversationId: string): Promise<void> {
+    await this.persistence.archive(conversationId);
+    this.conversations.delete(conversationId);
+  }
+
+  async searchConversations(query: string): Promise<Conversation[]> {
+    const metadata = await this.persistence.search({ title: query });
+    const conversations: Conversation[] = [];
+
+    for (const meta of metadata) {
+      const conversation = await this.persistence.load(meta.id);
+      if (conversation) {
+        conversations.push(conversation);
+      }
+    }
+
+    return conversations;
+  }
+
+  async cleanup(): Promise<void> {
+    // Save all conversations before cleanup
+    await this.saveAllConversations();
+  }
+
+  /**
+   * Get the tracing context for a conversation
+   */
+  getTracingContext(conversationId: string): TracingContext | undefined {
+    return this.conversationContexts.get(conversationId);
+  }
+
+  // Agent Context Management Methods
+
+  /**
+   * Create a new context for an agent in a conversation
+   */
+  createAgentContext(
+    conversationId: string,
+    agentSlug: string,
+    handoff?: PhaseTransition
+  ): AgentContext {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    const messages: Message[] = [];
+
+    // If there's a handoff, create system message for context and user message for the request
+    if (handoff) {
+      // First, add a system message with the context
+      if (handoff.summary) {
+        let contextContent = "";
+
+        if (handoff.summary) {
+          contextContent += `**Current State:**\n${handoff.summary}\n\n`;
         }
 
-        // Save after adding event
-        await this.persistence.save(conversation);
+        messages.push(new Message("system", contextContent.trim()));
+      }
+
+      // Then add the user message with the actual request
+      messages.push(new Message("user", handoff.message));
     }
 
-    async updateMetadata(
-        conversationId: string,
-        metadata: Partial<ConversationMetadata>
-    ): Promise<void> {
-        const conversation = this.conversations.get(conversationId);
-        if (!conversation) {
-            throw new Error(`Conversation ${conversationId} not found`);
+    const context: AgentContext = {
+      agentSlug,
+      messages,
+      tokenCount: 0, // Will be updated when messages are added
+      lastUpdate: new Date(),
+    };
+
+    conversation.agentContexts.set(agentSlug, context);
+    
+    logger.info(`[AGENT_CONTEXT] Context created for agent: ${agentSlug}`, {
+      conversationId,
+      agentSlug,
+      messageCount: context.messages.length,
+      messages: context.messages.map(m => ({
+        role: m.role,
+        content: m.content.substring(0, 100) + "..."
+      }))
+    });
+    
+    return context;
+  }
+
+  /**
+   * Add a message to an agent's context
+   */
+  async addMessageToContext(
+    conversationId: string,
+    agentSlug: string,
+    message: Message
+  ): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    // logger.info(`[AGENT_CONTEXT] Adding message to agent context`, {
+    //   conversationId,
+    //   agentSlug,
+    //   messageRole: message.role,
+    //   messageContent: message.content.substring(0, 100) + "...",
+    //   currentPhase: conversation.phase
+    // });
+
+    let context = conversation.agentContexts.get(agentSlug);
+    if (!context) {
+      logger.warn(`[AGENT_CONTEXT] Context not found for agent ${agentSlug}, creating new context`);
+      // Create context if it doesn't exist
+      context = this.createAgentContext(conversationId, agentSlug);
+    }
+
+    context.messages.push(message);
+    context.lastUpdate = new Date();
+    
+    // logger.info(`[AGENT_CONTEXT] Message added to agent context`, {
+    //   conversationId,
+    //   agentSlug,
+    //   totalMessages: context.messages.length,
+    //   contextState: context.messages.map(m => ({
+    //     role: m.role,
+    //     preview: m.content.substring(0, 50) + "..."
+    //   }))
+    // });
+
+    // TODO: Update token count based on message content
+    // This would require tokenization logic specific to the model being used
+
+    // Save after updating context
+    await this.persistence.save(conversation);
+  }
+
+  /**
+   * Get an agent's context from a conversation
+   */
+  getAgentContext(conversationId: string, agentSlug: string): AgentContext | undefined {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      logger.warn(`[AGENT_CONTEXT] Conversation ${conversationId} not found when getting agent context`);
+      return undefined;
+    }
+
+    const context = conversation.agentContexts.get(agentSlug);
+
+    return context;
+  }
+
+  /**
+   * Synchronize an agent's context with messages they missed since last active
+   */
+  async synchronizeAgentContext(
+    conversationId: string,
+    agentSlug: string,
+    triggeringEvent?: NDKEvent
+  ): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    const context = conversation.agentContexts.get(agentSlug);
+    if (!context) {
+      throw new Error(`Agent context for ${agentSlug} not found`);
+    }
+
+    // Find the timestamp of when this agent was last updated
+    const lastUpdateTime = context.lastUpdate.getTime();
+    
+    logger.info(`[AGENT_CONTEXT] Synchronizing context for agent`, {
+      agentSlug,
+      lastUpdate: context.lastUpdate.toISOString(),
+      currentMessages: context.messages.length
+    });
+
+    // Find all events that occurred after the agent's last update
+    const missedEvents: NDKEvent[] = [];
+    
+    for (const event of conversation.history) {
+      // Check if event has a timestamp (created_at is in seconds, we need milliseconds)
+      const eventTime = (event.created_at || 0) * 1000;
+      
+      if (eventTime > lastUpdateTime) {
+        missedEvents.push(event);
+      }
+    }
+
+    // If there's a triggering event that's not in history yet, include it
+    if (triggeringEvent && !missedEvents.find(e => e.id === triggeringEvent.id)) {
+      const triggeringTime = (triggeringEvent.created_at || 0) * 1000;
+      if (triggeringTime > lastUpdateTime) {
+        missedEvents.push(triggeringEvent);
+      }
+    }
+
+    logger.info(`[AGENT_CONTEXT] Found ${missedEvents.length} missed events`, {
+      agentSlug,
+      missedEventIds: missedEvents.map(e => e.id)
+    });
+
+    // Convert missed events to messages and add to context
+    for (const event of missedEvents) {
+      if (!event.content) continue;
+
+      // Determine the sender
+      const eventAgentSlug = getAgentSlugFromEvent(event);
+      
+      // Skip if this is the agent's own message
+      if (eventAgentSlug === agentSlug) {
+        logger.debug(`[AGENT_CONTEXT] Skipping agent's own message`, { agentSlug, eventId: event.id });
+        continue;
+      }
+
+      // Add messages with proper attribution
+      if (isEventFromUser(event)) {
+        // Direct user message
+        context.messages.push(new Message("user", event.content));
+      } else if (eventAgentSlug) {
+        // Message from another agent - add attribution
+        const projectCtx = getProjectContext();
+        const sendingAgent = projectCtx.agents.get(eventAgentSlug);
+        const senderName = sendingAgent ? sendingAgent.name : "another agent";
+        
+        // Add a system message for attribution, then the actual content
+        context.messages.push(new Message("system", `Message from ${senderName}:`));
+        context.messages.push(new Message("user", event.content));
+      } else {
+        // Unknown sender (shouldn't happen, but handle gracefully)
+        context.messages.push(new Message("user", event.content));
+      }
+      
+      logger.info(`[AGENT_CONTEXT] Added missed message to context`, {
+        agentSlug,
+        fromUser: isEventFromUser(event),
+        fromAgent: eventAgentSlug,
+        messagePreview: event.content.substring(0, 100) + "..."
+      });
+    }
+
+    // Update the last update time
+    context.lastUpdate = new Date();
+    
+    logger.info(`[AGENT_CONTEXT] Context synchronized`, {
+      agentSlug,
+      totalMessages: context.messages.length,
+      newMessages: missedEvents.length
+    });
+
+    // Save the updated conversation
+    await this.persistence.save(conversation);
+  }
+
+  /**
+   * Bootstrap context for an agent that joins without a handoff
+   * (e.g., directly mentioned via p-tag)
+   */
+  async bootstrapAgentContext(
+    conversationId: string,
+    agentSlug: string,
+    triggeringEvent?: NDKEvent
+  ): Promise<AgentContext> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${conversationId} not found`);
+    }
+
+    // Check if this is a new conversation (only has the initial event)
+    const isNewConversation = conversation.history.length === 1;
+
+    // For new conversations, just pass the user message directly
+    if (isNewConversation && triggeringEvent?.content) {
+      const messages: Message[] = [
+        new Message("user", triggeringEvent.content)
+      ];
+      
+      const context: AgentContext = {
+        agentSlug,
+        messages,
+        tokenCount: 0,
+        lastUpdate: new Date(),
+      };
+
+      conversation.agentContexts.set(agentSlug, context);
+      
+      return context;
+    }
+
+    // For ongoing conversations, create a summary
+    const recentHistory = conversation.history.slice(-10); // Last 10 messages
+    let summary = "You've been brought into an ongoing conversation. Recent context:\n\n";
+
+    for (const event of recentHistory) {
+      if (event.content) {
+        let sender: string;
+        if (isEventFromUser(event)) {
+          sender = "User";
+        } else {
+          // Try to get the actual agent slug from the event
+          const eventAgentSlug = getAgentSlugFromEvent(event);
+          sender = eventAgentSlug || "Agent";
         }
-
-        conversation.metadata = {
-            ...conversation.metadata,
-            ...metadata,
-        };
+        summary += `${sender}: ${event.content.substring(0, 200)}...\n\n`;
+      }
     }
 
-    getPhaseHistory(conversationId: string): NDKEvent[] {
-        const conversation = this.conversations.get(conversationId);
-        if (!conversation) {
-            return [];
-        }
-
-        // Return events from current phase only
-        // For now, return all events - phase filtering can be added later
-        // when we implement phase transition events
-        return conversation.history;
+    // If we have a triggering event and it's not already in the summary, add it
+    if (triggeringEvent && triggeringEvent.content) {
+      const isInRecent = recentHistory.some(e => e.id === triggeringEvent.id);
+      if (!isInRecent) {
+        const sender = isEventFromUser(triggeringEvent) ? "User" : "Agent";
+        summary += `${sender}: ${triggeringEvent.content}\n\n`;
+      }
     }
 
-    getAllConversations(): Conversation[] {
-        return Array.from(this.conversations.values());
+    const handoff: PhaseTransition = {
+      from: conversation.phase,
+      to: conversation.phase,
+      message: triggeringEvent?.content || "Direct mention - bootstrapping context",
+      timestamp: Date.now(),
+      agentPubkey: "", // Will be filled by orchestrator
+      agentName: "system",
+      summary: summary,
+    };
+
+    const context = this.createAgentContext(conversationId, agentSlug, handoff);
+    
+    logger.info(`[AGENT_CONTEXT] Bootstrap completed for ongoing conversation`, {
+      conversationId,
+      agentSlug,
+      summaryLength: summary.length,
+      handoffMessage: handoff.message,
+    });
+    
+    return context;
+  }
+
+  /**
+   * Remove old contexts to manage memory
+   */
+  pruneOldContexts(conversationId: string): void {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return;
     }
 
-    getConversationByEvent(eventId: string): Conversation | undefined {
-        // Find conversation that contains this event
-        for (const conversation of this.conversations.values()) {
-            if (conversation.history.some((e) => e.id === eventId)) {
-                return conversation;
-            }
-        }
-        return undefined;
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    // Remove contexts that haven't been updated in over an hour
+    for (const [agentSlug, context] of conversation.agentContexts.entries()) {
+      if (context.lastUpdate < oneHourAgo) {
+        conversation.agentContexts.delete(agentSlug);
+      }
+    }
+  }
+
+  /**
+   * Clean up conversation metadata that's no longer needed
+   * This includes readFiles and other temporary metadata
+   */
+  cleanupConversationMetadata(conversationId: string): void {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return;
     }
 
-    // Persistence methods
-    private async loadConversations(): Promise<void> {
-        try {
-            const metadata = await this.persistence.list();
-            let _loadedCount = 0;
-
-            for (const meta of metadata) {
-                if (!meta.archived) {
-                    const conversation = await this.persistence.load(meta.id);
-                    if (conversation) {
-                        // Ensure execution time is initialized for loaded conversations
-                        ensureExecutionTimeInitialized(conversation);
-                        
-                        this.conversations.set(meta.id, conversation);
-                        _loadedCount++;
-                    }
-                }
-            }
-        } catch (error) {
-            logger.error("Failed to load conversations", { error });
-        }
+    // Clear readFiles tracking
+    if (conversation.metadata.readFiles) {
+      logger.info(`[CONVERSATION] Cleaning up readFiles metadata`, {
+        conversationId,
+        fileCount: conversation.metadata.readFiles.length
+      });
+      delete conversation.metadata.readFiles;
     }
 
-    private async saveAllConversations(): Promise<void> {
-        const promises: Promise<void>[] = [];
+    // Could add cleanup for other temporary metadata here in the future
+  }
 
-        for (const conversation of this.conversations.values()) {
-            promises.push(this.persistence.save(conversation));
-        }
-
-        await Promise.all(promises);
+  /**
+   * Complete a conversation and clean up its resources
+   */
+  async completeConversation(conversationId: string): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return;
     }
 
-    async saveConversation(conversationId: string): Promise<void> {
-        const conversation = this.conversations.get(conversationId);
-        if (conversation) {
-            await this.persistence.save(conversation);
-        }
-    }
+    logger.info(`[CONVERSATION] Completing conversation`, {
+      conversationId,
+      title: conversation.title,
+      phase: conversation.phase
+    });
 
-    async archiveConversation(conversationId: string): Promise<void> {
-        await this.persistence.archive(conversationId);
-        this.conversations.delete(conversationId);
-    }
+    // Clean up metadata
+    this.cleanupConversationMetadata(conversationId);
 
-    async searchConversations(query: string): Promise<Conversation[]> {
-        const metadata = await this.persistence.search({ title: query });
-        const conversations: Conversation[] = [];
+    // Remove from active conversations
+    this.conversations.delete(conversationId);
+    this.conversationContexts.delete(conversationId);
 
-        for (const meta of metadata) {
-            const conversation = await this.persistence.load(meta.id);
-            if (conversation) {
-                conversations.push(conversation);
-            }
-        }
-
-        return conversations;
-    }
-
-    async cleanup(): Promise<void> {
-        // Save all conversations before cleanup
-        await this.saveAllConversations();
-    }
-
-    /**
-     * Get the tracing context for a conversation
-     */
-    getTracingContext(conversationId: string): TracingContext | undefined {
-        return this.conversationContexts.get(conversationId);
-    }
+    // Save final state
+    await this.persistence.save(conversation);
+  }
 }

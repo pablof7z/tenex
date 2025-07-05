@@ -23,6 +23,12 @@ mock.module("@/services", () => ({
     },
 }));
 
+// Mock built-in agents to avoid them being loaded during tests
+const mockGetBuiltInAgents = mock(() => []);
+mock.module("@/agents/builtInAgents", () => ({
+    getBuiltInAgents: mockGetBuiltInAgents,
+}));
+
 describe("AgentRegistry", () => {
     let registry: AgentRegistry;
     const testProjectPath = "/test/project";
@@ -59,7 +65,7 @@ describe("AgentRegistry", () => {
                 role: "Software Developer",
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
-                tools: ["shell", "read_file"],
+                tools: ["read_file", "analyze"],
                 llmConfig: "default",
             };
 
@@ -95,14 +101,14 @@ describe("AgentRegistry", () => {
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
                 nsec: "",
-                tools: ["shell", "read_file"],
+                tools: ["read_file", "analyze"],
                 llmConfig: "default",
             });
 
             expect(developer).toBeDefined();
             expect(developer?.name).toBe("Developer");
             expect(developer?.role).toBe("Software Developer");
-            expect(developer?.tools).toEqual(["shell", "read_file"]);
+            expect(developer?.tools).toEqual(["read_file", "analyze"]);
 
             // Ensure agent reviewer
             const reviewer = await registry.ensureAgent("reviewer", {
@@ -161,7 +167,7 @@ describe("AgentRegistry", () => {
                 expertise: "Testing",
                 instructions: "Test everything",
                 nsec: "",
-                tools: ["shell"],
+                tools: ["analyze"],
                 llmConfig: "default",
             };
 
@@ -247,23 +253,25 @@ describe("AgentRegistry", () => {
                 expertise: "Testing",
                 instructions: "Test everything",
                 nsec: "",
-                tools: ["shell", "read_file"],
+                tools: ["read_file", "analyze"],
                 llmConfig: "fast",
             };
 
             await registry.ensureAgent("tester", config);
 
-            expect(fs.writeJsonFile).toHaveBeenCalledWith(
-                expect.stringContaining("tester.json"),
-                expect.objectContaining({
-                    name: "TestAgent",
-                    role: "Tester",
-                    expertise: "Testing",
-                    instructions: "Test everything",
-                    tools: ["shell", "read_file"],
-                    llmConfig: "fast",
-                })
-            );
+            // Check that writeJsonFile was called for the tester agent
+            const calls = (fs.writeJsonFile as any).mock.calls;
+            expect(calls.length).toBe(1);
+            
+            const [filePath, content] = calls[0];
+            expect(filePath).toContain("tester.json");
+            expect(content).toMatchObject({
+                name: "TestAgent",
+                role: "Tester",
+                instructions: "Test everything",
+                tools: ["read_file", "analyze"],
+                llmConfig: "fast",
+            });
 
             expect(configService.saveProjectAgents).toHaveBeenCalledWith(
                 testProjectPath,
@@ -294,7 +302,7 @@ describe("AgentRegistry", () => {
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
                 nsec: "",
-                tools: ["shell"],
+                tools: ["analyze"],
             });
         });
 
@@ -405,7 +413,7 @@ describe("AgentRegistry", () => {
                 role: "Software Developer",
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
-                tools: ["shell", "read_file"],
+                tools: ["read_file", "analyze"],
                 llmConfig: "default",
             };
 
@@ -452,6 +460,70 @@ describe("AgentRegistry", () => {
 
             const agent = await registry.loadAgentBySlug("developer");
             expect(agent).toBeNull();
+        });
+    });
+
+    describe("Built-in agent tool assignment", () => {
+        it("orchestrator agent should not have yield_back tool", async () => {
+            const registry = new AgentRegistry("/test/project");
+            
+            // Mock dependencies
+            (fs.ensureDirectory as any).mockResolvedValue(undefined);
+            (configService.loadTenexAgents as any).mockResolvedValue({});
+            (configService.saveProjectAgents as any).mockResolvedValue(undefined);
+            (fs.fileExists as any).mockResolvedValue(false);
+            (fs.writeJsonFile as any).mockResolvedValue(undefined);
+            
+            // Mock AgentPublisher
+            const mockPublishAgent = jest.fn().mockResolvedValue("mock-event-id");
+            AgentPublisher.publishAgent = mockPublishAgent;
+            
+            // Load agents including built-in agents
+            await registry.loadFromProject();
+            
+            // Get the orchestrator agent
+            const orchestrator = registry.getAgent("orchestrator");
+            
+            expect(orchestrator).toBeDefined();
+            expect(orchestrator?.tools).toBeDefined();
+            expect(orchestrator?.tools).not.toContain("yield_back");
+            
+            // Should have these tools instead
+            expect(orchestrator?.tools).toContain("analyze");
+            expect(orchestrator?.tools).toContain("end_conversation");
+            expect(orchestrator?.tools).toContain("continue");
+        });
+
+        it("non-orchestrator built-in agents should have yield_back tool", async () => {
+            const registry = new AgentRegistry("/test/project");
+            
+            // Mock dependencies
+            (fs.ensureDirectory as any).mockResolvedValue(undefined);
+            (configService.loadTenexAgents as any).mockResolvedValue({});
+            (configService.saveProjectAgents as any).mockResolvedValue(undefined);
+            (fs.fileExists as any).mockResolvedValue(false);
+            (fs.writeJsonFile as any).mockResolvedValue(undefined);
+            
+            // Mock AgentPublisher
+            const mockPublishAgent = jest.fn().mockResolvedValue("mock-event-id");
+            AgentPublisher.publishAgent = mockPublishAgent;
+            
+            // Load agents including built-in agents
+            await registry.loadFromProject();
+            
+            // Get non-orchestrator agents
+            const executor = registry.getAgent("executor");
+            const planner = registry.getAgent("planner");
+            
+            expect(executor).toBeDefined();
+            expect(executor?.tools).toContain("yield_back");
+            expect(executor?.tools).not.toContain("end_conversation");
+            expect(executor?.tools).not.toContain("continue");
+            
+            expect(planner).toBeDefined();
+            expect(planner?.tools).toContain("yield_back");
+            expect(planner?.tools).not.toContain("end_conversation");
+            expect(planner?.tools).not.toContain("continue");
         });
     });
 });

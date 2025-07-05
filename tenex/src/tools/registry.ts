@@ -1,57 +1,31 @@
-import type { Tool } from "./types";
-import { readFileTool } from "./implementations/readFile";
-import { shellTool } from "./implementations/shell";
-import { claudeCodeTool } from "./implementations/claudeCode";
-import { getTimeTool } from "./implementations/getTime";
-import { continueTool } from "./implementations/continue";
-import { completeTool } from "./implementations/complete";
 import { analyze } from "./implementations/analyze";
+import { claudeCodeTool } from "./implementations/claudeCode";
+import { continueTool } from "./implementations/continue";
+import { createMilestoneTaskTool } from "./implementations/createMilestoneTask";
+import { endConversationTool } from "./implementations/endConversation";
 import { generateInventoryTool } from "./implementations/generateInventory";
+import { getTimeTool } from "./implementations/getTime";
 import { learnTool } from "./implementations/learn";
+import { readFileTool } from "./implementations/readFile";
+import { writeContextFileTool } from "./implementations/writeContextFile";
+import { yieldBackTool } from "./implementations/yieldBack";
+import type { Tool } from "./types";
 
 // Registry of all available tools
 const toolsMap = new Map<string, Tool>([
-    ["read_file", readFileTool],
-    ["shell", shellTool],
-    ["claude_code", claudeCodeTool],
-    ["get_time", getTimeTool],
-    ["continue", continueTool],
-    ["complete", completeTool],
-    ["analyze", analyze],
-    ["generate_inventory", generateInventoryTool],
-    ["learn", learnTool],
+  ["read_file", readFileTool],
+  ["write_context_file", writeContextFileTool],
+  ["claude_code", claudeCodeTool],
+  // ["get_time", getTimeTool],
+  ["continue", continueTool],
+  ["yield_back", yieldBackTool],
+  ["end_conversation", endConversationTool],
+  ["analyze", analyze],
+  ["generate_inventory", generateInventoryTool],
+  ["learn", learnTool],
+  ["create_milestone_task", createMilestoneTaskTool],
 ]);
 
 export function getTool(name: string): Tool | undefined {
-    return toolsMap.get(name);
-}
-
-export function getAllTools(): Tool[] {
-    // Return unique tools (not aliases)
-    return Array.from(toolsMap.values());
-}
-
-export function getToolNames(): string[] {
-    return Array.from(toolsMap.keys());
-}
-
-// Generate tool documentation for agent prompts
-export function generateToolDocumentation(): string {
-    const tools = getAllTools();
-    const docs = tools
-        .map((tool) => {
-            const params = tool.parameters
-                .map(
-                    (p) =>
-                        `  - ${p.name} (${p.type}${p.required ? ", required" : ", optional"}): ${p.description}`
-                )
-                .join("\n");
-
-            return `### ${tool.name}
-${tool.description}
-${params.length > 0 ? `\nParameters:\n${params}` : "\nNo parameters required"}`;
-        })
-        .join("\n\n");
-
-    return `## Available Tools\n\n${docs}`;
+  return toolsMap.get(name);
 }

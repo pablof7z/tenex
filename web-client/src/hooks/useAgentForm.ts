@@ -7,6 +7,7 @@ interface AgentFormData extends Record<string, unknown> {
     title: string;
     description: string;
     role: string;
+    useCriteria: string;
     instructions: string;
     tags: string[];
     newTag: string;
@@ -16,6 +17,7 @@ const initialFormData: AgentFormData = {
     title: "",
     description: "",
     role: "",
+    useCriteria: "",
     instructions: "",
     tags: [],
     newTag: "",
@@ -45,6 +47,7 @@ export function useAgentForm() {
                 description:
                     agent.description || extractDescriptionFromContent(agent.content || ""),
                 role: agent.role || extractRoleFromContent(agent.content || ""),
+                useCriteria: agent.useCriteria || "",
                 instructions: agent.content || "",
                 tags: agentTags,
                 newTag: "",
@@ -67,6 +70,7 @@ export function useAgentForm() {
             newAgent.title = formState.data.title;
             newAgent.description = formState.data.description;
             newAgent.role = formState.data.role;
+            newAgent.useCriteria = formState.data.useCriteria;
             newAgent.content = formState.data.instructions;
 
             // Add technology tags

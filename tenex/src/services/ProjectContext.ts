@@ -1,153 +1,174 @@
-import type { Hexpubkey, NDKProject } from "@nostr-dev-kit/ndk";
-import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { Agent } from "@/agents/types";
 import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { logger } from "@/utils/logger";
-import { PM_AGENT_DEFINITION } from "@/agents/projectAgentDefinition";
-import { getDefaultToolsForAgent } from "@/agents/constants";
+import type { Hexpubkey, NDKProject } from "@nostr-dev-kit/ndk";
+import type { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 /**
  * ProjectContext provides system-wide access to loaded project and agents
  * Initialized during "tenex project run" by ProjectManager
  */
 export class ProjectContext {
-    /**
-     * Event that represents this project, note that this is SIGNED
-     * by the USER, so this.project.pubkey is NOT the project's pubkey but the
-     * USER OWNER'S pubkey.
-     *
-     * - projectCtx.pubkey = The project agent's pubkey (the bot/system)
-     * - projectCtx.project.pubkey = The user's pubkey (who created the project)
-     */
-    public readonly project: NDKProject;
+  /**
+   * Event that represents this project, note that this is SIGNED
+   * by the USER, so this.project.pubkey is NOT the project's pubkey but the
+   * USER OWNER'S pubkey.
+   *
+   * - projectCtx.pubkey = The project agent's pubkey (the bot/system)
+   * - projectCtx.project.pubkey = The user's pubkey (who created the project)
+   */
+  public project: NDKProject;
 
-    /**
-     * Signer the project agent uses (hardwired to project agent's signer)
-     */
-    public readonly signer: NDKPrivateKeySigner;
+  /**
+   * Signer the project agent uses (hardwired to orchestrator agent's signer)
+   */
+  public readonly signer: NDKPrivateKeySigner;
 
-    /**
-     * Pubkey of the project agent
-     */
-    public readonly pubkey: Hexpubkey;
-    public readonly agents: Map<string, Agent>;
-    
-    /**
-     * Lessons learned by agents in this project
-     * Key: agent pubkey, Value: array of lessons (limited to most recent 50 per agent)
-     */
-    public readonly agentLessons: Map<string, NDKAgentLesson[]>;
+  /**
+   * Pubkey of the project agent
+   */
+  public readonly pubkey: Hexpubkey;
 
-    constructor(project: NDKProject, agents: Map<string, Agent>) {
-        this.project = project;
+  /**
+   * The orchestrator agent for this project
+   */
+  public orchestrator: Agent;
 
-        // Find the PM agent dynamically
-        let pmAgent: Agent | undefined;
-        for (const agent of agents.values()) {
-            if (agent.isPMAgent) {
-                pmAgent = agent;
-                break;
-            }
-        }
+  public agents: Map<string, Agent>;
 
-        if (!pmAgent) {
-            logger.warn("PM agent not found in agents, creating default PM agent");
-            
-            // Create a default PM agent
-            const signer = NDKPrivateKeySigner.generate();
-            const defaultPMAgent: Agent = {
-                name: PM_AGENT_DEFINITION.name,
-                pubkey: signer.pubkey,
-                signer,
-                role: PM_AGENT_DEFINITION.role,
-                instructions: PM_AGENT_DEFINITION.instructions || "",
-                llmConfig: PM_AGENT_DEFINITION.llmConfig || "agents",
-                tools: PM_AGENT_DEFINITION.tools || [],
-                slug: "pm",
-                isPMAgent: true,
-            };
-            
-            // Add to agents map
-            agents.set("pm", defaultPMAgent);
-            pmAgent = defaultPMAgent;
-        }
+  /**
+   * Lessons learned by agents in this project
+   * Key: agent pubkey, Value: array of lessons (limited to most recent 50 per agent)
+   */
+  public readonly agentLessons: Map<string, NDKAgentLesson[]>;
 
-        // Hardwire to PM agent's signer and pubkey
-        this.signer = pmAgent.signer;
-        this.pubkey = pmAgent.pubkey;
-        this.agents = new Map(agents);
-        this.agentLessons = new Map();
+  constructor(project: NDKProject, agents: Map<string, Agent>) {
+    this.project = project;
+
+    // Debug logging
+    logger.debug("Initializing ProjectContext", {
+      projectId: project.id,
+      projectTitle: project.tagValue("title"),
+      agentsCount: agents.size,
+      agentSlugs: Array.from(agents.keys()),
+      agentDetails: Array.from(agents.entries()).map(([slug, agent]) => ({
+        slug,
+        name: agent.name,
+        isOrchestrator: agent.isOrchestrator,
+        isBuiltIn: agent.isBuiltIn,
+      })),
+    });
+
+    // Find the orchestrator agent dynamically
+    let orchestratorAgent: Agent | undefined;
+    for (const agent of agents.values()) {
+      if (agent.isOrchestrator) {
+        orchestratorAgent = agent;
+        break;
+      }
     }
 
-    // =====================================================================================
-    // AGENT ACCESS HELPERS
-    // =====================================================================================
-
-    getAgent(slug: string): Agent | undefined {
-        return this.agents.get(slug);
+    if (!orchestratorAgent) {
+      throw new Error(
+        "Orchestrator agent not found. Ensure AgentRegistry.loadFromProject() is called before initializing ProjectContext."
+      );
     }
 
-    getAgentByPubkey(pubkey: Hexpubkey): Agent | undefined {
-        // Find the PM agent dynamically
-        for (const agent of this.agents.values()) {
-            if (agent.pubkey === pubkey) {
-                return agent;
-            }
-        }
-        
-        return undefined
+    // Hardwire to orchestrator agent's signer and pubkey
+    this.signer = orchestratorAgent.signer;
+    this.pubkey = orchestratorAgent.pubkey;
+    this.orchestrator = orchestratorAgent;
+    this.agents = new Map(agents);
+    this.agentLessons = new Map();
+  }
+
+  // =====================================================================================
+  // AGENT ACCESS HELPERS
+  // =====================================================================================
+
+  getAgent(slug: string): Agent | undefined {
+    return this.agents.get(slug);
+  }
+
+  getAgentByPubkey(pubkey: Hexpubkey): Agent | undefined {
+    // Find the agent dynamically
+    for (const agent of this.agents.values()) {
+      if (agent.pubkey === pubkey) {
+        return agent;
+      }
     }
 
-    getProjectAgent(): Agent {
-        // Find the PM agent dynamically
-        for (const agent of this.agents.values()) {
-            if (agent.isPMAgent) {
-                return agent;
-            }
-        }
-        throw new Error("PM agent not found");
+    return undefined;
+  }
+
+  getProjectAgent(): Agent {
+    return this.orchestrator;
+  }
+
+  getAgentSlugs(): string[] {
+    return Array.from(this.agents.keys());
+  }
+
+  hasAgent(slug: string): boolean {
+    return this.agents.has(slug);
+  }
+
+  // =====================================================================================
+  // LESSON MANAGEMENT
+  // =====================================================================================
+
+  /**
+   * Add a lesson for an agent, maintaining the 50-lesson limit per agent
+   */
+  addLesson(agentPubkey: string, lesson: NDKAgentLesson): void {
+    const existingLessons = this.agentLessons.get(agentPubkey) || [];
+
+    // Add the new lesson at the beginning (most recent first)
+    const updatedLessons = [lesson, ...existingLessons];
+
+    // Keep only the most recent 50 lessons
+    const limitedLessons = updatedLessons.slice(0, 50);
+
+    this.agentLessons.set(agentPubkey, limitedLessons);
+  }
+
+  /**
+   * Get lessons for a specific agent
+   */
+  getLessonsForAgent(agentPubkey: string): NDKAgentLesson[] {
+    return this.agentLessons.get(agentPubkey) || [];
+  }
+
+  /**
+   * Get all lessons across all agents
+   */
+  getAllLessons(): NDKAgentLesson[] {
+    return Array.from(this.agentLessons.values()).flat();
+  }
+
+  /**
+   * Safely update project data without creating a new instance.
+   * This ensures all parts of the system work with consistent state.
+   */
+  updateProjectData(newProject: NDKProject, newAgents: Map<string, Agent>): void {
+    this.project = newProject;
+    this.agents = new Map(newAgents);
+
+    // Update orchestrator reference if it exists in new agents
+    for (const agent of newAgents.values()) {
+      if (agent.isOrchestrator) {
+        this.orchestrator = agent;
+        break;
+      }
     }
 
-    getAgentSlugs(): string[] {
-        return Array.from(this.agents.keys());
-    }
-
-    hasAgent(slug: string): boolean {
-        return this.agents.has(slug);
-    }
-
-    // =====================================================================================
-    // LESSON MANAGEMENT
-    // =====================================================================================
-
-    /**
-     * Add a lesson for an agent, maintaining the 50-lesson limit per agent
-     */
-    addLesson(agentPubkey: string, lesson: NDKAgentLesson): void {
-        const existingLessons = this.agentLessons.get(agentPubkey) || [];
-        
-        // Add the new lesson at the beginning (most recent first)
-        const updatedLessons = [lesson, ...existingLessons];
-        
-        // Keep only the most recent 50 lessons
-        const limitedLessons = updatedLessons.slice(0, 50);
-        
-        this.agentLessons.set(agentPubkey, limitedLessons);
-    }
-
-    /**
-     * Get lessons for a specific agent
-     */
-    getLessonsForAgent(agentPubkey: string): NDKAgentLesson[] {
-        return this.agentLessons.get(agentPubkey) || [];
-    }
-
-    /**
-     * Get all lessons across all agents
-     */
-    getAllLessons(): NDKAgentLesson[] {
-        return Array.from(this.agentLessons.values()).flat();
-    }
+    logger.info("ProjectContext updated with new data", {
+      projectId: newProject.id,
+      projectTitle: newProject.tagValue("title"),
+      totalAgents: newAgents.size,
+      agentSlugs: Array.from(newAgents.keys()),
+    });
+  }
 }
 
 // Module-level variable for global access
@@ -157,7 +178,7 @@ let projectContext: ProjectContext | undefined = undefined;
  * Initialize the project context. Should be called once during project startup.
  */
 export function setProjectContext(project: NDKProject, agents: Map<string, Agent>): void {
-    projectContext = new ProjectContext(project, agents);
+  projectContext = new ProjectContext(project, agents);
 }
 
 /**
@@ -165,15 +186,15 @@ export function setProjectContext(project: NDKProject, agents: Map<string, Agent
  * @throws Error if not initialized
  */
 export function getProjectContext(): ProjectContext {
-    if (!projectContext) {
-        throw new Error("ProjectContext not initialized. Call setProjectContext() first.");
-    }
-    return projectContext;
+  if (!projectContext) {
+    throw new Error("ProjectContext not initialized. Call setProjectContext() first.");
+  }
+  return projectContext;
 }
 
 /**
  * Check if project context is initialized
  */
 export function isProjectContextInitialized(): boolean {
-    return projectContext !== undefined;
+  return projectContext !== undefined;
 }

@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { AgentPublisher } from "@/agents/AgentPublisher";
 import type { Agent, AgentConfig, StoredAgentData } from "@/agents/types";
@@ -11,7 +12,6 @@ import { logger } from "@/utils/logger";
 import NDK, { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { getBuiltInAgents } from "./builtInAgents";
 import { getDefaultToolsForAgent } from "./constants";
-import { PM_AGENT_DEFINITION } from "./projectAgentDefinition";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -25,7 +25,7 @@ export class AgentRegistry {
     this.agentsDir = path.join(projectPath, ".tenex", "agents");
   }
 
-  async loadFromProject(): Promise<void> {
+  async loadFromProject(ndkProject?: import("@nostr-dev-kit/ndk").NDKProject): Promise<void> {
     // Ensure .tenex directory exists
     await ensureDirectory(path.join(this.projectPath, ".tenex"));
     await ensureDirectory(this.agentsDir);
@@ -34,18 +34,27 @@ export class AgentRegistry {
     try {
       this.registry = await configService.loadTenexAgents(path.join(this.projectPath, ".tenex"));
       logger.info(
-        `Loaded agent registry with ${Object.keys(this.registry).length} agents via ConfigService`
+        `Loaded agent registry with ${Object.keys(this.registry).length} agents via ConfigService`,
+        {
+          registryKeys: Object.keys(this.registry),
+          projectPath: this.projectPath,
+        }
       );
 
       // Load each agent from the registry
-      for (const [slug, _registryEntry] of Object.entries(this.registry)) {
+      for (const [slug, registryEntry] of Object.entries(this.registry)) {
+        logger.debug(`Loading agent from registry: ${slug}`, { registryEntry });
         await this.loadAgentBySlug(slug);
       }
 
       // Load built-in agents
-      await this.ensureBuiltInAgents();
+      logger.debug("Loading built-in agents");
+      await this.ensureBuiltInAgents(ndkProject);
 
-      logger.info(`Loaded ${this.agents.size} agents into runtime`);
+      logger.info(`Loaded ${this.agents.size} agents into runtime`, {
+        agentSlugs: Array.from(this.agents.keys()),
+        agentsByPubkey: this.agentsByPubkey.size,
+      });
     } catch (error) {
       logger.error("Failed to load agent registry", { error });
       this.registry = {};
@@ -54,7 +63,8 @@ export class AgentRegistry {
 
   async ensureAgent(
     name: string,
-    config: Omit<AgentConfig, "nsec"> & { nsec?: string }
+    config: Omit<AgentConfig, "nsec"> & { nsec?: string },
+    ndkProject?: import("@nostr-dev-kit/ndk").NDKProject
   ): Promise<Agent> {
     // Check if agent already exists
     const existingAgent = this.agents.get(name);
@@ -83,17 +93,33 @@ export class AgentRegistry {
         registryEntry.eventId = config.eventId;
       }
 
+      // Check if this is a built-in agent
+      const isBuiltIn = getBuiltInAgents().some((agent) => agent.slug === name);
+
       // Save agent definition to file
       agentDefinition = {
         name: config.name,
         role: config.role,
         instructions: config.instructions || "",
+        useCriteria: config.useCriteria,
         llmConfig: config.llmConfig,
-        tools: getDefaultToolsForAgent(false, undefined, false), // All non-PM agents get same tools
       };
+      
+      // Only include tools if explicitly provided
+      if (config.tools && config.tools.length > 0) {
+        agentDefinition.tools = config.tools;
+      }
 
       const definitionPath = path.join(this.agentsDir, fileName);
-      await writeJsonFile(definitionPath, agentDefinition);
+      if (isBuiltIn) {
+        // For built-in agents, we don't save instructions to the JSON file
+        // This ensures built-in agents always use the up-to-date instructions
+        // from the code rather than potentially outdated instructions in the file
+        const { instructions, ...definitionWithoutInstructions } = agentDefinition;
+        await writeJsonFile(definitionPath, definitionWithoutInstructions);
+      } else {
+        await writeJsonFile(definitionPath, agentDefinition);
+      }
 
       this.registry[name] = registryEntry;
       await this.saveRegistry();
@@ -102,7 +128,7 @@ export class AgentRegistry {
 
       // Publish kind:0 and request events for new agent
       const { nsec: _, ...configWithoutNsec } = config;
-      await this.publishAgentEvents(signer, configWithoutNsec, registryEntry.eventId);
+      await this.publishAgentEvents(signer, configWithoutNsec, registryEntry.eventId, ndkProject);
     } else {
       // Load agent definition from file
       const definitionPath = path.join(this.agentsDir, registryEntry.file);
@@ -111,6 +137,13 @@ export class AgentRegistry {
         try {
           agentDefinition = JSON.parse(content);
           this.validateAgentDefinition(agentDefinition);
+
+          // For built-in agents, use the hardcoded instructions if not present in the file
+          const builtInAgents = getBuiltInAgents();
+          const builtInAgent = builtInAgents.find((agent) => agent.slug === name);
+          if (builtInAgent && !agentDefinition.instructions) {
+            agentDefinition.instructions = builtInAgent.instructions || "";
+          }
         } catch (error) {
           logger.error("Failed to parse or validate agent definition", {
             file: registryEntry.file,
@@ -119,15 +152,23 @@ export class AgentRegistry {
           throw new Error(`Invalid agent definition in ${registryEntry.file}: ${error}`);
         }
       } else {
+        // Check if this is a built-in agent
+        const isBuiltIn = getBuiltInAgents().some((agent) => agent.slug === name);
+
         // Fallback: create definition from config if file doesn't exist
         agentDefinition = {
           name: config.name,
           role: config.role,
           instructions: config.instructions || "",
+          useCriteria: config.useCriteria,
           llmConfig: config.llmConfig,
-          tools: getDefaultToolsForAgent(false, undefined, false), // All non-PM agents get same tools
         };
-        await writeJsonFile(definitionPath, agentDefinition);
+        if (isBuiltIn) {
+          const { instructions, ...definitionWithoutInstructions } = agentDefinition;
+          await writeJsonFile(definitionPath, definitionWithoutInstructions);
+        } else {
+          await writeJsonFile(definitionPath, agentDefinition);
+        }
       }
     }
 
@@ -135,9 +176,9 @@ export class AgentRegistry {
     const signer = new NDKPrivateKeySigner(registryEntry.nsec);
     const pubkey = signer.pubkey;
 
-    // Determine agent name - use project name for PM agents
+    // Determine agent name - use project name for orchestrator agents
     let agentName = agentDefinition.name;
-    if (registryEntry.pmAgent) {
+    if (registryEntry.orchestratorAgent) {
       try {
         const { getProjectContext } = await import("@/services");
         const projectCtx = getProjectContext();
@@ -158,19 +199,31 @@ export class AgentRegistry {
       signer,
       role: agentDefinition.role,
       instructions: agentDefinition.instructions,
+      useCriteria: agentDefinition.useCriteria,
       llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
       tools: [], // Will be set after creation
+      mcp: agentDefinition.mcp ?? !registryEntry.orchestratorAgent, // Default to true for non-orchestrator agents
       eventId: registryEntry.eventId,
       slug: name,
-      isPMAgent: registryEntry.pmAgent,
+      isOrchestrator: registryEntry.orchestratorAgent,
     };
 
-    // Set tools based on agent type
-    agent.tools = getDefaultToolsForAgent(
-      registryEntry.pmAgent || false,
-      undefined,
-      agent.isBuiltIn
-    );
+    // Determine if this is a built-in agent
+    const isBuiltIn = getBuiltInAgents().some(builtIn => builtIn.slug === name);
+
+    // Set tools - use explicit tools if configured, otherwise use defaults
+    if (agentDefinition.tools !== undefined) {
+      // User has explicitly defined the tools array (even if empty)
+      agent.tools = agentDefinition.tools;
+    } else {
+      // tools property is not in the JSON file, assign defaults
+      agent.tools = getDefaultToolsForAgent(
+        registryEntry.orchestratorAgent || false,
+        undefined,
+        isBuiltIn,
+        name
+      );
+    }
 
     // Store in both maps
     this.agents.set(name, agent);
@@ -204,43 +257,69 @@ export class AgentRegistry {
   }
 
   /**
-   * Create a new PM agent with the given configuration
+   * Remove an agent by its event ID
+   * This removes the agent from memory and deletes its definition file
    */
-  async createPMAgent(slug: string, nsec: string): Promise<Agent> {
-    // Create registry entry with pmAgent flag
-    const fileName = `${slug}.json`;
-    const registryEntry = {
-      nsec,
-      file: fileName,
-      pmAgent: true,
-    };
+  async removeAgentByEventId(eventId: string): Promise<boolean> {
+    // Find the agent with this event ID
+    let agentSlugToRemove: string | undefined;
+    let agentToRemove: Agent | undefined;
 
-    // Save PM agent definition to file
-    const definitionPath = path.join(this.agentsDir, fileName);
-    await writeJsonFile(definitionPath, PM_AGENT_DEFINITION);
+    for (const [slug, agent] of this.agents) {
+      if (agent.eventId === eventId) {
+        agentSlugToRemove = slug;
+        agentToRemove = agent;
+        break;
+      }
+    }
 
-    this.registry[slug] = registryEntry;
-    await this.saveRegistry();
+    if (!agentSlugToRemove || !agentToRemove) {
+      logger.warn(`Agent with eventId ${eventId} not found for removal`);
+      return false;
+    }
 
-    logger.info(`Created PM agent "${slug}" in registry`);
+    // Don't allow removing built-in agents
+    if (agentToRemove.isBuiltIn) {
+      logger.warn(`Cannot remove built-in agent ${agentSlugToRemove}`);
+      return false;
+    }
 
-    // Create and return the agent with PM definition
-    return this.ensureAgent(slug, {
-      name: PM_AGENT_DEFINITION.name,
-      role: PM_AGENT_DEFINITION.role,
-      instructions: PM_AGENT_DEFINITION.instructions,
-      llmConfig: PM_AGENT_DEFINITION.llmConfig,
-      nsec,
-    });
+    // Remove from memory
+    this.agents.delete(agentSlugToRemove);
+    this.agentsByPubkey.delete(agentToRemove.pubkey);
+
+    // Remove from registry
+    const registryEntry = this.registry[agentSlugToRemove];
+    if (registryEntry) {
+      // Delete the agent definition file
+      try {
+        const filePath = path.join(this.agentsDir, registryEntry.file);
+        await fs.unlink(filePath);
+        logger.info(`Deleted agent definition file: ${filePath}`);
+      } catch (error) {
+        logger.warn("Failed to delete agent definition file", { error, slug: agentSlugToRemove });
+      }
+
+      // Remove from registry and save
+      delete this.registry[agentSlugToRemove];
+      await this.saveRegistry();
+    }
+
+    logger.info(`Removed agent ${agentSlugToRemove} (eventId: ${eventId})`);
+    return true;
   }
 
   /**
-   * Get the PM agent if one exists
+   * Get the orchestrator agent if one exists
    */
-  getPMAgent(): Agent | undefined {
-    // Find the agent with pmAgent flag
+  getOrchestratorAgent(): Agent | undefined {
+    // Look for the orchestrator by slug first (for built-in orchestrator)
+    const orchestrator = this.agents.get("orchestrator");
+    if (orchestrator) return orchestrator;
+
+    // Fallback to looking for any agent marked as orchestrator
     for (const [slug, registryEntry] of Object.entries(this.registry)) {
-      if (registryEntry.pmAgent) {
+      if (registryEntry.orchestratorAgent) {
         return this.agents.get(slug);
       }
     }
@@ -250,24 +329,33 @@ export class AgentRegistry {
   private async publishAgentEvents(
     signer: NDKPrivateKeySigner,
     config: Omit<AgentConfig, "nsec">,
-    ndkAgentEventId?: string
+    ndkAgentEventId?: string,
+    ndkProject?: import("@nostr-dev-kit/ndk").NDKProject
   ): Promise<void> {
     try {
-      // Load project config to get project info
-      const projectConfig = await configService.loadTenexConfig(this.projectPath);
-      const projectName = projectConfig.description || "Unknown Project";
+      let projectName: string;
+      let projectPubkey: string;
 
-      // Check if project context is initialized
-      if (!isProjectContextInitialized()) {
-        logger.warn("ProjectContext not initialized, skipping agent event publishing");
-        return;
+      // Use passed NDKProject if available, otherwise fall back to ProjectContext
+      if (ndkProject) {
+        projectName = ndkProject.tagValue("title") || "Unknown Project";
+        projectPubkey = ndkProject.pubkey;
+      } else {
+        // Check if project context is initialized
+        if (!isProjectContextInitialized()) {
+          logger.warn(
+            "ProjectContext not initialized and no NDKProject provided, skipping agent event publishing"
+          );
+          return;
+        }
+
+        // Get project context for project pubkey and name
+        const projectCtx = getProjectContext();
+        projectName = projectCtx.project.tagValue("title") || "Unknown Project";
+        projectPubkey = projectCtx.project.pubkey;
       }
 
-      // Get project context for project pubkey
-      const projectCtx = getProjectContext();
-
       const ndk = getNDK();
-      await ndk.connect();
 
       // Create agent publisher
       const publisher = new AgentPublisher(ndk);
@@ -277,11 +365,9 @@ export class AgentRegistry {
         signer,
         config,
         projectName,
-        projectCtx.project.pubkey,
+        projectPubkey,
         ndkAgentEventId
       );
-
-      logger.info(`Published agent events for "${config.name}"`);
     } catch (error) {
       logger.error("Failed to publish agent events", { error });
       // Don't throw - agent creation should succeed even if publishing fails
@@ -314,6 +400,13 @@ export class AgentRegistry {
       throw new Error(`Invalid agent definition in ${definitionPath}: ${error}`);
     }
 
+    // For built-in agents, use the hardcoded instructions if not present in the file
+    const builtInAgents = getBuiltInAgents();
+    const builtInAgent = builtInAgents.find((agent) => agent.slug === slug);
+    if (builtInAgent && !agentDefinition.instructions) {
+      agentDefinition.instructions = builtInAgent.instructions || "";
+    }
+
     // Create AgentConfig from definition
     const config: AgentConfig = {
       name: agentDefinition.name,
@@ -321,7 +414,8 @@ export class AgentRegistry {
       instructions: agentDefinition.instructions || "",
       nsec: registryEntry.nsec,
       eventId: registryEntry.eventId,
-      tools: getDefaultToolsForAgent(false), // All non-PM agents get same tools
+      tools: agentDefinition.tools, // Preserve explicit tools configuration
+      mcp: agentDefinition.mcp, // Preserve MCP configuration
       llmConfig: agentDefinition.llmConfig,
     };
 
@@ -347,13 +441,17 @@ export class AgentRegistry {
     }
 
     // Optional fields with type validation
-
+    // Note: instructions is optional for built-in agents
     if (def.instructions !== undefined && typeof def.instructions !== "string") {
       throw new Error("Agent instructions must be a string");
     }
 
     if (def.tools !== undefined && !Array.isArray(def.tools)) {
       throw new Error("Agent tools must be an array");
+    }
+
+    if (def.mcp !== undefined && typeof def.mcp !== "boolean") {
+      throw new Error("Agent mcp must be a boolean");
     }
 
     if (def.llmConfig !== undefined && typeof def.llmConfig !== "string") {
@@ -364,22 +462,50 @@ export class AgentRegistry {
   /**
    * Ensure built-in agents are loaded
    */
-  private async ensureBuiltInAgents(): Promise<void> {
+  private async ensureBuiltInAgents(
+    ndkProject?: import("@nostr-dev-kit/ndk").NDKProject
+  ): Promise<void> {
     const builtInAgents = getBuiltInAgents();
+    logger.debug(`Loading ${builtInAgents.length} built-in agents`, {
+      agentSlugs: builtInAgents.map((a) => a.slug),
+    });
 
     for (const def of builtInAgents) {
-      // Use ensureAgent just like any other agent
-      const agent = await this.ensureAgent(def.slug, {
+      // Check if this is the orchestrator
+      const isOrchestrator = def.slug === "orchestrator";
+
+      logger.debug(`Loading built-in agent: ${def.slug}`, {
         name: def.name,
         role: def.role,
-        instructions: def.instructions || "",
-        llmConfig: def.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+        isOrchestrator,
       });
 
-      // Mark as built-in after creation and update tools
+      // Use ensureAgent just like any other agent
+      const agent = await this.ensureAgent(
+        def.slug,
+        {
+          name: def.name,
+          role: def.role,
+          instructions: def.instructions || "",
+          llmConfig: def.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+          mcp: !isOrchestrator, // Default: true for all agents except orchestrator
+        },
+        ndkProject
+      );
+
+      // Mark as built-in and set orchestrator flag
       if (agent) {
         agent.isBuiltIn = true;
-        agent.tools = getDefaultToolsForAgent(false, undefined, true);
+        agent.isOrchestrator = isOrchestrator;
+
+        // Update registry to mark orchestrator
+        const registryEntry = this.registry[def.slug];
+        if (isOrchestrator && registryEntry) {
+          registryEntry.orchestratorAgent = true;
+          await this.saveRegistry();
+        }
+      } else {
+        logger.error(`Failed to load built-in agent: ${def.slug}`);
       }
     }
   }

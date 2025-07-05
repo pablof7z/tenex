@@ -25,10 +25,11 @@ import {
 } from "./components/routes/RouteComponents";
 import { NavigationProvider } from "./contexts/NavigationContext";
 import { themeAtom } from "./lib/store";
+import { NDKCacheAdapter } from "@nostr-dev-kit/ndk-hooks";
 
 function AppContent() {
     const sessionStorage = useRef(new NDKSessionLocalStorage());
-    const cache = useRef<NDKCacheSQLiteWASM | null>(null);
+    const cache = useRef<NDKCacheAdapter | null>(null);
     const theme = useAtomValue(themeAtom);
 
     // Initialize SQLite cache

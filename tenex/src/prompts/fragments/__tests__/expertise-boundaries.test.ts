@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import { expertiseBoundariesFragment } from "../expertise-boundaries";
 
 describe("expertiseBoundariesFragment", () => {
-    it("should return empty string for PM agents", () => {
+    it("should return empty string for orchestrator agents", () => {
         const result = expertiseBoundariesFragment.template({
             agentRole: "Project Manager",
-            isPMAgent: true,
+            isOrchestrator: true,
         });
 
         expect(result).toBe("");
@@ -14,7 +14,7 @@ describe("expertiseBoundariesFragment", () => {
     it("should provide expertise boundaries guidance for specialist agents", () => {
         const result = expertiseBoundariesFragment.template({
             agentRole: "Frontend Developer",
-            isPMAgent: false,
+            isOrchestrator: false,
         });
 
         expect(result).toContain("## Expertise Boundaries");
@@ -29,7 +29,7 @@ describe("expertiseBoundariesFragment", () => {
         expect(
             expertiseBoundariesFragment.validateArgs({
                 agentRole: "Backend Developer",
-                isPMAgent: false,
+                isOrchestrator: false,
             })
         ).toBe(true);
 
@@ -41,7 +41,7 @@ describe("expertiseBoundariesFragment", () => {
 
         expect(
             expertiseBoundariesFragment.validateArgs({
-                isPMAgent: false,
+                isOrchestrator: false,
             })
         ).toBe(false);
 
@@ -52,7 +52,7 @@ describe("expertiseBoundariesFragment", () => {
     it("should emphasize staying within specialization", () => {
         const result = expertiseBoundariesFragment.template({
             agentRole: "DevOps Engineer",
-            isPMAgent: false,
+            isOrchestrator: false,
         });
 
         expect(result).toContain(

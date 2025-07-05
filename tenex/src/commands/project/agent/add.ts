@@ -2,8 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { AgentRegistry } from "@/agents/AgentRegistry";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import { readFileTool } from "@/tools/implementations/readFile";
-import { shellTool } from "@/tools/implementations/shell";
 import { logger } from "@/utils/logger";
 import { input } from "@inquirer/prompts";
 import { Command } from "commander";
@@ -61,7 +59,6 @@ export const agentAddCommand = new Command("add")
         role,
         instructions: prompt,
         llmConfig: DEFAULT_AGENT_LLM_CONFIG,
-        tools: [readFileTool.name, shellTool.name],
       };
 
       // Use AgentRegistry to ensure agent (this handles all file operations and Nostr publishing)

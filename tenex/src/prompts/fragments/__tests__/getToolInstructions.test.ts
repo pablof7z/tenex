@@ -10,37 +10,43 @@ describe("Tool Registry", () => {
         expect(readFileTool?.parameters).toBeDefined();
         expect(readFileTool?.execute).toBeInstanceOf(Function);
 
-        const shellTool = getTool("shell");
-        expect(shellTool).toBeDefined();
-        expect(shellTool?.description).toBeDefined();
-        expect(shellTool?.parameters).toBeDefined();
+        const analyzeTool = getTool("analyze");
+        expect(analyzeTool).toBeDefined();
+        expect(analyzeTool?.description).toBeDefined();
+        expect(analyzeTool?.parameters).toBeDefined();
 
         const claudeCodeTool = getTool("claude_code");
         expect(claudeCodeTool).toBeDefined();
         expect(claudeCodeTool?.description).toContain("Use Claude Code");
         expect(claudeCodeTool?.parameters).toHaveLength(2); // prompt and mode
 
-        const switchPhaseTool = getTool("switch_phase");
-        expect(switchPhaseTool).toBeDefined();
-        expect(switchPhaseTool?.description).toContain("Transition to a different workflow phase");
-        expect(switchPhaseTool?.parameters).toHaveLength(3); // phase, reason, message
+        const continueTool = getTool("continue");
+        expect(continueTool).toBeDefined();
+        expect(continueTool?.description).toBeDefined();
+        expect(continueTool?.parameters).toBeDefined();
 
-        const handoffTool = getTool("handoff");
-        expect(handoffTool).toBeDefined();
-        expect(handoffTool?.description).toContain("Hand off the conversation to another agent");
-        expect(handoffTool?.parameters).toHaveLength(2); // target, message
+        const yieldBackTool = getTool("yield_back");
+        expect(yieldBackTool).toBeDefined();
+        expect(yieldBackTool?.description).toBeDefined();
+        expect(yieldBackTool?.parameters).toBeDefined();
+
+        const endConversationTool = getTool("end_conversation");
+        expect(endConversationTool).toBeDefined();
+        expect(endConversationTool?.description).toBeDefined();
+        expect(endConversationTool?.parameters).toBeDefined();
     });
 
     test("tool registry should have all expected tools with proper structure", () => {
         const expectedTools = [
             "read_file",
-            "shell",
             "claude_code",
-            "switch_phase",
-            "handoff",
-            "get_time",
+            "continue",
+            "yield_back",
+            "end_conversation",
             "analyze",
             "generate_inventory",
+            "learn",
+            "create_milestone_task",
         ];
 
         for (const toolName of expectedTools) {

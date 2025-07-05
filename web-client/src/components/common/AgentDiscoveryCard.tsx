@@ -1,4 +1,4 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { ArrowRight, Bot, Sparkles, Users } from "lucide-react";
 import { memo, useMemo } from "react";

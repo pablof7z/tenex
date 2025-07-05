@@ -1,33 +1,32 @@
-import { NDKKind, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind, useNDK, useSubscribe, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import type { NDKProject } from "@nostr-dev-kit/ndk-svelte";
+import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronDown, ChevronRight, Send, Reply } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
-import { EVENT_KINDS } from "../lib/constants";
 import { StatusUpdate } from "./tasks/StatusUpdate";
 import { Button } from "./ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface MessageWithRepliesProps {
     event: NDKEvent;
     project: NDKProject;
 }
 
-// Simple reply component that doesn't have its own subscriptions
-const ReplyMessage = memo(function ReplyMessage({ 
-    event, 
-    onReply,
-    depth = 0
-}: { 
-    event: NDKEvent; 
-    onReply: (event: NDKEvent) => void;
-    depth?: number;
-}) {
+// Component for reply avatars
+const ReplyAvatar = memo(function ReplyAvatar({ pubkey }: { pubkey: string }) {
+    const profile = useProfileValue(pubkey);
+    
     return (
-        <div className={depth > 0 ? "pl-4" : ""}>
-            <StatusUpdate event={event} onReply={onReply} />
-        </div>
+        <Avatar className="w-6 h-6 border-2 border-white">
+            <AvatarImage src={profile?.image} alt={profile?.name || "User"} />
+            <AvatarFallback className="text-[10px] bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                {profile?.name?.charAt(0).toUpperCase() ||
+                    pubkey.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+        </Avatar>
     );
 });
+
 
 export const MessageWithReplies = memo(function MessageWithReplies({
     event,
@@ -39,44 +38,30 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     const [replyInput, setReplyInput] = useState("");
     const [isSending, setIsSending] = useState(false);
 
-    // Subscribe to ALL replies in the thread at once to avoid nested subscriptions
-    const { events: allReplies } = useSubscribe(
+    // Subscribe to replies that e-tag this event (NIP-22 threading)
+    const { events: directReplies } = useSubscribe(
         event.kind === NDKKind.GenericReply ? [
             {
                 kinds: [NDKKind.GenericReply],
-                ...event.filter(),
+                "#e": [event.id],
             },
         ] : false,
         {},
-        [event.id, showReplies]
+        [event.id]
     );
 
-    // Build reply tree structure
-    const replyTree = useMemo(() => {
-        if (!allReplies || allReplies.length === 0) return { direct: [], all: [] };
+    // Sort replies by timestamp
+    const sortedReplies = useMemo(() => {
+        if (!directReplies || directReplies.length === 0) return [];
         
-        const directReplies: NDKEvent[] = [];
-        const replyMap = new Map<string, NDKEvent[]>();
+        // Filter to only include events that directly e-tag this event
+        const filtered = directReplies.filter(reply => {
+            const eTags = reply.tags?.filter(tag => tag[0] === "e");
+            return eTags?.some(tag => tag[1] === event.id);
+        });
         
-        // First pass: categorize replies
-        for (const reply of allReplies) {
-            const eTag = reply.tags?.find(tag => tag[0] === "e" && tag[3] === "reply");
-            const parentId = eTag?.[1] || reply.tags?.find(tag => tag[0] === "e")?.[1];
-            
-            if (parentId === event.id) {
-                directReplies.push(reply);
-            } else if (parentId) {
-                const existing = replyMap.get(parentId) || [];
-                existing.push(reply);
-                replyMap.set(parentId, existing);
-            }
-        }
-        
-        // Sort by timestamp
-        directReplies.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
-        
-        return { direct: directReplies, replyMap };
-    }, [allReplies, event.id]);
+        return filtered.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
+    }, [directReplies, event.id]);
 
     const handleReply = useCallback((targetEvent: NDKEvent) => {
         setReplyToEvent(targetEvent);
@@ -115,54 +100,62 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         [handleSendReply]
     );
 
-    // Render a reply and its sub-replies
-    const renderReplyBranch = useCallback((reply: NDKEvent, currentDepth: number) => {
-        const subReplies = replyTree.replyMap?.get(reply.id) || [];
+    // Count for replies display
+    const replyCount = useMemo(() => {
+        if (!directReplies) return 0;
         
-        return (
-            <div key={reply.id}>
-                <ReplyMessage 
-                    event={reply} 
-                    onReply={handleReply}
-                    depth={currentDepth}
-                />
-                {subReplies.length > 0 && (
-                    <div className="border-l-2 border-muted ml-5">
-                        {subReplies
-                            .sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0))
-                            .map(subReply => renderReplyBranch(subReply, currentDepth + 1))}
-                    </div>
-                )}
-            </div>
-        );
-    }, [replyTree.replyMap, handleReply]);
+        // Count events that directly e-tag this event
+        return directReplies.filter(reply => {
+            const eTags = reply.tags?.filter(tag => tag[0] === "e");
+            return eTags?.some(tag => tag[1] === event.id);
+        }).length;
+    }, [directReplies, event.id]);
 
     return (
         <div className="group">
             <StatusUpdate event={event} onReply={() => handleReply(event)} />
             
-            {/* Reply count and toggle */}
-            {replyTree.direct.length > 0 && (
-                <div className="pl-11 -mt-1">
+            {/* Reply count and toggle - Slack style */}
+            {replyCount > 0 && (
+                <div className="pl-11 mt-2">
                     <button
                         type="button"
                         onClick={() => setShowReplies(!showReplies)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 transition-colors font-medium"
                     >
+                        <div className="flex -space-x-2">
+                            {/* Show up to 3 user avatars who replied */}
+                            {sortedReplies.slice(0, 3).map((reply, idx) => (
+                                <div key={reply.id} style={{ zIndex: 3 - idx }}>
+                                    <ReplyAvatar pubkey={reply.pubkey} />
+                                </div>
+                            ))}
+                        </div>
+                        <span>
+                            {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                        </span>
                         {showReplies ? (
-                            <ChevronDown className="w-3 h-3" />
+                            <ChevronDown className="w-4 h-4" />
                         ) : (
-                            <ChevronRight className="w-3 h-3" />
+                            <ChevronRight className="w-4 h-4" />
                         )}
-                        {allReplies?.length || 0} {(allReplies?.length || 0) === 1 ? "reply" : "replies"}
                     </button>
                 </div>
             )}
 
-            {/* Replies */}
-            {showReplies && replyTree.direct.length > 0 && (
-                <div className="pl-11 mt-2 space-y-1 border-l-2 border-muted ml-5">
-                    {replyTree.direct.map(reply => renderReplyBranch(reply, 0))}
+            {/* Thread replies - Slack style */}
+            {showReplies && sortedReplies.length > 0 && (
+                <div className="pl-11 mt-2">
+                    <div className="border-l-2 border-gray-300/50 pl-3">
+                        {sortedReplies.map(reply => (
+                            <div key={reply.id} className="relative -ml-3">
+                                <MessageWithReplies
+                                    event={reply}
+                                    project={project}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 

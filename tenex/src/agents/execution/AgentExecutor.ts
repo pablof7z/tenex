@@ -1,6 +1,6 @@
-import { getDefaultToolsForAgent } from "@/agents/constants";
 import type { ConversationManager } from "@/conversations/ConversationManager";
 import type { Phase } from "@/conversations/phases";
+import type { PhaseTransition } from "@/conversations/types";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
@@ -12,18 +12,19 @@ import {
   needsCurrentUserMessage,
 } from "@/prompts/utils/messageBuilder";
 import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
-import { getProjectContext } from "@/services";
+import { type ProjectContext, getProjectContext } from "@/services";
 import { mcpService } from "@/services/mcp/MCPService";
 import { getTool } from "@/tools/registry";
 import type {
-  CompleteMetadata,
   ContinueMetadata,
+  EndConversationMetadata,
   ToolExecutionMetadata,
   ToolExecutionResult,
   ToolOutput,
   ToolResult,
+  YieldBackMetadata,
 } from "@/tools/types";
-import { isCompleteMetadata, isContinueMetadata } from "@/tools/types";
+import { isContinueMetadata, isEndConversationMetadata, isYieldBackMetadata } from "@/tools/types";
 import {
   type TracingContext,
   type TracingLogger,
@@ -39,12 +40,13 @@ import { ReasonActLoop } from "./ReasonActLoop";
 import type { ReasonActContext, ReasonActResult } from "./ReasonActLoop";
 import type { AgentExecutionContext, AgentExecutionResult } from "./types";
 import "@/prompts/fragments/available-agents";
-import "@/prompts/fragments/pm-routing";
+import "@/prompts/fragments/orchestrator-routing";
 import "@/prompts/fragments/expertise-boundaries";
 import { startExecutionTime, stopExecutionTime } from "@/conversations/executionTime";
 
 export class AgentExecutor {
   private reasonActLoop: ReasonActLoop;
+  private projectCtx: ProjectContext;
 
   constructor(
     private llmService: LLMService,
@@ -52,16 +54,16 @@ export class AgentExecutor {
     private conversationManager?: ConversationManager
   ) {
     this.reasonActLoop = new ReasonActLoop(llmService);
+    this.projectCtx = getProjectContext();
   }
 
   /**
-   * Execute an agent's assignment for a conversation
+   * Execute an agent's assignment for a conversation with streaming
    */
   async execute(
     context: AgentExecutionContext,
     triggeringEvent: NDKEvent,
-    parentTracingContext?: TracingContext,
-    _options?: { streaming?: boolean }
+    parentTracingContext?: TracingContext
   ): Promise<AgentExecutionResult> {
     // Create agent execution tracing context
     const tracingContext = parentTracingContext
@@ -74,54 +76,36 @@ export class AgentExecutor {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
 
     tracingLogger.startOperation("agent_execution", {
-      agentName: context.agent.name,
-      agentPubkey: context.agent.pubkey,
       phase: context.phase,
     });
 
     // Create NostrPublisher outside try block so it's accessible in catch
-    const projectCtx = getProjectContext();
     const publisher = new NostrPublisher({
-      ndk: this.ndk,
       conversation: context.conversation,
       agent: context.agent,
       triggeringEvent: triggeringEvent,
-      project: projectCtx.project,
     });
 
     try {
       // Start execution time tracking
       startExecutionTime(context.conversation);
 
-      // 1. Get phase-aware tools for this agent
-      const phaseAwareTools = getDefaultToolsForAgent(
-        context.agent.isPMAgent || false,
-        context.phase,
-        context.agent.isBuiltIn || false
-      );
+      // 1. Build the agent's messages
+      const messages = await this.buildMessages(context, triggeringEvent);
 
-      // Create a modified agent with phase-aware tools
-      const agentWithPhaseTools = {
-        ...context.agent,
-        tools: phaseAwareTools,
-      };
-
-      // 2. Build the agent's messages
-      const messages = await this.buildMessages({
-        ...context,
-        agent: agentWithPhaseTools,
-      });
-
-      // 3. Publish typing indicator start
+      // 2. Publish typing indicator start
       await publisher.publishTypingIndicator("start");
 
-      // Get tools for response processing - use phase-aware tools
-      const toolNames = agentWithPhaseTools.tools || [];
+      // Get tools for response processing - use agent's configured tools
+      const toolNames = context.agent.tools || [];
       const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
 
-      // Add MCP tools if available
-      const mcpTools = await mcpService.getAvailableTools();
-      const allTools = [...tools, ...mcpTools];
+      // Add MCP tools if available and agent has MCP access
+      let allTools = tools;
+      if (context.agent.mcp !== false) {
+        const mcpTools = await mcpService.getAvailableTools();
+        allTools = [...tools, ...mcpTools];
+      }
 
       const streamResult = await this.executeWithStreaming(
         {
@@ -129,7 +113,7 @@ export class AgentExecutor {
           conversationId: context.conversation.id,
           phase: context.phase,
           llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
-          agent: agentWithPhaseTools,
+          agent: context.agent,
           conversation: context.conversation,
           eventToReply: triggeringEvent,
         },
@@ -149,14 +133,12 @@ export class AgentExecutor {
       const llmMetadata = await buildLLMMetadata(finalResponse, messages);
 
       // 6. Process routing decisions
-      let nextResponder: string | undefined;
       let phaseTransition: string | undefined;
 
       if (continueMetadata) {
-        nextResponder = continueMetadata.routingDecision.destination;
         phaseTransition = continueMetadata.routingDecision.phase;
 
-        // Handle phase transition in conversation manager
+        // Handle phase transition in conversation manager with enhanced handoff
         if (this.conversationManager && phaseTransition) {
           await this.conversationManager.updatePhase(
             context.conversation.id,
@@ -164,11 +146,43 @@ export class AgentExecutor {
             continueMetadata.routingDecision.message,
             context.agent.pubkey,
             context.agent.name,
-            continueMetadata.routingDecision.reason
+            continueMetadata.routingDecision.reason,
+            // Enhanced handoff fields - the agent should have provided these
+            continueMetadata.routingDecision.summary
           );
         }
-      } else if (completeMetadata) {
-        nextResponder = completeMetadata.completion.nextAgent;
+      }
+
+      // Handle yield_back/end_conversation tool metadata as a same-phase handoff
+      if (completeMetadata && this.conversationManager && !context.agent.isOrchestrator) {
+        // When a non-orchestrator agent completes, create a handoff record for the orchestrator
+        const { response, summary } = completeMetadata.completion;
+        
+        logger.info(`[AGENT_EXECUTOR] Creating handoff from completion tool`, {
+          fromAgent: context.agent.name,
+          toOrchestrator: true,
+          summary: summary.substring(0, 100) + "..."
+        });
+        
+        // Use updatePhase to create a handoff record without changing phase
+        await this.conversationManager.updatePhase(
+          context.conversation.id,
+          context.phase, // Keep the same phase
+          response, // The response becomes the handoff message
+          context.agent.pubkey,
+          context.agent.name,
+          `Task completed by ${context.agent.name}`,
+          summary // Pass the detailed summary to the orchestrator
+        );
+      }
+
+      // Add the agent's response to their context
+      if (this.conversationManager && finalContent) {
+        await this.conversationManager.addMessageToContext(
+          context.conversation.id,
+          context.agent.slug,
+          new Message("assistant", finalContent)
+        );
       }
 
       // 8. Check if response was already published during streaming
@@ -188,7 +202,8 @@ export class AgentExecutor {
           context,
           triggeringEvent,
           finalContent,
-          nextResponder,
+          continueMetadata,
+          completeMetadata,
           llmMetadata,
           tracingContext,
           phaseTransition
@@ -219,7 +234,6 @@ export class AgentExecutor {
         agentName: context.agent.name,
         responseLength: finalContent.length,
         toolExecutions: allToolResults.length,
-        nextAgent: nextResponder,
         sessionDurationMs: sessionDuration,
       });
 
@@ -228,7 +242,6 @@ export class AgentExecutor {
         response: finalContent,
         llmMetadata,
         toolExecutions: allToolResults,
-        nextAgent: nextResponder,
         publishedEvent,
       };
     } catch (error) {
@@ -258,7 +271,10 @@ export class AgentExecutor {
   /**
    * Build the messages array for the agent execution
    */
-  private async buildMessages(context: AgentExecutionContext): Promise<Message[]> {
+  private async buildMessages(
+    context: AgentExecutionContext,
+    triggeringEvent: NDKEvent
+  ): Promise<Message[]> {
     const projectCtx = getProjectContext();
     const project = projectCtx.project;
 
@@ -296,46 +312,83 @@ export class AgentExecutor {
 
     messages.push(new Message("system", systemPrompt));
 
-    // Add conversation history as proper messages
-    const historyMessages = buildHistoryMessages(context.conversation.history);
-    messages.push(...historyMessages);
+    // Use agent's isolated context instead of full history
+    if (this.conversationManager) {
+      let agentContext = this.conversationManager.getAgentContext(
+        context.conversation.id,
+        context.agent.slug
+      );
 
-    // Add current user message if needed
-    if (needsCurrentUserMessage(context.conversation)) {
-      const latestUserMessage = getLatestUserMessage(context.conversation);
-      if (latestUserMessage) {
-        messages.push(new Message("user", latestUserMessage));
+      // If no context exists, this agent is being invoked for the first time
+      if (!agentContext) {
+        // Check if this is a handoff from another agent (will be set in execute method)
+        const handoff = (context as AgentExecutionContext & { handoff?: PhaseTransition }).handoff;
+
+        if (handoff) {
+          logger.info(`[AGENT_EXECUTOR] Creating context from handoff`, {
+            fromAgent: handoff.agentName,
+            toAgent: context.agent.slug,
+            handoffMessage: handoff.message.substring(0, 100) + "..."
+          });
+          
+          // Create context with handoff information
+          agentContext = this.conversationManager.createAgentContext(
+            context.conversation.id,
+            context.agent.slug,
+            handoff
+          );
+        } else {
+          logger.info(`[AGENT_EXECUTOR] Bootstrapping context for direct invocation`, {
+            agentSlug: context.agent.slug
+          });
+          
+          // Bootstrap context for direct invocation (e.g., p-tag mention)
+          agentContext = await this.conversationManager.bootstrapAgentContext(
+            context.conversation.id,
+            context.agent.slug,
+            triggeringEvent
+          );
+        }
+      } else {
+        // Context exists - synchronize with missed messages
+        logger.info(`[AGENT_EXECUTOR] Synchronizing existing context`, {
+          agentSlug: context.agent.slug,
+          currentMessages: agentContext.messages.length
+        });
+        
+        await this.conversationManager.synchronizeAgentContext(
+          context.conversation.id,
+          context.agent.slug,
+          triggeringEvent
+        );
+      }
+
+      // Add the agent's isolated messages
+      messages.push(...agentContext.messages);
+      
+      logger.info(`[AGENT_EXECUTOR] Final message state for agent`, {
+        agentSlug: context.agent.slug,
+        totalMessages: messages.length,
+        messages: messages.map(m => ({
+          role: m.role,
+          contentPreview: m.content.substring(0, 100) + "..."
+        }))
+      });
+    } else {
+      // Fallback to old behavior if no ConversationManager
+      const historyMessages = buildHistoryMessages(context.conversation.history);
+      messages.push(...historyMessages);
+
+      // Add current user message if needed
+      if (needsCurrentUserMessage(context.conversation)) {
+        const latestUserMessage = getLatestUserMessage(context.conversation);
+        if (latestUserMessage) {
+          messages.push(new Message("user", latestUserMessage));
+        }
       }
     }
 
     return messages;
-  }
-
-  /**
-   * Generate initial response from LLM
-   */
-  private async generateResponse(
-    messages: Message[],
-    context: AgentExecutionContext
-  ): Promise<CompletionResponse> {
-    // Get tools for this agent
-    const toolNames = context.agent.tools || [];
-    const tools = toolNames.map((name) => getTool(name)).filter(Boolean) as Tool[];
-
-    return await this.llmService.complete({
-      messages,
-      options: {},
-      tools: tools.length > 0 ? tools : undefined,
-      toolContext: {
-        projectPath: process.cwd(),
-        conversationId: context.conversation.id,
-        phase: context.phase,
-        agent: context.agent,
-        conversation: context.conversation,
-        agentSigner: context.agent.signer,
-        conversationRootEventId: context.conversation.history[0]?.id,
-      },
-    });
   }
 
   /**
@@ -345,15 +398,12 @@ export class AgentExecutor {
     context: AgentExecutionContext,
     triggeringEvent: NDKEvent,
     content: string,
-    nextResponder: string | undefined,
+    continueMetadata?: ContinueMetadata,
+    completeMetadata?: YieldBackMetadata | EndConversationMetadata,
     llmMetadata?: LLMMetadata,
     tracingContext?: TracingContext,
     phaseTransition?: string
   ): Promise<NDKEvent> {
-    const tracingLogger = tracingContext
-      ? createTracingLogger(tracingContext, "nostr")
-      : logger.forModule("nostr");
-
     // Check if this is a phase transition request
     const additionalTags: NDKTag[] = [];
     if (phaseTransition) {
@@ -362,28 +412,18 @@ export class AgentExecutor {
 
     // This method is now only used as a fallback - should not normally be called
     const publisher = new NostrPublisher({
-      ndk: this.ndk,
       conversation: context.conversation,
       agent: context.agent,
       triggeringEvent: triggeringEvent,
-      project: getProjectContext().project,
     });
 
     const event = await publisher.publishResponse({
       content,
-      nextAgent: nextResponder,
+      continueMetadata,
+      completeMetadata,
       llmMetadata,
       additionalTags,
     });
-
-    if (tracingContext && "logEventPublished" in tracingLogger) {
-      tracingLogger.logEventPublished(event.id || "unknown", "agent_response", {
-        agentName: context.agent.name,
-        preview: content.substring(0, 60),
-        nextResponder,
-        hasLLMMetadata: !!llmMetadata,
-      });
-    }
 
     return event;
   }
@@ -403,8 +443,10 @@ export class AgentExecutor {
     let finalContent = "";
     const allToolResults: ToolExecutionResult[] = [];
     let continueMetadata: ContinueMetadata | undefined;
-    let completeMetadata: CompleteMetadata | undefined;
+    let completeMetadata: YieldBackMetadata | EndConversationMetadata | undefined;
     let wasPublished = false;
+
+    const lastMessage = messages[messages.length - 1];
 
     // Process the stream - ReasonActLoop handles all publishing
     const stream = this.reasonActLoop.executeStreaming(
@@ -416,6 +458,11 @@ export class AgentExecutor {
     );
 
     for await (const event of stream) {
+      // console.log("stream", {
+      //   agent: context.agent.name,
+      //   messageContent: lastMessage?.content?.substring(0, 40),
+      //   ...event,
+      // });
       switch (event.type) {
         case "content":
           finalContent += event.content;
@@ -426,19 +473,41 @@ export class AgentExecutor {
           const resultWithMetadata = event.result as
             | {
                 metadata?: unknown;
+                success?: boolean;
+                error?: string;
               }
             | null
             | undefined;
 
+          // Check if tool execution failed and publish error
+          if (resultWithMetadata?.success === false && resultWithMetadata?.error && publisher) {
+            try {
+              await publisher.publishError(
+                `Tool "${event.tool}" failed: ${resultWithMetadata.error}`
+              );
+              tracingLogger.info("Published tool error to conversation", {
+                tool: event.tool,
+                error: resultWithMetadata.error,
+              });
+            } catch (error) {
+              tracingLogger.error("Failed to publish tool error", {
+                tool: event.tool,
+                originalError: resultWithMetadata.error,
+                publishError: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+
           const toolResult: ToolExecutionResult = {
-            success: true,
+            success: resultWithMetadata?.success ?? true,
             output: event.result as ToolOutput,
             duration: 0,
             toolName: event.tool,
             metadata: resultWithMetadata?.metadata as
               | ToolExecutionMetadata
               | ContinueMetadata
-              | CompleteMetadata
+              | YieldBackMetadata
+              | EndConversationMetadata
               | undefined,
           };
 
@@ -449,7 +518,7 @@ export class AgentExecutor {
             const metadata = resultWithMetadata.metadata;
             if (isContinueMetadata(metadata)) {
               continueMetadata = metadata;
-            } else if (isCompleteMetadata(metadata)) {
+            } else if (isYieldBackMetadata(metadata) || isEndConversationMetadata(metadata)) {
               completeMetadata = metadata;
             }
           }

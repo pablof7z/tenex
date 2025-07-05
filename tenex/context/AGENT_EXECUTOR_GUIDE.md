@@ -59,7 +59,7 @@ The architecture follows a clear separation of concerns:
 The `execute` method follows a well-defined, asynchronous data flow:
 
 1.  **Initialization**: Receives `AgentExecutionContext` and a triggering `NDKEvent`. A `TracingContext` is created for logging and debugging.
-2.  **Tool Setup**: Determines the appropriate tools for the agent based on its role (`isPMAgent`) and the current conversation `phase`.
+2.  **Tool Setup**: Determines the appropriate tools for the agent based on its role (`isOrchestrator`) and the current conversation `phase`.
 3.  **Prompt Construction**: The `buildMessages` method is called. It uses the `PromptBuilder` to assemble a system prompt from various fragments (`agent-system-prompt`, `available-agents`, `phase-context`, etc.). This prompt, along with the conversation history, forms the `Message[]` array for the LLM.
 4.  **Typing Indicator (Start)**: Publishes a "typing..." event to Nostr to provide immediate user feedback.
 5.  **Streaming Execution**: The `executeWithStreaming` method is invoked.
@@ -103,8 +103,8 @@ The `execute` method follows a well-defined, asynchronous data flow:
 #### How the Module is Used
 
 The `AgentExecutor` is a central service instantiated and used primarily by the `EventHandler` (`src/event-handler/index.ts`).
--   When a new conversation is started (`handleNewConversation`), the `EventHandler` calls `agentExecutor.execute` with the Project Manager (PM) agent to determine the initial response or routing.
--   When a reply is received in an existing conversation (`handleChatMessage`), it's also routed through the PM agent via `agentExecutor.execute` to decide on the next step.
+-   When a new conversation is started (`handleNewConversation`), the `EventHandler` calls `agentExecutor.execute` with the Orchestrator agent to determine the initial response or routing.
+-   When a reply is received in an existing conversation (`handleChatMessage`), it's also routed through the orchestrator agent via `agentExecutor.execute` to decide on the next step.
 
 #### External Dependencies
 
@@ -135,8 +135,7 @@ The `AgentExecutor` is a central service instantiated and used primarily by the 
 #### Potential Areas for Improvement
 
 1.  **Result Processing**: The logic for processing tool results and extracting metadata is currently embedded within the `executeWithStreaming` loop. This could be refactored into a dedicated `ToolResultProcessor` class to simplify the main loop and improve separation of concerns.
-2.  **Dead Code Removal**: The `execute` method contains an `if (true)` block that forces the streaming path. The `else` block containing the more traditional, non-streaming logic is effectively dead code and could be removed to simplify the file.
-3.  **Dependency Management**: The module relies on several implicitly-available singletons or services (e.g., `getProjectContext`, `getNDK`). While convenient, this can make the class harder to test in isolation. Explicitly passing these dependencies into the constructor would make the data flow more transparent.
+2.  **Dependency Management**: The module relies on several implicitly-available singletons or services (e.g., `getProjectContext`, `getNDK`). While convenient, this can make the class harder to test in isolation. Explicitly passing these dependencies into the constructor would make the data flow more transparent.
 
 #### Common Pitfalls and Gotchas
 

@@ -5,6 +5,7 @@ import {
     useEvent,
     useNDK,
     useSubscribe,
+    useNDKCurrentPubkey,
 } from "@nostr-dev-kit/ndk-hooks";
 import { EVENT_KINDS } from "../lib/constants";
 import { useAtom } from "jotai";
@@ -54,23 +55,15 @@ const MessageList = memo(
         project: NDKProject;
     }) => {
         return (
-            <div className="space-y-1">
+            <div className="divide-y divide-transparent">
                 {messages.map((event) => {
                     // Check if this is a task event
                     if (event.kind === EVENT_KINDS.TASK) {
                         // For tasks, we'll render them as a special message with the task card
                         const task = event as NDKTask;
-                        const taskComplexity = task.tags?.find(
-                            (tag) => tag[0] === "complexity"
-                        )?.[1];
 
                         return (
-                            <div key={event.id} className="p-3">
-                                <div className="text-xs text-muted-foreground mb-2">
-                                    Task created • Complexity: {taskComplexity}/10
-                                </div>
-                                <TaskCard task={task} onClick={() => onTaskClick?.(task)} />
-                            </div>
+                            <TaskCard key={event.id} task={task} onClick={() => onTaskClick?.(task)} />
                         );
                     }
 
@@ -115,6 +108,7 @@ export function ChatInterface({
     onBack,
 }: ChatInterfaceProps) {
     const { ndk } = useNDK();
+    const currentUserPubkey = useNDKCurrentPubkey();
     const [isSending, setIsSending] = useState(false);
     const [kind11Event, setKind11Event] = useState<NDKEvent | null>(null);
     const [showDebugDialog, setShowDebugDialog] = useState(false);
@@ -237,7 +231,7 @@ export function ChatInterface({
 
     // Subscribe to thread messages when currentThreadEvent is available
     const { events: threadReplies } = useSubscribe(
-        currentThreadEvent && typeof currentThreadEvent.filter === "function"
+        currentThreadEvent
             ? [
                   {
                       kinds: [NDKKind.GenericReply],
@@ -254,20 +248,6 @@ export function ChatInterface({
     const { events: relatedTasks } = useSubscribe(
         currentThreadEvent && typeof currentThreadEvent.filter === "function"
             ? [{ kinds: [NDKTask.kind], ...currentThreadEvent.filter() }]
-            : false,
-        {},
-        [currentThreadEvent?.id]
-    );
-
-    // Subscribe to tasks that specifically E-tag this thread (like claude_code tasks)
-    const { events: threadTasks } = useSubscribe(
-        currentThreadEvent
-            ? [
-                  {
-                      kinds: [NDKTask.kind],
-                      "#e": [currentThreadEvent.id], // Tasks that E-tag this thread
-                  },
-              ]
             : false,
         {},
         [currentThreadEvent?.id]
@@ -345,14 +325,9 @@ export function ChatInterface({
             messages.push(...relatedTasks);
         }
 
-        // Add all thread-specific tasks (E-tagged tasks like claude_code)
-        if (threadTasks && threadTasks.length > 0) {
-            messages.push(...threadTasks);
-        }
-
         // Sort by created_at timestamp
         return messages.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
-    }, [currentThreadEvent, threadReplies, relatedTasks, threadTasks]);
+    }, [currentThreadEvent, threadReplies, relatedTasks]);
 
     // Get unique participants from thread messages and p-tags
     const threadParticipants = useMemo(() => {
@@ -409,6 +384,11 @@ export function ChatInterface({
 
             // Extract mentions and get clean content
             const { cleanContent, mentionedAgents } = extractMentions(messageInput.trim());
+            
+            // Debug logging
+            console.log("Message input:", messageInput);
+            console.log("Mentioned agents found:", mentionedAgents);
+            console.log("Available project agents:", projectAgents);
 
             if (isThreadMode) {
                 // Check if we have an existing thread with reply capability
@@ -425,6 +405,17 @@ export function ChatInterface({
                     // Add mentioned agents to the reply (explicit p-tags)
                     for (const agent of mentionedAgents) {
                         event.tags.push(["p", agent.pubkey]);
+                    }
+
+                    // If no agents were mentioned, p-tag the most recent non-user message
+                    if (mentionedAgents.length === 0 && currentUserPubkey && threadMessages.length > 0) {
+                        const mostRecentNonUserMessage = [...threadMessages]
+                            .reverse()
+                            .find((msg) => msg.pubkey !== currentUserPubkey);
+                        
+                        if (mostRecentNonUserMessage) {
+                            event.tags.push(["p", mostRecentNonUserMessage.pubkey]);
+                        }
                     }
                 } else if (!kind11Event) {
                     // This is the first message, create a new thread (kind 11)
@@ -509,11 +500,15 @@ export function ChatInterface({
                     event.tags.push(["a", project.tagId()]); // Project reference
                 }
 
-                // Find the most recent agent from status updates
+                // Find the most recent non-user message from status updates
                 const sortedUpdates = [...statusUpdates].sort(
                     (a, b) => (b.created_at ?? 0) - (a.created_at ?? 0)
                 );
-                const mostRecentUpdate = sortedUpdates[0];
+                
+                // Find the most recent update that is not from the current user
+                const mostRecentNonUserUpdate = currentUserPubkey 
+                    ? sortedUpdates.find((update) => update.pubkey !== currentUserPubkey)
+                    : sortedUpdates[0];
 
                 const claudeSessionId = statusUpdates
                     .find((s) => !!s.hasTag("claude-session-id"))
@@ -523,21 +518,19 @@ export function ChatInterface({
                     return;
                 }
 
-                if (mostRecentUpdate) {
-                    // P-tag the most recent agent that responded
-                    event.tags.push(["p", mostRecentUpdate.pubkey]);
-
-                    // Check if there's a claude-session-id in the most recent update
-                    event.tags.push(["claude-session-id", claudeSessionId]);
-                }
-
                 // Add mentioned agents to the reply (explicit p-tags)
                 for (const agent of mentionedAgents) {
-                    // Don't add duplicate p-tags
-                    if (!event.tags.some((tag) => tag[0] === "p" && tag[1] === agent.pubkey)) {
-                        event.tags.push(["p", agent.pubkey]);
-                    }
+                    event.tags.push(["p", agent.pubkey]);
                 }
+
+                // If no agents were mentioned, p-tag the most recent non-user update
+                if (mentionedAgents.length === 0 && mostRecentNonUserUpdate) {
+                    // P-tag the most recent non-user that responded
+                    event.tags.push(["p", mostRecentNonUserUpdate.pubkey]);
+                }
+
+                // Always add claude-session-id for routing
+                event.tags.push(["claude-session-id", claudeSessionId]);
             } else {
                 // This shouldn't happen due to the check above, but TypeScript needs this
                 return;

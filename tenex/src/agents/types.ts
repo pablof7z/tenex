@@ -14,11 +14,13 @@ export interface Agent {
   signer: NDKPrivateKeySigner;
   role: string;
   instructions?: string;
+  useCriteria?: string; // Criteria for when this agent should be selected
   llmConfig: string;
   tools: string[];
+  mcp?: boolean; // Whether this agent has access to MCP tools (defaults to true except for orchestrator)
   eventId?: string; // NDKAgent event ID
   slug: string; // Agent slug/key from agents.json
-  isPMAgent?: boolean; // Whether this agent is the PM agent (project manager/orchestrator)
+  isOrchestrator?: boolean; // Whether this agent is the orchestrator agent
   isBuiltIn?: boolean; // Whether this is a built-in agent (executer, planner)
 }
 
@@ -53,10 +55,12 @@ export interface AgentConfig {
   role: string;
   description?: string;
   instructions?: string;
+  useCriteria?: string;
   nsec: string;
   eventId?: string;
   pubkey?: string;
   tools?: string[]; // Made optional since we assign tools dynamically
+  mcp?: boolean; // Whether this agent has access to MCP tools
   llmConfig?: string;
 }
 
@@ -75,8 +79,10 @@ export interface StoredAgentData {
   role: string;
   description?: string;
   instructions?: string;
+  useCriteria?: string;
   llmConfig?: string;
   tools?: string[];
+  mcp?: boolean; // Whether this agent has access to MCP tools
 }
 
 /**

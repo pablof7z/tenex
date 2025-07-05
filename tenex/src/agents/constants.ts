@@ -1,62 +1,44 @@
-import { PHASES, type Phase } from "../conversations/phases";
+import type { Phase } from "../conversations/phases";
 import { analyze } from "../tools/implementations/analyze";
 import { claudeCodeTool } from "../tools/implementations/claudeCode";
+import { continueTool } from "../tools/implementations/continue";
+import { endConversationTool } from "../tools/implementations/endConversation";
 import { generateInventoryTool } from "../tools/implementations/generateInventory";
 import { learnTool } from "../tools/implementations/learn";
 import { readFileTool } from "../tools/implementations/readFile";
-import { shellTool } from "../tools/implementations/shell";
-
-/**
- * Tools that are only available to the Project Manager (PM) agent
- */
-export const PM_ONLY_TOOLS = ["continue", generateInventoryTool.name];
+import { writeContextFileTool } from "@/tools/implementations/writeContextFile";
+import { yieldBackTool } from "../tools/implementations/yieldBack";
 
 /**
  * Get all available tools for an agent based on their role and phase
- * All agents now have access to all tools except PM-only tools
+ * All agents now have access to all tools except orchestrator-only tools
  */
 export function getDefaultToolsForAgent(
-  isPMAgent: boolean,
+  isOrchestrator: boolean,
   phase?: Phase,
-  isBuiltIn?: boolean
+  isBuiltIn?: boolean,
+  agentSlug?: string
 ): string[] {
-  if (isPMAgent) {
-    // PM agents get limited tools (no claude_code or shell)
-    const pmTools = [readFileTool.name, analyze.name, "complete", ...PM_ONLY_TOOLS];
+  let tools = [readFileTool.name, learnTool.name, analyze.name];
 
-    // Add learn tool only during reflection phase
-    if (phase === PHASES.REFLECTION) {
-      pmTools.push(learnTool.name);
-    }
-
-    return pmTools;
-  }
-
-  // Built-in agents (planner/executor) only get claude_code and complete
+  // Built-in agents
   if (isBuiltIn) {
-    const builtInTools = [claudeCodeTool.name, "complete"];
-
-    // Add learn tool only during reflection phase
-    if (phase === PHASES.REFLECTION) {
-      builtInTools.push(learnTool.name);
+    if (isOrchestrator) {
+      // Orchestrator agents get limited tools (no claude_code or shell)
+      tools = [analyze.name, endConversationTool.name, continueTool.name, generateInventoryTool.name];
+    } else {
+      // Non-orchestrator agents use yield_back instead of complete
+      tools.push(claudeCodeTool.name, yieldBackTool.name);
+  
+      if (agentSlug === 'project-manager') {
+        tools.push(generateInventoryTool.name);
+        tools.push(writeContextFileTool.name);
+      }
     }
-
-    return builtInTools;
+  } else {
+    // Custom agents default to yield_back
+    tools.push(yieldBackTool.name);
   }
 
-  // Other non-PM agents get all base tools
-  const baseTools = [
-    readFileTool.name,
-    shellTool.name,
-    claudeCodeTool.name,
-    analyze.name,
-    "complete",
-  ];
-
-  // Add learn tool only during reflection phase
-  if (phase === PHASES.REFLECTION) {
-    baseTools.push(learnTool.name);
-  }
-
-  return baseTools;
+  return tools;
 }

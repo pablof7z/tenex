@@ -3,20 +3,20 @@ import type { PromptFragment } from "../core/types";
 
 // Fragment for specialized agents to understand their expertise boundaries
 interface ExpertiseBoundariesArgs {
-    agentRole: string;
-    isPMAgent: boolean;
+  agentRole: string;
+  isOrchestrator: boolean;
 }
 
 export const expertiseBoundariesFragment: PromptFragment<ExpertiseBoundariesArgs> = {
-    id: "expertise-boundaries",
-    priority: 20,
-    template: ({ agentRole, isPMAgent }) => {
-        // Only provide boundaries guidance for non-PM agents
-        if (isPMAgent) {
-            return "";
-        }
+  id: "expertise-boundaries",
+  priority: 20,
+  template: ({ agentRole, isOrchestrator }) => {
+    // Only provide boundaries guidance for non-orchestrator agents
+    if (isOrchestrator) {
+      return "";
+    }
 
-        return `## Expertise Boundaries
+    return `## Expertise Boundaries
 
 As a specialist agent with the role "${agentRole}", you should:
 
@@ -35,15 +35,15 @@ As a specialist agent with the role "${agentRole}", you should:
 4. **Quality Over Scope**: It's better to excel within your specialization than to provide mediocre guidance outside it.
 
 Remember: Your value comes from deep expertise in your specific domain, not from attempting to cover all aspects of a task.`;
-    },
-    validateArgs: (args): args is ExpertiseBoundariesArgs => {
-        return (
-            typeof args === "object" &&
-            args !== null &&
-            typeof (args as ExpertiseBoundariesArgs).agentRole === "string" &&
-            typeof (args as ExpertiseBoundariesArgs).isPMAgent === "boolean"
-        );
-    },
+  },
+  validateArgs: (args): args is ExpertiseBoundariesArgs => {
+    return (
+      typeof args === "object" &&
+      args !== null &&
+      typeof (args as ExpertiseBoundariesArgs).agentRole === "string" &&
+      typeof (args as ExpertiseBoundariesArgs).isOrchestrator === "boolean"
+    );
+  },
 };
 
 // Register the fragment

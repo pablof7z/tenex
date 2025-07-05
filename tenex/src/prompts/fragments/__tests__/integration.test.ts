@@ -1,6 +1,6 @@
 import { PromptBuilder } from "../../core/PromptBuilder";
 import "../available-agents";
-import "../pm-routing";
+import "../orchestrator-routing";
 import type { Agent } from "@/agents/types";
 
 describe("Agent Routing Integration", () => {
@@ -10,7 +10,7 @@ describe("Agent Routing Integration", () => {
             pubkey: "pm123",
             role: "Project coordination and planning",
             slug: "pm",
-            isPMAgent: true,
+            isOrchestrator: true,
             signer: {} as any,
             llmConfig: "gpt-4",
             tools: ["switch_phase", "handoff"],
@@ -20,10 +20,10 @@ describe("Agent Routing Integration", () => {
             pubkey: "dev456",
             role: "Frontend development and UI implementation",
             slug: "frontend-dev",
-            isPMAgent: false,
+            isOrchestrator: false,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["read_file", "shell"],
+            tools: ["read_file"],
         },
     ];
 
@@ -36,19 +36,19 @@ describe("Agent Routing Integration", () => {
             .build();
 
         expect(prompt).toContain("## Available Agents");
-        expect(prompt).toContain("**Project Manager** (Project Manager) (pm)");
+        expect(prompt).toContain("**Project Manager** (Orchestrator) (pm)");
         expect(prompt).not.toContain("Frontend Developer");
-        expect(prompt).toContain("collaboration and handoffs");
+        expect(prompt).toContain("As a Specialist");
     });
 
-    it("should build complete system prompt for PM agent with routing instructions", () => {
+    it("should build complete system prompt for orchestrator agent with routing instructions", () => {
         const prompt = new PromptBuilder()
             .add("available-agents", {
                 agents: mockAgents,
                 currentAgentPubkey: "pm123",
             })
-            .add("pm-routing-instructions", {})
-            .add("pm-handoff-guidance", {})
+            .add("orchestrator-routing-instructions", {})
+            .add("orchestrator-handoff-guidance", {})
             .build();
 
         // Should have available agents
@@ -56,10 +56,10 @@ describe("Agent Routing Integration", () => {
         expect(prompt).toContain("Frontend Developer");
         expect(prompt).not.toContain("Project Manager (PM)");
 
-        // Should have PM routing instructions
-        expect(prompt).toContain("## PM Agent Routing Instructions");
-        expect(prompt).toContain("### 1. Handoff Tool");
-        expect(prompt).toContain("Phase Transitions");
+        // Should have orchestrator routing instructions
+        expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
+        expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
+        expect(prompt).toContain("Phase-Based Routing");
 
         // Should have handoff guidance
         expect(prompt).toContain("## Agent Selection Guidance");

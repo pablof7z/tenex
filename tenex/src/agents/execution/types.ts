@@ -24,7 +24,6 @@ export interface AgentExecutionResult {
   response?: string;
   llmMetadata?: LLMMetadata;
   toolExecutions?: ToolExecutionResult[];
-  nextAgent?: string; // pubkey of next agent if handoff needed
   error?: string;
   publishedEvent?: NDKEvent;
 }

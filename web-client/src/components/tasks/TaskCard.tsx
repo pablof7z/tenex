@@ -1,4 +1,4 @@
-import type { NDKTask } from "@nostr-dev-kit/ndk";
+import type { NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { StringUtils } from "../../lib/types.js";
 import { Circle, Code2 } from "lucide-react";
 import { memo } from "react";

@@ -1,19 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { AgentExecutor } from "../execution/AgentExecutor";
-import { Agent } from "../Agent";
+import type { Agent } from "../types";
 import { MCPService } from "@/services/mcp/MCPService";
 import { ConversationManager } from "@/conversations/ConversationManager";
-import { llmManager } from "@/llm/manager";
+import { loadLLMRouter } from "@/llm";
 import type { Tool } from "@/tools/types";
 import type { TenexMCP } from "@/services/config/types";
 import { configService } from "@/services";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 
 // Mock modules
-mock.module("@/llm/manager", () => ({
-    llmManager: {
-        chat: mock(),
-    },
+// Mock llm router
+const mockChat = mock();
+mock.module("@/llm", () => ({
+    loadLLMRouter: mock(() => ({
+        chat: mockChat,
+    })),
 }));
 
 mock.module("@/services", () => ({
@@ -35,18 +37,17 @@ describe("Agent-MCP Integration", () => {
         mcpService = MCPService.getInstance();
 
         // Create test agent
-        const signer = new NDKPrivateKeySigner.generate();
-        agent = new Agent({
-            id: "test-agent",
+        const signer = NDKPrivateKeySigner.generate();
+        agent = {
             name: "Test Agent",
             role: "Tester",
-            expertise: "Testing MCP integration",
             instructions: "Test MCP tools",
             signer,
             pubkey: (await signer.user()).pubkey,
-            tools: ["shell"], // Native tool
+            tools: ["read_file"], // Native tool
             llmConfig: "default",
-        });
+            slug: "test-agent",
+        };
 
         // Create conversation manager
         conversationManager = new ConversationManager(projectPath);
@@ -119,7 +120,7 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should include both native and MCP tools
-            expect(tools.some(t => t.name === "shell")).toBe(true); // Native tool
+            expect(tools.some(t => t.name === "read_file")).toBe(true); // Native tool
             expect(tools.some(t => t.name === "test-server/database-query")).toBe(true);
             expect(tools.some(t => t.name === "test-server/api-call")).toBe(true);
         });
@@ -145,7 +146,7 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should only have native tools
-            expect(tools.some(t => t.name === "shell")).toBe(true);
+            expect(tools.some(t => t.name === "read_file")).toBe(true);
             expect(tools.every(t => !t.name.includes("/"))).toBe(true); // No namespaced MCP tools
         });
     });
@@ -171,7 +172,7 @@ describe("Agent-MCP Integration", () => {
             getToolsSpy.mockResolvedValue([mockMCPTool]);
 
             // Mock LLM response that uses the MCP tool
-            (llmManager.chat as any).mockResolvedValueOnce({
+            mockChat.mockResolvedValueOnce({
                 content: "I'll process that data for you.",
                 tool_calls: [
                     {
@@ -208,7 +209,7 @@ describe("Agent-MCP Integration", () => {
             const getToolsSpy = spyOn(mcpService, "getAvailableTools");
             getToolsSpy.mockResolvedValue([mockMCPTool]);
 
-            (llmManager.chat as any).mockResolvedValueOnce({
+            mockChat.mockResolvedValueOnce({
                 content: "I'll try this tool.",
                 tool_calls: [
                     {
@@ -264,7 +265,7 @@ describe("Agent-MCP Integration", () => {
             getToolsSpy.mockResolvedValue(mockTools);
 
             // First LLM call
-            (llmManager.chat as any).mockResolvedValueOnce({
+            mockChat.mockResolvedValueOnce({
                 content: "Let me use both tools.",
                 tool_calls: [
                     {
@@ -287,7 +288,7 @@ describe("Agent-MCP Integration", () => {
             });
 
             // Second LLM call (after tools)
-            (llmManager.chat as any).mockResolvedValueOnce({
+            mockChat.mockResolvedValueOnce({
                 content: "Both tools executed successfully. Tool1 returned: Tool1: test, Tool2 returned: Tool2: 42",
             });
 
@@ -307,9 +308,9 @@ describe("Agent-MCP Integration", () => {
             // Native tool and MCP tool with potential conflict
             const mockMCPTools: Tool[] = [
                 {
-                    name: "server/shell", // Could conflict with native "shell"
-                    description: "Server shell command",
-                    handler: async () => "Server shell result",
+                    name: "server/read_file", // Could conflict with native "read_file"
+                    description: "Server read file command",
+                    handler: async () => "Server read file result",
                     parameters: [],
                 },
             ];
@@ -320,12 +321,12 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should have both tools with different names
-            const nativeShell = tools.find(t => t.name === "shell");
-            const mcpShell = tools.find(t => t.name === "server/shell");
+            const nativeReadFile = tools.find(t => t.name === "read_file");
+            const mcpReadFile = tools.find(t => t.name === "server/read_file");
 
-            expect(nativeShell).toBeDefined();
-            expect(mcpShell).toBeDefined();
-            expect(nativeShell).not.toBe(mcpShell);
+            expect(nativeReadFile).toBeDefined();
+            expect(mcpReadFile).toBeDefined();
+            expect(nativeReadFile).not.toBe(mcpReadFile);
         });
 
         it("should validate tool names match namespace pattern", async () => {
@@ -387,7 +388,7 @@ describe("Agent-MCP Integration", () => {
 
             // Capture the messages sent to LLM
             let capturedMessages: any[] = [];
-            (llmManager.chat as any).mockImplementation(async (messages: any[]) => {
+            mockChat.mockImplementation(async (messages: any[]) => {
                 capturedMessages = messages;
                 return { content: "Response" };
             });
@@ -429,7 +430,7 @@ describe("Agent-MCP Integration", () => {
             getToolsSpy.mockResolvedValue(mockMCPTools);
 
             let capturedMessages: any[] = [];
-            (llmManager.chat as any).mockImplementation(async (messages: any[]) => {
+            mockChat.mockImplementation(async (messages: any[]) => {
                 capturedMessages = messages;
                 return { content: "Response" };
             });

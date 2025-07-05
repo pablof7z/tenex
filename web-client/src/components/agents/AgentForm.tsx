@@ -8,6 +8,7 @@ interface AgentFormData {
     title: string;
     description: string;
     role: string;
+    useCriteria: string;
     instructions: string;
     tags: string[];
     newTag: string;
@@ -78,6 +79,25 @@ export function AgentForm({ formData, onFormChange, onAddTag, onRemoveTag }: Age
                             onChange={(e) => onFormChange("role", e.target.value)}
                             placeholder="e.g., Senior Software Engineer, UX Designer, DevOps Specialist"
                             className="w-full h-10 px-4 text-base border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
+                        />
+                    </div>
+
+                    {/* Use Criteria */}
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="agent-use-criteria"
+                            className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                        >
+                            <FileText className="w-4 h-4 text-amber-600" />
+                            Use Criteria
+                        </label>
+                        <Textarea
+                            id="agent-use-criteria"
+                            value={formData.useCriteria}
+                            onChange={(e) => onFormChange("useCriteria", e.target.value)}
+                            placeholder="Describe when this agent should be selected (e.g., 'For code reviews, testing, and quality assurance tasks')"
+                            rows={2}
+                            className="w-full p-4 text-base resize-none"
                         />
                     </div>
 

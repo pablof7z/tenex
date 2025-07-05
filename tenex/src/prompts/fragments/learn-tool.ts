@@ -3,16 +3,16 @@ import type { PromptFragment } from "../core/types";
 
 // Learn tool directive fragment - instructs agents when and how to use the learn tool
 interface LearnToolDirectiveArgs {
-    hasLearnTool?: boolean;
+  hasLearnTool?: boolean;
 }
 
 export const learnToolDirectiveFragment: PromptFragment<LearnToolDirectiveArgs> = {
-    id: "learn-tool-directive",
-    priority: 20, // Lower priority to appear after main instructions
-    template: ({ hasLearnTool = true }) => {
-        if (!hasLearnTool) return "";
-        
-        return `## Learn Tool Directive
+  id: "learn-tool-directive",
+  priority: 20, // Lower priority to appear after main instructions
+  template: ({ hasLearnTool = true }) => {
+    if (!hasLearnTool) return "";
+
+    return `## Learn Tool Directive
 
 Purpose: Persist distilled lessons so you never repeat avoidable mistakes.
 
@@ -51,7 +51,7 @@ Purpose: Persist distilled lessons so you never repeat avoidable mistakes.
 - Include relevant keywords to help with future retrieval (e.g., ['typescript', 'async'] for async/await lessons)
 
 The lessons you record become permanent knowledge that will help you and other agents avoid repeating mistakes.`;
-    },
+  },
 };
 
 // Register the fragment

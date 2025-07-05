@@ -169,7 +169,6 @@ export class Orchestrator {
             }
 
             // Start daemon
-            this.logger.info("Starting TENEX daemon");
             const tenexPath = path.join(process.cwd(), "..", "tenex", "src", "cli.ts");
             const projectsPath = path.join(this.environment.getTempDir(), "projects");
 

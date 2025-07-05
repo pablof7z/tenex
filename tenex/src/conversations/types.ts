@@ -1,45 +1,58 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { Message } from "multi-llm-ts";
 import type { Phase } from "./phases";
 
+export interface AgentContext {
+  agentSlug: string;
+  messages: Message[]; // Agent's isolated view
+  tokenCount: number;
+  lastUpdate: Date;
+}
+
 export interface Conversation {
-    id: string;
-    title: string;
-    phase: Phase;
-    history: NDKEvent[];
-    phaseStartedAt?: number;
-    metadata: ConversationMetadata;
-    phaseTransitions: PhaseTransition[]; // First-class phase transition history
-    
-    // Execution time tracking
-    executionTime: {
-        totalSeconds: number;
-        currentSessionStart?: number;
-        isActive: boolean;
-        lastUpdated: number;
-    };
+  id: string;
+  title: string;
+  phase: Phase;
+  history: NDKEvent[]; // Master audit trail
+  agentContexts: Map<string, AgentContext>; // Per-agent contexts
+  phaseStartedAt?: number;
+  metadata: ConversationMetadata;
+  phaseTransitions: PhaseTransition[]; // First-class phase transition history
+
+  // Execution time tracking
+  executionTime: {
+    totalSeconds: number;
+    currentSessionStart?: number;
+    isActive: boolean;
+    lastUpdated: number;
+  };
 }
 
 export interface ConversationMetadata {
-    branch?: string; // Git branch for execution phase
-    summary?: string; // Current understanding/summary
-    requirements?: string; // Captured requirements
-    plan?: string; // Approved plan
-    [key: string]: unknown; // Extensible for phase-specific data
+  branch?: string; // Git branch for execution phase
+  summary?: string; // Current understanding/summary
+  requirements?: string; // Captured requirements
+  plan?: string; // Approved plan
+  readFiles?: string[]; // Files read during this conversation (for write_context_file security)
+  [key: string]: unknown; // Extensible for phase-specific data
 }
 
 export interface PhaseContext {
-    phase: Phase;
-    startedAt: number;
-    completedAt?: number;
-    summary: string;
+  phase: Phase;
+  startedAt: number;
+  completedAt?: number;
+  summary: string;
 }
 
 export interface PhaseTransition {
-    from: Phase;
-    to: Phase;
-    message: string; // Comprehensive context from the transition
-    timestamp: number;
-    agentPubkey: string; // Track which agent initiated
-    agentName: string; // Human-readable agent name
-    reason?: string; // Brief description (optional)
+  from: Phase;
+  to: Phase;
+  message: string; // Comprehensive context from the transition
+  timestamp: number;
+  agentPubkey: string; // Track which agent initiated
+  agentName: string; // Human-readable agent name
+  reason?: string; // Brief description (optional)
+
+  // Enhanced handoff fields
+  summary?: string; // State summary for receiving agent
 }

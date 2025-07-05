@@ -1,4 +1,4 @@
-import { resolve, isAbsolute, relative } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import type { z } from "zod";
 import type { ToolResult } from "./types";
 
@@ -11,14 +11,14 @@ import type { ToolResult } from "./types";
  * @throws Error if the path would escape the project directory
  */
 export function resolveAndValidatePath(filePath: string, projectPath: string): string {
-    const fullPath = isAbsolute(filePath) ? filePath : resolve(projectPath, filePath);
-    const relativePath = relative(projectPath, fullPath);
+  const fullPath = isAbsolute(filePath) ? filePath : resolve(projectPath, filePath);
+  const relativePath = relative(projectPath, fullPath);
 
-    if (relativePath.startsWith("..")) {
-        throw new Error(`Path outside project directory: ${filePath}`);
-    }
+  if (relativePath.startsWith("..")) {
+    throw new Error(`Path outside project directory: ${filePath}`);
+  }
 
-    return fullPath;
+  return fullPath;
 }
 
 /**
@@ -26,18 +26,18 @@ export function resolveAndValidatePath(filePath: string, projectPath: string): s
  * Returns either the parsed data or a ToolResult error.
  */
 export function parseToolParams<T extends z.ZodTypeAny>(
-    schema: T,
-    params: unknown
+  schema: T,
+  params: unknown
 ): { success: true; data: z.infer<T> } | { success: false; errorResult: ToolResult } {
-    const parsed = schema.safeParse(params);
-    if (!parsed.success) {
-        return {
-            success: false,
-            errorResult: {
-                success: false,
-                error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-            },
-        };
-    }
-    return { success: true, data: parsed.data };
+  const parsed = schema.safeParse(params);
+  if (!parsed.success) {
+    return {
+      success: false,
+      errorResult: {
+        success: false,
+        error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      },
+    };
+  }
+  return { success: true, data: parsed.data };
 }
