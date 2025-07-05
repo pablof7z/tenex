@@ -58,7 +58,7 @@ export class NostrPublisher {
 
       // Use the continue message if available, otherwise use the content
       // This ensures the next agent receives the actual instruction, not a placeholder
-      if (options.continueMetadata?.routing.message) {
+      if (options.continueMetadata?.routing?.message) {
         reply.content = options.continueMetadata.routing.message;
       } else if (options.completeMetadata?.type === "yield_back") {
         // If we have yield_back metadata with a response, use it
@@ -84,7 +84,7 @@ export class NostrPublisher {
       });
 
       // Handle routing
-      if (options.continueMetadata?.routing.destinations) {
+      if (options.continueMetadata?.routing?.destinations) {
         // Add p-tags for all destination agents
         const destinations = options.continueMetadata.routing.destinations;
         for (const pubkey of destinations) {
@@ -328,14 +328,12 @@ export class NostrPublisher {
   }
 
   private addRoutingMetadata(event: NDKEvent, continueMetadata?: ContinueFlow): void {
-    if (continueMetadata) {
-      if (continueMetadata.routing.phase) {
-        event.tag(["new-phase", continueMetadata.routing.phase]);
-      }
+    if (continueMetadata?.routing?.phase) {
+      event.tag(["new-phase", continueMetadata.routing.phase]);
     }
     // Only add phase-transition tag if phase is actually changing
     const isPhaseTransition =
-      continueMetadata?.routing.phase &&
+      continueMetadata?.routing?.phase &&
       continueMetadata.routing.phase !== this.context.conversation.phase;
     if (isPhaseTransition) {
       event.tag(["phase-from", this.context.conversation.phase]);
