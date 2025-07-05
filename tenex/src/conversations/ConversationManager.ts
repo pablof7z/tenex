@@ -315,11 +315,11 @@ export class ConversationManager {
             // Ensure execution time is initialized for loaded conversations
             ensureExecutionTimeInitialized(conversation);
 
-            // Initialize agentContexts as a Map if not present (for backward compatibility)
+            // Initialize agentContexts as a Map if not present
             if (!conversation.agentContexts) {
               conversation.agentContexts = new Map<string, AgentContext>();
             } else if (!(conversation.agentContexts instanceof Map)) {
-              // Convert from plain object to Map if needed (after deserialization)
+              // Convert from plain object to Map after deserialization
               const contextsObj = conversation.agentContexts as Record<string, AgentContext>;
               conversation.agentContexts = new Map<string, AgentContext>(
                 Object.entries(contextsObj)

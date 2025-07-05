@@ -193,7 +193,7 @@ export class AgentExecutor {
         // We don't have the actual event ID from streaming, but we know it was published
         publishedEvent = undefined;
       } else {
-        // This should not happen with the new architecture, but keep as safety fallback
+        // Safety fallback for unexpected cases
         tracingLogger.error("Response was not published during streaming - publishing now", {
           agentName: context.agent.name,
         });

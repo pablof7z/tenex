@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { AgentPublisher } from "@/agents/AgentPublisher";
-import type { Agent, AgentConfig, StoredAgentData } from "@/agents/types";
+import type { Agent, AgentConfig, AgentConfigOptionalNsec, StoredAgentData } from "@/agents/types";
 import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import { getNDK } from "@/nostr";
@@ -97,7 +97,7 @@ export class AgentRegistry {
 
   async ensureAgent(
     name: string,
-    config: Omit<AgentConfig, "nsec"> & { nsec?: string },
+    config: AgentConfigOptionalNsec,
     ndkProject?: import("@nostr-dev-kit/ndk").NDKProject
   ): Promise<Agent> {
     // Check if agent already exists

@@ -82,6 +82,15 @@ export interface AgentConfig extends StoredAgentData {
 }
 
 /**
+ * Agent config for creation with optional nsec
+ */
+export interface AgentConfigOptionalNsec extends StoredAgentData {
+  nsec?: string; // Optional during creation
+  eventId?: string;
+  pubkey?: string;
+}
+
+/**
  * Agent configuration for orchestration system
  */
 export interface AgentConfiguration {

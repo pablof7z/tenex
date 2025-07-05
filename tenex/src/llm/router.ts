@@ -123,7 +123,7 @@ export class LLMRouter implements LLMService {
     let error: Error | undefined;
 
     try {
-      // Use the new multi-llm-ts v4 API
+      // Use the multi-llm-ts v4 API
       const llmConfig = {
         apiKey: config.apiKey,
         baseURL: config.baseUrl,
@@ -154,7 +154,7 @@ export class LLMRouter implements LLMService {
         throw new Error(`Model ${config.model} not found for provider ${config.provider}`);
       }
 
-      // Execute completion with new API
+      // Execute completion with API
       console.log(
           "CALLING LLM ****COMPLETE****",
           request.messages[request.messages.length - 1]?.content.substring(0, 100)
@@ -164,15 +164,8 @@ export class LLMRouter implements LLMService {
         caching: config.enableCaching ?? true,
       });
 
-      // Extract context window information from model metadata
-      if (typeof model === "object" && model !== null && "meta" in model) {
-        const modelWithMeta = model as any;
-        if (modelWithMeta.meta) {
-          // Add context window information to response
-          (response as any).contextWindow = modelWithMeta.meta.context_length;
-          (response as any).maxCompletionTokens = modelWithMeta.meta.top_provider?.max_completion_tokens;
-        }
-      }
+      // Model metadata is available in the model object if needed for future use
+      // Not mutating the response object to maintain clean types
 
       const endTime = Date.now();
       const duration = endTime - startTime;

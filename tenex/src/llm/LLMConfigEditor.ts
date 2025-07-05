@@ -281,7 +281,7 @@ export class LLMConfigEditor {
       configs.push({
         name: key,
         ...value,
-      } as LLMConfigWithName);
+      });
     }
 
     return configs;
@@ -788,7 +788,7 @@ export class LLMConfigEditor {
         baseURL: config.baseUrl,
       };
 
-      // Use the proper multi-llm-ts v4.0 API
+      // Use the multi-llm-ts v4.0 API
       const llm = igniteEngine(config.provider, llmConfig);
       const models = await getModelsForProvider(config.provider as LLMProvider, config.apiKey);
 

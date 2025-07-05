@@ -26,7 +26,7 @@ export class NDKAgentLesson extends NDKEvent {
     if (value) this.tags.push(["title", value]);
   }
 
-  // Backwards compatibility alias
+  // Alias for title
   get description(): string | undefined {
     return this.tagValue("title");
   }

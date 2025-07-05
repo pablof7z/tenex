@@ -43,17 +43,12 @@ export async function buildLLMMetadata(
   const systemPrompt = messages.find((m) => m.role === "system")?.content;
   const userPrompt = messages.find((m) => m.role === "user")?.content;
 
-  // Extract additional metadata if available
-  const responseWithMetadata = response as any;
-
   return {
     model,
     cost,
     promptTokens: response.usage.prompt_tokens,
     completionTokens: response.usage.completion_tokens,
     totalTokens: response.usage.prompt_tokens + response.usage.completion_tokens,
-    contextWindow: responseWithMetadata.contextWindow,
-    maxCompletionTokens: responseWithMetadata.maxCompletionTokens,
     systemPrompt,
     userPrompt,
     rawResponse: response.content,

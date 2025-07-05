@@ -87,7 +87,7 @@ describe("Agent Execution Prompt Fragments", () => {
                 })
                 .build();
 
-            // Conversation history is now handled as message array
+            // Conversation history is handled as message array
 
             const phaseContext = new PromptBuilder()
                 .add("phase-context", {

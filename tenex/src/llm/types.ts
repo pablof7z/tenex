@@ -25,6 +25,12 @@ export interface CompletionOptions extends LlmCompletionOpts {
   agentName?: string;
 }
 
+// Model information that can be passed along with responses
+export interface ModelInfo {
+  contextWindow?: number;
+  maxCompletionTokens?: number;
+}
+
 // Import and re-export tool types
 import type { Tool, ToolExecutionContext } from "@/tools/types";
 export type { Tool, ToolExecutionContext };

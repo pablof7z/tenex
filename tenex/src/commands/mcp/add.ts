@@ -9,6 +9,11 @@ interface AddOptions {
   global?: boolean;
 }
 
+interface AddOptionsWithPaths extends AddOptions {
+  paths?: string;
+  env?: string[];
+}
+
 export const addCommand = new Command("add")
   .description("Add a new MCP server")
   .argument("<name>", "Name for the MCP server")
@@ -22,7 +27,7 @@ export const addCommand = new Command("add")
     async (
       name: string,
       commandArgs: string[],
-      options: AddOptions & { paths?: string; env?: string[] }
+      options: AddOptionsWithPaths
     ) => {
       try {
         // Parse command and args from the array

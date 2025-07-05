@@ -9,7 +9,7 @@
 import type { ToolExecutionResult, NonEmptyArray } from "@/tools/types";
 import { isNonEmptyArray } from "@/tools/core";
 import type { Phase } from "@/conversations/phases";
-import type { ControlFlow, Termination, ToolError, ValidationError, ExecutionError, SystemError } from "@/tools/core";
+import type { ControlFlow, Termination, ToolError } from "@/tools/core";
 
 /**
  * Serialized tool result that preserves type information
@@ -101,7 +101,7 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
         },
       };
       
-    case "control":
+    case "control": {
       // Handle different control flow types
       let serializedFlow = undefined;
       if (result.flow) {
@@ -140,6 +140,7 @@ export function serializeToolResult(result: ToolExecutionResult): SerializedTool
           error: result.error,
         },
       };
+    }
       
     case "terminal":
       return {
@@ -174,7 +175,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
         duration: serialized.duration,
       };
       
-    case "control":
+    case "control": {
       // Handle different control flow types
       let deserializedFlow = undefined;
       if (serialized.data.flow) {
@@ -189,7 +190,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
               ...flow,
               routing: {
                 ...flow.routing,
-                destinations: flow.routing.destinations as NonEmptyArray<string>,
+                destinations: flow.routing.destinations,
               },
             };
             break;
@@ -200,7 +201,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
             }
             deserializedFlow = {
               ...flow,
-              agents: flow.agents as NonEmptyArray<string>,
+              agents: flow.agents,
             };
             break;
           case "fork":
@@ -210,10 +211,7 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
             }
             deserializedFlow = {
               ...flow,
-              branches: flow.branches as NonEmptyArray<{
-                agent: string;
-                message: string;
-              }>,
+              branches: flow.branches,
             };
             break;
         }
@@ -222,16 +220,17 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
       return {
         kind: "control",
         success: serialized.success,
-        flow: deserializedFlow ? reconstructControlFlow(deserializedFlow) : undefined,
+        flow: deserializedFlow,
         error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
         duration: serialized.duration,
       };
+    }
       
     case "terminal":
       return {
         kind: "terminal",
         success: serialized.success,
-        termination: serialized.data.termination ? reconstructTermination(serialized.data.termination) : undefined,
+        termination: serialized.data.termination,
         error: serialized.data.error ? reconstructError(serialized.data.error) : undefined,
         duration: serialized.duration,
       };
@@ -243,82 +242,9 @@ export function deserializeToolResult(serialized: SerializedToolResult): ToolExe
 }
 
 /**
- * Reconstruct a proper ControlFlow from serialized data
- */
-function reconstructControlFlow(flow: any): ControlFlow {
-  switch (flow.type) {
-    case 'continue':
-      return {
-        type: 'continue',
-        routing: {
-          phase: flow.routing?.phase as Phase | undefined,
-          destinations: flow.routing?.destinations as NonEmptyArray<string>,
-          reason: flow.routing?.reason || '',
-          message: flow.routing?.message || '',
-          context: flow.routing?.context,
-        },
-      };
-    case 'delegate':
-      return {
-        type: 'delegate',
-        agents: flow.agents as NonEmptyArray<string>,
-        message: flow.message || '',
-        returnToOrchestrator: flow.returnToOrchestrator ?? true,
-      };
-    case 'fork':
-      return {
-        type: 'fork',
-        branches: flow.branches as NonEmptyArray<{
-          readonly agent: string;
-          readonly message: string;
-        }>,
-      };
-    default:
-      throw new Error(`Unknown control flow type: ${flow.type}`);
-  }
-}
-
-/**
- * Reconstruct a proper Termination from serialized data
- */
-function reconstructTermination(termination: any): Termination {
-  switch (termination.type) {
-    case 'yield_back':
-      return {
-        type: 'yield_back',
-        completion: termination.completion ? {
-          response: termination.completion.response || '',
-          summary: termination.completion.summary || '',
-          nextAgent: termination.completion.nextAgent || '',
-        } : {
-          response: '',
-          summary: '',
-          nextAgent: '',
-        },
-      };
-    case 'end_conversation':
-      return {
-        type: 'end_conversation',
-        result: termination.result ? {
-          response: termination.result.response || '',
-          summary: termination.result.summary || '',
-          success: termination.result.success ?? true,
-          artifacts: termination.result.artifacts,
-        } : {
-          response: '',
-          summary: '',
-          success: true,
-        },
-      };
-    default:
-      throw new Error(`Unknown termination type: ${termination.type}`);
-  }
-}
-
-/**
  * Reconstruct a proper ToolError from serialized data
  */
-function reconstructError(error: any): ToolError {
+function reconstructError(error: unknown): ToolError {
   if (!error || typeof error !== 'object') {
     return {
       kind: 'system',
@@ -360,8 +286,8 @@ function reconstructError(error: any): ToolError {
 export function isSerializedToolResult(obj: unknown): obj is SerializedToolResult {
   if (!obj || typeof obj !== "object") return false;
   
-  // Use property access without type assertion
-  const record = obj as Record<string, unknown>;
+  // Safe property access
+  const record = Object(obj);
   
   // Type guard for kind
   if (typeof record.kind !== "string") return false;

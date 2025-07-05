@@ -140,7 +140,7 @@ export class ToolPlugin extends Plugin {
     }
 
     try {
-      // Execute the tool using the new type-safe executor
+      // Execute the tool using the type-safe executor
       const result = await this.executor.execute(this.tool, parameters);
       const endTime = Date.now();
 

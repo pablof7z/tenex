@@ -33,7 +33,7 @@ export const readFileTool: EffectTool<ReadFileInput, ReadFileOutput> = {
 
         const content = await readFile(fullPath, "utf-8");
         
-        // Note: File tracking has been moved to the interpreter layer
+        // Note: File tracking is handled by the interpreter layer
         // This keeps the tool pure and focused on its primary responsibility
         
         return { ok: true, value: content };
