@@ -7,7 +7,7 @@ import type { ToolExecutionResult, ContinueFlow, YieldBack, EndConversation } fr
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { Message } from "multi-llm-ts";
+import { Message } from "multi-llm-ts";
 import { deserializeToolResult, isSerializedToolResult } from "@/llm/ToolResult";
 
 import type { Agent } from "@/agents/types";
@@ -44,6 +44,7 @@ export interface ReasonActResult {
 
 export class ReasonActLoop {
   private static readonly MAX_ITERATIONS = 3;
+  private static readonly COMPLETE_REMINDER_KEY = "_complete_reminder_sent";
 
   constructor(
     private llmService: LLMService,
@@ -76,6 +77,79 @@ export class ReasonActLoop {
       );
 
       await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
+      
+      // Multi-layered guardrail for non-orchestrator agents
+      if (!context.agent.isOrchestrator && !state.termination && !state.continueFlow) {
+        // Check if this is already a reminder attempt
+        const lastMessage = messages[messages.length - 1];
+        const reminderAlreadySent = lastMessage?.content?.includes("you haven't used the 'complete' tool yet");
+        
+        if (!reminderAlreadySent) {
+          // Layer 1: Send reminder
+          tracingLogger.info("Non-orchestrator agent did not call complete(), sending reminder");
+          
+          // Add a system message reminding the agent to complete
+          const reminderMessages = [
+            ...messages, 
+            new Message("assistant", state.fullContent),
+            new Message("user", "I see you've finished responding, but you haven't used the 'complete' tool yet. As a non-orchestrator agent, you MUST use the 'complete' tool to signal that your work is done and report back to the orchestrator. Please use the 'complete' tool now with a summary of what you accomplished.")
+          ];
+          
+          // Make another LLM call with the reminder
+          const reminderStream = this.createLLMStream(context, reminderMessages, tools, publisher);
+          
+          // Store the original content before resetting
+          const originalContent = state.fullContent;
+          
+          // Reset state for the reminder attempt
+          state.fullContent = "";
+          state.finalResponse = undefined;
+          state.termination = undefined;
+          state.continueFlow = undefined;
+          
+          // Process the reminder stream
+          yield* this.processStreamEvents(
+            reminderStream,
+            state,
+            streamPublisher,
+            publisher,
+            tracingLogger,
+            context
+          );
+          
+          // Finalize again with the new state
+          await this.finalizeStream(streamPublisher, state, context, reminderMessages, tracingLogger);
+          
+          // Layer 2: Auto-complete if agent still didn't comply
+          if (!state.termination && !state.continueFlow) {
+            tracingLogger.error("Agent failed to call complete() even after reminder - auto-completing", {
+              agent: context.agent.name,
+              phase: context.phase,
+              conversationId: context.conversationId
+            });
+            
+            // Create auto-completion
+            const autoCompleteContent = state.fullContent || originalContent || "Task completed";
+            state.termination = {
+              type: "complete",
+              completion: {
+                response: autoCompleteContent,
+                summary: "Agent completed its turn but failed to call the complete tool after a reminder. [Auto-completed by system]",
+                nextAgent: context.conversation.history[0]?.pubkey || "" // Orchestrator pubkey
+              }
+            };
+            
+            // Update the final response to include the auto-completion
+            state.fullContent = autoCompleteContent;
+          }
+        } else {
+          // This was already a reminder attempt that failed - should not happen with Layer 2
+          tracingLogger.error("Critical: Agent in reminder loop - this should not happen with auto-completion", undefined, {
+            agent: context.agent.name
+          });
+        }
+      }
+      
       yield this.createFinalEvent(state);
     } catch (error) {
       yield* this.handleStreamingError(
@@ -150,6 +224,7 @@ export class ReasonActLoop {
         conversation: context.conversation,
         publisher: publisher as NostrPublisher,
         triggeringEvent: context.eventToReply,
+        conversationManager: this.conversationManager,
       },
     });
   }
@@ -331,8 +406,8 @@ export class ReasonActLoop {
       }
     }
 
-    // Check if it's a termination (yield_back or end_conversation)
-    if (output.type === "yield_back" && output.completion) {
+    // Check if it's a termination (complete or end_conversation)
+    if (output.type === "complete" && output.completion) {
       state.termination = output as YieldBack;
       tracingLogger.info("✅ Termination detected in streaming", {
         type: output.type,
@@ -357,7 +432,7 @@ export class ReasonActLoop {
     const output = result.output as Record<string, unknown>;
     // Check if it's a control flow or termination
     return output.type === "continue" ||
-           output.type === "yield_back" ||
+           output.type === "complete" ||
            output.type === "end_conversation";
   }
 
@@ -404,7 +479,7 @@ export class ReasonActLoop {
         routingDecision: state.continueFlow.routing,
       };
     } else if (state.termination) {
-      if (state.termination.type === "yield_back") {
+      if (state.termination.type === "complete") {
         metadata.completeMetadata = {
           completion: state.termination.completion,
         };
@@ -432,7 +507,7 @@ export class ReasonActLoop {
   }
 
   private createFinalEvent(state: StreamingState): StreamEvent {
-    return {
+    const baseEvent: StreamEvent = {
       type: "done",
       response: state.finalResponse || {
         type: "text",
@@ -440,6 +515,12 @@ export class ReasonActLoop {
         toolCalls: [],
       },
     };
+    
+    // Add additional properties that AgentExecutor expects
+    return Object.assign(baseEvent, {
+      continueFlow: state.continueFlow,
+      termination: state.termination,
+    }) as StreamEvent;
   }
 
   private async *handleStreamingError(

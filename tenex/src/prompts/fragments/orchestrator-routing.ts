@@ -147,7 +147,7 @@ Consider these valid reasons for skipping phases:
 
 ### Agent Completion Handoffs
 
-- When agents use yield_back(), they provide detailed summaries of their work
+- When agents use complete(), they provide detailed summaries of their work
 - Collect these summaries to build context for subsequent routing decisions
 
 ### Example Routing with Thinking

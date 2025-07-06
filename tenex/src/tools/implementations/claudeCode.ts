@@ -26,7 +26,7 @@ interface ClaudeCodeOutput {
 
 export const claudeCodeTool: Tool<ClaudeCodeInput, ClaudeCodeOutput> = {
   name: "claude_code",
-  description: "Use Claude Code to perform complex coding tasks",
+  description: "Use Claude Code to perform complex coding tasks. The 'mode' parameter accepts either 'run' (for executing/implementing tasks) or 'plan' (for planning tasks). Use 'run' mode to execute implementations, and 'plan' mode when you need to plan before implementation.",
 
   parameters: createZodSchema(ClaudeCodeArgsSchema),
 

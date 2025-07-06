@@ -1,5 +1,4 @@
 import type { ConversationManager } from "@/conversations/ConversationManager";
-import type { Phase } from "@/conversations/phases";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { CompletionResponse, LLMService, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
@@ -76,6 +75,7 @@ export class AgentExecutor {
       conversation: context.conversation,
       agent: context.agent,
       triggeringEvent: triggeringEvent,
+      conversationManager: this.conversationManager,
     });
 
     try {
@@ -129,35 +129,34 @@ export class AgentExecutor {
       if (continueFlow) {
         phaseTransition = continueFlow.routing.phase;
 
-        // Handle phase transition in conversation manager with enhanced handoff
-        if (this.conversationManager && phaseTransition) {
-          await this.conversationManager.updatePhase(
-            context.conversation.id,
-            phaseTransition as Phase,
-            continueFlow.routing.message,
-            context.agent.pubkey,
-            context.agent.name,
-            continueFlow.routing.reason,
-            // Enhanced handoff fields - the agent should have provided these
-            typeof continueFlow.routing.context === "object" &&
-              continueFlow.routing.context !== null &&
-              "summary" in continueFlow.routing.context
-              ? String(continueFlow.routing.context.summary)
-              : undefined
-          );
-        }
+        logger.info("[AGENT_EXECUTOR] Continue flow detected", {
+          phase: phaseTransition,
+          currentPhase: context.conversation.phase,
+          conversationId: context.conversation.id,
+        });
+        
+        // Phase transition is handled by the continue tool itself
+        // AgentExecutor should NOT update phases
       }
 
-      // Handle yield_back/end_conversation tool metadata as a same-phase handoff
+      // Handle complete/end_conversation tool metadata as a same-phase handoff
       if (termination && this.conversationManager && !context.agent.isOrchestrator) {
+        logger.info("[AGENT_EXECUTOR] Processing termination handoff", {
+          terminationType: termination.type,
+          contextPhase: context.phase,
+          conversationPhase: context.conversation.phase,
+          agentName: context.agent.name,
+        });
         // When a non-orchestrator agent completes, create a handoff record for the orchestrator
-        if (termination.type === "yield_back") {
+        if (termination.type === "complete") {
           const { response, summary } = termination.completion;
 
           logger.info("[AGENT_EXECUTOR] Creating handoff from completion tool", {
             fromAgent: context.agent.name,
             toOrchestrator: true,
             summary: `${summary.substring(0, 100)}...`,
+            currentPhase: context.phase,
+            conversationPhase: context.conversation.phase,
           });
 
           // Use updatePhase to create a handoff record without changing phase
@@ -478,38 +477,60 @@ export class AgentExecutor {
           // Check if tool execution failed and publish error
           if (!toolResult.success && toolResult.error && publisher) {
             try {
+              // Format error message based on error type
+              let errorMessage: string;
+              if (typeof toolResult.error === 'string') {
+                errorMessage = toolResult.error;
+              } else if (toolResult.error && typeof toolResult.error === 'object' && 'message' in toolResult.error) {
+                errorMessage = toolResult.error.message;
+              } else {
+                errorMessage = JSON.stringify(toolResult.error);
+              }
+              
               await publisher.publishError(
-                `Tool "${event.tool}" failed: ${toolResult.error.message}`
+                `Tool "${event.tool}" failed: ${errorMessage}`
               );
               tracingLogger.info("Published tool error to conversation", {
                 tool: event.tool,
-                error: toolResult.error.message,
+                error: errorMessage,
               });
             } catch (error) {
               tracingLogger.error("Failed to publish tool error", {
                 tool: event.tool,
-                originalError: toolResult.error.message,
+                originalError: toolResult.error,
                 publishError: error instanceof Error ? error.message : String(error),
               });
             }
           }
 
           // Extract control flow and termination from tool results
-          const output = toolResult.output as Record<string, unknown>;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const output = toolResult.output as any;
           if (toolResult.success && output?.type === "continue" && output?.routing) {
             // Only accept ContinueFlow, not other control flow types
-            continueFlow = output as unknown as ContinueFlow;
+            continueFlow = output as ContinueFlow;
           } else if (
             toolResult.success &&
-            (output?.type === "yield_back" || output?.type === "end_conversation")
+            (output?.type === "complete" || output?.type === "end_conversation")
           ) {
-            termination = output as unknown as (YieldBack | EndConversation);
+            termination = output as (YieldBack | EndConversation);
           }
           break;
         }
 
         case "done":
           finalResponse = event.response;
+          // Extract continueFlow and termination from done event if not already set
+          if (!continueFlow && (event as any).continueFlow) {
+            continueFlow = (event as any).continueFlow;
+            logger.info("[AGENT_EXECUTOR] Extracted continueFlow from done event", {
+              phase: continueFlow?.routing.phase,
+              agents: continueFlow?.routing.agents,
+            });
+          }
+          if (!termination && (event as any).termination) {
+            termination = (event as any).termination;
+          }
           // The ReasonActLoop always publishes responses when it completes
           wasPublished = true;
           break;

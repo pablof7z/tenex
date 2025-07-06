@@ -35,6 +35,11 @@ export class ToolExecutor {
       // Validate input
       const validationResult = tool.parameters.validate(input);
       if (!validationResult.ok) {
+        logger.warn(`Tool validation failed for ${tool.name}`, {
+          tool: tool.name,
+          input,
+          error: validationResult.error,
+        });
         return {
           success: false,
           error: validationResult.error,

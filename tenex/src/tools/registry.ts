@@ -7,7 +7,7 @@ import { generateInventoryTool } from "./implementations/generateInventory";
 import { learnTool } from "./implementations/learn";
 import { readFileTool } from "./implementations/readFile";
 import { writeContextFileTool } from "./implementations/writeContextFile";
-import { yieldBackTool } from "./implementations/yieldBack";
+import { completeTool } from "./implementations/complete";
 import type { Tool } from "./types";
 
 // Registry of all available tools
@@ -17,7 +17,7 @@ toolsMap.set("write_context_file", writeContextFileTool as Tool<unknown, unknown
 toolsMap.set("claude_code", claudeCodeTool as Tool<unknown, unknown>);
 // toolsMap.set("get_time", getTimeTool as Tool<unknown, unknown>);
 toolsMap.set("continue", continueTool as Tool<unknown, unknown>);
-toolsMap.set("yield_back", yieldBackTool as Tool<unknown, unknown>);
+toolsMap.set("complete", completeTool as Tool<unknown, unknown>);
 toolsMap.set("end_conversation", endConversationTool as Tool<unknown, unknown>);
 toolsMap.set("analyze", analyze as Tool<unknown, unknown>);
 toolsMap.set("generate_inventory", generateInventoryTool as Tool<unknown, unknown>);

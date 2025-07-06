@@ -60,7 +60,7 @@ describe("Orchestrator Routing - Clarity-Based Decision Making", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
     expect(result).toContain("Collecting Agent Summaries:");
-    expect(result).toContain("When agents use yield_back(), they provide detailed summaries of their work");
+    expect(result).toContain("When agents use complete(), they provide detailed summaries of their work");
     expect(result).toContain("Forward feedback verbatim when routing back for fixes");
   });
 

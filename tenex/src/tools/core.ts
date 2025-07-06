@@ -10,6 +10,7 @@
 import type { Phase } from "@/conversations/phases";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
+import type { ConversationManager } from "@/conversations/ConversationManager";
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
 
 // ============================================================================
@@ -37,6 +38,7 @@ export interface ExecutionContext {
   readonly agent: Agent;
   readonly conversation: Conversation;
   readonly publisher: NostrPublisher;
+  readonly conversationManager?: ConversationManager;
 }
 
 // ============================================================================
@@ -88,7 +90,7 @@ export interface RoutingDecision {
 export type Termination = YieldBack | EndConversation;
 
 export interface YieldBack {
-  readonly type: "yield_back";
+  readonly type: "complete";
   readonly completion: CompletionSummary;
 }
 

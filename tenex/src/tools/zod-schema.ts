@@ -148,7 +148,7 @@ export function createZodSchema<T>(schema: z.ZodType<T>): ParameterSchema<T> {
         ok: false,
         error: {
           kind: "validation",
-          field: firstError.path.join(".") || "value",
+          field: firstError.path.length > 0 ? firstError.path.join(".") : "input",
           message: firstError.message,
         },
       };

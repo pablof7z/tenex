@@ -7,7 +7,7 @@ import { generateInventoryTool } from "../tools/implementations/generateInventor
 import { learnTool } from "../tools/implementations/learn";
 import { readFileTool } from "../tools/implementations/readFile";
 import { writeContextFileTool } from "@/tools/implementations/writeContextFile";
-import { yieldBackTool } from "../tools/implementations/yieldBack";
+import { completeTool } from "../tools/implementations/complete";
 
 /**
  * Get all available tools for an agent based on their role
@@ -27,8 +27,8 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
         generateInventoryTool.name,
       ];
     } else {
-      // Non-orchestrator agents use yield_back instead of complete
-      tools.push(claudeCodeTool.name, yieldBackTool.name);
+      // Non-orchestrator agents use complete tool to signal task completion
+      tools.push(claudeCodeTool.name, completeTool.name);
 
       if (agent.slug === "project-manager") {
         tools.push(generateInventoryTool.name);
@@ -36,8 +36,8 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
       }
     }
   } else {
-    // Custom agents default to yield_back
-    tools.push(yieldBackTool.name);
+    // Custom agents default to complete tool
+    tools.push(completeTool.name);
   }
 
   return tools;

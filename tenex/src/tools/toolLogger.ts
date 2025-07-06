@@ -155,7 +155,7 @@ export class ToolCallLogger {
       return `Control flow: ${output.type}`;
     }
     // Check if it's a termination result
-    if (output.type === "yield_back" && output.completion) {
+    if (output.type === "complete" && output.completion) {
       return output.completion.response;
     }
     if (output.type === "end_conversation" && output.result) {
@@ -181,7 +181,7 @@ export class ToolCallLogger {
     if (output.type === "continue" && output.routing) {
       return { flow: output };
     }
-    if ((output.type === "yield_back" && output.completion) || (output.type === "end_conversation" && output.result)) {
+    if ((output.type === "complete" && output.completion) || (output.type === "end_conversation" && output.result)) {
       return { termination: output };
     }
     

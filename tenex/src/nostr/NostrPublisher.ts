@@ -1,6 +1,7 @@
 import type { Agent } from "@/agents/types";
 import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
 import type { Conversation } from "@/conversations/types";
+import type { ConversationManager } from "@/conversations/ConversationManager";
 import { EVENT_KINDS } from "@/llm/types";
 import { getNDK } from "@/nostr";
 import { EXECUTION_TAGS } from "@/nostr/tags";
@@ -31,6 +32,7 @@ export interface NostrPublisherContext {
   conversation: Conversation;
   agent: Agent;
   triggeringEvent: NDKEvent;
+  conversationManager?: ConversationManager;
 }
 
 // Options for publishing responses
@@ -60,7 +62,7 @@ export class NostrPublisher {
       // This ensures the next agent receives the actual instruction, not a placeholder
       if (options.continueMetadata?.routing?.message) {
         reply.content = options.continueMetadata.routing.message;
-      } else if (options.completeMetadata?.type === "yield_back") {
+      } else if (options.completeMetadata?.type === "complete") {
         // If we have yield_back metadata with a response, use it
         reply.content = options.completeMetadata.completion.response;
       } else if (options.completeMetadata?.type === "end_conversation") {
@@ -90,7 +92,7 @@ export class NostrPublisher {
         for (const pubkey of agents) {
           reply.tag(["p", pubkey]);
         }
-      } else if (options.completeMetadata?.type === "yield_back") {
+      } else if (options.completeMetadata?.type === "complete") {
         // Handle yield_back routing
         reply.tag(["p", options.completeMetadata.completion.nextAgent]);
       }
@@ -288,8 +290,22 @@ export class NostrPublisher {
     const { project } = getProjectContext();
     event.tag(project);
 
-    // Always add current phase tag
-    event.tag(["phase", this.context.conversation.phase]);
+    // Always add current phase tag - get from ConversationManager if available
+    const contextPhase = this.context.conversation.phase;
+    const managerConversation = this.context.conversationManager?.getConversation(this.context.conversation.id);
+    const managerPhase = managerConversation?.phase;
+    const currentPhase = managerPhase || contextPhase;
+    
+    logger.info("[NOSTR_PUBLISHER] Adding phase tag", {
+      conversationId: this.context.conversation.id,
+      contextPhase,
+      managerPhase,
+      currentPhase,
+      hasConversationManager: !!this.context.conversationManager,
+      hasManagerConversation: !!managerConversation,
+    });
+    
+    event.tag(["phase", currentPhase]);
 
     // Always add execution time tag
     const totalSeconds = getTotalExecutionTimeSeconds(this.context.conversation);
@@ -338,11 +354,16 @@ export class NostrPublisher {
     }
     
     // Only add phase-transition tag if phase is actually changing
+    // Get current phase from ConversationManager if available
+    const currentPhase = this.context.conversationManager
+      ? this.context.conversationManager.getConversation(this.context.conversation.id)?.phase || this.context.conversation.phase
+      : this.context.conversation.phase;
+    
     const isPhaseTransition =
       routing.phase &&
-      routing.phase !== this.context.conversation.phase;
+      routing.phase !== currentPhase;
     if (isPhaseTransition) {
-      event.tag(["phase-from", this.context.conversation.phase]);
+      event.tag(["phase-from", currentPhase]);
     }
 
     // Add routing reason

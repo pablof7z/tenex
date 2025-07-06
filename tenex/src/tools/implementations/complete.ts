@@ -4,32 +4,30 @@ import type { Tool, Termination } from "../types";
 import { success, createZodSchema } from "../types";
 import { z } from "zod";
 
-const yieldBackSchema = z.object({
-  response: z.string().describe("Detailed summary of what was accomplished"),
+const completeSchema = z.object({
+  response: z.string().describe("Detailed report of what was accomplished and the results achieved"),
   summary: z
     .string()
     .optional()
-    .describe("Comprehensive summary of work done (if different from response)"),
+    .describe("Comprehensive summary of work done for the orchestrator's context (if different from response)"),
 });
 
 /**
- * Yield back tool - non-orchestrator agents use this to return control
- * Implements the star topology where all agents complete back to orchestrator
+ * Complete tool - non-orchestrator agents MUST use this to signal task completion
+ * Implements the star topology where all agents report completion to orchestrator
+ * YOUR JOB IS NOT DONE UNTIL YOU EXPLICITLY USE THIS TOOL
  */
-export const yieldBackTool: Tool<{
+export const completeTool: Tool<{
   response: string;
   summary?: string;
 }, Termination> = {
-  name: "yield_back",
-  description: "Return control to the orchestrator after completing assigned task",
+  name: "complete",
+  description: "Signal that you have completed your assigned task and report results to the orchestrator",
 
-  parameters: createZodSchema(yieldBackSchema),
+  parameters: createZodSchema(completeSchema),
 
   execute: async (input, context) => {
     const { response, summary } = input.value;
-
-    // TypeScript ensures this is a terminal context with orchestratorPubkey
-    // No need to check if orchestrator - type system prevents it!
 
     const projectContext = getProjectContext();
     const orchestratorAgent = projectContext.getProjectAgent();
@@ -42,8 +40,8 @@ export const yieldBackTool: Tool<{
       });
     }
 
-    logger.info("📬 Yielding control back to orchestrator (star topology)", {
-      tool: "yield_back",
+    logger.info("📬 Completing task and returning control to orchestrator (star topology)", {
+      tool: "complete",
       fromAgent: context.agent.name,
       toOrchestrator: orchestratorAgent.name,
       conversationId: context.conversationId,
@@ -53,7 +51,7 @@ export const yieldBackTool: Tool<{
     await context.publisher.publishResponse({
       content: response,
       completeMetadata: {
-        type: "yield_back",
+        type: "complete",
         completion: {
           response,
           summary: summary || response,
@@ -62,13 +60,13 @@ export const yieldBackTool: Tool<{
       }
     });
 
-    logger.info("Yield back published completion event", {
+    logger.info("Complete tool published completion event", {
       toOrchestrator: orchestratorAgent.pubkey,
     });
 
     // Log the completion
     logger.info("✅ Task completion signaled", {
-      tool: "yield_back",
+      tool: "complete",
       agent: context.agent.name,
       agentId: context.agent.pubkey,
       returningTo: orchestratorAgent.name,
@@ -78,7 +76,7 @@ export const yieldBackTool: Tool<{
 
     // Return properly typed termination
     return success({
-      type: "yield_back",
+      type: "complete",
       completion: {
         response,
         summary: summary || response, // Use summary if provided, otherwise use response

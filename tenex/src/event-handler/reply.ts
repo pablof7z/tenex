@@ -209,6 +209,7 @@ async function handleReplyLogic(
       conversation,
       agent: orchestratorAgent,
       triggeringEvent: event,
+      conversationManager,
     });
 
     await publisher.publishError(errorMessage);
@@ -276,6 +277,7 @@ async function handleDebugRoutingCommand(
       conversation,
       agent: orchestratorAgent,
       triggeringEvent: event,
+      conversationManager,
     });
 
     await publisher.publishError(`⚠️ Debug routing failed: ${result.error}`);

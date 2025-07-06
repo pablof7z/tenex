@@ -29,10 +29,10 @@ describe("Tool Registry", () => {
         expect(continueTool?.description).toBeDefined();
         expect(continueTool?.parameters).toBeDefined();
 
-        const yieldBackTool = getTool("yield_back");
-        expect(yieldBackTool).toBeDefined();
-        expect(yieldBackTool?.description).toBeDefined();
-        expect(yieldBackTool?.parameters).toBeDefined();
+        const completeTool = getTool("complete");
+        expect(completeTool).toBeDefined();
+        expect(completeTool?.description).toBeDefined();
+        expect(completeTool?.parameters).toBeDefined();
 
         const endConversationTool = getTool("end_conversation");
         expect(endConversationTool).toBeDefined();
@@ -45,7 +45,7 @@ describe("Tool Registry", () => {
             "read_file",
             "claude_code",
             "continue",
-            "yield_back",
+            "complete",
             "end_conversation",
             "analyze",
             "generate_inventory",

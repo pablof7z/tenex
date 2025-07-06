@@ -1,4 +1,3 @@
-import { NostrPublisher } from "@/nostr/NostrPublisher";
 import { getToolLogger } from "@/tools/toolLogger";
 import type {
   Tool,
@@ -36,6 +35,7 @@ export class ToolPlugin extends Plugin {
       agent: tenexContext.agent,
       conversation: tenexContext.conversation,
       publisher: tenexContext.publisher,
+      conversationManager: tenexContext.conversationManager,
     };
     this.executor = createToolExecutor(executionContext);
   }
@@ -54,6 +54,18 @@ export class ToolPlugin extends Plugin {
 
   getDescription(): string {
     return this.tool.description;
+  }
+
+  getRunningDescription(tool: string, args: any): string {
+    // For the continue tool specifically, provide a concise description
+    if (this.tool.name === "continue") {
+      const phase = args.phase || "next phase";
+      const agents = args.agents?.join(", ") || "specified agents";
+      return `Routing conversation to ${phase} with ${agents}`;
+    }
+    
+    // For other tools, provide a generic running description
+    return `Executing ${tool} tool`;
   }
 
   getParameters(): MultiLLMPluginParameter[] {
@@ -98,13 +110,14 @@ export class ToolPlugin extends Plugin {
     }
   }
 
-  async execute(parameters: Record<string, unknown>, context: PluginExecutionContext): Promise<unknown> {
+  async execute(context: PluginExecutionContext, parameters: Record<string, unknown>): Promise<unknown> {
     const startTime = Date.now();
 
     try {
       logger.debug(`Executing tool: ${this.tool.name}`, {
         tool: this.tool.name,
         parameters,
+        parameterKeys: Object.keys(parameters),
         agentId: this.tenexContext.agent.pubkey,
         conversationId: this.tenexContext.conversationId,
         phase: this.tenexContext.phase,
@@ -124,10 +137,10 @@ export class ToolPlugin extends Plugin {
         
         // Check if it's a control flow result
         if (output.type === "continue" && output.routing) {
-          outputMessage = `Routing to ${output.routing.destinations.length} agents`;
+          outputMessage = `Routing to ${output.routing.agents.length} agents`;
         }
         // Check if it's a termination result
-        else if (output.type === "yield_back" && output.completion) {
+        else if (output.type === "complete" && output.completion) {
           outputMessage = output.completion.response;
         }
         else if (output.type === "end_conversation" && output.result) {
@@ -224,6 +237,10 @@ export class ToolPlugin extends Plugin {
   private formatError(error: ToolError): string {
     switch (error.kind) {
       case "validation":
+        // If the field is empty and message is just "Required", make it clearer
+        if (error.field === "" && error.message === "Required") {
+          return `Validation error: Missing required parameter`;
+        }
         return `Validation error in ${error.field}: ${error.message}`;
       case "execution":
         return `Execution error: ${error.message}`;

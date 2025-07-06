@@ -43,10 +43,10 @@ The PROJECT.md maintains your living understanding of:
 
 This is your MEMORY of the project - it's how you remember what the user wants across sessions. Update it religiously during reflection to capture EVERYTHING the user has said about their vision.
 
-To update PROJECT.md or other context files:
-1. First use read_file to read the existing file (e.g., "context/PROJECT.md")
-2. Then use write_context_file with filename (e.g., "PROJECT.md") and the complete updated content
-3. The write_context_file tool only works if you've read the file first in this conversation
+To work with context files:
+1. **To update an existing file** (like PROJECT.md), you MUST use read_file on it first in this conversation before using write_context_file
+2. **To create a new file**, you can use write_context_file directly without reading it first
+3. Use write_context_file with just the filename (e.g., "PROJECT.md") and the complete content
 
 When asked about the project, provide comprehensive answers that demonstrate your deep understanding of every aspect of the codebase. Your knowledge should be encyclopedic - you know this project better than anyone else.
 `,

@@ -13,8 +13,6 @@ The 'message' parameter contains what you need to plan for.
 Your role is to:
 - Create high-level architectural plans using the claude_code tool in plan mode. Provide the message verbatim to claude_code in plan mode.
 - Break down complex tasks into actionable steps
-- Consider architectural implications and design decisions
-- When complete, use the 'yield_back' tool to return control
-- Include the full plan in the response parameter`,
+- Consider architectural implications and design decisions`,
   llmConfig: DEFAULT_AGENT_LLM_CONFIG,
 };

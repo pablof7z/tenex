@@ -29,7 +29,7 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
         .optional()
         .describe("Target phase"),
       agents: z.array(z.string()).optional().describe("Array of agent slugs or pubkeys"),
-      reason: z.string().describe("Reason for this routing decision"),
+      reason: z.string().describe("Reason for choosing this routing (e.g., 'Request is clear and specific', 'Need planning due to ambiguity', 'Complex task requires specialized agents')"),
       message: z.string().describe("Context/instructions for the destination agent"),
       summary: z.string().optional().describe("2-3 sentence overview of current state"),
     })
@@ -65,9 +65,6 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
           break;
         case "execute":
           targetAgents = ["executer"];
-          break;
-        case "reflection":
-          targetAgents = ["project-manager"];
           break;
         default:
           return failure({
@@ -152,13 +149,43 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
     // We know validPubkeys is non-empty due to check above
     const targetAgentPubkeys = validPubkeys as unknown as NonEmptyArray<string>;
 
+    // Use current phase if not specified
+    const targetPhase = phase || context.conversation.phase;
+
+    logger.info("[CONTINUE] Phase transition requested", {
+      requestedPhase: phase,
+      currentPhase: context.conversation.phase,
+      targetPhase,
+      conversationId: context.conversation.id,
+      agents: validPubkeys,
+    });
+
+    // Update phase IMMEDIATELY if transitioning
+    if (targetPhase !== context.conversation.phase && context.conversationManager) {
+      logger.info("[CONTINUE] Updating phase before routing", {
+        from: context.conversation.phase,
+        to: targetPhase,
+        conversationId: context.conversation.id,
+      });
+      
+      await context.conversationManager.updatePhase(
+        context.conversation.id,
+        targetPhase,
+        message,
+        context.agent.pubkey,
+        context.agent.name,
+        reason,
+        summary
+      );
+    }
+
     // Publish the routing event directly
     await context.publisher.publishResponse({
       content: message,
       continueMetadata: {
         type: "continue",
         routing: {
-          phase,
+          phase: targetPhase,
           agents: targetAgentPubkeys,
           reason,
           message,
@@ -169,14 +196,14 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
 
     logger.info("Continue tool published routing event", {
       agents: validPubkeys,
-      phase,
+      phase: targetPhase,
     });
 
     // Return properly typed control flow
     return success({
       type: "continue",
       routing: {
-        phase,
+        phase: targetPhase,
         agents: targetAgentPubkeys,
         reason,
         message,

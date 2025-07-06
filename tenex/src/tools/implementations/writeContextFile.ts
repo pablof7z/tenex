@@ -61,25 +61,30 @@ export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileO
         const fullPath = path.join(contextDir, filename);
 
         // Check if this file was recently read from persisted conversation metadata
-        const wasRecentlyRead = false; // For now, we'll allow all writes since we can't track reads yet
+        const readFiles = context.conversation.metadata.readFiles || [];
+        const contextPath = `context/${filename}`;
+        const wasRecentlyRead = readFiles.includes(contextPath);
+
+        // Check if file exists
+        let fileExists = false;
+        try {
+          await access(fullPath);
+          fileExists = true;
+        } catch {
+          // File doesn't exist, allow creation
+          fileExists = false;
+        }
 
         // If file exists and wasn't recently read, deny access
-        if (!wasRecentlyRead) {
-          // Check if file exists
-          try {
-            await access(fullPath);
-            // File exists but wasn't read recently
-            return {
-              ok: false,
-              error: {
-                kind: "validation" as const,
-                field: "filename",
-                message: `You must read the file 'context/${filename}' before writing to it. Use the read_file tool first.`,
-              },
-            };
-          } catch {
-            // File doesn't exist, allow creation
-          }
+        if (fileExists && !wasRecentlyRead) {
+          return {
+            ok: false,
+            error: {
+              kind: "validation" as const,
+              field: "filename",
+              message: `You must read the file 'context/${filename}' before writing to it. Use the read_file tool first.`,
+            },
+          };
         }
 
         // Ensure context directory exists

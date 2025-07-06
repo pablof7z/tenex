@@ -4,6 +4,7 @@ import type { Conversation } from "@/conversations/types";
 import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import type { Tool } from "@/tools/types";
+import "@/prompts/fragments/yield-back";
 
 export interface BuildSystemPromptOptions {
   // Required data
@@ -97,6 +98,9 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
       agentRole: agent.role,
       isOrchestrator: false,
     });
+    
+    // Add yield-back instructions for non-orchestrator agents
+    systemPromptBuilder.add("yield-back", {});
   }
 
   return systemPromptBuilder.build();

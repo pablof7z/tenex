@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { Phase } from "@/conversations/phases";
 import type { AgentContext, PhaseTransition } from "@/conversations/types";
-import { ensureDirectory, fileExists, readFile, writeJsonFile } from "@/lib/fs";
+import { ensureDirectory } from "@/lib/fs";
 import { getAgentSlugFromEvent, isEventFromUser } from "@/nostr/utils";
 import { getProjectContext } from "@/services";
 import {
@@ -13,7 +13,7 @@ import {
 import { logger } from "@/utils/logger";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
-import { ensureExecutionTimeInitialized, initializeExecutionTime } from "./executionTime";
+import { ensureExecutionTimeInitialized } from "./executionTime";
 import { FileSystemAdapter } from "./persistence";
 import type { Conversation, ConversationMetadata } from "./types";
 
@@ -142,8 +142,20 @@ export class ConversationManager {
 
     // Update conversation phase if it changed
     if (previousPhase !== phase) {
+      logger.info("[CONVERSATION_MANAGER] Updating phase in conversation object", {
+        conversationId: id,
+        previousPhase,
+        newPhase: phase,
+      });
+      
       conversation.phase = phase;
       conversation.phaseStartedAt = Date.now();
+      
+      logger.info("[CONVERSATION_MANAGER] Phase updated in memory", {
+        conversationId: id,
+        updatedPhase: conversation.phase,
+        phaseStartedAt: conversation.phaseStartedAt,
+      });
 
       // Clear readFiles when transitioning from REFLECTION back to CHAT
       // This starts a new conversation cycle with fresh file tracking
@@ -175,6 +187,12 @@ export class ConversationManager {
 
     // Save after phase update
     await this.persistence.save(conversation);
+    
+    logger.info("[CONVERSATION_MANAGER] Phase update complete", {
+      conversationId: id,
+      finalPhase: conversation.phase,
+      wasTransition: previousPhase !== phase,
+    });
   }
 
   async incrementContinueCallCount(conversationId: string, phase: Phase): Promise<void> {
