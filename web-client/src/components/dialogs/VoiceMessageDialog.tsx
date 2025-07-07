@@ -1,5 +1,4 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
-import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { Loader2, Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
@@ -11,6 +10,7 @@ interface VoiceMessageDialogProps {
     onOpenChange: (open: boolean) => void;
     project: NDKProject;
     onMessageSent?: () => void;
+    onTranscriptionComplete?: (text: string) => void;
 }
 
 export function VoiceMessageDialog({
@@ -18,8 +18,8 @@ export function VoiceMessageDialog({
     onOpenChange,
     project,
     onMessageSent,
+    onTranscriptionComplete,
 }: VoiceMessageDialogProps) {
-    const { ndk } = useNDK();
     const { getSpeechConfig } = useLLMConfig();
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -157,20 +157,18 @@ export function VoiceMessageDialog({
 
             const transcriptionData = await transcriptionResponse.json();
             const transcription = transcriptionData.text;
+            
+            console.log("Transcription response:", transcriptionData);
+            console.log("Transcription text:", transcription);
 
-            // Send as a regular message to the project
-            if (ndk) {
-                const event = new NDKEvent(ndk);
-                event.kind = 1;
-                event.content = `🎤 Voice message: ${transcription}`;
-                event.tags = [["a", project.tagId()]];
-
-                event.publish();
-                onMessageSent?.();
+            // Pass the transcription to the parent component
+            if (onTranscriptionComplete) {
+                onTranscriptionComplete(transcription);
             }
 
             onOpenChange(false);
-        } catch (_error) {
+        } catch (error) {
+            console.error("Transcription error:", error);
             alert("Failed to process audio. Please try again.");
             onOpenChange(false);
         } finally {
