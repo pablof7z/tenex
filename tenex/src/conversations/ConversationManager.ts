@@ -208,7 +208,7 @@ export class ConversationManager {
         brainstorm: 0,
         plan: 0,
         execute: 0,
-        review: 0,
+        verification: 0,
         chores: 0,
         reflection: 0,
       };

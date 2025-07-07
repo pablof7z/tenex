@@ -48,9 +48,9 @@ Purpose: Persist distilled lessons so you never repeat avoidable mistakes.
 - Before calling \`learn\`, briefly consider if this is a genuinely new insight or a variation of something already known
 - Write lessons crisply with no pleasantries or meta-commentary
 - Focus on actionable insights that will help in future tasks
-- Include relevant keywords to help with future retrieval (e.g., ['typescript', 'async'] for async/await lessons)
+- Domain Boundaries: Only record lessons within your role's sphere of control and expertise. 
 
-The lessons you record become permanent knowledge that will help you and other agents avoid repeating mistakes.`;
+The lessons you record become permanent knowledge that will help you avoid repeating mistakes. This is your chance to become the best version of yourself.`;
   },
 };
 

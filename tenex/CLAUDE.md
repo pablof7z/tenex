@@ -84,9 +84,9 @@ The system uses a **star topology** with the orchestrator as the central hub:
    - Agents communicate exclusively through Nostr events
 
 2. **Conversation Management** (`src/conversations/`)
-   - Phase-based workflow: CHAT → PLAN → EXECUTE → REVIEW → CHORES → REFLECTION
+   - Phase-based workflow: CHAT → PLAN → EXECUTE → VERIFICATION → CHORES → REFLECTION
    - Recommended phase progression after EXECUTE (can skip with valid reason)
-   - Smart feedback loops between EXECUTE ↔ REVIEW
+   - Smart feedback loops between EXECUTE ↔ VERIFICATION
 
 3. **Nostr Integration** (`src/nostr/`)
    - Uses NDK (Nostr Development Kit) directly
@@ -129,7 +129,7 @@ The system uses a **star topology** with the orchestrator as the central hub:
 - Well-defined requests: Skip PLAN, go directly to EXECUTE
 - Ambiguous requests: Go through PLAN phase first
 - Vague requests: Start with BRAINSTORM phase
-- Post-execution: Required REVIEW → CHORES → REFLECTION (only skip if user explicitly requests)
+- Post-execution: Required VERIFICATION → CHORES → REFLECTION (only skip if user explicitly requests)
 
 ### Testing Guidelines
 - Tests are colocated with source files in `__tests__/` directories

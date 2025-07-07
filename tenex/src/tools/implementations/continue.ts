@@ -10,8 +10,8 @@ import { z } from "zod";
  * Routes conversation to next phase/agent
  */
 interface ContinueInput {
-  phase?: Phase;
-  agents?: string[];
+  phase?: string; // Will be transformed to lowercase Phase in schema
+  agents: string[];
   reason: string;
   message: string;
   summary?: string;
@@ -20,18 +20,25 @@ interface ContinueInput {
 export const continueTool: Tool<ContinueInput, ControlFlow> = {
   name: "continue",
   description:
-    "Route conversation to next phase/agent. REQUIRES either 'phase' or 'agents' parameter (or both). This is a terminal action - once called, the agent's turn ends and control is transferred.",
+    "Route conversation to next phase/agent. REQUIRES 'agents' parameter. This is a terminal action - once called, the orchestrator's turn ends and control is transferred.",
 
   parameters: createZodSchema(
     z.object({
       phase: z
-        .enum(ALL_PHASES as readonly [Phase, ...Phase[]])
+        .string()
         .optional()
+        .transform((val) => val?.toLowerCase() as Phase | undefined)
+        .refine(
+          (val) => !val || ALL_PHASES.includes(val as Phase),
+          {
+            message: `Invalid phase. Expected one of: ${ALL_PHASES.join(', ')}`
+          }
+        )
         .describe("Target phase"),
-      agents: z.array(z.string()).optional().describe("Array of agent slugs or pubkeys"),
-      reason: z.string().describe("Reason for choosing this routing (e.g., 'Request is clear and specific', 'Need planning due to ambiguity', 'Complex task requires specialized agents')"),
-      message: z.string().describe("Context/instructions for the destination agent"),
-      summary: z.string().optional().describe("2-3 sentence overview of current state"),
+      agents: z.array(z.string()).describe("Array of agent slugs"),
+      reason: z.string().describe("Used for routing debugging. Provide clear reason that justify this decision, include every detail and thought you had for choosing this routing (e.g., 'Request is clear and specific', 'Need planning due to ambiguity', 'Complex task requires specialized agents'). Always start the reason with 'Here is why I decided this path'. ALWAYS."),
+      message: z.string().describe("Context/instructions for the agent being delegated to."),
+      summary: z.string().optional().describe("User-facing 2-3 sentence overview of current state.")
     })
   ),
 
@@ -47,32 +54,13 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
       });
     }
 
-    // Determine agents based on phase if not provided
-    let targetAgents = agents;
-    if (!targetAgents || targetAgents.length === 0) {
-      if (!phase) {
-        return failure({
-          kind: "validation",
-          field: "agents/phase",
-          message: "Either 'agents' or 'phase' must be specified",
-        });
-      }
-
-      // Default agents based on phase
-      switch (phase) {
-        case "plan":
-          targetAgents = ["planner"];
-          break;
-        case "execute":
-          targetAgents = ["executer"];
-          break;
-        default:
-          return failure({
-            kind: "validation",
-            field: "phase",
-            message: `No default agent for phase '${phase}'. Please specify agents explicitly.`,
-          });
-      }
+    // Validate agents array is not empty
+    if (agents.length === 0) {
+      return failure({
+        kind: "validation",
+        field: "agents",
+        message: "Agents array cannot be empty",
+      });
     }
 
     // Get project context
@@ -91,34 +79,19 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
     const validPubkeys: string[] = [];
     const validNames: string[] = [];
 
-    for (const agent of targetAgents) {
-      if (agent.length === 64 && /^[0-9a-f]{64}$/i.test(agent)) {
-        // Check if agent is already a pubkey (64-char hex)
-        // Prevent routing to self
-        if (agent === context.agent.pubkey) {
-          return failure({
-            kind: "validation",
-            field: "agents",
-            message: "Cannot route to self",
-          });
-        }
-        validPubkeys.push(agent);
-        validNames.push(`pubkey:${agent.substring(0, 8)}...`);
+    for (const agent of agents) {
+      const agentDef = projectContext.agents.get(agent);
+      if (!agentDef) {
+        invalidAgents.push(agent);
+      } else if (agentDef.pubkey === context.agent.pubkey) {
+        return failure({
+          kind: "validation",
+          field: "agents",
+          message: `Cannot route to self (${agent})`,
+        });
       } else {
-        // Treat as agent slug
-        const agentDef = projectContext.agents.get(agent);
-        if (!agentDef) {
-          invalidAgents.push(agent);
-        } else if (agentDef.pubkey === context.agent.pubkey) {
-          return failure({
-            kind: "validation",
-            field: "agents",
-            message: `Cannot route to self (${agent})`,
-          });
-        } else {
-          validPubkeys.push(agentDef.pubkey);
-          validNames.push(agentDef.name);
-        }
+        validPubkeys.push(agentDef.pubkey);
+        validNames.push(agentDef.name);
       }
     }
 
@@ -149,8 +122,8 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
     // We know validPubkeys is non-empty due to check above
     const targetAgentPubkeys = validPubkeys as unknown as NonEmptyArray<string>;
 
-    // Use current phase if not specified
-    const targetPhase = phase || context.conversation.phase;
+    // Use current phase if not specified (phase is already lowercase from schema transform)
+    const targetPhase = (phase as Phase) || context.conversation.phase;
 
     logger.info("[CONTINUE] Phase transition requested", {
       requestedPhase: phase,

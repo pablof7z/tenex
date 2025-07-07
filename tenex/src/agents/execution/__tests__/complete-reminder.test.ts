@@ -93,20 +93,20 @@ describe("ReasonActLoop complete() reminder", () => {
     expect(reminderMessages[reminderMessages.length - 1].content).toContain("you haven't used the 'complete' tool yet");
   });
 
-  it("should not remind orchestrator agents", async () => {
+  it("should not remind orchestrator agents in chat phase", async () => {
     // Mock stream response for orchestrator
     const stream = async function* (): AsyncGenerator<StreamEvent> {
-      yield { type: "content", content: "Routing to appropriate agent." };
-      yield { type: "done", response: { type: "text", content: "Routing to appropriate agent.", toolCalls: [] } };
+      yield { type: "content", content: "I'd be happy to help you with that task." };
+      yield { type: "done", response: { type: "text", content: "I'd be happy to help you with that task.", toolCalls: [] } };
     };
     
     (mockLLMService.stream as any).mockReturnValue(stream());
     
-    // Create an orchestrator agent context
+    // Create an orchestrator agent context in CHAT phase
     const context = {
       projectPath: "/test",
       conversationId: "test-convo",
-      phase: PHASES.EXECUTE,
+      phase: PHASES.CHAT, // Chat phase - no reminder expected
       llmConfig: "test-config",
       agent: {
         name: "Orchestrator",
@@ -115,7 +115,7 @@ describe("ReasonActLoop complete() reminder", () => {
       conversation: { id: "test-convo", history: [] } as any,
     };
     
-    const messages = [new Message("user", "Please complete this task")];
+    const messages = [new Message("user", "What can you help me with?")];
     
     // Execute the streaming
     const generator = reasonActLoop.executeStreaming(

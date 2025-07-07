@@ -50,6 +50,9 @@ export const agentListCommand = new Command("list")
               const marker = agent.isBuiltIn ? " (built-in)" : "";
               logger.info(`  - ${agent.slug}: ${agent.name}${marker}`);
               logger.info(`    Role: ${agent.role}`);
+              if (agent.description) {
+                logger.info(`    Description: ${agent.description}`);
+              }
               if (agent.eventId) {
                 logger.info(`    Event ID: ${agent.eventId}`);
               }
@@ -103,6 +106,9 @@ export const agentListCommand = new Command("list")
             for (const agent of projectOnlyAgents) {
               logger.info(`  - ${agent.slug}: ${agent.name}`);
               logger.info(`    Role: ${agent.role}`);
+              if (agent.description) {
+                logger.info(`    Description: ${agent.description}`);
+              }
               if (agent.eventId) {
                 logger.info(`    Event ID: ${agent.eventId}`);
               }
@@ -115,6 +121,9 @@ export const agentListCommand = new Command("list")
               for (const agent of overriddenAgents) {
                 logger.info(`  - ${agent.slug}: ${agent.name} (overrides global)`);
                 logger.info(`    Role: ${agent.role}`);
+                if (agent.description) {
+                  logger.info(`    Description: ${agent.description}`);
+                }
                 if (agent.eventId) {
                   logger.info(`    Event ID: ${agent.eventId}`);
                 }

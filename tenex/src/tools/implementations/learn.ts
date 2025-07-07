@@ -92,7 +92,7 @@ export const learnTool: Tool<LearnInput, LearnOutput> = {
         lessonEvent.lesson = lesson;
 
         // Add reference to the agent event if available
-        const agentEventId = undefined; // Agent event ID not available in context
+        const agentEventId = context.agent.eventId;
         if (agentEventId) {
           // Fetch the actual NDKAgent event
           const agentEventFilter = {

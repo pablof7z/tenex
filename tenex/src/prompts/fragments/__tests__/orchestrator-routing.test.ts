@@ -8,10 +8,10 @@ describe("Orchestrator Routing Fragments", () => {
         expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
         expect(prompt).toContain("Core Routing Principles");
         expect(prompt).toContain("The Continue Tool");
-        expect(prompt).toContain("Phase-Based Routing");
+        expect(prompt).toContain("Agent Selection");
         expect(prompt).toContain("Request Assessment");
         expect(prompt).toContain("Quality Handoff Requirements");
-        expect(prompt).toContain("Critical Phase Requirements");
+        expect(prompt).toContain("Required Phase Sequence After Execution");
     });
 
     it("should generate orchestrator handoff guidance", () => {
@@ -19,10 +19,9 @@ describe("Orchestrator Routing Fragments", () => {
 
         expect(prompt).toContain("## Agent Selection Guidance");
         expect(prompt).toContain("Agent Capabilities Match");
-        expect(prompt).toContain("Developer agents");
-        expect(prompt).toContain("Reviewer/Expert agents");
+        expect(prompt).toContain("Execution agents");
+        expect(prompt).toContain("Verification/Expert agents");
         expect(prompt).toContain("Specialist agents");
-        expect(prompt).toContain("Built-in Specialists");
         expect(prompt).toContain("When to Use Multi-Agent Queries");
     });
 

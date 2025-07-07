@@ -25,6 +25,7 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
         endConversationTool.name,
         continueTool.name,
         generateInventoryTool.name,
+        learnTool.name,
       ];
     } else {
       // Non-orchestrator agents use complete tool to signal task completion

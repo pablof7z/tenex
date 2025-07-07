@@ -14,6 +14,7 @@ export interface Agent {
   pubkey: string;
   signer: NDKPrivateKeySigner;
   role: string;
+  description?: string; // Agent description from NDKAgent event
   instructions?: string;
   useCriteria?: string; // Criteria for when this agent should be selected
   llmConfig: string;
@@ -22,7 +23,7 @@ export interface Agent {
   eventId?: string; // NDKAgent event ID
   slug: string; // Agent slug/key from agents.json
   isOrchestrator?: boolean; // Whether this agent is the orchestrator agent
-  isBuiltIn?: boolean; // Whether this is a built-in agent (executer, planner)
+  isBuiltIn?: boolean; // Whether this is a built-in agent (executor, planner)
 }
 
 export interface AgentContext {

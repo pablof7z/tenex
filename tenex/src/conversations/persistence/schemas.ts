@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const PhaseSchema = z.enum(["chat", "brainstorm", "plan", "execute", "review", "chores"]);
+const PhaseSchema = z.enum(["chat", "brainstorm", "plan", "execute", "verification", "chores", "reflection"]);
 
 export const PhaseTransitionSchema = z.object({
   from: PhaseSchema,
@@ -34,7 +34,7 @@ const MessageSchema = z.object({
   attachments: z.array(z.any()).optional(),
 });
 
-const AgentContextSchema = z.object({
+export const AgentContextSchema = z.object({
   agentSlug: z.string(),
   messages: z.array(MessageSchema),
   tokenCount: z.number(),

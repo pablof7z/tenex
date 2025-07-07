@@ -1,18 +1,16 @@
 import type { PromptFragment } from "./types";
 
 export class FragmentRegistry {
-  // biome-ignore lint/suspicious/noExplicitAny: Generic map requires any for type safety
-  private fragments = new Map<string, PromptFragment<any>>();
+  private fragments = new Map<string, PromptFragment<unknown>>();
 
   register<T>(fragment: PromptFragment<T>): void {
     if (!fragment.id) {
       throw new Error("Fragment must have an id");
     }
-    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic storage
-    this.fragments.set(fragment.id, fragment as PromptFragment<any>);
+    this.fragments.set(fragment.id, fragment as PromptFragment<unknown>);
   }
 
-  get(id: string): PromptFragment | undefined {
+  get(id: string): PromptFragment<unknown> | undefined {
     return this.fragments.get(id);
   }
 

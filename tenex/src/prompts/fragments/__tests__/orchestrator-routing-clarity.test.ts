@@ -32,20 +32,20 @@ describe("Orchestrator Routing - Clarity-Based Decision Making", () => {
     expect(result).toContain("If no domain experts are available, route back to the default agent");
   });
 
-  it("should contain availability-based review strategy", () => {
+  it("should contain availability-based verification strategy", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
     expect(result).toContain("Quality Control in Execute and Plan Phases");
-    expect(result).toContain("Request review or validation of the work");
+    expect(result).toContain("Request verification or validation of the work");
     expect(result).toContain("route back to the default agent (planner/executor) for self-assessment");
-    expect(result).toContain("Request domain-specific review from experts or self-assessment");
+    expect(result).toContain("Request domain-specific verification from experts or self-assessment");
   });
 
   it("should enforce mandatory post-execute phases", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("After execution work, you MUST proceed through REVIEW → CHORES → REFLECTION");
-    expect(result).toContain("REVIEW Phase** (recommended after execute)");
+    expect(result).toContain("After execution work, you MUST proceed through VERIFICATION → CHORES → REFLECTION");
+    expect(result).toContain("VERIFICATION Phase** (recommended after execute)");
     expect(result).toContain("Only skip if**: User explicitly requests to skip");
   });
 
@@ -64,7 +64,7 @@ describe("Orchestrator Routing - Clarity-Based Decision Making", () => {
     expect(result).toContain("Collect these summaries to build context for subsequent routing decisions");
   });
 
-  it("should specify review-execute feedback loop", () => {
+  it("should specify verification-execute feedback loop", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
     expect(result).toContain("If issues found: Loop back to execute");

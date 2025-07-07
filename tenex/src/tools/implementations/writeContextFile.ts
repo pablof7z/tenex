@@ -26,6 +26,8 @@ export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileO
   parameters: createZodSchema(WriteContextFileArgsSchema),
 
   execute: async (input, context) => {
+    console.log('write_context_file called', input);
+    
       const { filename, content } = input.value;
 
       // TODO: Implement agent role check when available in context

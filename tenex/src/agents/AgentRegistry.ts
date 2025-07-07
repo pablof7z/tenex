@@ -138,6 +138,7 @@ export class AgentRegistry {
       agentDefinition = {
         name: config.name,
         role: config.role,
+        description: config.description,
         instructions: config.instructions || "",
         useCriteria: config.useCriteria,
         llmConfig: config.llmConfig,
@@ -197,6 +198,7 @@ export class AgentRegistry {
         agentDefinition = {
           name: config.name,
           role: config.role,
+          description: config.description,
           instructions: config.instructions || "",
           useCriteria: config.useCriteria,
           llmConfig: config.llmConfig,
@@ -239,6 +241,7 @@ export class AgentRegistry {
       pubkey,
       signer,
       role: agentDefinition.role,
+      description: agentDefinition.description,
       instructions: agentDefinition.instructions,
       useCriteria: agentDefinition.useCriteria,
       llmConfig: agentDefinition.llmConfig || DEFAULT_AGENT_LLM_CONFIG,

@@ -40,7 +40,7 @@ describe("Agent Execution Prompt Fragments", () => {
 
     describe("phaseContextFragment", () => {
         it("should generate correct phase context for each phase", () => {
-            const phases: Phase[] = ["chat", "plan", "execute", "review"];
+            const phases: Phase[] = ["chat", "plan", "execute", "verification"];
 
             phases.forEach((phase) => {
                 const prompt = new PromptBuilder()

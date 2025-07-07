@@ -61,6 +61,11 @@ export const agentAddCommand = new Command("add")
         validate: (value) => (value.trim() ? true : "Prompt is required"),
       });
 
+      const description = await input({
+        message: "Agent description (optional):",
+        default: "",
+      });
+
       // Determine the base path for the registry
       const basePath = useProject
         ? configService.getProjectPath(projectPath)
@@ -110,6 +115,7 @@ export const agentAddCommand = new Command("add")
         role,
         instructions: prompt,
         llmConfig: DEFAULT_AGENT_LLM_CONFIG,
+        ...(description && { description }),
       };
 
       // Use AgentRegistry to ensure agent (this handles all file operations and Nostr publishing)

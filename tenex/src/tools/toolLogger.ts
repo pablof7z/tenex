@@ -148,18 +148,20 @@ export class ToolCallLogger {
       return undefined;
     }
 
-    const output = result.output as any;
+    const output = result.output;
     
     // Check if it's a control flow result
-    if (output.type === "continue" && output.routing) {
-      return `Control flow: ${output.type}`;
-    }
-    // Check if it's a termination result
-    if (output.type === "complete" && output.completion) {
-      return output.completion.response;
-    }
-    if (output.type === "end_conversation" && output.result) {
-      return output.result.response;
+    if (typeof output === "object" && output !== null && "type" in output) {
+      if (output.type === "continue" && "routing" in output) {
+        return `Control flow: ${output.type}`;
+      }
+      // Check if it's a termination result
+      if (output.type === "complete" && "completion" in output && typeof output.completion === "object" && output.completion !== null && "response" in output.completion && typeof output.completion.response === "string") {
+        return output.completion.response;
+      }
+      if (output.type === "end_conversation" && "result" in output && typeof output.result === "object" && output.result !== null && "response" in output.result && typeof output.result.response === "string") {
+        return output.result.response;
+      }
     }
     
     // Regular tool output
@@ -175,14 +177,16 @@ export class ToolCallLogger {
       return undefined;
     }
 
-    const output = result.output as any;
+    const output = result.output;
     
     // Return metadata for special result types
-    if (output.type === "continue" && output.routing) {
-      return { flow: output };
-    }
-    if ((output.type === "complete" && output.completion) || (output.type === "end_conversation" && output.result)) {
-      return { termination: output };
+    if (typeof output === "object" && output !== null && "type" in output) {
+      if (output.type === "continue" && "routing" in output) {
+        return { flow: output };
+      }
+      if ((output.type === "complete" && "completion" in output) || (output.type === "end_conversation" && "result" in output)) {
+        return { termination: output };
+      }
     }
     
     return undefined;

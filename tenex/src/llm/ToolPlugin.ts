@@ -56,11 +56,11 @@ export class ToolPlugin extends Plugin {
     return this.tool.description;
   }
 
-  getRunningDescription(tool: string, args: any): string {
+  getRunningDescription(tool: string, args: Record<string, unknown>): string {
     // For the continue tool specifically, provide a concise description
     if (this.tool.name === "continue") {
-      const phase = args.phase || "next phase";
-      const agents = args.agents?.join(", ") || "specified agents";
+      const phase = (args.phase as string) || "next phase";
+      const agents = (args.agents as string[])?.join(", ") || "specified agents";
       return `Routing conversation to ${phase} with ${agents}`;
     }
     
@@ -133,18 +133,20 @@ export class ToolPlugin extends Plugin {
       // Create a human-readable output message
       let outputMessage = "";
       if (result.success && result.output !== undefined) {
-        const output = result.output as any;
+        const output = result.output;
         
         // Check if it's a control flow result
-        if (output.type === "continue" && output.routing) {
-          outputMessage = `Routing to ${output.routing.agents.length} agents`;
-        }
-        // Check if it's a termination result
-        else if (output.type === "complete" && output.completion) {
-          outputMessage = output.completion.response;
-        }
-        else if (output.type === "end_conversation" && output.result) {
-          outputMessage = output.result.response;
+        if (typeof output === "object" && output !== null && "type" in output) {
+          if (output.type === "continue" && "routing" in output && typeof output.routing === "object" && output.routing !== null && "agents" in output.routing && Array.isArray(output.routing.agents)) {
+            outputMessage = `Routing to ${output.routing.agents.length} agents`;
+          }
+          // Check if it's a termination result
+          else if (output.type === "complete" && "completion" in output && typeof output.completion === "object" && output.completion !== null && "response" in output.completion && typeof output.completion.response === "string") {
+            outputMessage = output.completion.response;
+          }
+          else if (output.type === "end_conversation" && "result" in output && typeof output.result === "object" && output.result !== null && "response" in output.result && typeof output.result.response === "string") {
+            outputMessage = output.result.response;
+          }
         }
         // Regular tool output
         else {

@@ -4,6 +4,7 @@
  */
 
 import type { ToolExecutionResult } from "@/tools/types";
+import type { ToolError } from "@/tools/core";
 
 /**
  * Simplified serialized tool result
@@ -52,19 +53,50 @@ export function isSerializedToolResult(obj: unknown): obj is SerializedToolResul
     "success" in obj &&
     "duration" in obj &&
     "data" in obj &&
-    typeof (obj as any).success === "boolean" &&
-    typeof (obj as any).duration === "number"
+    typeof obj.success === "boolean" &&
+    typeof obj.duration === "number"
   );
 }
 
 /**
  * Deserialize a tool result back to typed format
  */
+function deserializeToolError(error: { kind: string; message: string } | undefined): ToolError | undefined {
+  if (!error) return undefined;
+  
+  // Create a proper ToolError based on the kind
+  switch (error.kind) {
+    case "validation":
+      return {
+        kind: "validation",
+        field: "unknown", // We don't serialize the field, so use a default
+        message: error.message
+      };
+    case "execution":
+      return {
+        kind: "execution",
+        tool: "unknown", // We don't serialize the tool name separately
+        message: error.message
+      };
+    case "system":
+      return {
+        kind: "system",
+        message: error.message
+      };
+    default:
+      // If unknown kind, treat as system error
+      return {
+        kind: "system",
+        message: error.message
+      };
+  }
+}
+
 export function deserializeToolResult(serialized: SerializedToolResult): ToolExecutionResult {
   return {
     success: serialized.success,
     duration: serialized.duration,
     output: serialized.data.output,
-    error: serialized.data.error as any,
+    error: deserializeToolError(serialized.data.error),
   };
 }

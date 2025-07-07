@@ -190,7 +190,7 @@ export const ToolSchemas = {
    */
   phase: () =>
     z
-      .enum(["chat", "brainstorm", "plan", "execute", "review", "chores", "reflection"])
+      .enum(["chat", "brainstorm", "plan", "execute", "verification", "chores", "reflection"])
       .describe("Conversation phase"),
 
   /**

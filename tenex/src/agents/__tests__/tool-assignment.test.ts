@@ -23,7 +23,7 @@ describe("Tool assignment", () => {
             const mockExecutor = {
                 isOrchestrator: false,
                 isBuiltIn: true,
-                slug: "executer"
+                slug: "executor"
             } as any;
             const mockPlanner = {
                 isOrchestrator: false,
@@ -81,7 +81,7 @@ describe("Tool assignment", () => {
             
             // Verify orchestrator is in built-in agents
             expect(builtInSlugs).toContain("orchestrator");
-            expect(builtInSlugs).toContain("executer");
+            expect(builtInSlugs).toContain("executor");
             expect(builtInSlugs).toContain("planner");
             
             // The fix in AgentRegistry.ts line 212 ensures isBuiltIn is determined before tool assignment

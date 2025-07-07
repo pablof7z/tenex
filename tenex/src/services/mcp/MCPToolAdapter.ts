@@ -7,7 +7,7 @@ interface MCPTool {
   name: string;
   description?: string;
   inputSchema?: {
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
   };
 }
@@ -32,7 +32,7 @@ export function adaptMCPTool(
   const parameters = createZodSchema(schemaWithDescription);
 
   // Create a Tool that wraps the MCP tool
-  const tool: Tool<any, any> = {
+  const tool: Tool<Record<string, unknown>, unknown> = {
     name: namespacedName,
     description: mcpTool.description || `Tool from ${serverName}`,
     parameters,
@@ -77,15 +77,15 @@ export function adaptMCPTool(
 /**
  * Type-safe MCP tool with proper inference
  */
-export interface TypedMCPTool<TInput extends z.ZodType<any>>
-  extends Tool<z.infer<TInput>, any> {
+export interface TypedMCPTool<TInput extends z.ZodType<unknown>>
+  extends Tool<z.infer<TInput>, unknown> {
   readonly inputSchema: TInput;
 }
 
 /**
  * Create a strongly-typed MCP tool
  */
-export function createTypedMCPTool<TInput extends z.ZodType<any>>(config: {
+export function createTypedMCPTool<TInput extends z.ZodType<unknown>>(config: {
   name: string;
   serverName: string;
   description?: string;

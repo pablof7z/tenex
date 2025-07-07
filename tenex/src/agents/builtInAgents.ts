@@ -10,6 +10,7 @@ export interface BuiltInAgentDefinition {
   role: string;
   instructions: string;
   llmConfig?: string;
+  useCriteria?: string;
 }
 
 export const PROJECT_MANAGER_BUILT_IN: BuiltInAgentDefinition = {

@@ -61,6 +61,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
         if (selectedAgent) {
             loadAgent(selectedAgent);
             setIsEditing(true);
+            setShowDetailView(false);
         }
     };
 
@@ -110,6 +111,7 @@ export function AgentsPage({ onBack }: AgentsPageProps) {
                 <AgentDetailPage
                     agent={selectedAgent}
                     onBack={handleBackFromDetail}
+                    onEdit={handleEdit}
                 />
             ) : (
                 <AgentMainContent

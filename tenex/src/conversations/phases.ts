@@ -1,11 +1,11 @@
-export type Phase = "chat" | "brainstorm" | "plan" | "execute" | "review" | "chores" | "reflection";
+export type Phase = "chat" | "brainstorm" | "plan" | "execute" | "verification" | "chores" | "reflection";
 
 export const PHASES = {
   CHAT: "chat" as const,
   BRAINSTORM: "brainstorm" as const,
   PLAN: "plan" as const,
   EXECUTE: "execute" as const,
-  REVIEW: "review" as const,
+  VERIFICATION: "verification" as const,
   CHORES: "chores" as const,
   REFLECTION: "reflection" as const,
 } as const;
@@ -15,7 +15,7 @@ export const ALL_PHASES: readonly Phase[] = [
   PHASES.BRAINSTORM,
   PHASES.PLAN,
   PHASES.EXECUTE,
-  PHASES.REVIEW,
+  PHASES.VERIFICATION,
   PHASES.CHORES,
   PHASES.REFLECTION,
 ] as const;
@@ -25,7 +25,7 @@ export const PHASE_DESCRIPTIONS = {
   [PHASES.BRAINSTORM]: "Creative exploration and ideation",
   [PHASES.PLAN]: "Planning approach for complex tasks",
   [PHASES.EXECUTE]: "Implementation and execution",
-  [PHASES.REVIEW]: "Quality review and validation",
+  [PHASES.VERIFICATION]: "Functional verification and testing",
   [PHASES.CHORES]: "Cleanup and documentation tasks",
   [PHASES.REFLECTION]: "Learn from experience and gather insights",
 } as const;
@@ -41,7 +41,7 @@ export interface PhaseDefinition {
 export const PHASE_DEFINITIONS: Record<Phase, PhaseDefinition> = {
   [PHASES.CHAT]: {
     description: "Requirements gathering and discussion",
-    goal: "Clarify intent. Once the user's instruction is actionable, immediately move to execute.",
+    goal: "Clarify intent.",
     whenToUse: [
       "The user's request is unclear or ambiguous",
       "You need to confirm what the user wants to happen",
@@ -86,8 +86,8 @@ export const PHASE_DEFINITIONS: Record<Phase, PhaseDefinition> = {
     ],
   },
   [PHASES.EXECUTE]: {
-    description: "Implementation and execution",
-    goal: "Execute the task. Create, modify, or produce the requested output.",
+    description: "Moment of truth: the phase where all of the work is to be implemented AND reviewed.",
+    goal: "Execute the task. Produce AND review the requested output.",
     whenToUse: [
       "The user gives a clear instruction to create or modify something",
       "The request involves producing tangible output",
@@ -103,23 +103,24 @@ export const PHASE_DEFINITIONS: Record<Phase, PhaseDefinition> = {
       "Explain key decisions made during execution",
     ],
   },
-  [PHASES.REVIEW]: {
-    description: "Quality review and validation",
-    goal: "Verify the output meets requirements and quality standards.",
+  [PHASES.VERIFICATION]: {
+    description: "Functional verification of the implemented work from an end-user perspective.",
+    goal: "Functionally test the implemented changes to ensure they work as expected and meet requirements. This is NOT a code review of implementation details.",
     whenToUse: [
-      "The execution is complete",
-      "The work needs validation for correctness and completeness",
-      "Quality assurance is needed before finalizing",
+      "After the 'execute' phase is complete.",
+      "When you need to confirm that the changes work correctly from a user's point of view.",
+      "Before moving on to documentation (chores) or learning (reflection)."
     ],
     constraints: [
-      "Provide constructive feedback",
-      "Highlight both strengths and areas for improvement",
-      "Suggest specific improvements",
+      "Focus on the functional aspects, not the implementation details.",
+      "Try out the feature that was built to confirm it works as expected.",
+      "If the changes work correctly, proceed to the 'chores' phase.",
+      "If issues are found, provide clear, reproducible steps and route back to the 'execute' phase for fixes."
     ],
   },
   [PHASES.CHORES]: {
     description: "Cleanup and documentation tasks",
-    goal: "Organize work products and update documentation.",
+    goal: "Allow agents that can perform routine cleanup functions to tidy up.",
     whenToUse: [
       "Work is complete and needs documentation",
       "Artifacts have been created or modified and need organizing",
@@ -134,7 +135,7 @@ export const PHASE_DEFINITIONS: Record<Phase, PhaseDefinition> = {
     ],
   },
   [PHASES.REFLECTION]: {
-    description: "Learn from mistakes and gather insights",
+    description: "Provide an opportunity to all agents that were part of this conversation to reflect on the work they did.",
     goal: "Reflect on the work done, learn from mistakes, and record valuable insights.",
     whenToUse: [
       "After completing significant work or fixing complex issues",
@@ -156,8 +157,8 @@ export const PHASE_TRANSITIONS = {
   [PHASES.CHAT]: [PHASES.EXECUTE, PHASES.PLAN, PHASES.BRAINSTORM],
   [PHASES.BRAINSTORM]: [PHASES.CHAT, PHASES.PLAN, PHASES.EXECUTE],
   [PHASES.PLAN]: [PHASES.EXECUTE],
-  [PHASES.EXECUTE]: [PHASES.REVIEW, PHASES.CHAT],
-  [PHASES.REVIEW]: [PHASES.CHORES, PHASES.EXECUTE, PHASES.CHAT],
+  [PHASES.EXECUTE]: [PHASES.VERIFICATION, PHASES.CHAT],
+  [PHASES.VERIFICATION]: [PHASES.CHORES, PHASES.EXECUTE, PHASES.CHAT],
   [PHASES.CHORES]: [PHASES.REFLECTION],
   [PHASES.REFLECTION]: [PHASES.CHAT],
 } as const;

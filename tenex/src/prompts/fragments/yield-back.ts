@@ -29,7 +29,7 @@ The 'complete' tool has two parameters:
 ### ⚠️ REMEMBER: Your Work is NOT Done Until You Use 'complete' ⚠️
 
 - In CHAT phase: Use 'complete' when finishing any specific task
-- In PLAN/EXECUTE/REVIEW/CHORES/REFLECTION phases: ALWAYS use 'complete' before stopping
+- In PLAN/EXECUTE/VERIFICATION/CHORES/REFLECTION phases: ALWAYS use 'complete' before stopping
 - Your completion report helps the orchestrator understand what was done and what's next
 - BE EXPLICIT: State clearly what you accomplished, any issues encountered, and next steps
 

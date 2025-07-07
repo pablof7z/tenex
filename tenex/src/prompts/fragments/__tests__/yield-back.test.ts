@@ -30,6 +30,6 @@ describe("yield-back fragment", () => {
     const content = fragment?.template({});
     
     expect(content).toContain("CHAT phase:");
-    expect(content).toContain("PLAN/EXECUTE/REVIEW/CHORES/REFLECTION phases:");
+    expect(content).toContain("PLAN/EXECUTE/VERIFICATION/CHORES/REFLECTION phases:");
   });
 });

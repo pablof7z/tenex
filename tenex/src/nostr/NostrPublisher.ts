@@ -9,12 +9,8 @@ import type { LLMMetadata } from "@/nostr/types";
 import { getProjectContext } from "@/services";
 import type { ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
 import { logger } from "@/utils/logger";
-import type NDK from "@nostr-dev-kit/ndk";
 import {
-  NDKEvent,
-  type NDKPrivateKeySigner,
-  type NDKProject,
-  type NDKTag,
+  NDKEvent, type NDKTag
 } from "@nostr-dev-kit/ndk";
 
 // Tool execution status interface (from ToolExecutionPublisher)
@@ -150,14 +146,20 @@ export class NostrPublisher {
     }
   }
 
-  async publishTypingIndicator(state: "start" | "stop"): Promise<NDKEvent> {
+  async publishTypingIndicator(state: "start" | "stop", message?: string): Promise<NDKEvent> {
     try {
       const { agent } = this.context;
 
       const event = new NDKEvent(getNDK());
       event.kind =
         state === "start" ? EVENT_KINDS.TYPING_INDICATOR : EVENT_KINDS.TYPING_INDICATOR_STOP;
-      event.content = state === "start" ? `${agent.name} is typing` : "";
+      
+      // Use provided message or default
+      if (state === "start") {
+        event.content = message || `${agent.name} is typing`;
+      } else {
+        event.content = "";
+      }
 
       // Add base tags (project, phase)
       this.addBaseTags(event);
@@ -172,6 +174,7 @@ export class NostrPublisher {
         conversationId: this.context.conversation.id,
         author: event.pubkey,
         agent: this.context.agent.name,
+        message: state === "start" ? event.content : undefined,
       });
 
       return event;
@@ -297,12 +300,9 @@ export class NostrPublisher {
     const currentPhase = managerPhase || contextPhase;
     
     logger.info("[NOSTR_PUBLISHER] Adding phase tag", {
-      conversationId: this.context.conversation.id,
       contextPhase,
       managerPhase,
       currentPhase,
-      hasConversationManager: !!this.context.conversationManager,
-      hasManagerConversation: !!managerConversation,
     });
     
     event.tag(["phase", currentPhase]);
@@ -472,20 +472,27 @@ export class StreamPublisher {
         this.scheduledContent = "";
       }
 
-      // Always publish the final event with metadata
-      const finalEvent = await this.publisher.publishResponse({
-        content: this.pendingContent,
-        ...metadata,
-      });
-
-      logger.debug("Finalized streaming response", {
-        totalSequences: this.sequence,
-        agent: this.publisher.context.agent.name,
-      });
-
       this.hasFinalized = true;
 
-      return finalEvent;
+      if (this.pendingContent.trim().length > 0) {
+        // Always publish the final event with metadata
+        const finalEvent = await this.publisher.publishResponse({
+          content: this.pendingContent,
+          ...metadata,
+        });
+
+        logger.debug("Finalized streaming response", {
+          totalSequences: this.sequence,
+          agent: this.publisher.context.agent.name,
+        });
+
+        return finalEvent;
+      }
+
+        logger.debug("Refusing to publish empty response", {
+          totalSequences: this.sequence,
+          agent: this.publisher.context.agent.name,
+        });
     } catch (error) {
       logger.error("Failed to finalize streaming response", {
         agent: this.publisher.context.agent.name,

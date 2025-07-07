@@ -70,7 +70,6 @@ export function useAgentForm() {
             newAgent.title = formState.data.title;
             newAgent.description = formState.data.description;
             newAgent.role = formState.data.role;
-            newAgent.useCriteria = formState.data.useCriteria;
             newAgent.content = formState.data.instructions;
 
             // Add technology tags
@@ -87,6 +86,8 @@ export function useAgentForm() {
                 // New agent starts at version 1
                 newAgent.tags.push(["ver", "1"]);
             }
+
+            newAgent.tags.push(['use-criteria', formState.data.useCriteria])
 
             try {
                 await newAgent.publish();

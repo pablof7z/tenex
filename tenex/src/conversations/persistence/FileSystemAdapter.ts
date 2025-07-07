@@ -7,7 +7,8 @@ import { logger } from "@/utils/logger";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import type { AgentContext, ConversationMetadata as ConvMetadata, Conversation } from "../types";
-import { MetadataFileSchema, SerializedConversationSchema } from "./schemas";
+import { AgentContextSchema, MetadataFileSchema, SerializedConversationSchema } from "./schemas";
+import { z } from "zod";
 import type {
   ConversationMetadata,
   ConversationPersistenceAdapter,
@@ -41,7 +42,7 @@ export class FileSystemAdapter implements ConversationPersistenceAdapter {
       const filePath = this.getConversationPath(conversation.id);
 
       // Convert agentContexts Map to a plain object for serialization
-      const agentContextsObj: Record<string, any> = {};
+      const agentContextsObj: Record<string, z.infer<typeof AgentContextSchema>> = {};
       if (conversation.agentContexts) {
         for (const [key, context] of conversation.agentContexts.entries()) {
           agentContextsObj[key] = {

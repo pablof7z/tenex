@@ -113,25 +113,25 @@ describe("ConversationManager", () => {
                 "plan approved"
             );
 
-            // Third transition: execute -> review
+            // Third transition: execute -> verification
             await manager.updatePhase(
                 conversation.id,
-                "review",
+                "verification",
                 "Implementation complete: Created 5 files, all tests passing",
                 "pm-agent-1",
                 "PM Agent",
-                "ready for review"
+                "ready for verification"
             );
 
             const updated = manager.getConversation(conversation.id);
-            expect(updated?.phase).toBe("review");
+            expect(updated?.phase).toBe("verification");
             expect(updated?.phaseTransitions).toHaveLength(3);
 
             // Verify transition history
             const transitions = updated?.phaseTransitions || [];
             expect(transitions[0]).toMatchObject({ from: "chat", to: "plan" });
             expect(transitions[1]).toMatchObject({ from: "plan", to: "execute" });
-            expect(transitions[2]).toMatchObject({ from: "execute", to: "review" });
+            expect(transitions[2]).toMatchObject({ from: "execute", to: "verification" });
         });
 
         it("should not create transition when phase does not change", async () => {

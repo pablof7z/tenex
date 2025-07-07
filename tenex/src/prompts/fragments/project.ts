@@ -4,7 +4,6 @@ import type { Phase } from "@/conversations/phases";
 import { logger } from "@/utils/logger";
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
-import { getPhaseTransitionInstructions } from "./phase";
 
 // Project inventory context fragment
 interface InventoryContextArgs {

@@ -5,6 +5,7 @@ import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import type { Tool } from "@/tools/types";
 import "@/prompts/fragments/yield-back";
+import "@/prompts/fragments/phase-definitions";
 
 export interface BuildSystemPromptOptions {
   // Required data
@@ -50,14 +51,14 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
     })
     .add("available-agents", {
       agents: availableAgents,
-      currentAgentPubkey: agent.pubkey,
+      currentAgent: agent,
     })
     .add("project-inventory-context", {
       phase,
       inventoryContent, // Pass content directly instead of having fragment read file
-      isProjectManager: agent.role === "Project Knowledge Expert", // Check if this is the project-manager
+      isProjectManager: agent.slug === 'project-manager'
     })
-    // Move phase context and constraints to system prompt
+    .add("phase-definitions", {})
     .add("phase-context", {
       phase,
       phaseMetadata: conversation?.metadata,

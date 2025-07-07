@@ -1,6 +1,6 @@
 import type { ConversationManager } from "@/conversations/ConversationManager";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import type { CompletionResponse, LLMService, Tool } from "@/llm/types";
+import type { LLMService, StreamEvent, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
 import type { LLMMetadata } from "@/nostr/types";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
@@ -12,7 +12,7 @@ import {
 import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
 import { type ProjectContext, getProjectContext } from "@/services";
 import { mcpService } from "@/services/mcp/MCPService";
-import type { ContinueFlow, EndConversation, ToolExecutionResult, YieldBack } from "@/tools/types";
+import type { ContinueFlow, EndConversation, YieldBack } from "@/tools/types";
 import {
   type TracingContext,
   createAgentExecutionContext,
@@ -37,7 +37,6 @@ import { startExecutionTime, stopExecutionTime } from "@/conversations/execution
 
 export class AgentExecutor {
   private reasonActLoop: ReasonActLoop;
-  private projectCtx: ProjectContext;
 
   constructor(
     private llmService: LLMService,
@@ -45,7 +44,6 @@ export class AgentExecutor {
     private conversationManager?: ConversationManager
   ) {
     this.reasonActLoop = new ReasonActLoop(llmService, conversationManager);
-    this.projectCtx = getProjectContext();
   }
 
   /**
@@ -123,55 +121,6 @@ export class AgentExecutor {
       // Build metadata with final response from ReasonActLoop
       const llmMetadata = await buildLLMMetadata(finalResponse, messages);
 
-      // 6. Process routing decisions
-      let phaseTransition: string | undefined;
-
-      if (continueFlow) {
-        phaseTransition = continueFlow.routing.phase;
-
-        logger.info("[AGENT_EXECUTOR] Continue flow detected", {
-          phase: phaseTransition,
-          currentPhase: context.conversation.phase,
-          conversationId: context.conversation.id,
-        });
-        
-        // Phase transition is handled by the continue tool itself
-        // AgentExecutor should NOT update phases
-      }
-
-      // Handle complete/end_conversation tool metadata as a same-phase handoff
-      if (termination && this.conversationManager && !context.agent.isOrchestrator) {
-        logger.info("[AGENT_EXECUTOR] Processing termination handoff", {
-          terminationType: termination.type,
-          contextPhase: context.phase,
-          conversationPhase: context.conversation.phase,
-          agentName: context.agent.name,
-        });
-        // When a non-orchestrator agent completes, create a handoff record for the orchestrator
-        if (termination.type === "complete") {
-          const { response, summary } = termination.completion;
-
-          logger.info("[AGENT_EXECUTOR] Creating handoff from completion tool", {
-            fromAgent: context.agent.name,
-            toOrchestrator: true,
-            summary: `${summary.substring(0, 100)}...`,
-            currentPhase: context.phase,
-            conversationPhase: context.conversation.phase,
-          });
-
-          // Use updatePhase to create a handoff record without changing phase
-          await this.conversationManager.updatePhase(
-            context.conversation.id,
-            context.phase, // Keep the same phase
-            response, // The response becomes the handoff message
-            context.agent.pubkey,
-            context.agent.name,
-            `Task completed by ${context.agent.name}`,
-            summary // Pass the detailed summary to the orchestrator
-          );
-        }
-      }
-
       // Add the agent's response to their context
       if (this.conversationManager && finalContent) {
         await this.conversationManager.addMessageToContext(
@@ -208,8 +157,7 @@ export class AgentExecutor {
           continueFlow,
           termination,
           llmMetadata,
-          tracingContext,
-          phaseTransition
+          tracingContext
         );
       }
 
@@ -404,14 +352,9 @@ export class AgentExecutor {
     continueFlow?: ContinueFlow,
     termination?: YieldBack | EndConversation,
     llmMetadata?: LLMMetadata,
-    tracingContext?: TracingContext,
-    phaseTransition?: string
+    tracingContext?: TracingContext
   ): Promise<NDKEvent> {
-    // Check if this is a phase transition request
     const additionalTags: NDKTag[] = [];
-    if (phaseTransition) {
-      additionalTags.push(["phase", phaseTransition]);
-    }
 
     // This method is now only used as a fallback - should not normally be called
     const publisher = new NostrPublisher({
@@ -442,12 +385,6 @@ export class AgentExecutor {
     publisher?: NostrPublisher
   ): Promise<ReasonActResult> {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
-    let finalResponse: CompletionResponse | undefined;
-    let finalContent = "";
-    const allToolResults: ToolExecutionResult[] = [];
-    let continueFlow: ContinueFlow | undefined;
-    let termination: YieldBack | EndConversation | undefined;
-    let wasPublished = false;
 
     // Process the stream - ReasonActLoop handles all publishing
     const stream = this.reasonActLoop.executeStreaming(
@@ -458,105 +395,22 @@ export class AgentExecutor {
       tools
     );
 
-    for await (const event of stream) {
-      // console.log("stream", {
-      //   agent: context.agent.name,
-      //   messageContent: messages[messages.length - 1]?.content?.substring(0, 40),
-      //   ...event,
-      // });
-      switch (event.type) {
-        case "content":
-          finalContent += event.content;
-          break;
+    // Drain the generator to make it execute.
+    // The generator's return value contains the final result.
+    let iterResult: IteratorResult<StreamEvent, ReasonActResult>;
+    do {
+      iterResult = await stream.next();
+      // All yielded events are handled by ReasonActLoop (e.g., streaming and publishing content).
+      // AgentExecutor only needs the final result.
+    } while (!iterResult.done);
 
-        case "tool_complete": {
-          // Parse the raw result to get the ToolExecutionResult
-          const toolResult = event.result as ToolExecutionResult;
-          allToolResults.push(toolResult);
+    tracingLogger.info("[AGENT_EXECUTOR] Stream completed", {
+      agent: context.agent.name,
+      hasTermination: !!iterResult.value.termination,
+      hasContinueFlow: !!iterResult.value.continueFlow,
+      contentLength: iterResult.value.finalContent.length,
+    });
 
-          // Check if tool execution failed and publish error
-          if (!toolResult.success && toolResult.error && publisher) {
-            try {
-              // Format error message based on error type
-              let errorMessage: string;
-              if (typeof toolResult.error === 'string') {
-                errorMessage = toolResult.error;
-              } else if (toolResult.error && typeof toolResult.error === 'object' && 'message' in toolResult.error) {
-                errorMessage = toolResult.error.message;
-              } else {
-                errorMessage = JSON.stringify(toolResult.error);
-              }
-              
-              await publisher.publishError(
-                `Tool "${event.tool}" failed: ${errorMessage}`
-              );
-              tracingLogger.info("Published tool error to conversation", {
-                tool: event.tool,
-                error: errorMessage,
-              });
-            } catch (error) {
-              tracingLogger.error("Failed to publish tool error", {
-                tool: event.tool,
-                originalError: toolResult.error,
-                publishError: error instanceof Error ? error.message : String(error),
-              });
-            }
-          }
-
-          // Extract control flow and termination from tool results
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const output = toolResult.output as any;
-          if (toolResult.success && output?.type === "continue" && output?.routing) {
-            // Only accept ContinueFlow, not other control flow types
-            continueFlow = output as ContinueFlow;
-          } else if (
-            toolResult.success &&
-            (output?.type === "complete" || output?.type === "end_conversation")
-          ) {
-            termination = output as (YieldBack | EndConversation);
-          }
-          break;
-        }
-
-        case "done":
-          finalResponse = event.response;
-          // Extract continueFlow and termination from done event if not already set
-          if (!continueFlow && (event as any).continueFlow) {
-            continueFlow = (event as any).continueFlow;
-            logger.info("[AGENT_EXECUTOR] Extracted continueFlow from done event", {
-              phase: continueFlow?.routing.phase,
-              agents: continueFlow?.routing.agents,
-            });
-          }
-          if (!termination && (event as any).termination) {
-            termination = (event as any).termination;
-          }
-          // The ReasonActLoop always publishes responses when it completes
-          wasPublished = true;
-          break;
-
-        case "error":
-          // Handle streaming error explicitly
-          tracingLogger.error("Stream reported error", {
-            agentName: context.agent.name,
-            error: event.error,
-          });
-          // Set error content and throw to be caught by outer try/catch
-          finalContent = event.error || "An error occurred during processing";
-          throw new Error(`Streaming failed: ${event.error}`);
-      }
-    }
-
-    return {
-      finalResponse:
-        finalResponse ||
-        ({ type: "text", content: finalContent, toolCalls: [] } as CompletionResponse),
-      finalContent,
-      toolExecutions: allToolResults.length,
-      allToolResults,
-      continueFlow,
-      termination,
-      wasPublished,
-    };
+    return iterResult.value;
   }
 }

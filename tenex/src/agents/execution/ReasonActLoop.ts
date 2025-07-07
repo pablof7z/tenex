@@ -4,6 +4,7 @@ import type { NostrPublisher } from "@/nostr/NostrPublisher";
 import { StreamPublisher } from "@/nostr/NostrPublisher";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type { ToolExecutionResult, ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
+import type { ControlFlow, Termination, RoutingDecision, CompletionSummary, ConversationResult } from "@/tools/core";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -42,9 +43,83 @@ export interface ReasonActResult {
   wasPublished?: boolean;
 }
 
+// Type guards for tool outputs
+function isContinueFlow(output: unknown): output is ContinueFlow {
+  return (
+    typeof output === "object" &&
+    output !== null &&
+    "type" in output &&
+    output.type === "continue" &&
+    "routing" in output &&
+    isRoutingDecision(output.routing)
+  );
+}
+
+function isRoutingDecision(routing: unknown): routing is RoutingDecision {
+  return (
+    typeof routing === "object" &&
+    routing !== null &&
+    "agents" in routing &&
+    Array.isArray(routing.agents) &&
+    routing.agents.length > 0 &&
+    "reason" in routing &&
+    typeof routing.reason === "string" &&
+    "message" in routing &&
+    typeof routing.message === "string"
+  );
+}
+
+function isYieldBack(output: unknown): output is YieldBack {
+  return (
+    typeof output === "object" &&
+    output !== null &&
+    "type" in output &&
+    output.type === "complete" &&
+    "completion" in output &&
+    isCompletionSummary(output.completion)
+  );
+}
+
+function isCompletionSummary(completion: unknown): completion is CompletionSummary {
+  return (
+    typeof completion === "object" &&
+    completion !== null &&
+    "response" in completion &&
+    typeof completion.response === "string" &&
+    "summary" in completion &&
+    typeof completion.summary === "string" &&
+    "nextAgent" in completion &&
+    typeof completion.nextAgent === "string"
+  );
+}
+
+function isEndConversation(output: unknown): output is EndConversation {
+  return (
+    typeof output === "object" &&
+    output !== null &&
+    "type" in output &&
+    output.type === "end_conversation" &&
+    "result" in output &&
+    isConversationResult(output.result)
+  );
+}
+
+function isConversationResult(result: unknown): result is ConversationResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "response" in result &&
+    typeof result.response === "string" &&
+    "summary" in result &&
+    typeof result.summary === "string" &&
+    "success" in result &&
+    typeof result.success === "boolean"
+  );
+}
+
 export class ReasonActLoop {
   private static readonly MAX_ITERATIONS = 3;
-  private static readonly COMPLETE_REMINDER_KEY = "_complete_reminder_sent";
+  private static readonly MAX_TERMINATION_ATTEMPTS = 2;
 
   constructor(
     private llmService: LLMService,
@@ -64,91 +139,132 @@ export class ReasonActLoop {
     this.logStreamingStart(tracingLogger, context, tools);
 
     try {
-      const stream = this.createLLMStream(context, messages, tools, publisher);
-      const streamPublisher = this.setupStreamPublisher(publisher, tracingLogger, context);
+      // Check if this agent requires termination enforcement
+      const isChatPhase = context.phase === 'chat';
+      const isBrainstormPhase = context.phase === "brainstorm";
+      const requiresTerminationEnforcement = !isChatPhase && !isBrainstormPhase;
 
-      yield* this.processStreamEvents(
-        stream,
-        state,
-        streamPublisher,
-        publisher,
-        tracingLogger,
-        context
-      );
+      tracingLogger.info("🚀 Starting executeStreaming with termination enforcement check", {
+        agent: context.agent.name,
+        isOrchestrator: context.agent.isOrchestrator,
+        phase: context.phase,
+        requiresTerminationEnforcement,
+        reason: `phase is ${context.phase}`
+      });
 
-      await this.finalizeStream(streamPublisher, state, context, messages, tracingLogger);
-      
-      // Multi-layered guardrail for non-orchestrator agents
-      if (!context.agent.isOrchestrator && !state.termination && !state.continueFlow) {
-        // Check if this is already a reminder attempt
-        const lastMessage = messages[messages.length - 1];
-        const reminderAlreadySent = lastMessage?.content?.includes("you haven't used the 'complete' tool yet");
+      let currentMessages = messages;
+      let attempt = 0;
+
+      // Allow up to MAX_TERMINATION_ATTEMPTS attempts for proper termination
+      while (attempt < ReasonActLoop.MAX_TERMINATION_ATTEMPTS) {
+        attempt++;
         
-        if (!reminderAlreadySent) {
-          // Layer 1: Send reminder
-          tracingLogger.info("Non-orchestrator agent did not call complete(), sending reminder");
-          
-          // Add a system message reminding the agent to complete
-          const reminderMessages = [
-            ...messages, 
-            new Message("assistant", state.fullContent),
-            new Message("user", "I see you've finished responding, but you haven't used the 'complete' tool yet. As a non-orchestrator agent, you MUST use the 'complete' tool to signal that your work is done and report back to the orchestrator. Please use the 'complete' tool now with a summary of what you accomplished.")
-          ];
-          
-          // Make another LLM call with the reminder
-          const reminderStream = this.createLLMStream(context, reminderMessages, tools, publisher);
-          
-          // Store the original content before resetting
-          const originalContent = state.fullContent;
-          
-          // Reset state for the reminder attempt
+        tracingLogger.info(`🔄 Termination attempt ${attempt}/${ReasonActLoop.MAX_TERMINATION_ATTEMPTS}`, {
+          agent: context.agent.name,
+          phase: context.phase,
+          isOrchestrator: context.agent.isOrchestrator,
+          requiresTerminationEnforcement,
+          messageCount: currentMessages.length
+        });
+        
+        // Create stream for this attempt
+        const stream = this.createLLMStream(context, currentMessages, tools, publisher);
+        const streamPublisher = attempt === 1 
+          ? this.setupStreamPublisher(publisher, tracingLogger, context)
+          : state.streamPublisher; // Reuse existing stream publisher for reminder
+
+        // Reset state for new attempt (but keep streamPublisher)
+        if (attempt > 1) {
+          tracingLogger.info("🔄 Resetting state for reminder attempt", {
+            previousContent: state.fullContent.substring(0, 100) + "...",
+            hadTermination: !!state.termination,
+            hadContinueFlow: !!state.continueFlow
+          });
           state.fullContent = "";
           state.finalResponse = undefined;
           state.termination = undefined;
           state.continueFlow = undefined;
-          
-          // Process the reminder stream
-          yield* this.processStreamEvents(
-            reminderStream,
-            state,
-            streamPublisher,
-            publisher,
-            tracingLogger,
-            context
-          );
-          
-          // Finalize again with the new state
-          await this.finalizeStream(streamPublisher, state, context, reminderMessages, tracingLogger);
-          
-          // Layer 2: Auto-complete if agent still didn't comply
-          if (!state.termination && !state.continueFlow) {
-            tracingLogger.error("Agent failed to call complete() even after reminder - auto-completing", {
-              agent: context.agent.name,
-              phase: context.phase,
-              conversationId: context.conversationId
-            });
-            
-            // Create auto-completion
-            const autoCompleteContent = state.fullContent || originalContent || "Task completed";
-            state.termination = {
-              type: "complete",
-              completion: {
-                response: autoCompleteContent,
-                summary: "Agent completed its turn but failed to call the complete tool after a reminder. [Auto-completed by system]",
-                nextAgent: context.conversation.history[0]?.pubkey || "" // Orchestrator pubkey
-              }
-            };
-            
-            // Update the final response to include the auto-completion
-            state.fullContent = autoCompleteContent;
-          }
-        } else {
-          // This was already a reminder attempt that failed - should not happen with Layer 2
-          tracingLogger.error("Critical: Agent in reminder loop - this should not happen with auto-completion", undefined, {
-            agent: context.agent.name
-          });
+          state.allToolResults = [];
         }
+
+        // Process the stream
+        yield* this.processStreamEvents(
+          stream,
+          state,
+          streamPublisher,
+          publisher,
+          tracingLogger,
+          context
+        );
+
+        // Finalize the stream
+        await this.finalizeStream(streamPublisher, state, context, currentMessages, tracingLogger);
+
+        // Check if termination is correct
+        const hasTerminated = state.termination || state.continueFlow;
+        
+        tracingLogger.info("📊 Termination check after attempt", {
+          attempt,
+          hasTerminated,
+          hasTermination: !!state.termination,
+          hasContinueFlow: !!state.continueFlow,
+          terminationType: state.termination?.type,
+          continueAgents: state.continueFlow?.routing?.agents,
+          requiresTerminationEnforcement,
+          contentLength: state.fullContent.length,
+          toolCallCount: state.allToolResults.length
+        });
+        
+        // If terminated properly, we're done
+        if (hasTerminated || !requiresTerminationEnforcement) {
+          tracingLogger.info("✅ Termination successful or not required", {
+            hasTerminated,
+            requiresTerminationEnforcement,
+            reason: hasTerminated ? "Agent called terminal tool" : "Termination not enforced for this context"
+          });
+          break;
+        }
+
+        // If this is the last attempt, auto-complete
+        if (attempt === ReasonActLoop.MAX_TERMINATION_ATTEMPTS) {
+          tracingLogger.info("⚠️ Max attempts reached, auto-completing", {
+            agent: context.agent.name,
+            phase: context.phase
+          });
+          this.autoCompleteTermination(state, context, tracingLogger);
+          break;
+        }
+
+        // Otherwise, prepare reminder for next attempt
+        tracingLogger.info(`📢 ${context.agent.isOrchestrator ? "Orchestrator" : "Non-orchestrator"} agent did not call terminal tool, preparing reminder`, {
+          agent: context.agent.name,
+          phase: context.phase,
+          attempt,
+          currentContentPreview: state.fullContent.substring(0, 100) + "..."
+        });
+
+        const reminderMessage = this.getReminderMessage(context);
+        tracingLogger.info("📝 Reminder message prepared", {
+          messagePreview: reminderMessage.substring(0, 100) + "...",
+          previousMessageCount: currentMessages.length
+        });
+        
+        currentMessages = [
+          ...currentMessages,
+          new Message("assistant", state.fullContent),
+          new Message("user", reminderMessage)
+        ];
       }
+      
+      tracingLogger.info("🏁 Creating final event", {
+        hasTermination: !!state.termination,
+        hasContinueFlow: !!state.continueFlow,
+        terminationType: state.termination?.type,
+        continueAgents: state.continueFlow?.routing?.agents,
+        contentLength: state.fullContent.length,
+        agent: context.agent.name,
+        phase: context.phase
+      });
       
       yield this.createFinalEvent(state);
     } catch (error) {
@@ -262,7 +378,7 @@ export class ReasonActLoop {
           break;
 
         case "tool_start":
-          await this.handleToolStartEvent(streamPublisher, publisher, event.tool, tracingLogger);
+          await this.handleToolStartEvent(streamPublisher, publisher, event.tool, event.args, tracingLogger);
           break;
 
         case "tool_complete": {
@@ -313,10 +429,53 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     toolName: string,
+    toolArgs: Record<string, unknown>,
     tracingLogger: TracingLogger
   ): Promise<void> {
     await streamPublisher?.flush();
-    await this.publishTypingIndicator(publisher, toolName, tracingLogger);
+    
+    // Publish typing indicator with tool information
+    if (publisher) {
+      // Format the tool usage message
+      let message = `@${publisher.context.agent.name} is using ${toolName}`;
+      
+      // Add key parameters to the message
+      if (toolArgs && Object.keys(toolArgs).length > 0) {
+        const keyParams: string[] = [];
+        
+        // Handle common file/path parameters
+        if (toolArgs.file_path || toolArgs.path) {
+          keyParams.push(`${toolArgs.file_path || toolArgs.path}`);
+        } else if (toolArgs.filename) {
+          keyParams.push(`${toolArgs.filename}`);
+        }
+        
+        // Handle other notable parameters
+        if (toolArgs.url && typeof toolArgs.url === 'string') {
+          keyParams.push(`${toolArgs.url}`);
+        }
+        
+        if (toolArgs.query && typeof toolArgs.query === 'string') {
+          keyParams.push(`"${toolArgs.query}"`);
+        }
+        
+        if (toolArgs.pattern && typeof toolArgs.pattern === 'string') {
+          keyParams.push(`pattern: "${toolArgs.pattern}"`);
+        }
+        
+        if (keyParams.length > 0) {
+          message += ` with ${keyParams.join(', ')}`;
+        }
+      }
+      
+      tracingLogger.debug("Publishing typing indicator with tool info", {
+        tool: toolName,
+        hasArgs: Object.keys(toolArgs).length > 0,
+        message
+      });
+      
+      await publisher.publishTypingIndicator("start", message);
+    }
   }
 
   private async handleToolCompleteEvent(
@@ -327,16 +486,61 @@ export class ReasonActLoop {
     tracingLogger: TracingLogger,
     context: ReasonActContext
   ): Promise<boolean> {
+    tracingLogger.info("🛠️ Tool complete event received", {
+      tool: event.tool,
+      agent: context.agent.name,
+      isOrchestrator: context.agent.isOrchestrator,
+      phase: context.phase
+    });
+
     const toolResult = this.parseToolResult(event);
     state.allToolResults.push(toolResult);
+
+    // Check if tool execution failed and publish error
+    if (!toolResult.success && toolResult.error && publisher) {
+      try {
+        // Format error message based on error type
+        let errorMessage: string;
+        if (typeof toolResult.error === 'string') {
+          errorMessage = toolResult.error;
+        } else if (toolResult.error && typeof toolResult.error === 'object' && 'message' in toolResult.error) {
+          errorMessage = (toolResult.error as {message: string}).message;
+        } else {
+          errorMessage = JSON.stringify(toolResult.error);
+        }
+        
+        await publisher.publishError(
+          `Tool "${event.tool}" failed: ${errorMessage}`
+        );
+        tracingLogger.info("Published tool error to conversation", {
+          tool: event.tool,
+          error: errorMessage,
+        });
+      } catch (error) {
+        tracingLogger.error("Failed to publish tool error", {
+          tool: event.tool,
+          originalError: toolResult.error,
+          publishError: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     this.processToolResult(toolResult, state, tracingLogger, context);
 
     await streamPublisher?.flush();
-    await this.stopTypingIndicator(publisher, event.tool, tracingLogger);
+    publisher?.publishTypingIndicator("stop");
 
     // Check if this is a terminal tool
     const isTerminal = this.isTerminalResult(toolResult);
+    
+    tracingLogger.info("🔍 Terminal tool check", {
+      tool: event.tool,
+      isTerminal,
+      hasTermination: !!state.termination,
+      hasContinueFlow: !!state.continueFlow,
+      terminationType: state.termination?.type,
+      agent: context.agent.name
+    });
 
     return isTerminal;
   }
@@ -365,31 +569,41 @@ export class ReasonActLoop {
     tracingLogger: TracingLogger,
     context: ReasonActContext
   ): void {
+    tracingLogger.info("🔧 Processing tool result", {
+      success: toolResult.success,
+      hasOutput: !!toolResult.output,
+      outputType: toolResult.output && typeof toolResult.output === "object" && toolResult.output !== null && "type" in toolResult.output ? String(toolResult.output.type) : "none",
+      agent: context.agent.name,
+      isOrchestrator: context.agent.isOrchestrator
+    });
+
     if (!toolResult.success || !toolResult.output) {
+      tracingLogger.info("⚠️ Tool result unsuccessful or missing output", {
+        success: toolResult.success,
+        hasOutput: !!toolResult.output
+      });
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = toolResult.output as any;
+    const output = toolResult.output;
 
     // Check if it's a continue flow
-    if (output.type === "continue" && output.routing) {
+    if (isContinueFlow(output)) {
       // Only process the first continue
       if (state.continueFlow) {
         tracingLogger.info("⚠️ Multiple continue calls detected - ignoring additional calls", {
           existingAgents: state.continueFlow.routing.agents,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          newAgents: (output.routing as any).agents,
+          newAgents: output.routing.agents,
         });
         return;
       }
 
-      state.continueFlow = output as ContinueFlow;
+      state.continueFlow = output;
       tracingLogger.info("🔄 Continue routing detected in streaming", {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        agents: (output.routing as any).agents,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        phase: (output.routing as any).phase,
+        agents: output.routing.agents,
+        phase: output.routing.phase,
+        agent: context.agent.name,
+        isOrchestrator: context.agent.isOrchestrator
       });
 
       // Increment continue call count
@@ -407,19 +621,28 @@ export class ReasonActLoop {
     }
 
     // Check if it's a termination (complete or end_conversation)
-    if (output.type === "complete" && output.completion) {
-      state.termination = output as YieldBack;
-      tracingLogger.info("✅ Termination detected in streaming", {
+    if (isYieldBack(output)) {
+      state.termination = output;
+      tracingLogger.info("✅ Complete termination detected in streaming", {
         type: output.type,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        hasResponse: !!(output.completion as any).response,
+        hasResponse: !!output.completion.response,
+        summaryPreview: (output.completion.summary || "").substring(0, 50) + "...",
+        agent: context.agent.name,
+        isOrchestrator: context.agent.isOrchestrator
       });
-    } else if (output.type === "end_conversation" && output.result) {
-      state.termination = output as EndConversation;
-      tracingLogger.info("✅ Termination detected in streaming", {
+    } else if (isEndConversation(output)) {
+      state.termination = output;
+      tracingLogger.info("✅ End conversation termination detected in streaming", {
         type: output.type,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        hasResponse: !!(output.result as any).response,
+        hasResponse: !!output.result.response,
+        summaryPreview: (output.result.summary || "").substring(0, 50) + "...",
+        agent: context.agent.name,
+        isOrchestrator: context.agent.isOrchestrator
+      });
+    } else {
+      tracingLogger.info("ℹ️ Tool result not a terminal tool", {
+        outputType: typeof output === "object" && output !== null && "type" in output ? String(output.type) : "unknown",
+        agent: context.agent.name
       });
     }
   }
@@ -506,6 +729,57 @@ export class ReasonActLoop {
     });
   }
 
+  private getReminderMessage(context: ReasonActContext): string {
+    if (context.agent.isOrchestrator) {
+      return `I see you've finished responding, but you haven't used the 'continue' or 'end_conversation' tool yet. As the orchestrator in the ${context.phase} phase, you MUST either:
+- Use the 'continue' tool to route to appropriate agents for the next task
+- Use the 'end_conversation' tool if all work is complete and you're ready to end the conversation
+Please use one of these tools now.`;
+    } else {
+      return "I see you've finished responding, but you haven't used the 'complete' tool yet. As a non-orchestrator agent, you MUST use the 'complete' tool to signal that your work is done and report back to the orchestrator. Please use the 'complete' tool now with a summary of what you accomplished.";
+    }
+  }
+
+  private autoCompleteTermination(
+    state: StreamingState,
+    context: ReasonActContext,
+    tracingLogger: TracingLogger
+  ): void {
+    tracingLogger.error(`${context.agent.isOrchestrator ? "Orchestrator" : "Agent"} failed to call terminal tool even after reminder - auto-completing`, {
+      agent: context.agent.name,
+      phase: context.phase,
+      conversationId: context.conversationId,
+      isOrchestrator: context.agent.isOrchestrator
+    });
+    
+    const autoCompleteContent = state.fullContent || "Task completed";
+    
+    if (context.agent.isOrchestrator) {
+      // For orchestrator, we'll auto-end the conversation
+      state.termination = {
+        type: "end_conversation",
+        result: {
+          response: autoCompleteContent,
+          summary: `Orchestrator in ${context.phase} phase completed its turn but failed to call continue or end_conversation after a reminder. [Auto-ended by system]`,
+          success: true
+        }
+      };
+    } else {
+      // For non-orchestrator, complete back to orchestrator
+      state.termination = {
+        type: "complete",
+        completion: {
+          response: autoCompleteContent,
+          summary: "Agent completed its turn but failed to call the complete tool after a reminder. [Auto-completed by system]",
+          nextAgent: context.conversation.history[0]?.pubkey || "" // Orchestrator pubkey
+        }
+      };
+    }
+    
+    // Update the final response to include the auto-completion
+    state.fullContent = autoCompleteContent;
+  }
+
   private createFinalEvent(state: StreamingState): StreamEvent {
     const baseEvent: StreamEvent = {
       type: "done",
@@ -545,7 +819,7 @@ export class ReasonActLoop {
       }
     }
 
-    await this.stopTypingIndicator(publisher, "error", tracingLogger);
+    publisher?.publishTypingIndicator("stop");
 
     yield {
       type: "error",
@@ -553,39 +827,4 @@ export class ReasonActLoop {
     };
   }
 
-  private async publishTypingIndicator(
-    publisher: NostrPublisher | undefined,
-    toolName: string,
-    tracingLogger: TracingLogger
-  ): Promise<void> {
-    if (!publisher) return;
-
-    try {
-      await publisher.publishTypingIndicator("start");
-      tracingLogger.debug(`Typing indicator started for tool: ${toolName}`);
-    } catch (error) {
-      tracingLogger.error("Failed to publish typing indicator", {
-        tool: toolName,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  private async stopTypingIndicator(
-    publisher: NostrPublisher | undefined,
-    toolName: string,
-    tracingLogger: TracingLogger
-  ): Promise<void> {
-    if (!publisher) return;
-
-    try {
-      await publisher.publishTypingIndicator("stop");
-      tracingLogger.debug(`Typing indicator stopped for tool: ${toolName}`);
-    } catch (error) {
-      tracingLogger.error("Failed to stop typing indicator", {
-        tool: toolName,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
 }

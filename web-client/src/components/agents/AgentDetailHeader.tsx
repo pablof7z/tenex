@@ -9,6 +9,7 @@ interface AgentDetailHeaderProps {
     lessonCount: number;
     onTabChange: (tab: "details" | "lessons") => void;
     onBack: () => void;
+    onEdit: () => void;
 }
 
 export function AgentDetailHeader({
@@ -17,6 +18,7 @@ export function AgentDetailHeader({
     lessonCount,
     onTabChange,
     onBack,
+    onEdit,
 }: AgentDetailHeaderProps) {
     const [copiedId, setCopiedId] = useState(false);
 
@@ -72,6 +74,7 @@ export function AgentDetailHeader({
                         <Button
                             variant="ghost"
                             size="icon"
+                            onClick={onEdit}
                             className="w-8 h-8 sm:w-9 sm:h-9"
                             title="Edit Agent"
                         >

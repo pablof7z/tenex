@@ -10,11 +10,12 @@ import { AgentLessonsTab } from "./AgentLessonsTab";
 interface AgentDetailPageProps {
     agent: NDKAgent;
     onBack: () => void;
+    onEdit: () => void;
 }
 
 type TabType = "details" | "lessons";
 
-export function AgentDetailPage({ agent, onBack }: AgentDetailPageProps) {
+export function AgentDetailPage({ agent, onBack, onEdit }: AgentDetailPageProps) {
     const [activeTab, setActiveTab] = useState<TabType>("details");
 
     // Fetch lessons for this agent (kind 4129)
@@ -39,6 +40,7 @@ export function AgentDetailPage({ agent, onBack }: AgentDetailPageProps) {
                 lessonCount={lessons.length}
                 onTabChange={setActiveTab}
                 onBack={onBack}
+                onEdit={onEdit}
             />
 
             {/* Tab Content */}
