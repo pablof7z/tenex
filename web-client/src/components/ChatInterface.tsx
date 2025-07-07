@@ -740,10 +740,11 @@ export function ChatInterface({
                     open={showVoiceDialog}
                     onOpenChange={setShowVoiceDialog}
                     project={project}
-                    onMessageSent={() => {
+                    onTranscriptionComplete={(text) => {
+                        setMessageInput(text);
                         setShowVoiceDialog(false);
-                        // Voice messages are published directly by the dialog
-                        // No need to handle the transcription here
+                        // Focus the textarea after setting the text
+                        setTimeout(() => textareaRef.current?.focus(), 100);
                     }}
                 />
             )}
