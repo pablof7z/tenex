@@ -5,72 +5,71 @@ describe("Orchestrator Routing - Clarity-Based Decision Making", () => {
   it("should contain request clarity assessment instructions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("Request Clarity Assessment");
-    expect(result).toContain("Well-defined request:");
-    expect(result).toContain("Ambiguous request:");
-    expect(result).toContain("Vague/exploratory request:");
+    expect(result).toContain("Request Assessment");
+    expect(result).toContain("Clear requests");
+    expect(result).toContain("Ambiguous requests");
+    expect(result).toContain("Exploratory requests");
   });
 
   it("should specify clarity-based routing actions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    // Well-defined requests
-    expect(result).toContain("Action: Route directly to @executer (skip PLAN phase)");
+    // Clear requests
+    expect(result).toContain("Route directly to execute phase");
     
     // Ambiguous requests
-    expect(result).toContain("Action: Route to @planner first");
+    expect(result).toContain("Route to plan phase first");
     
-    // Vague requests
-    expect(result).toContain("Action: Route to BRAINSTORM phase");
+    // Exploratory requests
+    expect(result).toContain("Route to brainstorm phase");
   });
 
   it("should contain mandatory double-consultation instructions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("Mandatory Double-Consultation in Plan/Execute Phases");
-    expect(result).toContain("you MUST always consult at least twice");
-    expect(result).toContain("Even without specialist agents, self-review provides valuable quality assurance");
+    expect(result).toContain("Minimum Continue Call Requirements:");
+    expect(result).toContain("You MUST use the continue tool at least TWICE");
+    expect(result).toContain("If no domain experts are available, route back to the default agent");
   });
 
   it("should contain availability-based review strategy", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("Availability-Based Review Strategy:");
-    expect(result).toContain("If relevant experts exist: Route to them for domain-specific review");
-    expect(result).toContain("If no relevant experts: Ask @executer to self-review their work");
-    expect(result).toContain("If multiple relevant experts: Query them in parallel for comprehensive feedback");
+    expect(result).toContain("Quality Control in Execute and Plan Phases");
+    expect(result).toContain("Request review or validation of the work");
+    expect(result).toContain("route back to the default agent (planner/executor) for self-assessment");
+    expect(result).toContain("Request domain-specific review from experts or self-assessment");
   });
 
   it("should enforce mandatory post-execute phases", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("After EXECUTE: Always proceed to REVIEW (mandatory)");
-    expect(result).toContain("CHORES to REFLECTION) are mandatory");
-    expect(result).toContain("Never skip review after execute");
+    expect(result).toContain("After execution work, you MUST proceed through REVIEW → CHORES → REFLECTION");
+    expect(result).toContain("REVIEW Phase** (recommended after execute)");
+    expect(result).toContain("Only skip if**: User explicitly requests to skip");
   });
 
   it("should specify orchestrator end_conversation() usage", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("In REFLECTION phase: Use end_conversation() to provide a comprehensive summary of the entire workflow");
-    expect(result).toContain("ONLY when the ENTIRE task is finished and ALL post-execute phases are completed");
+    expect(result).toContain("Use end_conversation() ONLY when ALL necessary phases are complete");
+    expect(result).toContain("Include final summary of the entire conversation");
   });
 
   it("should contain feedback collection instructions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("Collecting Agent Summaries:");
+    expect(result).toContain("Agent Completion Handoffs");
     expect(result).toContain("When agents use complete(), they provide detailed summaries of their work");
-    expect(result).toContain("Forward feedback verbatim when routing back for fixes");
+    expect(result).toContain("Collect these summaries to build context for subsequent routing decisions");
   });
 
   it("should specify review-execute feedback loop", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("Review Decision Point:");
-    expect(result).toContain("Issues Found ---> Loop back to EXECUTE (with specific feedback)");
-    expect(result).toContain("Work Acceptable ---> Proceed to CHORES");
-    expect(result).toContain("Continue loop until acceptable");
+    expect(result).toContain("If issues found: Loop back to execute");
+    expect(result).toContain("If acceptable: Proceed to chores");
+    expect(result).toContain("Quality assessment and validation from end-user perspective");
   });
 });
 
@@ -89,7 +88,7 @@ describe("Orchestrator Handoff Guidance", () => {
     
     expect(result).toContain("Agent Capabilities Match");
     expect(result).toContain("When to Use Multi-Agent Queries");
-    expect(result).toContain("What expertise is most critical right now?");
+    expect(result).toContain("Gathering specialized knowledge from domain experts");
   });
 });
 
@@ -97,32 +96,32 @@ describe("Orchestrator No Assumptions Principle", () => {
   it("should explicitly forbid adding assumptions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("CRITICAL: NO GUESSING OR ASSUMPTIONS");
-    expect(result).toContain("ONLY pass information that was EXPLICITLY stated by the user");
-    expect(result).toContain("Never guess features, requirements, or implementation details");
+    expect(result).toContain("Pass ONLY what the user explicitly stated");
+    expect(result).toContain("Never add assumptions");
+    expect(result).toContain("Let specialist agents ask for clarification if needed");
   });
 
   it("should provide clear examples of no assumptions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
     // Should show calculator example
-    expect(result).toContain('"build a calculator" → Pass exactly "build a calculator"');
-    expect(result).toContain("do NOT add \"with basic arithmetic operations\"");
+    expect(result).toContain('"Build a calculator" → Pass exactly "@executor, build a calculator"');
+    expect(result).toContain("Never add assumptions like \"with basic operations\" or \"follow best practices\"");
   });
 
   it("should show BAD examples of adding assumptions", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("BAD Examples - Adding Assumptions (DO NOT DO THIS)");
-    expect(result).toContain("❌ User said \"build a calculator\" but you added assumptions");
-    expect(result).toContain("❌ User said \"add login\" but you added security assumptions");
+    expect(result).toContain("Never add assumptions like \"with basic operations\" or \"follow best practices\"");
+    expect(result).toContain("Pass ONLY what the user explicitly stated");
+    expect(result).toContain("Let specialist agents ask for clarification if needed");
   });
 
   it("should emphasize passing only explicit user statements", () => {
     const result = orchestratorRoutingInstructionsFragment.template();
     
-    expect(result).toContain("Message Quality - NO ASSUMPTIONS:");
-    expect(result).toContain("Pass the user's exact words");
-    expect(result).toContain("Aggregate ONLY explicit statements");
+    expect(result).toContain("Message Passing Rules:");
+    expect(result).toContain("Pass ONLY what the user explicitly stated");
+    expect(result).toContain("Prefix messages with the target agent's slug using @ notation");
   });
 });
