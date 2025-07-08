@@ -21,14 +21,15 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
     if (agent.isOrchestrator) {
       // Orchestrator agents get limited tools (no claude_code or shell)
       tools = [
-        analyze.name,
         endConversationTool.name,
         continueTool.name,
-        generateInventoryTool.name,
         learnTool.name,
       ];
+    } else if (agent.slug === "planner" || agent.slug === "executor") {
+      // Planner and executor only get claude_code and complete tools
+      tools = [claudeCodeTool.name, completeTool.name];
     } else {
-      // Non-orchestrator agents use complete tool to signal task completion
+      // Other non-orchestrator agents use complete tool to signal task completion
       tools.push(claudeCodeTool.name, completeTool.name);
 
       if (agent.slug === "project-manager") {

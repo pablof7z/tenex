@@ -14,12 +14,13 @@ describe("Tool assignment", () => {
             const tools = getDefaultToolsForAgent(mockAgent);
             
             expect(tools).not.toContain("complete");
-            expect(tools).toContain("analyze");
+            expect(tools).not.toContain("analyze");
             expect(tools).toContain("end_conversation");
             expect(tools).toContain("continue");
+            expect(tools).toContain("learn");
         });
 
-        it("non-orchestrator built-in agents should have complete tool", () => {
+        it("planner and executor agents should only have claude_code and complete tools", () => {
             const mockExecutor = {
                 isOrchestrator: false,
                 isBuiltIn: true,
@@ -34,13 +35,23 @@ describe("Tool assignment", () => {
             const executorTools = getDefaultToolsForAgent(mockExecutor);
             const plannerTools = getDefaultToolsForAgent(mockPlanner);
             
+            // Executor should only have claude_code and complete
+            expect(executorTools).toContain("claude_code");
             expect(executorTools).toContain("complete");
+            expect(executorTools).not.toContain("analyze");
+            expect(executorTools).not.toContain("read_file");
             expect(executorTools).not.toContain("end_conversation");
             expect(executorTools).not.toContain("continue");
+            expect(executorTools.length).toBe(2);
             
+            // Planner should only have claude_code and complete
+            expect(plannerTools).toContain("claude_code");
             expect(plannerTools).toContain("complete");
+            expect(plannerTools).not.toContain("analyze");
+            expect(plannerTools).not.toContain("read_file");
             expect(plannerTools).not.toContain("end_conversation");
             expect(plannerTools).not.toContain("continue");
+            expect(plannerTools.length).toBe(2);
         });
 
         it("custom agents should have complete tool", () => {
