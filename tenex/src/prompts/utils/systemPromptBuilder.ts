@@ -4,7 +4,6 @@ import type { Conversation } from "@/conversations/types";
 import type { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import type { Tool } from "@/tools/types";
-import "@/prompts/fragments/yield-back";
 import "@/prompts/fragments/phase-definitions";
 
 export interface BuildSystemPromptOptions {
@@ -20,7 +19,6 @@ export interface BuildSystemPromptOptions {
   agentLessons?: Map<string, NDKAgentLesson[]>;
   mcpTools?: Tool[];
   claudeCodeReport?: string;
-  inventoryContent?: string;
 }
 
 /**
@@ -38,7 +36,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
     agentLessons,
     mcpTools = [],
     claudeCodeReport,
-    inventoryContent,
   } = options;
 
   // Build system prompt with all agent and phase context
@@ -52,12 +49,24 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
     .add("available-agents", {
       agents: availableAgents,
       currentAgent: agent,
-    })
-    .add("project-inventory-context", {
+    });
+
+  // Add project inventory context only for non-orchestrator agents
+  if (!agent.isOrchestrator) {
+    systemPromptBuilder.add("project-inventory-context", {
       phase,
-      inventoryContent, // Pass content directly instead of having fragment read file
-      isProjectManager: agent.slug === 'project-manager'
-    })
+    });
+    
+    // Add PROJECT.md fragment only for project-manager
+    if (agent.slug === 'project-manager') {
+      systemPromptBuilder.add("project-md", {
+        projectPath: process.cwd(),
+        currentAgent: agent
+      });
+    }
+  }
+
+  systemPromptBuilder
     .add("phase-definitions", {})
     .add("phase-context", {
       phase,
@@ -73,8 +82,8 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
       conversation,
       agentLessons: agentLessons || new Map(),
     })
-    .add("learn-tool-directive", {
-      hasLearnTool: agent.tools?.some((tool) => tool.name === "learn") ?? false,
+    .add("agent-tools", {
+      agent,
     })
     .add("mcp-tools", {
       tools: mcpTools,
@@ -85,7 +94,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
   if (agent.isOrchestrator) {
     systemPromptBuilder
       .add("orchestrator-routing-instructions", {})
-      .add("orchestrator-handoff-guidance", {});
 
     // Add Claude Code report fragment if we have one
     if (claudeCodeReport) {
@@ -99,9 +107,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
       agentRole: agent.role,
       isOrchestrator: false,
     });
-    
-    // Add yield-back instructions for non-orchestrator agents
-    systemPromptBuilder.add("yield-back", {});
   }
 
   return systemPromptBuilder.build();

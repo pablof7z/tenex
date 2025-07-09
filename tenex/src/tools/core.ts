@@ -52,6 +52,7 @@ export interface Tool<Input = unknown, Output = unknown> {
   readonly name: string;
   readonly description: string;
   readonly parameters: ParameterSchema<Input>;
+  readonly promptFragment?: string;
   readonly execute: (input: Validated<Input>, context: ExecutionContext) => Promise<Result<ToolError, Output>>;
 }
 
@@ -62,18 +63,11 @@ export interface Tool<Input = unknown, Output = unknown> {
 /**
  * Control flow decisions that affect execution
  */
-export type ControlFlow = ContinueFlow | DelegateFlow;
+export type ControlFlow = ContinueFlow;
 
 export interface ContinueFlow {
   readonly type: "continue";
   readonly routing: RoutingDecision;
-}
-
-export interface DelegateFlow {
-  readonly type: "delegate";
-  readonly agents: NonEmptyArray<string>;
-  readonly message: string;
-  readonly returnToOrchestrator: boolean;
 }
 
 export interface RoutingDecision {
@@ -87,9 +81,9 @@ export interface RoutingDecision {
 /**
  * Termination types that end execution
  */
-export type Termination = YieldBack | EndConversation;
+export type Termination = Complete | EndConversation;
 
-export interface YieldBack {
+export interface Complete {
   readonly type: "complete";
   readonly completion: CompletionSummary;
 }

@@ -8,13 +8,9 @@ import { createZodSchema } from "../types";
 
 const execAsync = promisify(exec);
 
-const generateInventorySchema = z.object({
-  force: z.boolean().optional().describe("Force regeneration even if inventory already exists"),
-});
+const generateInventorySchema = z.undefined().or(z.null()).or(z.void());
 
-interface GenerateInventoryInput {
-  force?: boolean;
-}
+type GenerateInventoryInput = undefined | null | void;
 
 interface GenerateInventoryOutput {
   message: string;
@@ -29,26 +25,12 @@ export const generateInventoryTool: Tool<GenerateInventoryInput, GenerateInvento
   parameters: createZodSchema(generateInventorySchema),
 
   execute: async (input, context) => {
-      const { force = false } = input.value;
-
       logger.info("Agent requesting inventory generation", {
-        force,
         projectPath: context.projectPath,
       });
 
       // Check if inventory already exists
       const exists = await inventoryExists(context.projectPath);
-      if (exists && !force) {
-        return {
-          ok: true,
-          value: {
-            message:
-              'Project inventory already exists at context/INVENTORY.md. Use {"force": true} to regenerate it.',
-            inventoryExists: true,
-            regenerated: false,
-          },
-        };
-      }
 
       // Check for recently modified files using git status
       let focusFiles: Array<{ path: string; status: string }> | undefined;

@@ -21,6 +21,9 @@ export const endConversationTool: Tool<{
 }, Termination> = {
   name: "end_conversation",
   description: "Conclude the conversation and return final response to the user",
+  promptFragment: `- Use end_conversation() ONLY when ALL necessary phases are complete
+- Ends the conversation permanently with the user
+- Include final summary of the entire conversation`,
 
   parameters: createZodSchema(endConversationSchema),
 

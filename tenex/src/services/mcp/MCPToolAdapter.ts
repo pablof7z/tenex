@@ -3,11 +3,27 @@ import { createZodSchema, mcpSchemaToZod } from "@/tools/zod-schema";
 import { logger } from "@/utils/logger";
 import { z } from "zod";
 
+// Import MCPPropertyDefinition type
+interface MCPPropertyDefinition {
+  type?: "string" | "number" | "integer" | "boolean" | "array" | "object";
+  description?: string;
+  enum?: string[];
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+  items?: MCPPropertyDefinition;
+  properties?: Record<string, MCPPropertyDefinition>;
+  required?: string[];
+  minItems?: number;
+  maxItems?: number;
+}
+
 interface MCPTool {
   name: string;
   description?: string;
   inputSchema?: {
-    properties?: Record<string, unknown>;
+    properties?: Record<string, MCPPropertyDefinition>;
     required?: string[];
   };
 }
@@ -19,7 +35,7 @@ export function adaptMCPTool(
   mcpTool: MCPTool,
   serverName: string,
   executeFn: (args: Record<string, unknown>) => Promise<unknown>
-): Tool {
+): Tool<Record<string, unknown>, unknown> {
   const namespacedName = `mcp__${serverName}__${mcpTool.name}`;
 
   // Convert MCP input schema to Zod schema
@@ -29,7 +45,7 @@ export function adaptMCPTool(
   const schemaWithDescription = zodSchema.describe(`${mcpTool.name} parameters for ${serverName}`);
 
   // Create the parameter schema using our Zod adapter
-  const parameters = createZodSchema(schemaWithDescription);
+  const parameters = createZodSchema<Record<string, unknown>>(schemaWithDescription as z.ZodType<Record<string, unknown>>);
 
   // Create a Tool that wraps the MCP tool
   const tool: Tool<Record<string, unknown>, unknown> = {

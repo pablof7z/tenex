@@ -3,8 +3,7 @@ import chalk from "chalk";
 import { Message } from "multi-llm-ts";
 import type { AgentExecutor } from "../agents/execution/AgentExecutor";
 import type {
-  AgentExecutionContext,
-  AgentExecutionContextWithHandoff,
+  AgentExecutionContextWithHandoff
 } from "../agents/execution/types";
 import type { ConversationManager } from "../conversations";
 import { NostrPublisher } from "../nostr";
@@ -28,12 +27,6 @@ export const handleChatMessage = async (
     chalk.gray("Message: ") +
       chalk.white(event.content.substring(0, 100) + (event.content.length > 100 ? "..." : ""))
   );
-
-  // Check for /debug-routing command
-  if (event.content.trim().startsWith("/debug-routing")) {
-    await handleDebugRoutingCommand(event, context);
-    return;
-  }
 
   // Extract p-tags to identify mentioned agents
   const pTags = event.tags.filter((tag) => tag[0] === "p");
@@ -83,7 +76,7 @@ async function handleReplyLogic(
 ): Promise<void> {
   // Find the conversation this reply belongs to
   const conversation = conversationManager.getConversationByEvent(
-    event.tags.find((tag) => tag[0] === "E")?.[1] || ""
+    event.tagValue("E") || ""
   );
 
   if (!conversation) {
@@ -133,21 +126,6 @@ async function handleReplyLogic(
   if (conversation.phaseTransitions.length > 0) {
     const recentTransition =
       conversation.phaseTransitions[conversation.phaseTransitions.length - 1];
-    logger.info("[HANDOFF_DETECTION] Checking for recent handoff", {
-      conversationId: conversation.id,
-      targetAgent: targetAgent.slug,
-      hasTransitions: conversation.phaseTransitions.length > 0,
-      recentTransition: recentTransition
-        ? {
-            from: recentTransition.from,
-            to: recentTransition.to,
-            agentName: recentTransition.agentName,
-            timestamp: recentTransition.timestamp,
-            ageMs: Date.now() - recentTransition.timestamp,
-            hasHandoffInfo: !!recentTransition.summary,
-          }
-        : null,
-    });
 
     // If this transition was very recent (within last 30 seconds) and has handoff info
     if (
@@ -156,12 +134,6 @@ async function handleReplyLogic(
       recentTransition.summary
     ) {
       handoff = recentTransition;
-      logger.info("[HANDOFF_DETECTION] Found recent handoff for agent", {
-        targetAgent: targetAgent.slug,
-        fromAgent: recentTransition.agentName,
-        handoffAge: Date.now() - recentTransition.timestamp,
-        handoffMessage: `${recentTransition.message.substring(0, 100)}...`,
-      });
     }
   }
 
@@ -223,68 +195,5 @@ async function handleReplyLogic(
         conversation: conversation.id,
       }
     );
-  }
-}
-
-async function handleDebugRoutingCommand(
-  event: NDKEvent,
-  { conversationManager, agentExecutor }: EventHandlerContext
-): Promise<void> {
-  // Extract the request after /debug-routing
-  const request = event.content.replace("/debug-routing", "").trim();
-
-  if (!request) {
-    logger.info("Debug routing command with no request specified");
-    return;
-  }
-
-  // Find the conversation this command belongs to
-  const conversation = conversationManager.getConversationByEvent(
-    event.tags.find((tag) => tag[0] === "E")?.[1] || ""
-  );
-
-  if (!conversation) {
-    logger.error("No conversation found for debug routing command", { eventId: event.id });
-    return;
-  }
-
-  // Add the original event to conversation history
-  await conversationManager.addEvent(conversation.id, event);
-
-  // Get orchestrator agent
-  const projectCtx = getProjectContext();
-  const orchestratorAgent = projectCtx.getProjectAgent();
-
-  // Create a modified event with debug mode flag
-  const debugEvent = {
-    ...event,
-    content: `[DEBUG-ROUTING MODE] ${request}`,
-  } as NDKEvent;
-
-  // Execute with orchestrator in debug mode
-  const result = await agentExecutor.execute(
-    {
-      agent: orchestratorAgent,
-      conversation,
-      phase: conversation.phase,
-    },
-    debugEvent
-  );
-
-  // Handle execution errors
-  if (!result.success && result.error) {
-    const publisher = new NostrPublisher({
-      conversation,
-      agent: orchestratorAgent,
-      triggeringEvent: event,
-      conversationManager,
-    });
-
-    await publisher.publishError(`⚠️ Debug routing failed: ${result.error}`);
-
-    logger.error("Debug routing execution failed", {
-      error: result.error,
-      conversation: conversation.id,
-    });
   }
 }

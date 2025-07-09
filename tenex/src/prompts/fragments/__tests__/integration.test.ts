@@ -48,7 +48,6 @@ describe("Agent Routing Integration", () => {
                 currentAgentPubkey: "pm123",
             })
             .add("orchestrator-routing-instructions", {})
-            .add("orchestrator-handoff-guidance", {})
             .build();
 
         // Should have available agents
@@ -58,8 +57,7 @@ describe("Agent Routing Integration", () => {
 
         // Should have orchestrator routing instructions
         expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
-        expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
-        expect(prompt).toContain("Phase-Based Routing");
+        expect(prompt).toContain("Core Routing Principles");
 
         // Should have handoff guidance
         expect(prompt).toContain("## Agent Selection Guidance");

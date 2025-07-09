@@ -7,7 +7,7 @@ import { getNDK } from "@/nostr";
 import { EXECUTION_TAGS } from "@/nostr/tags";
 import type { LLMMetadata } from "@/nostr/types";
 import { getProjectContext } from "@/services";
-import type { ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
+import type { ContinueFlow, Complete, EndConversation } from "@/tools/types";
 import { logger } from "@/utils/logger";
 import {
   NDKEvent, type NDKTag
@@ -36,15 +36,16 @@ export interface ResponseOptions {
   content: string;
   llmMetadata?: LLMMetadata;
   continueMetadata?: ContinueFlow;
-  completeMetadata?: YieldBack | EndConversation;
+  completeMetadata?: Complete | EndConversation;
   additionalTags?: NDKTag[];
+  destinationPubkeys?: string[];
 }
 
 // Metadata for finalizing stream
 export interface FinalizeMetadata {
   llmMetadata?: LLMMetadata;
   continueMetadata?: ContinueFlow;
-  completeMetadata?: YieldBack | EndConversation;
+  completeMetadata?: Complete | EndConversation;
 }
 
 export class NostrPublisher {
@@ -54,19 +55,8 @@ export class NostrPublisher {
     try {
       const reply = this.createBaseReply();
 
-      // Use the continue message if available, otherwise use the content
-      // This ensures the next agent receives the actual instruction, not a placeholder
-      if (options.continueMetadata?.routing?.message) {
-        reply.content = options.continueMetadata.routing.message;
-      } else if (options.completeMetadata?.type === "complete") {
-        // If we have yield_back metadata with a response, use it
-        reply.content = options.completeMetadata.completion.response;
-      } else if (options.completeMetadata?.type === "end_conversation") {
-        // If we have end_conversation metadata with a response, use it
-        reply.content = options.completeMetadata.result.response;
-      } else {
-        reply.content = options.content;
-      }
+      // Just use the content provided by the caller
+      reply.content = options.content;
 
       // Add metadata tags
       this.addLLMMetadata(reply, options.llmMetadata);
@@ -81,16 +71,11 @@ export class NostrPublisher {
         hasCompleteMetadata: !!options.completeMetadata,
       });
 
-      // Handle routing
-      if (options.continueMetadata?.routing?.agents) {
-        // Add p-tags for all destination agents
-        const agents = options.continueMetadata.routing.agents;
-        for (const pubkey of agents) {
+      // Add p-tags for destination pubkeys if provided
+      if (options.destinationPubkeys) {
+        for (const pubkey of options.destinationPubkeys) {
           reply.tag(["p", pubkey]);
         }
-      } else if (options.completeMetadata?.type === "complete") {
-        // Handle yield_back routing
-        reply.tag(["p", options.completeMetadata.completion.nextAgent]);
       }
 
       // Add any additional tags
@@ -260,22 +245,12 @@ export class NostrPublisher {
   public createBaseReply(): NDKEvent {
     const reply = this.context.triggeringEvent.reply();
 
-    // When the triggering event has the same E and e tags and the author of the triggering event is the author of the thread, we want to mock a chat interface, where
-    // we don't reply in threads. This is a custom behavior; do not change it
-    const PTag = this.context.triggeringEvent.tagValue("P");
+    // When the triggering event has E tag, replace e tag with E tag value
     const ETag = this.context.triggeringEvent.tagValue("E");
-    const eTag = this.context.triggeringEvent.tagValue("e");
-    const pubkey = this.context.triggeringEvent.pubkey;
-
-    // if (PTag === pubkey && ETag === eTag && ETag) {
     if (ETag) {
       reply.removeTag("e");
       reply.tags.push(["e", ETag]);
     }
-    // } else {
-    //     console.log("not replying to root event", { PTag, pubkey, ETag, eTag });
-    //     console.log('event', this.context.triggeringEvent.inspect)
-    // }
 
     reply.tags.push(["triggering-event-id", this.context.triggeringEvent.id]);
     reply.tags.push([
@@ -455,7 +430,7 @@ export class StreamPublisher {
     }, StreamPublisher.FLUSH_DELAY_MS);
   }
 
-  async finalize(metadata: FinalizeMetadata): Promise<NDKEvent> {
+  async finalize(metadata: FinalizeMetadata): Promise<NDKEvent | undefined> {
     if (this.hasFinalized) {
       throw new Error("Stream already finalized");
     }
@@ -475,7 +450,8 @@ export class StreamPublisher {
       this.hasFinalized = true;
 
       if (this.pendingContent.trim().length > 0) {
-        // Always publish the final event with metadata
+        // StreamPublisher only handles text streaming, not terminal tool publishing
+        // Terminal tools publish their own events directly
         const finalEvent = await this.publisher.publishResponse({
           content: this.pendingContent,
           ...metadata,
@@ -489,10 +465,12 @@ export class StreamPublisher {
         return finalEvent;
       }
 
-        logger.debug("Refusing to publish empty response", {
-          totalSequences: this.sequence,
-          agent: this.publisher.context.agent.name,
-        });
+      logger.debug("No content to publish in finalize", {
+        totalSequences: this.sequence,
+        agent: this.publisher.context.agent.name,
+      });
+      
+      return undefined;
     } catch (error) {
       logger.error("Failed to finalize streaming response", {
         agent: this.publisher.context.agent.name,

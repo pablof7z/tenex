@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { configService } from "@/services/ConfigService";
 import type { MCPServerConfig, TenexMCP } from "@/services/config/types";
@@ -32,18 +32,7 @@ const MCPToolsListResponseSchema = z.object({
   tools: z.array(MCPToolSchema),
 });
 
-type MCPToolsListResponse = z.infer<typeof MCPToolsListResponseSchema>;
-
 type MCPTool = z.infer<typeof MCPToolSchema>;
-
-interface MCPToolProperty {
-  type: string;
-  description?: string;
-  default?: unknown;
-  enum?: unknown[];
-  minimum?: number;
-  maximum?: number;
-}
 
 const MCPContentSchema = z.object({
   type: z.string(),
@@ -54,7 +43,6 @@ const MCPToolExecuteResponseSchema = z.object({
   content: z.array(MCPContentSchema).optional(),
 });
 
-type MCPToolExecuteResponse = z.infer<typeof MCPToolExecuteResponseSchema>;
 type MCPContent = z.infer<typeof MCPContentSchema>;
 
 interface StdioTransportWithProcess extends StdioClientTransport {
@@ -180,7 +168,7 @@ export class MCPService {
 
     // Perform health check
     try {
-      const healthCheck = await Promise.race([
+      await Promise.race([
         client.request({ method: "tools/list" }, MCPToolsListResponseSchema),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Health check timeout")), 5000)
@@ -192,7 +180,7 @@ export class MCPService {
       logger.error(`MCP server '${name}' failed health check:`, error);
       try {
         await client.close();
-      } catch (closeError) {
+      } catch (_closeError) {
         // Ignore close errors
       }
       return;
@@ -254,7 +242,7 @@ export class MCPService {
     // Use the adapter to create a type-safe tool with Zod schemas
     return adaptMCPTool(mcpTool, serverName, (args) =>
       this.executeTool(serverName, mcpTool.name, args)
-    );
+    ) as Tool;
   }
 
   async executeTool(

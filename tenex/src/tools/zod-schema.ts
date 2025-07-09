@@ -35,6 +35,38 @@ function zodToSchemaShape(schema: z.ZodType<unknown>, isOptional = false): Schem
     return zodToSchemaShape(optionalDef.innerType, true);
   }
   
+  // Handle undefined/null/void schemas
+  if (schema instanceof z.ZodUndefined || schema instanceof z.ZodNull || schema instanceof z.ZodVoid) {
+    return {
+      type: "object",
+      description: "No parameters required",
+      properties: {},
+      required: [],
+    };
+  }
+  
+  // Handle union schemas (like z.undefined().or(z.null()))
+  if (schema instanceof z.ZodUnion) {
+    // If it's a union of undefined/null/void, treat it as no parameters
+    const unionDef = schema._def as z.ZodUnionDef;
+    const options = unionDef.options as z.ZodType<unknown>[];
+    const allVoid = options.every(opt => 
+      opt instanceof z.ZodUndefined || 
+      opt instanceof z.ZodNull || 
+      opt instanceof z.ZodVoid
+    );
+    if (allVoid) {
+      return {
+        type: "object", 
+        description: "No parameters required",
+        properties: {},
+        required: [],
+      };
+    }
+    // Otherwise, use the first option
+    return zodToSchemaShape(options[0], isOptional);
+  }
+  
   if (schema instanceof z.ZodString) {
     // For enum values, we need to check if it's a ZodEnum
     if (schema instanceof z.ZodEnum) {

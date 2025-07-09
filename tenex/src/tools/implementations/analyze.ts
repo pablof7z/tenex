@@ -8,10 +8,12 @@ import { createZodSchema } from "../types";
 
 const analyzeSchema = z.object({
   prompt: z.string().min(1).describe("The analysis prompt or question about the codebase"),
+  targetDirectory: z.string().optional().describe("Optional: Specific directory to analyze relative to project root (e.g., 'src/components' or 'packages/web-app'). If not provided, analyzes the entire project."),
 });
 
 interface AnalyzeInput {
   prompt: string;
+  targetDirectory?: string;
 }
 
 interface AnalyzeOutput {
@@ -21,14 +23,14 @@ interface AnalyzeOutput {
 
 export const analyze: Tool<AnalyzeInput, AnalyzeOutput> = {
   name: "analyze",
-  description: "Analyze the entire codebase using repomix to provide context-aware insights",
+  description: "Deeply analyze a topic or question, GREAT for reasoning and performing detailed reviews of work that was done or to validate a plan with a full view of everything involved. Can analyze the entire project or focus on a specific directory for more targeted analysis in monorepos.",
 
   parameters: createZodSchema(analyzeSchema),
 
   execute: async (input, context) => {
-      const { prompt } = input.value;
+      const { prompt, targetDirectory } = input.value;
 
-      logger.info("Running analyze tool", { prompt });
+      logger.info("Running analyze tool", { prompt, targetDirectory });
 
       // Publish custom typing indicator
       try {
@@ -39,7 +41,7 @@ export const analyze: Tool<AnalyzeInput, AnalyzeOutput> = {
 
       let repomixResult;
       try {
-        repomixResult = await generateRepomixOutput(context.projectPath);
+        repomixResult = await generateRepomixOutput(context.projectPath, targetDirectory);
       } catch (error) {
         return {
           ok: false,
@@ -54,13 +56,13 @@ export const analyze: Tool<AnalyzeInput, AnalyzeOutput> = {
 
       try {
         // Prepare the prompt for the LLM
-        const analysisPrompt = `You are analyzing a codebase. Here is the complete repository content in XML format from repomix:
+        const analysisPrompt = `You are analyzing a ${targetDirectory ? `specific directory (${targetDirectory})` : 'complete'} codebase. Here is the ${targetDirectory ? 'directory' : 'repository'} content in XML format from repomix:
 
 <repository>
 ${repomixResult.content}
 </repository>
 
-Based on this codebase, please answer the following:
+Based on this ${targetDirectory ? 'directory' : 'codebase'}, please answer the following:
 
 ${prompt}
 

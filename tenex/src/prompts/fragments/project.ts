@@ -8,17 +8,52 @@ import type { PromptFragment } from "../core/types";
 // Project inventory context fragment
 interface InventoryContextArgs {
   phase: Phase;
-  inventoryContent?: string; // Optional to support both old and new usage
-  isProjectManager?: boolean; // Whether this is the project-manager agent
 }
 
 // Helper function to get project files (excluding dot files/dirs)
 function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } {
   const projectFiles: string[] = [];
   let isEmpty = true;
+  let totalFileCount = 0;
+
+  // Helper function to count files in a directory (non-recursive, only direct children)
+  function countDirectFiles(dir: string): number {
+    let count = 0;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.name.startsWith(".") && entry.name !== "node_modules" && !entry.isDirectory()) {
+          count += 1;
+        }
+      }
+    } catch (error) {
+      logger.debug(`Could not count files in ${dir}`, { error });
+    }
+    return count;
+  }
+
+  // Helper function to count total files recursively
+  function countTotalFiles(dir: string): number {
+    let count = 0;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
+          if (entry.isDirectory()) {
+            count += countTotalFiles(path.join(dir, entry.name));
+          } else {
+            count += 1;
+          }
+        }
+      }
+    } catch (error) {
+      logger.debug(`Could not count files in ${dir}`, { error });
+    }
+    return count;
+  }
 
   // Helper function to build tree structure recursively
-  function buildTree(dir: string, prefix = "", isLast = true): string[] {
+  function buildTree(dir: string, prefix = "", isLast = true, showFiles = true): string[] {
     const treeLines: string[] = [];
 
     try {
@@ -43,12 +78,20 @@ function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } 
         const extension = isLastEntry ? "    " : "│   ";
 
         if (entry.isDirectory()) {
-          treeLines.push(`${prefix}${connector}${entry.name}/`);
-          // Recursively process subdirectory
           const subDir = path.join(dir, entry.name);
-          const subTree = buildTree(subDir, prefix + extension, isLastEntry);
+          // Always show directories and recurse
+          if (showFiles) {
+            treeLines.push(`${prefix}${connector}${entry.name}/`);
+          } else {
+            // Count only direct files in this directory
+            const fileCount = countDirectFiles(subDir);
+            const fileLabel = fileCount === 0 ? "" : fileCount === 1 ? " (1 file)" : ` (${fileCount} files)`;
+            treeLines.push(`${prefix}${connector}${entry.name}/${fileLabel}`);
+          }
+          // Always recurse into subdirectories
+          const subTree = buildTree(subDir, prefix + extension, isLastEntry, showFiles);
           treeLines.push(...subTree);
-        } else {
+        } else if (showFiles) {
           treeLines.push(`${prefix}${connector}${entry.name}`);
         }
       });
@@ -90,8 +133,22 @@ function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } 
     logger.debug("Could not read project directory", { error });
   }
 
+  // Count total files to decide whether to show individual files
+  totalFileCount = countTotalFiles(process.cwd());
+  const showFiles = totalFileCount <= 40;
+
   // Build the tree structure
-  const treeLines = buildTree(process.cwd());
+  const treeLines = buildTree(process.cwd(), "", true, showFiles);
+  
+  // If not showing files and there are files in the root directory, add a count
+  if (!showFiles) {
+    const rootFileCount = countDirectFiles(process.cwd());
+    if (rootFileCount > 0) {
+      const fileLabel = rootFileCount === 1 ? "1 file in root" : `${rootFileCount} files in root`;
+      treeLines.push(`\n(${fileLabel})`);
+    }
+  }
+  
   const tree = treeLines.join("\n");
 
   return { files: projectFiles, isEmpty, tree };
@@ -100,14 +157,12 @@ function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } 
 // Helper function to load inventory and context synchronously
 function loadProjectContextSync(
   phase: Phase,
-  isProjectManager: boolean
 ): {
   inventoryContent: string | null;
   projectContent: string | null;
   contextFiles: string[];
 } {
   let inventoryContent: string | null = null;
-  let projectContent: string | null = null;
   let contextFiles: string[] = [];
 
   // Load inventory content for chat and brainstorm phases
@@ -119,18 +174,6 @@ function loadProjectContextSync(
       }
     } catch (error) {
       logger.debug("Could not load inventory content", { error });
-    }
-  }
-
-  // Load PROJECT.md content only for project-manager
-  if (isProjectManager) {
-    try {
-      const projectPath = path.join(process.cwd(), "context", "PROJECT.md");
-      if (fs.existsSync(projectPath)) {
-        projectContent = fs.readFileSync(projectPath, "utf8");
-      }
-    } catch (error) {
-      logger.debug("Could not load project content", { error });
     }
   }
 
@@ -148,26 +191,18 @@ function loadProjectContextSync(
     logger.debug("Could not read context directory", { error });
   }
 
-  return { inventoryContent, projectContent, contextFiles };
+  return { inventoryContent, projectContent: null, contextFiles };
 }
 
 export const inventoryContextFragment: PromptFragment<InventoryContextArgs> = {
   id: "project-inventory-context",
   priority: 25,
   template: (args) => {
-    const { phase, inventoryContent: providedContent, isProjectManager = false } = args;
+    const { phase } = args;
 
     // If content is provided directly, use it; otherwise load from file
-    let inventoryContent: string | null = providedContent || null;
-    let projectContent: string | null = null;
-    let contextFiles: string[] = [];
-
-    if (!providedContent) {
-      const loaded = loadProjectContextSync(phase, isProjectManager);
-      inventoryContent = loaded.inventoryContent;
-      projectContent = loaded.projectContent;
-      contextFiles = loaded.contextFiles;
-    }
+    const loaded = loadProjectContextSync(phase);
+    const { inventoryContent, contextFiles } = loaded;
 
     const parts: string[] = [];
 
@@ -192,6 +227,10 @@ This is a fresh project with no files yet.`);
       } else {
         parts.push(`## Project Context
 
+A proper project inventory does not exist yet. The @project-manager agent can generate a comprehensive inventory to improve results.
+
+Here is a basic file structure we created for you:
+
 \`\`\`
 ${tree}
 \`\`\`
@@ -206,30 +245,7 @@ The following documentation files are available in the context/ directory and ca
 ${contextFiles.map((f) => `- context/${f}`).join("\n")}`);
     }
 
-    // For non-project-manager agents, just mention PROJECT.md exists
-    if (!isProjectManager) {
-      const projectPath = path.join(process.cwd(), "context", "PROJECT.md");
-      if (fs.existsSync(projectPath)) {
-        parts.push(`### Project Understanding Document
-The project-manager maintains a comprehensive understanding of the project in context/PROJECT.md.
-This document contains the user's vision, requirements, and project evolution history.`);
-      }
-    }
-
     parts.push("</project_inventory>\n");
-
-    // Add PROJECT.md content only for project-manager
-    if (isProjectManager && projectContent) {
-      parts.push(`<project_understanding>
-## Current Project Understanding
-
-This is your comprehensive understanding of what the user is building:
-
-${projectContent}
-
-${phase === "reflection" ? "During this reflection phase, you MUST update this document to include all new information learned from the current session." : ""}
-</project_understanding>\n`);
-    }
 
     return parts.join("\n\n");
   },

@@ -10,7 +10,7 @@ import { z } from "zod";
  * Routes conversation to next phase/agent
  */
 interface ContinueInput {
-  phase?: string; // Will be transformed to lowercase Phase in schema
+  phase?: string;
   agents: string[];
   reason: string;
   message: string;
@@ -21,6 +21,11 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
   name: "continue",
   description:
     "Route conversation to next phase/agent. REQUIRES 'agents' parameter. This is a terminal action - once called, the orchestrator's turn ends and control is transferred.",
+  promptFragment: `- ALWAYS include <thinking> tags before routing to explain your decision\n
+- The continue tool is terminal - it ends your turn immediately. When using it, first write a statement for the user to understand what you are doing and *then* use the continue() tool.
+
+The continue tool allows you to delegate to multiple agents at the same time, when you have multiple agents that have domain expertise of the plan or work involved, ping them all. Once you receive the report back from ALL the agents you pinged provide the work back to @planner or @executer agent detailing the feedback from the agents. DO NOT try to summarize or interpret the feedback, let the relevant agent you delegate to to make sense of the feedback.
+`,
 
   parameters: createZodSchema(
     z.object({
@@ -35,7 +40,7 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
           }
         )
         .describe("Target phase"),
-      agents: z.array(z.string()).describe("Array of agent slugs"),
+      agents: z.array(z.string()).describe("Array of agent slugs to delegate to"),
       reason: z.string().describe("Used for routing debugging. Provide clear reason that justify this decision, include every detail and thought you had for choosing this routing (e.g., 'Request is clear and specific', 'Need planning due to ambiguity', 'Complex task requires specialized agents'). Always start the reason with 'Here is why I decided this path'. ALWAYS."),
       message: z.string().describe("Context/instructions for the agent being delegated to."),
       summary: z.string().optional().describe("User-facing 2-3 sentence overview of current state.")
@@ -154,7 +159,8 @@ export const continueTool: Tool<ContinueInput, ControlFlow> = {
 
     // Publish the routing event directly
     await context.publisher.publishResponse({
-      content: message,
+      content: message,  // Use the routing message as content
+      destinationPubkeys: Array.from(targetAgentPubkeys),  // Convert to regular array
       continueMetadata: {
         type: "continue",
         routing: {

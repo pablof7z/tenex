@@ -1,8 +1,8 @@
-import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFileSync, unlinkSync } from "node:fs";
+import { unlinkSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, relative } from "node:path";
+import { runDefaultAction, type CliOptions } from "repomix";
 import { logger } from "@/utils/logger";
 
 export interface RepomixResult {
@@ -14,23 +14,54 @@ export interface RepomixResult {
 
 /**
  * Generate repository content using repomix
+ * @param projectPath - The root path of the project
+ * @param targetDirectory - Optional directory to analyze relative to projectPath
  */
-export async function generateRepomixOutput(projectPath: string): Promise<RepomixResult> {
+export async function generateRepomixOutput(projectPath: string, targetDirectory?: string): Promise<RepomixResult> {
   const outputPath = join(tmpdir(), `repomix-${randomUUID()}.xml`);
 
   try {
-    logger.debug("Running repomix", { outputPath, projectPath });
-    execSync(`npx repomix --output "${outputPath}" --style xml`, {
-      cwd: projectPath,
-      stdio: "pipe",
-    });
+    // Resolve the target path
+    let analyzePath = projectPath;
+    if (targetDirectory) {
+      const resolvedTarget = resolve(projectPath, targetDirectory);
+      
+      // Validate that the target directory exists
+      if (!existsSync(resolvedTarget)) {
+        throw new Error(`Target directory does not exist: ${targetDirectory}`);
+      }
+      
+      // Ensure the target is within the project path
+      const relativePath = relative(projectPath, resolvedTarget);
+      if (relativePath.startsWith("..")) {
+        throw new Error(`Target directory must be within the project: ${targetDirectory}`);
+      }
+      
+      analyzePath = resolvedTarget;
+    }
 
+    logger.debug("Running repomix", { outputPath, projectPath, targetDirectory, analyzePath });
+
+    // Configure repomix options for XML output
+    const cliOptions: CliOptions = {
+      output: outputPath,
+      style: "xml",
+      copyToClipboard: false,
+      verbose: true,
+    };
+
+    // Use the programmatic API to generate repomix output
+    const result = await runDefaultAction([analyzePath], analyzePath, cliOptions);
+
+    // Read the generated file
     const content = readFileSync(outputPath, "utf-8");
     const lines = content.split("\n").length;
 
     logger.debug("Repomix output generated", {
       size: content.length,
       lines,
+      totalFiles: result.packResult.totalFiles,
+      totalTokens: result.packResult.totalTokens,
     });
 
     return {

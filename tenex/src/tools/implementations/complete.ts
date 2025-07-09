@@ -32,24 +32,10 @@ export const completeTool: Tool<{
     const projectContext = getProjectContext();
     const orchestratorAgent = projectContext.getProjectAgent();
 
-    // Validate orchestrator pubkey matches project agent
-    if (orchestratorAgent.pubkey !== projectContext.orchestrator.pubkey) {
-      logger.warn("Orchestrator pubkey mismatch", {
-        expected: projectContext.orchestrator.pubkey,
-        actual: orchestratorAgent.pubkey,
-      });
-    }
-
-    logger.info("📬 Completing task and returning control to orchestrator (star topology)", {
-      tool: "complete",
-      fromAgent: context.agent.name,
-      toOrchestrator: orchestratorAgent.name,
-      conversationId: context.conversationId,
-    });
-
     // Publish the completion event directly
     await context.publisher.publishResponse({
-      content: response,
+      content: response,  // Use the response as content
+      destinationPubkeys: [orchestratorAgent.pubkey],  // Route to orchestrator
       completeMetadata: {
         type: "complete",
         completion: {

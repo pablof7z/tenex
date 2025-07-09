@@ -71,6 +71,7 @@ export interface StoredAgentData {
   llmConfig?: string;
   tools?: string[]; // Tool names in storage - converted to Tool instances at runtime
   mcp?: boolean; // Whether this agent has access to MCP tools
+  backend?: 'reason-act-loop' | 'claude'; // Execution backend to use (defaults to 'reason-act-loop')
 }
 
 /**

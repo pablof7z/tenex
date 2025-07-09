@@ -3,8 +3,8 @@ import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/ty
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
 import { StreamPublisher } from "@/nostr/NostrPublisher";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
-import type { ToolExecutionResult, ContinueFlow, YieldBack, EndConversation } from "@/tools/types";
-import type { ControlFlow, Termination, RoutingDecision, CompletionSummary, ConversationResult } from "@/tools/core";
+import type { ToolExecutionResult, ContinueFlow, Complete, EndConversation } from "@/tools/types";
+import type { RoutingDecision, CompletionSummary, ConversationResult } from "@/tools/core";
 import type { TracingContext, TracingLogger } from "@/tracing";
 import { createTracingLogger } from "@/tracing";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
@@ -13,11 +13,12 @@ import { deserializeToolResult, isSerializedToolResult } from "@/llm/ToolResult"
 
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
+import { getProjectContext } from "@/services/ProjectContext";
 
 interface StreamingState {
   allToolResults: ToolExecutionResult[];
   continueFlow: ContinueFlow | undefined;
-  termination: YieldBack | EndConversation | undefined;
+  termination: Complete | EndConversation | undefined;
   finalResponse: CompletionResponse | undefined;
   fullContent: string;
   streamPublisher: StreamPublisher | undefined;
@@ -27,7 +28,6 @@ export interface ReasonActContext {
   projectPath: string;
   conversationId: string;
   phase: Phase;
-  llmConfig: string;
   agent: Agent;
   conversation: Conversation;
   eventToReply?: NDKEvent;
@@ -39,7 +39,7 @@ export interface ReasonActResult {
   toolExecutions: number;
   allToolResults?: ToolExecutionResult[];
   continueFlow?: ContinueFlow;
-  termination?: YieldBack | EndConversation;
+  termination?: Complete | EndConversation;
   wasPublished?: boolean;
 }
 
@@ -69,7 +69,7 @@ function isRoutingDecision(routing: unknown): routing is RoutingDecision {
   );
 }
 
-function isYieldBack(output: unknown): output is YieldBack {
+function isComplete(output: unknown): output is Complete {
   return (
     typeof output === "object" &&
     output !== null &&
@@ -140,9 +140,8 @@ export class ReasonActLoop {
 
     try {
       // Check if this agent requires termination enforcement
-      const isChatPhase = context.phase === 'chat';
       const isBrainstormPhase = context.phase === "brainstorm";
-      const requiresTerminationEnforcement = !isChatPhase && !isBrainstormPhase;
+      const requiresTerminationEnforcement = !isBrainstormPhase;
 
       tracingLogger.info("🚀 Starting executeStreaming with termination enforcement check", {
         agent: context.agent.name,
@@ -232,6 +231,28 @@ export class ReasonActLoop {
             phase: context.phase
           });
           this.autoCompleteTermination(state, context, tracingLogger);
+          
+          // Publish the auto-generated termination event
+          if (publisher && state.termination) {
+            tracingLogger.info("Publishing auto-generated termination event", {
+              terminationType: state.termination.type,
+              agent: context.agent.name
+            });
+            
+            if (state.termination.type === 'complete') {
+              await publisher.publishResponse({
+                content: state.termination.completion.response,
+                destinationPubkeys: [state.termination.completion.nextAgent],
+                completeMetadata: state.termination
+              });
+            } else if (state.termination.type === 'end_conversation') {
+              await publisher.publishResponse({
+                content: state.termination.result.response,
+                completeMetadata: state.termination
+              });
+            }
+          }
+          
           break;
         }
 
@@ -328,7 +349,7 @@ export class ReasonActLoop {
     return this.llmService.stream({
       messages,
       options: {
-        configName: context.llmConfig,
+        configName: context.agent.llmConfig,
         agentName: context.agent.name,
       },
       tools,
@@ -621,7 +642,7 @@ export class ReasonActLoop {
     }
 
     // Check if it's a termination (complete or end_conversation)
-    if (isYieldBack(output)) {
+    if (isComplete(output)) {
       state.termination = output;
       tracingLogger.info("✅ Complete termination detected in streaming", {
         type: output.type,
@@ -698,22 +719,12 @@ export class ReasonActLoop {
     // Convert flow/termination to metadata for finalization
     const metadata: Record<string, unknown> = {};
     if (state.continueFlow) {
-      metadata.continueMetadata = {
-        routingDecision: state.continueFlow.routing,
-      };
+      metadata.continueMetadata = state.continueFlow;
     } else if (state.termination) {
       if (state.termination.type === "complete") {
-        metadata.completeMetadata = {
-          completion: state.termination.completion,
-        };
+        metadata.completeMetadata = state.termination;
       } else if (state.termination.type === "end_conversation") {
-        metadata.completeMetadata = {
-          completion: {
-            response: state.termination.result.response,
-            summary: state.termination.result.summary,
-            nextAgent: context.conversation.history[0]?.pubkey || "",
-          },
-        };
+        metadata.completeMetadata = state.termination;
       }
     }
 
@@ -766,12 +777,15 @@ Please use one of these tools now.`;
       };
     } else {
       // For non-orchestrator, complete back to orchestrator
+      const projectContext = getProjectContext();
+      const orchestratorAgent = projectContext.getProjectAgent();
+      
       state.termination = {
         type: "complete",
         completion: {
           response: autoCompleteContent,
           summary: "Agent completed its turn but failed to call the complete tool after a reminder. [Auto-completed by system]",
-          nextAgent: context.conversation.history[0]?.pubkey || "" // Orchestrator pubkey
+          nextAgent: orchestratorAgent.pubkey
         }
       };
     }

@@ -15,7 +15,6 @@ const toolsMap = new Map<string, Tool<unknown, unknown>>();
 toolsMap.set("read_file", readFileTool as Tool<unknown, unknown>);
 toolsMap.set("write_context_file", writeContextFileTool as Tool<unknown, unknown>);
 toolsMap.set("claude_code", claudeCodeTool as Tool<unknown, unknown>);
-// toolsMap.set("get_time", getTimeTool as Tool<unknown, unknown>);
 toolsMap.set("continue", continueTool as Tool<unknown, unknown>);
 toolsMap.set("complete", completeTool as Tool<unknown, unknown>);
 toolsMap.set("end_conversation", endConversationTool as Tool<unknown, unknown>);

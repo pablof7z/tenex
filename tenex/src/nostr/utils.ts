@@ -55,21 +55,3 @@ export function getAgentSlugFromEvent(event: NDKEvent): string | undefined {
 
   return undefined;
 }
-
-/**
- * Check if an event is from the project agent
- * @param event - The NDK event to check
- * @returns true if the event is from the project agent, false otherwise
- */
-export function isEventFromProject(event: NDKEvent): boolean {
-  if (!event.pubkey) return false;
-
-  if (!isProjectContextInitialized()) {
-    // Project context not initialized
-    return false;
-  }
-
-  const projectCtx = getProjectContext();
-  // Check if it's from the project agent (not the project owner)
-  return projectCtx.pubkey === event.pubkey;
-}

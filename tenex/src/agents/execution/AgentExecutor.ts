@@ -2,17 +2,14 @@ import type { ConversationManager } from "@/conversations/ConversationManager";
 import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
 import type { LLMService, StreamEvent, Tool } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
-import type { LLMMetadata } from "@/nostr/types";
-import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import {
   buildHistoryMessages,
   getLatestUserMessage,
   needsCurrentUserMessage,
 } from "@/prompts/utils/messageBuilder";
 import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
-import { type ProjectContext, getProjectContext } from "@/services";
+import { getProjectContext } from "@/services";
 import { mcpService } from "@/services/mcp/MCPService";
-import type { ContinueFlow, EndConversation, YieldBack } from "@/tools/types";
 import {
   type TracingContext,
   createAgentExecutionContext,
@@ -21,7 +18,7 @@ import {
 } from "@/tracing";
 import { logger } from "@/utils/logger";
 import type NDK from "@nostr-dev-kit/ndk";
-import type { NDKEvent, NDKTag } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import { ReasonActLoop } from "./ReasonActLoop";
 import type { ReasonActContext, ReasonActResult } from "./ReasonActLoop";
@@ -68,7 +65,7 @@ export class AgentExecutor {
       phase: context.phase,
     });
 
-    // Create NostrPublisher outside try block so it's accessible in catch
+    // Create NostrPublisher for ReasonActLoop to handle publishing
     const publisher = new NostrPublisher({
       conversation: context.conversation,
       agent: context.agent,
@@ -86,92 +83,28 @@ export class AgentExecutor {
       // 2. Publish typing indicator start
       await publisher.publishTypingIndicator("start");
 
-      // Get tools for response processing - use agent's configured tools
-      const tools = context.agent.tools || [];
-
-      // Add MCP tools if available and agent has MCP access
-      let allTools = tools;
-      if (context.agent.mcp !== false) {
-        const mcpTools = await mcpService.getAvailableTools();
-        allTools = [...tools, ...mcpTools];
-      }
-
       const streamResult = await this.executeWithStreaming(
         {
           projectPath: process.cwd(),
           conversationId: context.conversation.id,
           phase: context.phase,
-          llmConfig: context.agent.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
           agent: context.agent,
           conversation: context.conversation,
           eventToReply: triggeringEvent,
         },
         messages,
         tracingContext,
-        allTools,
         publisher
       );
 
-      const finalResponse = streamResult.finalResponse;
-      const finalContent = streamResult.finalContent;
-      const allToolResults = streamResult.allToolResults || [];
-      const continueFlow = streamResult.continueFlow;
-      const termination = streamResult.termination;
-
-      // Build metadata with final response from ReasonActLoop
-      const llmMetadata = await buildLLMMetadata(finalResponse, messages);
-
       // Add the agent's response to their context
-      if (this.conversationManager && finalContent) {
+      if (this.conversationManager && streamResult.finalContent) {
         await this.conversationManager.addMessageToContext(
           context.conversation.id,
           context.agent.slug,
-          new Message("assistant", finalContent)
+          new Message("assistant", streamResult.finalContent)
         );
       }
-
-      // 8. Check if response was already published
-      let publishedEvent: NDKEvent | undefined;
-      
-      // Routing tools (continue, yield_back, end_conversation) publish directly
-      const isRoutingTool = !!(continueFlow || termination);
-      
-      if (streamResult.wasPublished || isRoutingTool) {
-        tracingLogger.debug("Response already published", {
-          agentName: context.agent.name,
-          reason: isRoutingTool ? "routing tool published directly" : "published during streaming",
-          hasRoutingFlow: !!continueFlow,
-          hasTermination: !!termination,
-        });
-        // We don't have the actual event ID from streaming, but we know it was published
-        publishedEvent = undefined;
-      } else {
-        // Safety fallback for unexpected cases
-        tracingLogger.error("Response was not published - publishing now", {
-          agentName: context.agent.name,
-        });
-        publishedEvent = await this.publishResponse(
-          context,
-          triggeringEvent,
-          finalContent,
-          continueFlow,
-          termination,
-          llmMetadata,
-          tracingContext
-        );
-      }
-
-      // Log the agent response in human-readable format
-      logger.agentResponse(
-        context.agent.name,
-        finalContent,
-        context.conversation.id,
-        context.conversation.title,
-        publishedEvent?.id || "streaming-published"
-      );
-
-      // 9. Publish typing indicator stop
-      await publisher.publishTypingIndicator("stop");
 
       // Stop execution time tracking
       const sessionDuration = stopExecutionTime(context.conversation);
@@ -183,17 +116,15 @@ export class AgentExecutor {
 
       tracingLogger.completeOperation("agent_execution", {
         agentName: context.agent.name,
-        responseLength: finalContent.length,
-        toolExecutions: allToolResults.length,
+        responseLength: streamResult.finalContent.length,
+        toolExecutions: streamResult.allToolResults?.length || 0,
         sessionDurationMs: sessionDuration,
       });
 
       return {
         success: true,
-        response: finalContent,
-        llmMetadata,
-        toolExecutions: allToolResults,
-        publishedEvent,
+        response: streamResult.finalContent,
+        toolExecutions: streamResult.allToolResults,
       };
     } catch (error) {
       // Stop execution time tracking even on error
@@ -342,37 +273,6 @@ export class AgentExecutor {
     return messages;
   }
 
-  /**
-   * Publish the agent's response to Nostr
-   */
-  private async publishResponse(
-    context: AgentExecutionContext,
-    triggeringEvent: NDKEvent,
-    content: string,
-    continueFlow?: ContinueFlow,
-    termination?: YieldBack | EndConversation,
-    llmMetadata?: LLMMetadata,
-    tracingContext?: TracingContext
-  ): Promise<NDKEvent> {
-    const additionalTags: NDKTag[] = [];
-
-    // This method is now only used as a fallback - should not normally be called
-    const publisher = new NostrPublisher({
-      conversation: context.conversation,
-      agent: context.agent,
-      triggeringEvent: triggeringEvent,
-    });
-
-    const event = await publisher.publishResponse({
-      content,
-      continueMetadata: continueFlow,
-      completeMetadata: termination,
-      llmMetadata,
-      additionalTags,
-    });
-
-    return event;
-  }
 
   /**
    * Execute with streaming support
@@ -381,10 +281,19 @@ export class AgentExecutor {
     context: ReasonActContext,
     messages: Message[],
     tracingContext: TracingContext,
-    tools?: Tool[],
     publisher?: NostrPublisher
   ): Promise<ReasonActResult> {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
+
+    // Get tools for response processing - use agent's configured tools
+    const tools = context.agent.tools || [];
+
+    // Add MCP tools if available and agent has MCP access
+    let allTools = tools;
+    if (context.agent.mcp !== false) {
+      const mcpTools = await mcpService.getAvailableTools();
+      allTools = [...tools, ...mcpTools];
+    }
 
     // Process the stream - ReasonActLoop handles all publishing
     const stream = this.reasonActLoop.executeStreaming(
@@ -392,7 +301,7 @@ export class AgentExecutor {
       messages,
       tracingContext,
       publisher,
-      tools
+      allTools
     );
 
     // Drain the generator to make it execute.
@@ -400,8 +309,6 @@ export class AgentExecutor {
     let iterResult: IteratorResult<StreamEvent, ReasonActResult>;
     do {
       iterResult = await stream.next();
-      // All yielded events are handled by ReasonActLoop (e.g., streaming and publishing content).
-      // AgentExecutor only needs the final result.
     } while (!iterResult.done);
 
     tracingLogger.info("[AGENT_EXECUTOR] Stream completed", {

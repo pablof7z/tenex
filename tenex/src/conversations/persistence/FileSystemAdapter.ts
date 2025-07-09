@@ -7,8 +7,8 @@ import { logger } from "@/utils/logger";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import type { AgentContext, ConversationMetadata as ConvMetadata, Conversation } from "../types";
-import { AgentContextSchema, MetadataFileSchema, SerializedConversationSchema } from "./schemas";
-import { z } from "zod";
+import { type AgentContextSchema, MetadataFileSchema, SerializedConversationSchema } from "./schemas";
+import type { z } from "zod";
 import type {
   ConversationMetadata,
   ConversationPersistenceAdapter,

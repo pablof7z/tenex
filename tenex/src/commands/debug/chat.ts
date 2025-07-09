@@ -114,17 +114,16 @@ export async function runDebugChat(
 
     // Show system prompt if requested
     if (options.systemPrompt) {
-      const systemPrompt = new PromptBuilder()
+      const systemPromptBuilder = new PromptBuilder()
         .add("agent-system-prompt", {
           agent,
           phase: "chat" as Phase,
           projectTitle: project.tagValue("title") || "Untitled Project",
           projectRepository: project.tagValue("repo") || undefined,
-        })
-        .add("project-inventory-context", {
-          phase: "chat" as Phase,
-        })
-        .build();
+        });
+      
+      
+      const systemPrompt = systemPromptBuilder.build();
 
       console.log(chalk.cyan("\n=== System Prompt ==="));
       console.log(systemPrompt);
@@ -223,17 +222,16 @@ export async function runDebugChat(
       }
 
       if (input.toLowerCase() === "prompt") {
-        const systemPrompt = new PromptBuilder()
+        const systemPromptBuilder = new PromptBuilder()
           .add("agent-system-prompt", {
             agent,
             phase: "chat" as Phase,
             projectTitle: project.tagValue("title") || "Untitled Project",
             projectRepository: project.tagValue("repo") || undefined,
-          })
-          .add("project-inventory-context", {
-            phase: "chat" as Phase,
-          })
-          .build();
+          });
+        
+        
+        const systemPrompt = systemPromptBuilder.build();
 
         console.log(chalk.cyan("\n=== System Prompt ==="));
         console.log(systemPrompt);

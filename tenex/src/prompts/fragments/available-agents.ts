@@ -5,19 +5,23 @@ import type { PromptFragment } from "../core/types";
 // Available agents fragment - shows all agents available in the project
 interface AvailableAgentsArgs {
   agents: Agent[];
-  currentAgent: Agent;
+  currentAgent?: Agent;
+  currentAgentPubkey?: string;
 }
 
 export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
   id: "available-agents",
   priority: 15,
-  template: ({ agents, currentAgent }) => {
+  template: ({ agents, currentAgent, currentAgentPubkey }) => {
     if (agents.length === 0) {
       return "## Available Agents\nNo agents are currently available.";
     }
 
     // Filter out current agent if specified
-    const availableForHandoff = agents.filter((agent) => agent.pubkey !== currentAgent.pubkey)
+    const currentPubkey = currentAgent?.pubkey || currentAgentPubkey;
+    const availableForHandoff = currentPubkey 
+      ? agents.filter((agent) => agent.pubkey !== currentPubkey)
+      : agents;
 
     if (availableForHandoff.length === 0) {
       return "## Available Agents\nNo other agents are available.";
@@ -36,10 +40,34 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
       })
       .join("\n\n");
 
-    return `## Available Agents
-The following agents are available in this project:
+    // Determine if current agent is an orchestrator
+    const currentAgentObj = currentAgent || (currentAgentPubkey ? agents.find(a => a.pubkey === currentAgentPubkey) : null);
+    const isCurrentAgentOrchestrator = currentAgentObj?.isOrchestrator || false;
 
-${agentList}`;
+    const preface = isCurrentAgentOrchestrator
+      ? "The agents available to you in this system to involve in the workflow are:"
+      : "You are part of a multi-agent system, here are your coworkers:";
+    
+    // Add role-specific guidance
+    const roleGuidance = isCurrentAgentOrchestrator 
+      ? `
+
+As Orchestrator:
+- You coordinate work between specialist agents
+- Don't implement solutions yourself - delegate to them using the continue tool
+- Focus on routing, not solving technical problems
+- Let specialists handle implementation details` 
+      : `
+
+As a Specialist:
+- Focus on your area of expertise
+- When you need help outside your domain, defer to other specialists or the orchestrator agent
+- Use the complete tool when you finish your work or need to hand off to another agent`;
+
+    return `## Available Agents
+${preface}
+
+${agentList}${roleGuidance}`;
   },
   validateArgs: (args): args is AvailableAgentsArgs => {
     return (
