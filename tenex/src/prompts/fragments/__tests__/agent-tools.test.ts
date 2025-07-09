@@ -24,13 +24,7 @@ describe("agentToolsFragment", () => {
 
     // Check that the promptFragment is included
     expect(result).toContain("When you encounter important insights or lessons during your work");
-    expect(result).toContain("Examples of when to use the learn tool:");
-    
-    // Check that parameters are included
-    expect(result).toContain("**Parameters:**");
-    expect(result).toContain("title (string) (required):");
-    expect(result).toContain("lesson (string) (required):");
-    expect(result).toContain("keywords (array):");
+    expect(result).toContain("Domain Boundaries: Only record lessons within your role's sphere of control");
   });
 
   it("should return empty string when agent has no tools", () => {

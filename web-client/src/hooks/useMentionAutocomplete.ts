@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { ProjectAgent } from "./useProjectAgents";
+import type { ProjectAgent } from "../stores/project/hooks";
 
 export function useMentionAutocomplete(
     projectAgents: ProjectAgent[],

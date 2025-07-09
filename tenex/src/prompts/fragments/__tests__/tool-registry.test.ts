@@ -75,18 +75,15 @@ describe("Tool Registry", () => {
         expect(claudeCodeTool?.parameters.shape.type).toBe("object");
         expect(claudeCodeTool?.parameters.shape.properties).toBeDefined();
         expect(claudeCodeTool?.parameters.shape.properties?.prompt).toBeDefined();
-        expect(claudeCodeTool?.parameters.shape.properties?.mode).toBeDefined();
         
         // Test validation
         const result = claudeCodeTool?.parameters.validate({
             prompt: "Test prompt",
-            mode: "run"
         });
         expect(result?.ok).toBe(true);
         
         const invalidResult = claudeCodeTool?.parameters.validate({
-            prompt: "",
-            mode: "invalid"
+            prompt: ""
         });
         expect(invalidResult?.ok).toBe(false);
     });

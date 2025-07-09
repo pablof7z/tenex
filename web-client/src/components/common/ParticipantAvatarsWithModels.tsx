@@ -6,7 +6,7 @@ import { EVENT_KINDS } from "../../lib/constants";
 import { Check, ChevronDown, Cpu } from "lucide-react";
 import { useState } from "react";
 import { useAgentLLMTracking } from "../../hooks/useAgentLLMTracking";
-import { useProjectAgents } from "../../hooks/useProjectAgents";
+import { useProjectAgents } from "../../stores/project/hooks";
 import { ParticipantAvatar } from "./ParticipantAvatar";
 import {
     DropdownMenu,

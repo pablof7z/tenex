@@ -1,6 +1,6 @@
 import { AtSign, Mic, Send } from "lucide-react";
 import { forwardRef } from "react";
-import type { ProjectAgent } from "../../hooks/useProjectAgents";
+import type { ProjectAgent } from "../../stores/project/hooks";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 

@@ -2,13 +2,13 @@ import { startExecutionTime, stopExecutionTime } from "@/conversations/execution
 import type { Conversation } from "@/conversations/types";
 import type { TaskPublisher } from "@/nostr/TaskPublisher";
 import { logger } from "@/utils/logger";
-import type { SDKMessage } from "@anthropic-ai/claude-code";
 import type { ContentBlock, TextBlock } from "@anthropic-ai/sdk/resources/messages/messages";
 import type { NDKTask } from "@nostr-dev-kit/ndk";
 import { ClaudeCodeExecutor } from "./ClaudeCodeExecutor";
 
 export interface ClaudeTaskOptions {
   prompt: string;
+  systemPrompt?: string;
   projectPath: string;
   title: string;
   branch?: string;
@@ -48,6 +48,7 @@ export class ClaudeTaskOrchestrator {
     // Create executor
     const executor = new ClaudeCodeExecutor({
       prompt: options.prompt,
+      systemPrompt: options.systemPrompt,
       projectPath: options.projectPath,
       abortSignal: options.abortSignal,
     });

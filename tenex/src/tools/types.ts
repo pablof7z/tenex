@@ -23,5 +23,5 @@ export interface ToolExecutionContext {
   conversation: Conversation;
   publisher: NostrPublisher;
   triggeringEvent?: NDKEvent;
-  conversationManager?: ConversationManager;
+  conversationManager: ConversationManager;
 }

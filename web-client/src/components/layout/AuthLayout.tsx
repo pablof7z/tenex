@@ -4,19 +4,18 @@ import { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAgentLessons } from "../../hooks/useAgentLessons";
 import { useAppSubscriptions } from "../../hooks/useAppSubscriptions";
-import { useBackendStatus } from "../../hooks/useBackendStatus";
-import { useProjectStatus } from "../../hooks/useProjectStatus";
+import { useInitializeProjectStore, useProjectStatusCleanup } from "../../stores/project/hooks";
 import { themeAtom } from "../../lib/store";
 
 export function AuthLayout() {
     const currentPubkey = useNDKCurrentPubkey();
     const theme = useAtomValue(themeAtom);
 
-    // Initialize backend status tracking
-    useBackendStatus();
-
-    // Initialize project status tracking for online badges
-    useProjectStatus();
+    // Initialize project store with single subscription
+    useInitializeProjectStore();
+    
+    // Initialize periodic cleanup for stale status
+    useProjectStatusCleanup();
 
     // Initialize agent lessons monitoring
     useAgentLessons();

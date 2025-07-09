@@ -11,6 +11,7 @@
         "baseUrl": ".",
         "paths": {
             "@/*": ["./src/*"],
+            "@tenex/cli/*": ["../tenex/src/*"]
         }
     },
     "include": ["src"]

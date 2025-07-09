@@ -1,5 +1,4 @@
-import React from "react";
-import type { NDKAgent } from "@/lib/ndk-tools/agents";
+import type { NDKAgent } from "@/lib/ndk-setup";
 import { EntityListSidebar } from "@/components/common/EntityListSidebar";
 import { ProfileDisplay } from "../ProfileDisplay";
 

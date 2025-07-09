@@ -15,6 +15,7 @@ interface AgentMainContentProps {
         title: string;
         description: string;
         role: string;
+        useCriteria: string;
         instructions: string;
         tags: string[];
         newTag: string;

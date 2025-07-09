@@ -1,4 +1,4 @@
-import { NDKKind, useNDK, useSubscribe, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind, useNDK, useSubscribe, useProfileValue, NDKSubscriptionCacheUsage } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronDown, ChevronRight, Send, Reply } from "lucide-react";
@@ -40,13 +40,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
     // Subscribe to replies that e-tag this event (NIP-22 threading)
     const { events: directReplies } = useSubscribe(
-        event.kind === NDKKind.GenericReply ? [
-            {
-                kinds: [NDKKind.GenericReply],
-                "#e": [event.id],
-            },
-        ] : false,
-        {},
+        event.kind === NDKKind.GenericReply
+            ? [
+                  {
+                      kinds: [NDKKind.GenericReply],
+                      "#e": [event.id],
+                  },
+              ]
+            : false,
+        { cacheUsage: NDKSubscriptionCacheUsage.ONLY_CACHE },
         [event.id]
     );
 

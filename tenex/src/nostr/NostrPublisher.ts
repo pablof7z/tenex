@@ -12,6 +12,7 @@ import { logger } from "@/utils/logger";
 import {
   NDKEvent, type NDKTag
 } from "@nostr-dev-kit/ndk";
+import { Message } from "multi-llm-ts";
 
 // Tool execution status interface (from ToolExecutionPublisher)
 export interface ToolExecutionStatus {
@@ -28,7 +29,7 @@ export interface NostrPublisherContext {
   conversation: Conversation;
   agent: Agent;
   triggeringEvent: NDKEvent;
-  conversationManager?: ConversationManager;
+  conversationManager: ConversationManager;
 }
 
 // Options for publishing responses
@@ -51,6 +52,17 @@ export interface FinalizeMetadata {
 export class NostrPublisher {
   constructor(public readonly context: NostrPublisherContext) {}
 
+  /**
+   * Publishes an agent's response to Nostr and updates the conversation state.
+   * 
+   * IMPORTANT: This method follows a save-then-publish pattern for transactional integrity:
+   * 1. First updates the conversation state in memory
+   * 2. Then saves the conversation to persistent storage
+   * 3. Only after successful save does it publish to Nostr
+   * 
+   * This ensures that we never have events on the network that aren't reflected
+   * in our local state, preventing state inconsistencies.
+   */
   async publishResponse(options: ResponseOptions): Promise<NDKEvent> {
     try {
       const reply = this.createBaseReply();
@@ -85,7 +97,18 @@ export class NostrPublisher {
         }
       }
 
-      // Sign and publish
+      // Update conversation context with the assistant's response BEFORE publishing
+      // This ensures transactional integrity - if the update fails, we don't publish
+      await this.context.conversationManager.addMessageToContext(
+        this.context.conversation.id,
+        this.context.agent.slug,
+        new Message("assistant", options.content)
+      );
+
+      // Save conversation state BEFORE publishing
+      await this.context.conversationManager.saveConversation(this.context.conversation.id);
+
+      // Sign and publish only after local state is successfully updated
       await reply.sign(this.context.agent.signer);
       await reply.publish();
 
@@ -270,7 +293,7 @@ export class NostrPublisher {
 
     // Always add current phase tag - get from ConversationManager if available
     const contextPhase = this.context.conversation.phase;
-    const managerConversation = this.context.conversationManager?.getConversation(this.context.conversation.id);
+    const managerConversation = this.context.conversationManager.getConversation(this.context.conversation.id);
     const managerPhase = managerConversation?.phase;
     const currentPhase = managerPhase || contextPhase;
     

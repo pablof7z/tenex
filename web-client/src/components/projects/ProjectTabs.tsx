@@ -1,8 +1,6 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ArrowLeft, Edit3, MoreVertical, Copy, Info } from "lucide-react";
 import { Button } from "../ui/button";
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "../../lib/constants";
 import { useState } from "react";
 
 interface ProjectTabsProps {
@@ -28,23 +26,6 @@ export function ProjectTabs({
 }: ProjectTabsProps) {
     const [showProjectInfo, setShowProjectInfo] = useState(false);
     const [copiedPubkey, setCopiedPubkey] = useState(false);
-
-    // Get project's own pubkey from status events (signed by project identity)
-    const { events: statusEvents } = useSubscribe(
-        project
-            ? [
-                  {
-                      kinds: [EVENT_KINDS.PROJECT_STATUS as any],
-                      "#a": [`31933:${project.pubkey}:${project.dTag}`],
-                      limit: 1,
-                  },
-              ]
-            : false,
-        {},
-        [project?.tagId()]
-    );
-
-    const projectOwnPubkey = statusEvents[0]?.pubkey;
 
     const copyPubkey = async (pubkey: string) => {
         try {
@@ -135,26 +116,6 @@ export function ProjectTabs({
                                     </Button>
                                 </div>
                             </div>
-                            {projectOwnPubkey && (
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium">Project Identity:</span>
-                                    <div className="flex items-center gap-1">
-                                        <code className="bg-accent px-2 py-1 rounded text-xs font-mono">
-                                            {projectOwnPubkey.slice(0, 8)}...
-                                            {projectOwnPubkey.slice(-8)}
-                                        </code>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => copyPubkey(projectOwnPubkey)}
-                                            className="w-6 h-6"
-                                            title="Copy project pubkey"
-                                        >
-                                            <Copy className="w-3 h-3" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
                             <div className="flex items-center justify-between">
                                 <span className="font-medium">Project ID:</span>
                                 <code className="bg-accent px-2 py-1 rounded text-xs font-mono">

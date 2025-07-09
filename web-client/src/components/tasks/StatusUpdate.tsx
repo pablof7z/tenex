@@ -58,7 +58,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
         let thinkingMatch: RegExpExecArray | null;
         
         while ((thinkingMatch = thinkingRegex.exec(processedText)) !== null) {
-            thinkingBlocks.push(thinkingMatch[1]);
+            thinkingBlocks.push(thinkingMatch[1] || "");
         }
         
         // Replace thinking blocks with placeholders
@@ -165,7 +165,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                             }
                         } else if (match[0].startsWith('[THINKING_BLOCK:')) {
                             // Handle thinking block
-                            const thinkingIndex = parseInt(match[3], 10);
+                            const thinkingIndex = parseInt(match[3] || "0", 10);
                             const thinkingContent = processedContent.thinkingBlocks?.[thinkingIndex];
                             if (thinkingContent !== undefined) {
                                 const isExpanded = expandedThinkingBlocks.has(thinkingIndex);
@@ -213,7 +213,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                                         ) : (
                                             hasMultipleLines && (
                                                 <div className="mt-1 ml-4 text-muted-foreground/60 font-mono">
-                                                    {lines[0].slice(0, 80)}{lines[0].length > 80 ? '...' : ''}
+                                                    {lines[0]?.slice(0, 80)}{(lines[0]?.length ?? 0) > 80 ? '...' : ''}
                                                 </div>
                                             )
                                         )}
@@ -517,19 +517,19 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                                 {getPhaseFrom() && (
                                     <>
                                         <div
-                                            className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhaseFrom())} text-white`}
+                                            className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhaseFrom() || "")} text-white`}
                                             title={`Previous phase: ${getPhaseFrom()}`}
                                         >
-                                            {getPhaseIcon(getPhaseFrom())}
+                                            {getPhaseIcon(getPhaseFrom() || "")}
                                         </div>
                                         <span className="text-muted-foreground text-xs">→</span>
                                     </>
                                 )}
                                 <div
-                                    className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhase())} text-white`}
+                                    className={`flex items-center justify-center w-5 h-5 rounded-full ${getPhaseColor(getPhase() || "")} text-white`}
                                     title={getPhaseFrom() ? `Phase transition: ${getPhaseFrom()} → ${getPhase()}` : `Phase: ${getPhase()}`}
                                 >
-                                    {getPhaseIcon(getPhase())}
+                                    {getPhaseIcon(getPhase() || "")}
                                 </div>
                             </div>
                         )}

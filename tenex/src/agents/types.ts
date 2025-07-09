@@ -24,6 +24,7 @@ export interface Agent {
   slug: string; // Agent slug/key from agents.json
   isOrchestrator?: boolean; // Whether this agent is the orchestrator agent
   isBuiltIn?: boolean; // Whether this is a built-in agent (executor, planner)
+  backend?: 'reason-act-loop' | 'claude'; // Execution backend to use (defaults to 'reason-act-loop')
 }
 
 export interface AgentContext {

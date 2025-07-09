@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, Square, Upload, Edit2, Send } from "lucide-react";
+import { Square, Edit2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Textarea } from "../ui/textarea";
@@ -73,7 +73,7 @@ export function VoiceRecorderDialog({ open, onOpenChange, project }: VoiceRecord
             const step = Math.floor(bufferLength / barCount);
 
             for (let i = 0; i < barCount; i++) {
-                const barHeight = (dataArray[i * step] / 255) * canvas.height * 0.8;
+                const barHeight = ((dataArray[i * step] || 0) / 255) * canvas.height * 0.8;
                 const x = i * (barWidth + 2);
                 const y = (canvas.height - barHeight) / 2;
 
@@ -150,7 +150,8 @@ export function VoiceRecorderDialog({ open, onOpenChange, project }: VoiceRecord
             }, 100); // Small delay to ensure dialog is fully rendered
             return () => clearTimeout(timer);
         }
-    }, [open]);
+        return undefined;
+    }, [open, isRecording, audioBlob]);
 
     const startRecording = async () => {
         try {
@@ -402,7 +403,7 @@ export function VoiceRecorderDialog({ open, onOpenChange, project }: VoiceRecord
                         <div className="space-y-6">
                             {/* Audio Player */}
                             <div className="bg-gray-50 rounded-xl p-4">
-                                <audio controls src={audioUrl!} className="w-full" />
+                                <audio controls src={audioUrl || ""} className="w-full" />
                                 <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
                                     <span>Duration</span>
                                     <span className="font-medium">

@@ -57,7 +57,7 @@
         "jwt-js-decode": "^1.9.0",
         "multi-llm-ts": "^4.0.3",
         "nostr-tools": "^2.15.0",
-        "repomix": "^0.3.9",
+        "repomix": "^1.1.0",
         "zod": "^3.25.67"
     },
     "devDependencies": {

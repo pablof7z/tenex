@@ -1,4 +1,4 @@
-import { NDKKind, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind, NDKSubscriptionCacheUsage, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import {
     NDKEvent,
     type NDKProject,
@@ -12,8 +12,7 @@ import { useAtom } from "jotai";
 import { ArrowDown, Send } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useMentionAutocomplete } from "../hooks/useMentionAutocomplete";
-import { useProjectAgents } from "../hooks/useProjectAgents";
-import { useProjectLLMConfigs } from "../hooks/useProjectLLMConfigs";
+import { useProjectAgents, useProjectLLMConfigs } from "../stores/project/hooks";
 import { useScrollManagement } from "../hooks/useScrollManagement";
 import { messageDraftsAtom, selectedTaskAtom } from "../lib/store";
 import { generateThreadTitle } from "../utils/openai";
@@ -118,7 +117,7 @@ export function ChatInterface({
 
     // Determine if we're in thread mode (include new threads without titles)
     const isThreadMode = !!(project && (threadTitle !== undefined || threadId === "new"));
-
+    
     // Get project agents for @mentions
     const projectAgents = useProjectAgents(project?.tagId());
 
@@ -235,7 +234,7 @@ export function ChatInterface({
             ? [
                   {
                       kinds: [NDKKind.GenericReply],
-                      ...currentThreadEvent.filter(),
+                      ...currentThreadEvent.nip22Filter(),
                   },
               ]
             : false,
@@ -598,7 +597,6 @@ export function ChatInterface({
                     onBack={onBack}
                 />
             )}
-
             {/* Messages Container */}
             <div
                 ref={messagesContainerRef}
@@ -702,7 +700,6 @@ export function ChatInterface({
                     </div>
                 )}
             </div>
-
             {/* Input Area */}
             {allowInput && (isThreadMode || task?.id) && (
                 <ChatInputArea
@@ -722,7 +719,6 @@ export function ChatInterface({
                     }
                 />
             )}
-
             {/* Debug Dialog */}
             {showDebugDialog && (
                 <ChatDebugDialog
@@ -733,13 +729,11 @@ export function ChatInterface({
                     }}
                 />
             )}
-
             {/* Voice Message Dialog */}
             {showVoiceDialog && project && (
                 <VoiceMessageDialog
                     open={showVoiceDialog}
                     onOpenChange={setShowVoiceDialog}
-                    project={project}
                     onTranscriptionComplete={(text) => {
                         setMessageInput(text);
                         setShowVoiceDialog(false);

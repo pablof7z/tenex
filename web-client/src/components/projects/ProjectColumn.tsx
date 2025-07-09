@@ -1,10 +1,9 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useAtomValue } from "jotai";
 import { Circle, Plus } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { EVENT_KINDS } from "../../lib/constants";
-import { onlineProjectsAtom } from "../../lib/store";
+import { useProjectOnlineStatus } from "../../stores/project/hooks";
 import { ThreadCard } from "../tasks/ThreadCard";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -26,13 +25,11 @@ export function ProjectColumn({
 }: ProjectColumnProps) {
     const { ndk } = useNDK();
     const title = project.title || project.tagValue("title") || "Untitled Project";
-    const onlineProjects = useAtomValue(onlineProjectsAtom);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const [isLongPressing, setIsLongPressing] = useState(false);
 
-    // Get project directory name from d tag
-    const projectDir = project.tagValue("d") || "";
-    const isOnline = onlineProjects.has(projectDir);
+    // Get online status from the store
+    const isOnline = useProjectOnlineStatus(project.tagId());
 
     // Long-press handlers
     const handlePointerDown = (e: React.PointerEvent) => {

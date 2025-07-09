@@ -10,7 +10,6 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import {
     AgentRequestsPageWrapper,
     AgentsPageWrapper,
-    BlossomTestPageWrapper,
     ChatInterfacePage,
     ChatsPageWrapper,
     DocsPageWrapper,
@@ -25,7 +24,7 @@ import {
 } from "./components/routes/RouteComponents";
 import { NavigationProvider } from "./contexts/NavigationContext";
 import { themeAtom } from "./lib/store";
-import { NDKCacheAdapter } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKCacheAdapter } from "@nostr-dev-kit/ndk-hooks";
 
 function AppContent() {
     const sessionStorage = useRef(new NDKSessionLocalStorage());
@@ -70,7 +69,7 @@ function AppContent() {
             <NavigationProvider>
                 <Routes>
                     <Route path="/login" element={<LoginScreen />} />
-                    <Route path="/blossom-test" element={<BlossomTestPageWrapper />} />
+                    {/* <Route path="/blossom-test" element={<BlossomTestPageWrapper />} /> */}
                     <Route element={<AuthLayout />}>
                         {/* Root path - show desktop layout on desktop, project list on mobile */}
                         <Route path="/" element={<RootPage />} />

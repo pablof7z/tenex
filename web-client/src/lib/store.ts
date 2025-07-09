@@ -1,5 +1,5 @@
 import type { NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import type { LLMConfig, BackendInfo } from "./types.js";
+import type { BackendInfo } from "./types.js";
 import { atom } from "jotai";
 
 // Re-export BackendInfo from local types
@@ -7,39 +7,6 @@ export type { BackendInfo } from "./types.js";
 
 // Map to track online backends: pubkey -> BackendInfo
 export const onlineBackendsAtom = atom<Map<string, BackendInfo>>(new Map<string, BackendInfo>());
-
-// Map to track online projects from kind 24010 events: projectDir -> timestamp
-export const onlineProjectStatusAtom = atom<Map<string, number>>(new Map());
-
-// Map to track project LLM configurations from kind 24010 events: projectDir -> llmConfigs
-export const projectLLMConfigsAtom = atom<Map<string, Record<string, LLMConfig | string>>>(
-    new Map()
-);
-
-// Derived atom to get all online project directories (combines both sources)
-export const onlineProjectsAtom = atom((get) => {
-    const backends = get(onlineBackendsAtom);
-    const projectStatus = get(onlineProjectStatusAtom);
-    const projects = new Set<string>();
-
-    // Add projects from backends
-    for (const backend of backends.values()) {
-        for (const project of backend.projects) {
-            projects.add(project.name);
-        }
-    }
-
-    // Add projects from status events
-    const now = Date.now() / 1000;
-    for (const [projectDir, timestamp] of projectStatus.entries()) {
-        // Only include projects that have pinged in the last 90 seconds
-        if (now - timestamp <= 90) {
-            projects.add(projectDir);
-        }
-    }
-
-    return projects;
-});
 
 // Selected task for desktop split-screen view
 export const selectedTaskAtom = atom<NDKTask | null>(null);

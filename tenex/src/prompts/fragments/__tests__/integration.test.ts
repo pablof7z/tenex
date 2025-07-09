@@ -59,8 +59,8 @@ describe("Agent Routing Integration", () => {
         expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
         expect(prompt).toContain("Core Routing Principles");
 
-        // Should have handoff guidance
-        expect(prompt).toContain("## Agent Selection Guidance");
-        expect(prompt).toContain("Agent Capabilities Match");
+        // Should have routing rules
+        expect(prompt).toContain("Request Assessment");
+        expect(prompt).toContain("Quality Control in Plan Phase");
     });
 });

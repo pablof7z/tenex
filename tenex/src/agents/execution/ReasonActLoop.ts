@@ -1,19 +1,17 @@
-import type { Phase } from "@/conversations/phases";
-import type { CompletionResponse, LLMService, StreamEvent, Tool } from "@/llm/types";
+import type { CompletionResponse, LLMService, Tool } from "@/llm/types";
+import type { StreamEvent } from "@/llm/types";
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
 import { StreamPublisher } from "@/nostr/NostrPublisher";
 import { buildLLMMetadata } from "@/prompts/utils/llmMetadata";
 import type { ToolExecutionResult, ContinueFlow, Complete, EndConversation } from "@/tools/types";
 import type { RoutingDecision, CompletionSummary, ConversationResult } from "@/tools/core";
 import type { TracingContext, TracingLogger } from "@/tracing";
-import { createTracingLogger } from "@/tracing";
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import { createTracingLogger, createTracingContext } from "@/tracing";
 import { Message } from "multi-llm-ts";
 import { deserializeToolResult, isSerializedToolResult } from "@/llm/ToolResult";
-
-import type { Agent } from "@/agents/types";
-import type { Conversation } from "@/conversations/types";
 import { getProjectContext } from "@/services/ProjectContext";
+import type { ExecutionBackend } from "./ExecutionBackend";
+import type { AgentExecutionContext } from "./types";
 
 interface StreamingState {
   allToolResults: ToolExecutionResult[];
@@ -24,24 +22,6 @@ interface StreamingState {
   streamPublisher: StreamPublisher | undefined;
 }
 
-export interface ReasonActContext {
-  projectPath: string;
-  conversationId: string;
-  phase: Phase;
-  agent: Agent;
-  conversation: Conversation;
-  eventToReply?: NDKEvent;
-}
-
-export interface ReasonActResult {
-  finalResponse: CompletionResponse;
-  finalContent: string;
-  toolExecutions: number;
-  allToolResults?: ToolExecutionResult[];
-  continueFlow?: ContinueFlow;
-  termination?: Complete | EndConversation;
-  wasPublished?: boolean;
-}
 
 // Type guards for tool outputs
 function isContinueFlow(output: unknown): output is ContinueFlow {
@@ -117,22 +97,51 @@ function isConversationResult(result: unknown): result is ConversationResult {
   );
 }
 
-export class ReasonActLoop {
-  private static readonly MAX_ITERATIONS = 3;
+export class ReasonActLoop implements ExecutionBackend {
   private static readonly MAX_TERMINATION_ATTEMPTS = 2;
 
   constructor(
     private llmService: LLMService,
-    private conversationManager?: import("@/conversations/ConversationManager").ConversationManager
+    private conversationManager: import("@/conversations/ConversationManager").ConversationManager
   ) {}
 
-  async *executeStreaming(
-    context: ReasonActContext,
+  /**
+   * ExecutionBackend interface implementation
+   */
+  async execute(
+    messages: Array<import("multi-llm-ts").Message>,
+    tools: Tool[],
+    context: AgentExecutionContext,
+    publisher: NostrPublisher
+  ): Promise<void> {
+    // Create tracing context
+    const tracingContext = createTracingContext(context.conversation.id);
+
+    // Execute the streaming loop and collect results
+    const generator = this.executeStreamingInternal(
+      context,
+      messages,
+      tracingContext,
+      publisher,
+      tools
+    );
+
+    // Drain the generator to make it execute
+    let iterResult: IteratorResult<StreamEvent, void>;
+    do {
+      iterResult = await generator.next();
+    } while (!iterResult.done);
+
+    // Execution is complete - all state updates have been handled by the publisher
+  }
+
+  async *executeStreamingInternal(
+    context: AgentExecutionContext,
     messages: Message[],
     tracingContext: TracingContext,
     publisher?: NostrPublisher,
     tools?: Tool[]
-  ): AsyncGenerator<StreamEvent, ReasonActResult, unknown> {
+  ): AsyncGenerator<StreamEvent, void, unknown> {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
     const state = this.initializeStreamingState();
 
@@ -299,22 +308,7 @@ export class ReasonActLoop {
       throw error;
     }
 
-    // Return the final result
-    return {
-      finalResponse:
-        state.finalResponse ||
-        ({
-          content: state.fullContent,
-          toolCalls: [],
-          type: "text",
-        } as CompletionResponse),
-      finalContent: state.fullContent,
-      toolExecutions: state.allToolResults.length,
-      allToolResults: state.allToolResults,
-      continueFlow: state.continueFlow,
-      termination: state.termination,
-      wasPublished: !!state.streamPublisher,
-    };
+    // Execution is complete - all state updates have been handled by the publisher
   }
 
   private initializeStreamingState(): StreamingState {
@@ -330,7 +324,7 @@ export class ReasonActLoop {
 
   private logStreamingStart(
     tracingLogger: TracingLogger,
-    context: ReasonActContext,
+    context: AgentExecutionContext,
     tools?: Tool[]
   ): void {
     tracingLogger.info("🔄 Starting ReasonActLoop", {
@@ -341,7 +335,7 @@ export class ReasonActLoop {
   }
 
   private createLLMStream(
-    context: ReasonActContext,
+    context: AgentExecutionContext,
     messages: Message[],
     tools?: Tool[],
     publisher?: NostrPublisher
@@ -355,7 +349,7 @@ export class ReasonActLoop {
       tools,
       toolContext: {
         projectPath: context.projectPath,
-        conversationId: context.conversationId,
+        conversationId: context.conversation.id,
         phase: context.phase,
         agent: context.agent,
         conversation: context.conversation,
@@ -369,7 +363,7 @@ export class ReasonActLoop {
   private setupStreamPublisher(
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
-    context: ReasonActContext
+    context: AgentExecutionContext
   ): StreamPublisher | undefined {
     if (!publisher) return undefined;
 
@@ -386,7 +380,7 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
-    context: ReasonActContext
+    context: AgentExecutionContext
   ): AsyncGenerator<StreamEvent> {
     state.streamPublisher = streamPublisher;
 
@@ -505,7 +499,7 @@ export class ReasonActLoop {
     streamPublisher: StreamPublisher | undefined,
     publisher: NostrPublisher | undefined,
     tracingLogger: TracingLogger,
-    context: ReasonActContext
+    context: AgentExecutionContext
   ): Promise<boolean> {
     tracingLogger.info("🛠️ Tool complete event received", {
       tool: event.tool,
@@ -588,7 +582,7 @@ export class ReasonActLoop {
     toolResult: ToolExecutionResult,
     state: StreamingState,
     tracingLogger: TracingLogger,
-    context: ReasonActContext
+    context: AgentExecutionContext
   ): void {
     tracingLogger.info("🔧 Processing tool result", {
       success: toolResult.success,
@@ -628,13 +622,13 @@ export class ReasonActLoop {
       });
 
       // Increment continue call count
-      if (this.conversationManager && context.conversationId && context.phase) {
+      if (this.conversationManager && context.conversation.id && context.phase) {
         this.conversationManager
-          .incrementContinueCallCount(context.conversationId, context.phase)
+          .incrementContinueCallCount(context.conversation.id, context.phase)
           .catch((error) => {
             tracingLogger.error("Failed to increment continue call count", {
               error: error instanceof Error ? error.message : String(error),
-              conversationId: context.conversationId,
+              conversationId: context.conversation.id,
               phase: context.phase,
             });
           });
@@ -706,7 +700,7 @@ export class ReasonActLoop {
   private async finalizeStream(
     streamPublisher: StreamPublisher | undefined,
     state: StreamingState,
-    context: ReasonActContext,
+    context: AgentExecutionContext,
     messages: Message[],
     tracingLogger: TracingLogger
   ): Promise<void> {
@@ -740,7 +734,7 @@ export class ReasonActLoop {
     });
   }
 
-  private getReminderMessage(context: ReasonActContext): string {
+  private getReminderMessage(context: AgentExecutionContext): string {
     if (context.agent.isOrchestrator) {
       return `I see you've finished responding, but you haven't used the 'continue' or 'end_conversation' tool yet. As the orchestrator in the ${context.phase} phase, you MUST either:
 - Use the 'continue' tool to route to appropriate agents for the next task
@@ -753,13 +747,13 @@ Please use one of these tools now.`;
 
   private autoCompleteTermination(
     state: StreamingState,
-    context: ReasonActContext,
+    context: AgentExecutionContext,
     tracingLogger: TracingLogger
   ): void {
     tracingLogger.error(`${context.agent.isOrchestrator ? "Orchestrator" : "Agent"} failed to call terminal tool even after reminder - auto-completing`, {
       agent: context.agent.name,
       phase: context.phase,
-      conversationId: context.conversationId,
+      conversationId: context.conversation.id,
       isOrchestrator: context.agent.isOrchestrator
     });
     
@@ -816,7 +810,7 @@ Please use one of these tools now.`;
     publisher: NostrPublisher | undefined,
     streamPublisher: StreamPublisher | undefined,
     tracingLogger: TracingLogger,
-    context: ReasonActContext
+    context: AgentExecutionContext
   ): AsyncGenerator<StreamEvent> {
     tracingLogger.error("Streaming error", {
       error: error instanceof Error ? error.message : String(error),

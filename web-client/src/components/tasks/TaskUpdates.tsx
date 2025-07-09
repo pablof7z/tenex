@@ -1,5 +1,5 @@
 import { type NDKProject, type NDKTask, useEvent, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, MessageSquare, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { ChatInterface } from "../ChatInterface";
@@ -22,12 +22,11 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
         task
             ? [
                   {
-                      kinds: [1111],
-                      "#e": [task.id],
+                      "#E": [task.id],
                   },
               ]
             : false,
-        {},
+        { subId: 'updates' },
         [task?.id]
     );
 

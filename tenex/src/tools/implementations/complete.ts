@@ -1,8 +1,7 @@
-import { getProjectContext } from "@/services/ProjectContext";
-import { logger } from "@/utils/logger";
 import type { Tool, Termination } from "../types";
 import { success, createZodSchema } from "../types";
 import { z } from "zod";
+import { handleAgentCompletion } from "@/agents/execution/completionHandler";
 
 const completeSchema = z.object({
   response: z.string().describe("Detailed report of what was accomplished and the results achieved"),
@@ -29,45 +28,16 @@ export const completeTool: Tool<{
   execute: async (input, context) => {
     const { response, summary } = input.value;
 
-    const projectContext = getProjectContext();
-    const orchestratorAgent = projectContext.getProjectAgent();
-
-    // Publish the completion event directly
-    await context.publisher.publishResponse({
-      content: response,  // Use the response as content
-      destinationPubkeys: [orchestratorAgent.pubkey],  // Route to orchestrator
-      completeMetadata: {
-        type: "complete",
-        completion: {
-          response,
-          summary: summary || response,
-          nextAgent: orchestratorAgent.pubkey,
-        }
-      }
-    });
-
-    logger.info("Complete tool published completion event", {
-      toOrchestrator: orchestratorAgent.pubkey,
-    });
-
-    // Log the completion
-    logger.info("✅ Task completion signaled", {
-      tool: "complete",
-      agent: context.agent.name,
-      agentId: context.agent.pubkey,
-      returningTo: orchestratorAgent.name,
-      hasResponse: !!response,
+    // Use the shared completion handler
+    const completion = await handleAgentCompletion({
+      response,
+      summary,
+      agent: context.agent,
       conversationId: context.conversationId,
+      publisher: context.publisher,
     });
 
-    // Return properly typed termination
-    return success({
-      type: "complete",
-      completion: {
-        response,
-        summary: summary || response, // Use summary if provided, otherwise use response
-        nextAgent: orchestratorAgent.pubkey,
-      },
-    });
+    // Return success with the completion
+    return success(completion);
   },
 };

@@ -10,6 +10,7 @@ export interface BuiltInAgentDefinition {
   role: string;
   instructions: string;
   llmConfig?: string;
+  backend?: 'reason-act-loop' | 'claude';
   useCriteria?: string;
 }
 

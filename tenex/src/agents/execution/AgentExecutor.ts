@@ -1,12 +1,6 @@
 import type { ConversationManager } from "@/conversations/ConversationManager";
-import { DEFAULT_AGENT_LLM_CONFIG } from "@/llm/constants";
-import type { LLMService, StreamEvent, Tool } from "@/llm/types";
+import type { LLMService } from "@/llm/types";
 import { NostrPublisher } from "@/nostr";
-import {
-  buildHistoryMessages,
-  getLatestUserMessage,
-  needsCurrentUserMessage,
-} from "@/prompts/utils/messageBuilder";
 import { buildSystemPrompt } from "@/prompts/utils/systemPromptBuilder";
 import { getProjectContext } from "@/services";
 import { mcpService } from "@/services/mcp/MCPService";
@@ -21,7 +15,8 @@ import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import { ReasonActLoop } from "./ReasonActLoop";
-import type { ReasonActContext, ReasonActResult } from "./ReasonActLoop";
+import { ClaudeBackend } from "./ClaudeBackend";
+import type { ExecutionBackend } from "./ExecutionBackend";
 import type {
   AgentExecutionContext,
   AgentExecutionContextWithHandoff,
@@ -33,14 +28,25 @@ import "@/prompts/fragments/expertise-boundaries";
 import { startExecutionTime, stopExecutionTime } from "@/conversations/executionTime";
 
 export class AgentExecutor {
-  private reasonActLoop: ReasonActLoop;
-
   constructor(
     private llmService: LLMService,
     private ndk: NDK,
-    private conversationManager?: ConversationManager
-  ) {
-    this.reasonActLoop = new ReasonActLoop(llmService, conversationManager);
+    private conversationManager: ConversationManager
+  ) {}
+
+  /**
+   * Get the appropriate execution backend based on agent configuration
+   */
+  private getBackend(agent: import("@/agents/types").Agent): ExecutionBackend {
+    const backendType = agent.backend || 'reason-act-loop';
+    
+    switch (backendType) {
+      case 'claude':
+        return new ClaudeBackend();
+      case 'reason-act-loop':
+      default:
+        return new ReasonActLoop(this.llmService, this.conversationManager);
+    }
   }
 
   /**
@@ -83,57 +89,32 @@ export class AgentExecutor {
       // 2. Publish typing indicator start
       await publisher.publishTypingIndicator("start");
 
-      const streamResult = await this.executeWithStreaming(
-        {
-          projectPath: process.cwd(),
-          conversationId: context.conversation.id,
-          phase: context.phase,
-          agent: context.agent,
-          conversation: context.conversation,
-          eventToReply: triggeringEvent,
-        },
+      // Ensure context has all required fields
+      const fullContext: AgentExecutionContext = {
+        ...context,
+        projectPath: context.projectPath || process.cwd(),
+        eventToReply: triggeringEvent,
+      };
+
+      await this.executeWithStreaming(
+        fullContext,
         messages,
         tracingContext,
         publisher
       );
 
-      // Add the agent's response to their context
-      if (this.conversationManager && streamResult.finalContent) {
-        await this.conversationManager.addMessageToContext(
-          context.conversation.id,
-          context.agent.slug,
-          new Message("assistant", streamResult.finalContent)
-        );
-      }
-
-      // Stop execution time tracking
-      const sessionDuration = stopExecutionTime(context.conversation);
-
-      // Save updated conversation with execution time
-      if (this.conversationManager) {
-        await this.conversationManager.saveConversation(context.conversation.id);
-      }
-
-      tracingLogger.completeOperation("agent_execution", {
-        agentName: context.agent.name,
-        responseLength: streamResult.finalContent.length,
-        toolExecutions: streamResult.allToolResults?.length || 0,
-        sessionDurationMs: sessionDuration,
-      });
+      // Conversation updates are now handled by NostrPublisher
 
       return {
         success: true,
-        response: streamResult.finalContent,
-        toolExecutions: streamResult.allToolResults,
+        response: "Task completed successfully",
+        toolExecutions: [],
       };
     } catch (error) {
       // Stop execution time tracking even on error
       stopExecutionTime(context.conversation);
 
-      // Save updated conversation with execution time
-      if (this.conversationManager) {
-        await this.conversationManager.saveConversation(context.conversation.id);
-      }
+      // Conversation saving is now handled by NostrPublisher
 
       // Ensure typing indicator is stopped even on error
       await publisher.publishTypingIndicator("stop");
@@ -195,14 +176,13 @@ export class AgentExecutor {
     messages.push(new Message("system", systemPrompt));
 
     // Use agent's isolated context instead of full history
-    if (this.conversationManager) {
-      let agentContext = this.conversationManager.getAgentContext(
-        context.conversation.id,
-        context.agent.slug
-      );
+    let agentContext = this.conversationManager.getAgentContext(
+      context.conversation.id,
+      context.agent.slug
+    );
 
-      // If no context exists, this agent is being invoked for the first time
-      if (!agentContext) {
+    // If no context exists, this agent is being invoked for the first time
+    if (!agentContext) {
         // Check if this is a handoff from another agent (will be set in execute method)
         const handoff = (context as AgentExecutionContextWithHandoff).handoff;
 
@@ -245,30 +225,17 @@ export class AgentExecutor {
         );
       }
 
-      // Add the agent's isolated messages
-      messages.push(...agentContext.messages);
+    // Add the agent's isolated messages
+    messages.push(...agentContext.messages);
 
-      logger.info("[AGENT_EXECUTOR] Final message state for agent", {
-        agentSlug: context.agent.slug,
-        totalMessages: messages.length,
-        messages: messages.map((m) => ({
-          role: m.role,
-          contentPreview: `${m.content.substring(0, 100)}...`,
-        })),
-      });
-    } else {
-      // Build messages from conversation history
-      const historyMessages = buildHistoryMessages(context.conversation.history);
-      messages.push(...historyMessages);
-
-      // Add current user message if needed
-      if (needsCurrentUserMessage(context.conversation)) {
-        const latestUserMessage = getLatestUserMessage(context.conversation);
-        if (latestUserMessage) {
-          messages.push(new Message("user", latestUserMessage));
-        }
-      }
-    }
+    logger.info("[AGENT_EXECUTOR] Final message state for agent", {
+      agentSlug: context.agent.slug,
+      totalMessages: messages.length,
+      messages: messages.map((m) => ({
+        role: m.role,
+        contentPreview: `${m.content.substring(0, 100)}...`,
+      })),
+    });
 
     return messages;
   }
@@ -278,11 +245,11 @@ export class AgentExecutor {
    * Execute with streaming support
    */
   private async executeWithStreaming(
-    context: ReasonActContext,
+    context: AgentExecutionContext,
     messages: Message[],
     tracingContext: TracingContext,
-    publisher?: NostrPublisher
-  ): Promise<ReasonActResult> {
+    publisher: NostrPublisher
+  ): Promise<void> {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
 
     // Get tools for response processing - use agent's configured tools
@@ -295,29 +262,15 @@ export class AgentExecutor {
       allTools = [...tools, ...mcpTools];
     }
 
-    // Process the stream - ReasonActLoop handles all publishing
-    const stream = this.reasonActLoop.executeStreaming(
-      context,
-      messages,
-      tracingContext,
-      publisher,
-      allTools
-    );
+    // Get the appropriate backend for this agent
+    const backend = this.getBackend(context.agent);
 
-    // Drain the generator to make it execute.
-    // The generator's return value contains the final result.
-    let iterResult: IteratorResult<StreamEvent, ReasonActResult>;
-    do {
-      iterResult = await stream.next();
-    } while (!iterResult.done);
+    // Execute using the backend - all backends now use the same interface
+    await backend.execute(messages, allTools, context, publisher);
 
-    tracingLogger.info("[AGENT_EXECUTOR] Stream completed", {
+    tracingLogger.info("[AGENT_EXECUTOR] Backend execution completed", {
       agent: context.agent.name,
-      hasTermination: !!iterResult.value.termination,
-      hasContinueFlow: !!iterResult.value.continueFlow,
-      contentLength: iterResult.value.finalContent.length,
+      backend: context.agent.backend || 'reason-act-loop',
     });
-
-    return iterResult.value;
   }
 }

@@ -1,9 +1,10 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { NDKProject, NDKTask, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKProject, NDKTask, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { FileText, FolderOpen, MessageCircle, Search, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { useUserProjects } from "../../stores/project/hooks";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -16,26 +17,14 @@ interface GlobalSearchDialogProps {
 
 export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogProps) {
     const navigate = useNavigate();
-    const currentUser = useNDKCurrentUser();
     const [searchQuery, setSearchQuery] = useState("");
     const { formatRelativeTime } = useTimeFormat();
 
-    // Get all user's projects
-    const { events: projects } = useSubscribe<NDKProject>(
-        currentUser
-            ? [
-                  {
-                      kinds: [NDKProject.kind],
-                      authors: [currentUser.pubkey],
-                      limit: 100,
-                  },
-              ]
-            : false,
-        { wrap: true },
-        [currentUser?.pubkey]
-    );
+    // Get all user's projects from the store
+    const projects = useUserProjects();
 
-    // Get all tasks for these projects
+    // TODO: Tasks and status updates should come from a centralized store as well
+    // For now, we'll still subscribe to tasks but this should be refactored
     const { events: tasks } = useSubscribe<NDKTask>(
         projects.length > 0
             ? [
@@ -51,19 +40,8 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         [projects.length]
     );
 
-    // Get all status updates
-    const { events: statusUpdates } = useSubscribe(
-        tasks.length > 0
-            ? [
-                  {
-                      kinds: [1],
-                      "#e": tasks.map((t) => t.id),
-                  },
-              ]
-            : false,
-        {},
-        [tasks.length]
-    );
+    // TODO: Status updates should also come from a centralized store
+    const statusUpdates: NDKEvent[] = [];
 
     // Helper functions
     const getTaskTitle = useCallback((task: NDKTask) => {

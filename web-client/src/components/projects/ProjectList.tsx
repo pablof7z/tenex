@@ -1,11 +1,12 @@
 import { type NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import { useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { StringUtils } from "../../lib/string-utils";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../../contexts/NavigationContext";
 import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { useUserProjects } from "../../stores/project/hooks";
 import { SearchIconButton } from "../common/SearchBar";
 import { CreateProjectDialog } from "../dialogs/CreateProjectDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -66,49 +67,13 @@ export function ProjectList() {
     const pendingAgentRequests = usePendingAgentRequests();
     const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
 
-    const { events: projects } = useSubscribe<NDKProject>(
-        currentUser
-            ? [
-                  {
-                      kinds: [NDKProject.kind],
-                      authors: [currentUser.pubkey],
-                      limit: 50,
-                  },
-              ]
-            : false,
-        { wrap: true },
-        [currentUser?.pubkey]
-    );
+    // Get projects from the centralized store
+    const projects = useUserProjects();
 
-    // Get all tasks for these projects to subscribe to their status updates
-    const { events: tasks } = useSubscribe<NDKTask>(
-        projects.length > 0
-            ? [
-                  {
-                      kinds: [NDKTask.kind],
-                      "#a": projects.map(
-                          (p) => `${NDKProject.kind}:${p.pubkey}:${p.tagValue("d")}`
-                      ),
-                  },
-              ]
-            : false,
-        { wrap: true },
-        [projects.length]
-    );
-
-    // Get status updates for all tasks (NIP-22 replies - kind 1111 events with 'e' tag referencing any task)
-    const { events: statusUpdates } = useSubscribe(
-        tasks.length > 0
-            ? [
-                  {
-                      kinds: [1111],
-                      "#e": tasks.map((t) => t.id),
-                  },
-              ]
-            : false,
-        {},
-        [tasks.length]
-    );
+    // TODO: In the future, we should get task counts and latest activity from the store
+    // For now, we'll simplify and just show projects without the activity tracking
+    const tasks: NDKTask[] = [];
+    const statusUpdates: NDKEvent[] = [];
 
     // Create maps for project activity and status updates
     const { projectActivityMap, mostRecentStatusMap, unreadCountMap } = useMemo(() => {

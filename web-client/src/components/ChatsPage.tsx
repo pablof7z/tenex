@@ -1,4 +1,5 @@
-import { NDKProject, NDKTask, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKProject, NDKSubscriptionCacheUsage, NDKTask, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useUserProjects } from "../stores/project/hooks";
 import { Clock, MessageCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTimeFormat } from "../hooks/useTimeFormat";
@@ -16,20 +17,8 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
 
-    // Get all user's projects
-    const { events: projects } = useSubscribe<NDKProject>(
-        currentUser
-            ? [
-                  {
-                      kinds: [NDKProject.kind],
-                      authors: [currentUser.pubkey],
-                      limit: 50,
-                  },
-              ]
-            : false,
-        { wrap: true },
-        [currentUser?.pubkey]
-    );
+    // Get all user's projects from the store
+    const projects = useUserProjects();
 
     // Get all tasks for these projects
     const { events: tasks } = useSubscribe<NDKTask>(
@@ -52,12 +41,12 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
         tasks.length > 0
             ? [
                   {
-                      kinds: [1112],
+                      kinds: [1111],
                       "#e": tasks.map((t) => t.id),
                   },
               ]
             : false,
-        {},
+        { cacheUsage: NDKSubscriptionCacheUsage.ONLY_CACHE },
         [tasks.length]
     );
 
@@ -105,9 +94,6 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
         return formatRelativeTime(timestamp);
     };
 
-    const handleReplyToTask = (taskId: string) => {
-        setSelectedTaskId(taskId);
-    };
 
     const handleTaskClick = (taskId: string) => {
         const task = getTaskById(taskId);
@@ -232,14 +218,13 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
                     <ChatInterface
                         statusUpdates={selectedTaskUpdates}
                         task={selectedTaskId ? getTaskById(selectedTaskId) : undefined}
-                        project={selectedTaskId && getTaskById(selectedTaskId) ? getProjectForTask(getTaskById(selectedTaskId)!) : undefined}
+                        project={selectedTaskId && getTaskById(selectedTaskId) ? getProjectForTask(getTaskById(selectedTaskId)!) ?? undefined : undefined}
                         inputPlaceholder={
                             selectedTaskId
                                 ? "Reply to this task..."
                                 : "Select a task update to reply"
                         }
                         allowInput={!!selectedTaskId}
-                        onReplyToTask={handleReplyToTask}
                         className="h-full"
                     />
                 )}

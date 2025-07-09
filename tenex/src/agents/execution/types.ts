@@ -9,7 +9,8 @@ export interface AgentExecutionContext {
   phase: Phase;
   previousPhase?: Phase;
   projectContext?: Record<string, unknown>;
-  projectPath?: string;
+  projectPath: string;
+  eventToReply: import("@nostr-dev-kit/ndk").NDKEvent;
   additionalContext?: {
     claudeCodeReport?: string;
     claudeCodeSuccess?: boolean;
@@ -27,3 +28,4 @@ export interface AgentExecutionResult {
 export interface AgentExecutionContextWithHandoff extends AgentExecutionContext {
   handoff?: PhaseTransition;
 }
+

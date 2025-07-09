@@ -12,6 +12,7 @@ import { logger } from "@/utils/logger";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { getBuiltInAgents } from "./builtInAgents";
 import { getDefaultToolsForAgent } from "./constants";
+import { isClaudeBackend } from "./utils";
 
 export class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
@@ -142,6 +143,7 @@ export class AgentRegistry {
         instructions: config.instructions || "",
         useCriteria: config.useCriteria,
         llmConfig: config.llmConfig,
+        backend: config.backend,
       };
 
       // Only include tools if explicitly provided
@@ -180,8 +182,14 @@ export class AgentRegistry {
           // For built-in agents, use the hardcoded instructions if not present in the file
           const builtInAgents = getBuiltInAgents();
           const builtInAgent = builtInAgents.find((agent) => agent.slug === name);
-          if (builtInAgent && !agentDefinition.instructions) {
-            agentDefinition.instructions = builtInAgent.instructions || "";
+          if (builtInAgent) {
+            if (!agentDefinition.instructions) {
+              agentDefinition.instructions = builtInAgent.instructions || "";
+            }
+            // Also use the built-in backend if not specified in the file
+            if (!agentDefinition.backend && builtInAgent.backend) {
+              agentDefinition.backend = builtInAgent.backend;
+            }
           }
         } catch (error) {
           logger.error("Failed to parse or validate agent definition", {
@@ -202,6 +210,7 @@ export class AgentRegistry {
           instructions: config.instructions || "",
           useCriteria: config.useCriteria,
           llmConfig: config.llmConfig,
+          backend: config.backend,
         };
         if (isBuiltIn) {
           const { instructions: _, ...definitionWithoutInstructions } = agentDefinition;
@@ -251,11 +260,17 @@ export class AgentRegistry {
       slug: name,
       isOrchestrator: registryEntry.orchestratorAgent,
       isBuiltIn: isBuiltIn, // Set the isBuiltIn property here
+      backend: agentDefinition.backend, // Propagate backend configuration
     };
 
     // Set tools - use explicit tools if configured, otherwise use defaults
-    const toolNames =
-      agentDefinition.tools !== undefined ? agentDefinition.tools : getDefaultToolsForAgent(agent);
+    let toolNames: string[];
+    if (isClaudeBackend(agent)) {
+      // Claude backend agents don't use tools through the traditional tool system
+      toolNames = [];
+    } else {
+      toolNames = agentDefinition.tools !== undefined ? agentDefinition.tools : getDefaultToolsForAgent(agent);
+    }
 
     // Convert tool names to Tool instances
     const { getTools } = await import("@/tools/registry");

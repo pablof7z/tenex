@@ -2,7 +2,7 @@ import type { NDKArticle, NDKEvent, NDKProject } from "@nostr-dev-kit/ndk-hooks"
 import { NDKTask, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Plus } from "lucide-react";
 import { useState, useMemo } from "react";
-import type { ProjectAgent } from "../../hooks/useProjectAgents";
+import type { ProjectAgent } from "../../stores/project/hooks";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { EVENT_KINDS } from "../../lib/constants";
 import { TaskCreationOptionsDialog } from "../dialogs/TaskCreationOptionsDialog";
@@ -291,7 +291,6 @@ export function ProjectDetail({
             <VoiceMessageDialog
                 open={showVoiceDialog}
                 onOpenChange={setShowVoiceDialog}
-                project={project}
             />
 
             <ThreadDialog

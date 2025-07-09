@@ -1,4 +1,3 @@
-import React from "react";
 import type { NDKLLMRule } from "../../types/template";
 import { Badge } from "../ui/badge";
 import { EntityListSidebar } from "@/components/common/EntityListSidebar";

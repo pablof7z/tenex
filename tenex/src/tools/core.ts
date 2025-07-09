@@ -38,7 +38,7 @@ export interface ExecutionContext {
   readonly agent: Agent;
   readonly conversation: Conversation;
   readonly publisher: NostrPublisher;
-  readonly conversationManager?: ConversationManager;
+  readonly conversationManager: ConversationManager;
 }
 
 // ============================================================================

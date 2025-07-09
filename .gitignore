@@ -50,3 +50,6 @@ cli-client/dist shared/dist tenex/dist web-client/dist
 .tenex/conversations
 .tenex/llms.json
 .tenex/processed-events.json
+
+# TENEX project files
+.tenex/

@@ -8,10 +8,10 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../contexts/NavigationContext";
-import type { ProjectAgent } from "../hooks/useProjectAgents";
+import type { ProjectAgent } from "../stores/project/hooks";
 import { useUserProjects } from "../hooks/useUserProjects";
+import { useOnlineProjects } from "../stores/project/hooks";
 import {
-    onlineProjectsAtom,
     selectedProjectAtom,
     selectedTaskAtom,
     selectedThreadAtom,
@@ -36,7 +36,7 @@ export function DesktopLayout() {
     const [selectedThread, setSelectedThread] = useAtom(selectedThreadAtom);
     const [selectedProject, setSelectedProject] = useAtom(selectedProjectAtom);
     const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null);
-    const onlineProjects = useAtomValue(onlineProjectsAtom);
+    const onlineProjects = useOnlineProjects();
     const theme = useAtomValue(themeAtom);
     const toggleTheme = useSetAtom(toggleThemeAtom);
 

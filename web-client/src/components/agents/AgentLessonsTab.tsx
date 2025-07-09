@@ -27,7 +27,7 @@ function LessonReplies({ lesson }: LessonRepliesProps) {
 
     // Fetch replies to this lesson
     const { events: replies } = useSubscribe(
-        [{ kinds: [EVENT_KINDS.NOTE as NDKKind], "#e": [lesson.id] }],
+        [{ kinds: [EVENT_KINDS.GENERIC_REPLY as NDKKind], "#e": [lesson.id] }],
         {},
         [lesson.id]
     );

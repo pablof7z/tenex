@@ -1,7 +1,8 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ArrowRight, AtSign, Bot } from "lucide-react";
 import { useState } from "react";
-import { type ProjectAgent, useProjectAgents } from "../../hooks/useProjectAgents";
+import type { ProjectAgent } from "../../stores/project/hooks";
+import { useProjectAgents } from "../../stores/project/hooks";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";

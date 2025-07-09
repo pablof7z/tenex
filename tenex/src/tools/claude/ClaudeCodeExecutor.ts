@@ -5,6 +5,7 @@ import type { ContentBlock, TextBlock } from "@anthropic-ai/sdk/resources/messag
 export interface ClaudeCodeExecutorOptions {
   prompt: string;
   projectPath: string;
+  systemPrompt?: string;
   timeout?: number;
   abortSignal?: AbortSignal;
 }
@@ -78,6 +79,7 @@ export class ClaudeCodeExecutor {
         options: {
           cwd: this.options.projectPath,
           permissionMode: "bypassPermissions",
+          customSystemPrompt: this.options.systemPrompt,
         },
       })) {
         // Extract metrics from messages

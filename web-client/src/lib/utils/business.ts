@@ -197,6 +197,14 @@ export const ValidationUtils = {
     },
 
     /**
+     * Check if string is a valid email address
+     */
+    isValidEmail(str: string): boolean {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(str);
+    },
+
+    /**
      * Validate field with custom rules
      */
     validateField(value: unknown, rules: ValidationRule[]): string | null {

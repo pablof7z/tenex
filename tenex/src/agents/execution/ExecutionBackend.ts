@@ -1,6 +1,6 @@
 import type { AgentExecutionContext } from "./types";
-import type { ReasonActResult } from "./types";
 import type { Tool } from "@/tools/types";
+import type { NostrPublisher } from "@/nostr/NostrPublisher";
 
 /**
  * Interface for agent execution backends.
@@ -9,15 +9,16 @@ import type { Tool } from "@/tools/types";
  */
 export interface ExecutionBackend {
   /**
-   * Execute the agent's task with streaming support
+   * Execute the agent's task
    * @param messages - The messages to send to the LLM
    * @param tools - The tools available to the agent
    * @param context - The execution context
-   * @returns The result of the execution
+   * @param publisher - The NostrPublisher for publishing events
    */
-  executeStreaming(
-    messages: Array<any>,
+  execute(
+    messages: Array<import("multi-llm-ts").Message>,
     tools: Tool[],
-    context: AgentExecutionContext
-  ): Promise<ReasonActResult>;
+    context: AgentExecutionContext,
+    publisher: NostrPublisher
+  ): Promise<void>;
 }

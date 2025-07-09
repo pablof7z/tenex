@@ -1,4 +1,3 @@
-import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { Loader2, Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
@@ -8,16 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 interface VoiceMessageDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    project: NDKProject;
-    onMessageSent?: () => void;
     onTranscriptionComplete?: (text: string) => void;
 }
 
 export function VoiceMessageDialog({
     open,
     onOpenChange,
-    project,
-    onMessageSent,
     onTranscriptionComplete,
 }: VoiceMessageDialogProps) {
     const { getSpeechConfig } = useLLMConfig();
