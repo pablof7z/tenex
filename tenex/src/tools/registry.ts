@@ -1,5 +1,4 @@
 import { analyze } from "./implementations/analyze";
-import { claudeCodeTool } from "./implementations/claudeCode";
 import { continueTool } from "./implementations/continue";
 import { createMilestoneTaskTool } from "./implementations/createMilestoneTask";
 import { endConversationTool } from "./implementations/endConversation";
@@ -14,7 +13,6 @@ import type { Tool } from "./types";
 const toolsMap = new Map<string, Tool<unknown, unknown>>();
 toolsMap.set("read_file", readFileTool as Tool<unknown, unknown>);
 toolsMap.set("write_context_file", writeContextFileTool as Tool<unknown, unknown>);
-toolsMap.set("claude_code", claudeCodeTool as Tool<unknown, unknown>);
 toolsMap.set("continue", continueTool as Tool<unknown, unknown>);
 toolsMap.set("complete", completeTool as Tool<unknown, unknown>);
 toolsMap.set("end_conversation", endConversationTool as Tool<unknown, unknown>);

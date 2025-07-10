@@ -27,14 +27,6 @@ export interface Agent {
   backend?: 'reason-act-loop' | 'claude'; // Execution backend to use (defaults to 'reason-act-loop')
 }
 
-export interface AgentContext {
-  conversation: Conversation;
-  phase: Phase;
-  phaseHistory: NDKEvent[]; // Events from current phase only
-  availableAgents: Agent[];
-  projectPath: string;
-  incomingEvent: NDKEvent; // The event we're responding to
-}
 
 export interface ToolCallArguments {
   // Common tool arguments

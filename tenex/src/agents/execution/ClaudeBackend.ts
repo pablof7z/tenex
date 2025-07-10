@@ -2,7 +2,7 @@ import type { Tool } from "@/tools/types";
 import type { ExecutionBackend } from "./ExecutionBackend";
 import type { AgentExecutionContext } from "./types";
 import { handleAgentCompletion } from "./completionHandler";
-import { ClaudeTaskOrchestrator } from "@/tools/claude/ClaudeTaskOrchestrator";
+import { ClaudeTaskOrchestrator } from "@/claude/orchestrator";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
 import { getNDK } from "@/nostr/ndkClient";
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
@@ -64,9 +64,7 @@ export class ClaudeBackend implements ExecutionBackend {
       summary: `Claude Code execution completed. Task ID: ${result.task.id}`,
       agent: context.agent,
       conversationId: context.conversation.id,
-      publisher, // Use the publisher passed from AgentExecutor
+      publisher,
     });
-
-    // Execution is complete - all state updates have been handled by the publisher
   }
 }

@@ -18,11 +18,11 @@ describe("Tool Registry", () => {
         expect(analyzeTool?.parameters).toBeDefined();
         expect(analyzeTool?.parameters.shape).toBeDefined();
 
-        const claudeCodeTool = getTool("claude_code");
-        expect(claudeCodeTool).toBeDefined();
-        expect(claudeCodeTool?.description).toContain("Use Claude Code");
-        expect(claudeCodeTool?.parameters).toBeDefined();
-        expect(claudeCodeTool?.parameters.shape).toBeDefined();
+        const writeContextFileTool = getTool("write_context_file");
+        expect(writeContextFileTool).toBeDefined();
+        expect(writeContextFileTool?.description).toBeDefined();
+        expect(writeContextFileTool?.parameters).toBeDefined();
+        expect(writeContextFileTool?.parameters.shape).toBeDefined();
 
         const continueTool = getTool("continue");
         expect(continueTool).toBeDefined();
@@ -43,7 +43,7 @@ describe("Tool Registry", () => {
     test("tool registry should have all expected tools with proper structure", () => {
         const expectedTools = [
             "read_file",
-            "claude_code",
+            "write_context_file",
             "continue",
             "complete",
             "end_conversation",
@@ -67,23 +67,23 @@ describe("Tool Registry", () => {
     });
 
     test("tool parameters should have proper validation", () => {
-        const claudeCodeTool = getTool("claude_code");
-        expect(claudeCodeTool?.parameters).toBeDefined();
-        expect(claudeCodeTool?.parameters.shape).toBeDefined();
+        const completeTool = getTool("complete");
+        expect(completeTool?.parameters).toBeDefined();
+        expect(completeTool?.parameters.shape).toBeDefined();
         
         // The shape for a ZodObject has type "object" and properties
-        expect(claudeCodeTool?.parameters.shape.type).toBe("object");
-        expect(claudeCodeTool?.parameters.shape.properties).toBeDefined();
-        expect(claudeCodeTool?.parameters.shape.properties?.prompt).toBeDefined();
+        expect(completeTool?.parameters.shape.type).toBe("object");
+        expect(completeTool?.parameters.shape.properties).toBeDefined();
+        expect(completeTool?.parameters.shape.properties?.response).toBeDefined();
         
         // Test validation
-        const result = claudeCodeTool?.parameters.validate({
-            prompt: "Test prompt",
+        const result = completeTool?.parameters.validate({
+            response: "Test response",
         });
         expect(result?.ok).toBe(true);
         
-        const invalidResult = claudeCodeTool?.parameters.validate({
-            prompt: ""
+        const invalidResult = completeTool?.parameters.validate({
+            invalidField: "test"
         });
         expect(invalidResult?.ok).toBe(false);
     });

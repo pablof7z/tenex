@@ -105,6 +105,7 @@ export class LLMConfigEditor {
 
     const currentAgentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
     const currentAnalyzeDefault = llmsConfig.defaults?.[LLM_DEFAULTS.ANALYZE] || "none";
+    const currentOrchestratorDefault = llmsConfig.defaults?.[LLM_DEFAULTS.ORCHESTRATOR] || "none";
 
     const { action } = await inquirer.prompt([
       {
@@ -125,6 +126,10 @@ export class LLMConfigEditor {
                 {
                   name: `Set analyze tool's default [${currentAnalyzeDefault}]`,
                   value: "default-analyze",
+                },
+                {
+                  name: `Set orchestrator's default [${currentOrchestratorDefault}]`,
+                  value: "default-orchestrator",
                 },
               ]
             : []),
@@ -151,6 +156,9 @@ export class LLMConfigEditor {
         break;
       case "default-analyze":
         await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.ANALYZE);
+        break;
+      case "default-orchestrator":
+        await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.ORCHESTRATOR);
         break;
       case "exit":
         logger.info(chalk.green("\n✅ Configuration saved!"));
@@ -186,6 +194,7 @@ export class LLMConfigEditor {
 
       const currentAgentDefault = llmsConfig.defaults?.[LLM_DEFAULTS.AGENTS] || "none";
       const currentAnalyzeDefault = llmsConfig.defaults?.[LLM_DEFAULTS.ANALYZE] || "none";
+      const currentOrchestratorDefault = llmsConfig.defaults?.[LLM_DEFAULTS.ORCHESTRATOR] || "none";
 
       const choices = [
         { name: "Add new LLM configuration", value: "add" },
@@ -200,6 +209,10 @@ export class LLMConfigEditor {
               {
                 name: `Analyze tool's default: [${currentAnalyzeDefault}]`,
                 value: "default-analyze",
+              },
+              {
+                name: `Orchestrator's default: [${currentOrchestratorDefault}]`,
+                value: "default-orchestrator",
               },
             ]
           : []),
@@ -234,6 +247,9 @@ export class LLMConfigEditor {
           break;
         case "default-analyze":
           await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.ANALYZE);
+          break;
+        case "default-orchestrator":
+          await this.setDefaultConfiguration(llmsConfig, LLM_DEFAULTS.ORCHESTRATOR);
           break;
         case "continue":
           logger.info(chalk.green("\n✅ LLM configuration complete!"));
@@ -731,7 +747,8 @@ export class LLMConfigEditor {
   private async setDefaultConfiguration(llmsConfig: TenexLLMs, defaultType: string): Promise<void> {
     const configs = this.getConfigList(llmsConfig);
     const currentDefault = llmsConfig.defaults?.[defaultType] || "none";
-    const typeLabel = defaultType === LLM_DEFAULTS.AGENTS ? "agent" : "analyze tool";
+    const typeLabel = defaultType === LLM_DEFAULTS.AGENTS ? "agent" : 
+                     defaultType === LLM_DEFAULTS.ANALYZE ? "analyze tool" : "orchestrator";
 
     logger.info(chalk.cyan(`\n⚙️  Set Default Configuration for ${typeLabel}`));
     logger.info(chalk.gray(`Current default: ${currentDefault}\n`));

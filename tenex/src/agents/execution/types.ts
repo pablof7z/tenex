@@ -10,7 +10,7 @@ export interface AgentExecutionContext {
   previousPhase?: Phase;
   projectContext?: Record<string, unknown>;
   projectPath: string;
-  eventToReply: import("@nostr-dev-kit/ndk").NDKEvent;
+  triggeringEvent: import("@nostr-dev-kit/ndk").NDKEvent;
   additionalContext?: {
     claudeCodeReport?: string;
     claudeCodeSuccess?: boolean;

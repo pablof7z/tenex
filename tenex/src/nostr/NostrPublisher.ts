@@ -26,7 +26,7 @@ export interface ToolExecutionStatus {
 
 // Context passed to publisher on creation
 export interface NostrPublisherContext {
-  conversation: Conversation;
+  conversationId: string;
   agent: Agent;
   triggeringEvent: NDKEvent;
   conversationManager: ConversationManager;
@@ -51,6 +51,14 @@ export interface FinalizeMetadata {
 
 export class NostrPublisher {
   constructor(public readonly context: NostrPublisherContext) {}
+
+  private getConversation(): Conversation {
+    const conversation = this.context.conversationManager.getConversation(this.context.conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation not found in ConversationManager: ${this.context.conversationId}`);
+    }
+    return conversation;
+  }
 
   /**
    * Publishes an agent's response to Nostr and updates the conversation state.
@@ -100,23 +108,24 @@ export class NostrPublisher {
       // Update conversation context with the assistant's response BEFORE publishing
       // This ensures transactional integrity - if the update fails, we don't publish
       await this.context.conversationManager.addMessageToContext(
-        this.context.conversation.id,
+        this.context.conversationId,
         this.context.agent.slug,
         new Message("assistant", options.content)
       );
 
       // Save conversation state BEFORE publishing
-      await this.context.conversationManager.saveConversation(this.context.conversation.id);
+      await this.context.conversationManager.saveConversation(this.context.conversationId);
 
       // Sign and publish only after local state is successfully updated
       await reply.sign(this.context.agent.signer);
       await reply.publish();
 
+      const conversation = this.getConversation();
       logger.debug("Published agent response", {
         eventId: reply.id,
         contentLength: options.content.length,
         agent: this.context.agent.name,
-        phase: this.context.conversation.phase,
+        phase: conversation.phase,
       });
 
       return reply;
@@ -173,13 +182,13 @@ export class NostrPublisher {
       this.addBaseTags(event);
 
       // Add conversation references
-      event.tag(["e", this.context.conversation.id]);
+      event.tag(["e", this.context.conversationId]);
 
       await event.sign(this.context.agent.signer);
       await event.publish();
 
       logger.debug(`Published typing indicator ${state}`, {
-        conversationId: this.context.conversation.id,
+        conversationId: this.context.conversationId,
         author: event.pubkey,
         agent: this.context.agent.name,
         message: state === "start" ? event.content : undefined,
@@ -287,26 +296,18 @@ export class NostrPublisher {
   }
 
   private addBaseTags(event: NDKEvent): void {
+    const conversation = this.getConversation();
+    
     // Always add project tag
     const { project } = getProjectContext();
     event.tag(project);
 
-    // Always add current phase tag - get from ConversationManager if available
-    const contextPhase = this.context.conversation.phase;
-    const managerConversation = this.context.conversationManager.getConversation(this.context.conversation.id);
-    const managerPhase = managerConversation?.phase;
-    const currentPhase = managerPhase || contextPhase;
-    
-    logger.info("[NOSTR_PUBLISHER] Adding phase tag", {
-      contextPhase,
-      managerPhase,
-      currentPhase,
-    });
-    
+    // Always add current phase tag from the single source of truth
+    const currentPhase = conversation.phase;
     event.tag(["phase", currentPhase]);
 
-    // Always add execution time tag
-    const totalSeconds = getTotalExecutionTimeSeconds(this.context.conversation);
+    // Always add execution time tag using the fresh conversation object
+    const totalSeconds = getTotalExecutionTimeSeconds(conversation);
     event.tag([EXECUTION_TAGS.NET_TIME, totalSeconds.toString()]);
   }
 
@@ -352,10 +353,8 @@ export class NostrPublisher {
     }
     
     // Only add phase-transition tag if phase is actually changing
-    // Get current phase from ConversationManager if available
-    const currentPhase = this.context.conversationManager
-      ? this.context.conversationManager.getConversation(this.context.conversation.id)?.phase || this.context.conversation.phase
-      : this.context.conversation.phase;
+    const conversation = this.getConversation();
+    const currentPhase = conversation.phase;
     
     const isPhaseTransition =
       routing.phase &&

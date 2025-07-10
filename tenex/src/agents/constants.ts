@@ -1,6 +1,5 @@
 import type { Agent } from "./types";
 import { analyze } from "../tools/implementations/analyze";
-import { claudeCodeTool } from "../tools/implementations/claudeCode";
 import { continueTool } from "../tools/implementations/continue";
 import { endConversationTool } from "../tools/implementations/endConversation";
 import { generateInventoryTool } from "../tools/implementations/generateInventory";
@@ -25,12 +24,9 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
         continueTool.name,
         learnTool.name,
       ];
-    } else if (agent.slug === "planner" || agent.slug === "executor") {
-      // Planner and executor only get claude_code and complete tools
-      tools = [claudeCodeTool.name, completeTool.name];
     } else {
       // Other non-orchestrator agents use complete tool to signal task completion
-      tools.push(claudeCodeTool.name, completeTool.name);
+      tools.push(completeTool.name);
 
       if (agent.slug === "project-manager") {
         tools.push(generateInventoryTool.name);

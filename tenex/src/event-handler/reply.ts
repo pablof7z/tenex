@@ -142,6 +142,8 @@ async function handleReplyLogic(
     agent: targetAgent,
     conversation,
     phase: conversation.phase,
+    projectPath: process.cwd(),
+    triggeringEvent: event,
   };
 
   // Add handoff if available
@@ -164,34 +166,35 @@ async function handleReplyLogic(
     );
   }
 
-  const result = await agentExecutor.execute(executionContext, event);
-
-  // Check if execution failed and notify user
-  if (!result.success && result.error) {
+  try {
+    await agentExecutor.execute(executionContext);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     // Check if it's an insufficient credits error
     const isCreditsError =
-      result.error.includes("Insufficient credits") || result.error.includes("402");
+      errorMessage.includes("Insufficient credits") || errorMessage.includes("402");
 
-    const errorMessage = isCreditsError
+    const displayMessage = isCreditsError
       ? "⚠️ Unable to process your request: Insufficient credits. Please add more credits at https://openrouter.ai/settings/credits to continue."
       : "⚠️ Unable to process your request due to an error. Please try again later.";
 
     // Create NostrPublisher to publish error
     const publisher = new NostrPublisher({
-      conversation,
+      conversationId: conversation.id,
       agent: orchestratorAgent,
       triggeringEvent: event,
       conversationManager,
     });
 
-    await publisher.publishError(errorMessage);
+    await publisher.publishError(displayMessage);
 
     logger.error(
       isCreditsError
         ? "Agent execution failed due to insufficient credits"
         : "Agent execution failed",
       {
-        error: result.error,
+        error: errorMessage,
         conversation: conversation.id,
       }
     );

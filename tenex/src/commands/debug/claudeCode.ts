@@ -1,4 +1,4 @@
-import { ClaudeCodeExecutor } from "@/tools/claude/ClaudeCodeExecutor";
+import { ClaudeCodeExecutor } from "@/claude/executor";
 import type { SDKMessage } from "@anthropic-ai/claude-code";
 import { formatError } from "@/utils/errors";
 import { logError, logInfo, logDebug } from "@/utils/logger";

@@ -20,7 +20,6 @@ import type { ExecutionBackend } from "./ExecutionBackend";
 import type {
   AgentExecutionContext,
   AgentExecutionContextWithHandoff,
-  AgentExecutionResult,
 } from "./types";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/orchestrator-routing";
@@ -54,9 +53,8 @@ export class AgentExecutor {
    */
   async execute(
     context: AgentExecutionContext,
-    triggeringEvent: NDKEvent,
     parentTracingContext?: TracingContext
-  ): Promise<AgentExecutionResult> {
+  ): Promise<void> {
     // Create agent execution tracing context
     const tracingContext = parentTracingContext
       ? createAgentExecutionContext(parentTracingContext, context.agent.name)
@@ -73,9 +71,9 @@ export class AgentExecutor {
 
     // Create NostrPublisher for ReasonActLoop to handle publishing
     const publisher = new NostrPublisher({
-      conversation: context.conversation,
+      conversationId: context.conversation.id,
       agent: context.agent,
-      triggeringEvent: triggeringEvent,
+      triggeringEvent: context.triggeringEvent,
       conversationManager: this.conversationManager,
     });
 
@@ -84,7 +82,7 @@ export class AgentExecutor {
       startExecutionTime(context.conversation);
 
       // 1. Build the agent's messages
-      const messages = await this.buildMessages(context, triggeringEvent);
+      const messages = await this.buildMessages(context, context.triggeringEvent);
 
       // 2. Publish typing indicator start
       await publisher.publishTypingIndicator("start");
@@ -93,7 +91,6 @@ export class AgentExecutor {
       const fullContext: AgentExecutionContext = {
         ...context,
         projectPath: context.projectPath || process.cwd(),
-        eventToReply: triggeringEvent,
       };
 
       await this.executeWithStreaming(
@@ -104,12 +101,6 @@ export class AgentExecutor {
       );
 
       // Conversation updates are now handled by NostrPublisher
-
-      return {
-        success: true,
-        response: "Task completed successfully",
-        toolExecutions: [],
-      };
     } catch (error) {
       // Stop execution time tracking even on error
       stopExecutionTime(context.conversation);
@@ -123,11 +114,7 @@ export class AgentExecutor {
         agentName: context.agent.name,
       });
 
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        response: `Error: ${error instanceof Error ? error.message : String(error)}`,
-      };
+      throw error;
     }
   }
 
@@ -208,7 +195,7 @@ export class AgentExecutor {
           agentContext = await this.conversationManager.bootstrapAgentContext(
             context.conversation.id,
             context.agent.slug,
-            triggeringEvent
+            context.triggeringEvent
           );
         }
       } else {
@@ -221,7 +208,7 @@ export class AgentExecutor {
         await this.conversationManager.synchronizeAgentContext(
           context.conversation.id,
           context.agent.slug,
-          triggeringEvent
+          context.triggeringEvent
         );
       }
 

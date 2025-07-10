@@ -4,7 +4,7 @@ import type { TaskPublisher } from "@/nostr/TaskPublisher";
 import { logger } from "@/utils/logger";
 import type { ContentBlock, TextBlock } from "@anthropic-ai/sdk/resources/messages/messages";
 import type { NDKTask } from "@nostr-dev-kit/ndk";
-import { ClaudeCodeExecutor } from "./ClaudeCodeExecutor";
+import { ClaudeCodeExecutor } from "./executor";
 
 export interface ClaudeTaskOptions {
   prompt: string;
@@ -77,6 +77,8 @@ export class ClaudeTaskOrchestrator {
           if (options.conversation) {
             stopExecutionTime(options.conversation);
           }
+
+          console.log("completing task", executionResult);
 
           // Complete task
           await this.taskPublisher.completeTask(executionResult.success, {

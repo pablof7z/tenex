@@ -16,6 +16,7 @@ export interface LLMRouterConfig {
   defaults: {
     agents?: string;
     analyze?: string;
+    orchestrator?: string;
     [key: string]: string | undefined;
   };
 }
@@ -48,6 +49,7 @@ export class LLMRouter implements LLMService {
     const key =
       this.config.defaults.agents ??
       this.config.defaults.analyze ??
+      this.config.defaults.orchestrator ??
       Object.keys(this.config.configs)[0];
 
     // Fallback to first available config

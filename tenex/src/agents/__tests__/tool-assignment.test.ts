@@ -20,7 +20,7 @@ describe("Tool assignment", () => {
             expect(tools).toContain("learn");
         });
 
-        it("planner and executor agents should only have claude_code and complete tools", () => {
+        it("planner and executor agents get default tools (but AgentRegistry removes them for claude backend)", () => {
             const mockExecutor = {
                 isOrchestrator: false,
                 isBuiltIn: true,
@@ -35,23 +35,25 @@ describe("Tool assignment", () => {
             const executorTools = getDefaultToolsForAgent(mockExecutor);
             const plannerTools = getDefaultToolsForAgent(mockPlanner);
             
-            // Executor should only have claude_code and complete
-            expect(executorTools).toContain("claude_code");
+            // Both agents get default tools from constants.ts
             expect(executorTools).toContain("complete");
-            expect(executorTools).not.toContain("analyze");
-            expect(executorTools).not.toContain("read_file");
+            expect(executorTools).toContain("read_file");
+            expect(executorTools).toContain("learn");
+            expect(executorTools).toContain("analyze");
             expect(executorTools).not.toContain("end_conversation");
             expect(executorTools).not.toContain("continue");
-            expect(executorTools.length).toBe(2);
             
-            // Planner should only have claude_code and complete
-            expect(plannerTools).toContain("claude_code");
+            // Planner gets the same default tools
             expect(plannerTools).toContain("complete");
-            expect(plannerTools).not.toContain("analyze");
-            expect(plannerTools).not.toContain("read_file");
+            expect(plannerTools).toContain("read_file");
+            expect(plannerTools).toContain("learn");
+            expect(plannerTools).toContain("analyze");
             expect(plannerTools).not.toContain("end_conversation");
             expect(plannerTools).not.toContain("continue");
-            expect(plannerTools.length).toBe(2);
+            
+            // Note: AgentRegistry.ts will remove all tools from these agents
+            // since they use claude backend, but getDefaultToolsForAgent
+            // returns the default set for non-orchestrator built-in agents
         });
 
         it("custom agents should have complete tool", () => {

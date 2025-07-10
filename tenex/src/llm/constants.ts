@@ -6,6 +6,7 @@
 export const LLM_DEFAULTS = {
   AGENTS: "agents",
   ANALYZE: "analyze",
+  ORCHESTRATOR: "orchestrator",
 } as const;
 
 // Default fallback key for agents when no llmConfig is specified

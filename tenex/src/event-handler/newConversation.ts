@@ -50,14 +50,13 @@ export const handleNewConversation = async (
     }
 
     // Execute with the appropriate agent
-    await context.agentExecutor.execute(
-      {
-        agent: targetAgent,
-        conversation,
-        phase: conversation.phase,
-      },
-      event
-    );
+    await context.agentExecutor.execute({
+      agent: targetAgent,
+      conversation,
+      phase: conversation.phase,
+      projectPath: process.cwd(),
+      triggeringEvent: event,
+    });
 
     logInfo(chalk.green("✅ Conversation routed successfully"));
   } catch (error) {

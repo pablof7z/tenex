@@ -14,7 +14,7 @@ export interface CompletionOptions {
   summary?: string;
   agent: Agent;
   conversationId: string;
-  publisher?: NostrPublisher;
+  publisher: NostrPublisher;
 }
 
 /**
@@ -27,26 +27,24 @@ export async function handleAgentCompletion(options: CompletionOptions): Promise
   const projectContext = getProjectContext();
   const orchestratorAgent = projectContext.getProjectAgent();
   
-  // Publish the completion event if publisher is provided
-  if (publisher) {
-    await publisher.publishResponse({
-      content: response,
-      destinationPubkeys: [orchestratorAgent.pubkey],
-      completeMetadata: {
-        type: "complete",
-        completion: {
-          response,
-          summary: summary || response,
-          nextAgent: orchestratorAgent.pubkey,
-        }
+  // Publish the completion event
+  await publisher.publishResponse({
+    content: response,
+    destinationPubkeys: [orchestratorAgent.pubkey],
+    completeMetadata: {
+      type: "complete",
+      completion: {
+        response,
+        summary: summary || response,
+        nextAgent: orchestratorAgent.pubkey,
       }
-    });
-    
-    logger.info("Completion event published", {
-      toOrchestrator: orchestratorAgent.pubkey,
-      agent: agent.name,
-    });
-  }
+    }
+  });
+  
+  logger.info("Completion event published", {
+    toOrchestrator: orchestratorAgent.pubkey,
+    agent: agent.name,
+  });
   
   // Log the completion
   logger.info("✅ Task completion signaled", {

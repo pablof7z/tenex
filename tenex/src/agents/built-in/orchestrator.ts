@@ -37,5 +37,5 @@ Key behaviors:
 - Use end_conversation() only when all phases are done to end the conversation with a comprehensive summary
 - ALWAYS write a response message when routing - use continue as a separate tool call, not inline text
 `,
-  llmConfig: "agents",
+  llmConfig: "orchestrator",
 };

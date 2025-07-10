@@ -107,7 +107,7 @@ export async function runDebugChat(
     const llmService = createAgentAwareLLMService(llmRouter, agent.name);
 
     // Initialize AgentExecutor
-    const agentExecutor = new AgentExecutor(llmService, ndk);
+    const agentExecutor = new AgentExecutor(llmService, ndk, _conversationManager);
 
     // Track messages separately for interactive mode
     const messages: Array<{ role: string; content: string }> = [];
@@ -134,14 +134,6 @@ export async function runDebugChat(
     if (options.message) {
       logDebug("Processing single message:", "general", "debug", options.message);
 
-      // Create execution context
-      const context: AgentExecutionContext = {
-        agent,
-        conversation,
-        phase: "chat" as Phase,
-        projectContext: { projectPath },
-      };
-
       // Create a mock NDKEvent for the debug session
       const mockEvent = new NDKEvent();
       mockEvent.kind = 9000; // Tenex conversation event kind
@@ -153,27 +145,21 @@ export async function runDebugChat(
         ["phase", "chat"],
       ];
 
+      // Create execution context
+      const context: AgentExecutionContext = {
+        agent,
+        conversation,
+        phase: "chat" as Phase,
+        projectPath,
+        triggeringEvent: mockEvent,
+      };
+
       // Execute using AgentExecutor without parent tracing context
-      const result = await agentExecutor.execute(context, mockEvent, undefined);
-
-      if (result.success && result.response) {
-        console.log(chalk.green("\nAgent:"), result.response);
-
-        if (result.toolExecutions && result.toolExecutions.length > 0) {
-          console.log(chalk.gray("\nTools executed:"));
-          result.toolExecutions.forEach((toolResult, idx) => {
-            // Extract tool name from error if available
-            const toolName = toolResult.error?.kind === "execution" ? toolResult.error.tool : "unknown";
-            const errorMsg = toolResult.error?.message || "";
-            console.log(
-              chalk.gray(
-                `  ${idx + 1}. ${toolName} ${toolResult.success ? "✓" : "✗"}${errorMsg ? `: ${errorMsg}` : ""}`
-              )
-            );
-          });
-        }
-      } else if (result.error) {
-        console.error(chalk.red("\nError:"), result.error);
+      try {
+        await agentExecutor.execute(context, undefined);
+        console.log(chalk.green("\nAgent: Task completed successfully"));
+      } catch (error) {
+        console.error(chalk.red("\nError:"), error instanceof Error ? error.message : String(error));
       }
       return;
     }
@@ -253,14 +239,6 @@ export async function runDebugChat(
         // Add user message to tracking
         messages.push({ role: "user", content: input });
 
-        // Create execution context
-        const context: AgentExecutionContext = {
-          agent,
-          conversation,
-          phase: "chat" as Phase,
-          projectContext: { projectPath },
-        };
-
         // Create a mock NDKEvent for the user message
         const mockEvent = new NDKEvent();
         mockEvent.kind = 9000; // Tenex conversation event kind
@@ -272,35 +250,32 @@ export async function runDebugChat(
           ["phase", "chat"],
         ];
 
+        // Create execution context
+        const context: AgentExecutionContext = {
+          agent,
+          conversation,
+          phase: "chat" as Phase,
+          projectPath,
+          triggeringEvent: mockEvent,
+        };
+
         // Execute using AgentExecutor without parent tracing context
-        const result = await agentExecutor.execute(context, mockEvent, undefined);
+        try {
+          await agentExecutor.execute(context, undefined);
+          
+          // Clear thinking indicator
+          process.stdout.write(`\r${" ".repeat(20)}\r`);
 
-        // Clear thinking indicator
-        process.stdout.write(`\r${" ".repeat(20)}\r`);
-
-        if (result.success && result.response) {
           // Add assistant response to tracking
-          messages.push({ role: "assistant", content: result.response });
+          messages.push({ role: "assistant", content: "Task completed successfully" });
 
           // Display response
-          console.log(chalk.green("Agent:"), result.response);
-
-          // Show tool execution summary
-          if (result.toolExecutions && result.toolExecutions.length > 0) {
-            console.log(chalk.gray("\nTools executed:"));
-            for (const toolResult of result.toolExecutions) {
-              // Extract tool name from error if available
-              const toolName = toolResult.error?.kind === "execution" ? toolResult.error.tool : "unknown";
-              const errorMsg = toolResult.error?.message || "";
-              console.log(
-                chalk.gray(
-                  `  - ${toolName} ${toolResult.success ? "✓" : "✗"}${errorMsg ? `: ${errorMsg}` : ""}`
-                )
-              );
-            }
-          }
-        } else if (result.error) {
-          console.error(chalk.red("\nError:"), result.error);
+          console.log(chalk.green("Agent: Task completed successfully"));
+        } catch (error) {
+          // Clear thinking indicator
+          process.stdout.write(`\r${" ".repeat(20)}\r`);
+          
+          console.error(chalk.red("\nError:"), error instanceof Error ? error.message : String(error));
         }
 
         console.log(); // Empty line for readability

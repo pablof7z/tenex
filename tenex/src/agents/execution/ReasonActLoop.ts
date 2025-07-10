@@ -149,8 +149,9 @@ export class ReasonActLoop implements ExecutionBackend {
 
     try {
       // Check if this agent requires termination enforcement
+      const isChat = context.phase === "chat";
       const isBrainstormPhase = context.phase === "brainstorm";
-      const requiresTerminationEnforcement = !isBrainstormPhase;
+      const requiresTerminationEnforcement = !isChat && !isBrainstormPhase;
 
       tracingLogger.info("🚀 Starting executeStreaming with termination enforcement check", {
         agent: context.agent.name,
@@ -354,7 +355,7 @@ export class ReasonActLoop implements ExecutionBackend {
         agent: context.agent,
         conversation: context.conversation,
         publisher: publisher as NostrPublisher,
-        triggeringEvent: context.eventToReply,
+        triggeringEvent: context.triggeringEvent,
         conversationManager: this.conversationManager,
       },
     });

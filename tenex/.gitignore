@@ -73,4 +73,4 @@ agents.json
 # Test artifacts
 test-*.json
 test-*.txt
-__snapshots__/
+__snapshots__/.repomix-output.txt
