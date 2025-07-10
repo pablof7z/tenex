@@ -18,7 +18,6 @@ import {
     MCPToolsPageWrapper,
     ProjectDetailPage,
     ProjectListPage,
-    ProjectSettingsPage,
     RootPage,
     SettingsPageWrapper,
     TaskUpdatesPage,
@@ -82,7 +81,6 @@ function AppContent() {
                         <Route path="/instructions" element={<InstructionsPageWrapper />} />
                         <Route path="/agent-requests" element={<AgentRequestsPageWrapper />} />
                         <Route path="/project/:projectId" element={<ProjectDetailPage />} />
-                        <Route path="/project/:projectId/edit" element={<ProjectSettingsPage />} />
                         <Route
                             path="/project/:projectId/task/:taskId"
                             element={<TaskUpdatesPage />}

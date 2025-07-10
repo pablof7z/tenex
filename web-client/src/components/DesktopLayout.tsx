@@ -25,7 +25,6 @@ import { ProjectSidebar } from "./layout/ProjectSidebar";
 import { VoiceRecorderDialog } from "./dialogs/VoiceRecorderDialog";
 
 export function DesktopLayout() {
-    const { goToProjectSettings } = useNavigation();
     const currentUser = useNDKCurrentUser();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
@@ -168,7 +167,6 @@ export function DesktopLayout() {
                     // Task will be fetched by the drawer component itself
                     setSelectedTask({ id: taskId } as NDKTask);
                 }}
-                onEditProject={goToProjectSettings}
                 onThreadStart={(project, threadTitle, selectedAgents) => {
                     // Create a temporary thread object to open the chat interface
                     // No event is published yet - that happens when the first message is sent

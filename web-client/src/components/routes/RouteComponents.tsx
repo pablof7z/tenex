@@ -10,7 +10,6 @@ import { DesktopLayout } from "../DesktopLayout";
 import { DocsPage } from "../DocsPage";
 import { InstructionsPage } from "../InstructionsPage";
 import { MCPToolsPage } from "../MCPToolsPage";
-import { ProjectSettings } from "../ProjectSettings";
 import { SettingsPage } from "../SettingsPage";
 import { DocumentationView } from "../documentation/DocumentationView";
 import { ProjectDetail } from "../projects/ProjectDetail";
@@ -36,7 +35,7 @@ export function ProjectListPage() {
 export function ProjectDetailPage() {
     const { projectId } = useParams();
     const project = useProject(projectId);
-    const { goBack, goToTask, goToProjectSettings, goToNewThread, goToThread, goToArticle } =
+    const { goBack, goToTask, goToNewThread, goToThread, goToArticle } =
         useNavigation();
 
     if (!project) {
@@ -48,7 +47,6 @@ export function ProjectDetailPage() {
             project={project}
             onBack={goBack}
             onTaskSelect={(project, taskId) => goToTask(project, taskId)}
-            onEditProject={goToProjectSettings}
             onThreadStart={(project, threadTitle, selectedAgents) => {
                 const agentPubkeys = selectedAgents?.map((a) => a.pubkey) || [];
                 goToNewThread(project, threadTitle, agentPubkeys);
@@ -72,26 +70,6 @@ export function TaskUpdatesPage() {
     return <TaskUpdates project={project} taskId={taskId || ""} onBack={goBack} />;
 }
 
-// Project settings page
-export function ProjectSettingsPage() {
-    const { projectId } = useParams();
-    const project = useProject(projectId);
-    const { goBack } = useNavigation();
-
-    if (!project) {
-        return <LoadingScreen />;
-    }
-
-    return (
-        <ProjectSettings
-            project={project}
-            onBack={goBack}
-            onProjectUpdated={() => {
-                // Projects will automatically refresh via useSubscribe
-            }}
-        />
-    );
-}
 
 // Chat interface page
 export function ChatInterfacePage() {

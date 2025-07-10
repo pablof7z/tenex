@@ -22,7 +22,6 @@ interface LayoutDrawersProps {
 
     // Event handlers
     onTaskSelect: (project: NDKProject, taskId: string) => void;
-    onEditProject?: (project: NDKProject) => void;
     onThreadStart: (
         project: NDKProject,
         threadTitle: string,
@@ -42,7 +41,6 @@ export function LayoutDrawers({
     onProjectClose,
     onArticleClose,
     onTaskSelect,
-    onEditProject,
     onThreadStart,
     onThreadSelect,
     onArticleSelect,
@@ -151,7 +149,6 @@ export function LayoutDrawers({
                             project={selectedProject}
                             onBack={onProjectClose}
                             onTaskSelect={onTaskSelect}
-                            onEditProject={onEditProject || (() => {})}
                             onThreadStart={onThreadStart}
                             onThreadSelect={onThreadSelect}
                             onArticleSelect={onArticleSelect}

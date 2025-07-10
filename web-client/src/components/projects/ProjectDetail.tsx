@@ -8,6 +8,7 @@ import { EVENT_KINDS } from "../../lib/constants";
 import { TaskCreationOptionsDialog } from "../dialogs/TaskCreationOptionsDialog";
 import { ThreadDialog } from "../dialogs/ThreadDialog";
 import { VoiceMessageDialog } from "../dialogs/VoiceMessageDialog";
+import { EditProjectModal } from "../dialogs/EditProjectModal";
 import { Button } from "../ui/button";
 import { DocsTabContent } from "./DocsTabContent";
 import { ProjectTabs } from "./ProjectTabs";
@@ -18,7 +19,6 @@ interface ProjectDetailProps {
     project: NDKProject;
     onBack: () => void;
     onTaskSelect: (project: NDKProject, taskId: string) => void;
-    onEditProject: (project: NDKProject) => void;
     onThreadStart: (
         project: NDKProject,
         threadTitle: string,
@@ -32,7 +32,6 @@ export function ProjectDetail({
     project,
     onBack,
     onTaskSelect,
-    onEditProject,
     onThreadStart,
     onThreadSelect,
     onArticleSelect,
@@ -40,6 +39,7 @@ export function ProjectDetail({
     const [showOptionsDialog, setShowOptionsDialog] = useState(false);
     const [showVoiceDialog, setShowVoiceDialog] = useState(false);
     const [showThreadDialog, setShowThreadDialog] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState<"tasks" | "threads" | "docs">("tasks");
 
     // Subscribe to tasks for this project
@@ -232,7 +232,7 @@ export function ProjectDetail({
                 docCount={articles.length}
                 onTabChange={setActiveTab}
                 onBack={onBack}
-                onEditProject={() => onEditProject(project)}
+                onEditProject={() => setShowEditModal(true)}
             />
 
             {/* Content */}
@@ -299,6 +299,16 @@ export function ProjectDetail({
                 project={project}
                 onThreadStart={(threadTitle, selectedAgents) => {
                     onThreadStart(project, threadTitle, selectedAgents);
+                }}
+            />
+
+            <EditProjectModal
+                project={project}
+                open={showEditModal}
+                onOpenChange={setShowEditModal}
+                onProjectUpdated={() => {
+                    // Projects will automatically refresh via useSubscribe
+                    setShowEditModal(false);
                 }}
             />
         </div>

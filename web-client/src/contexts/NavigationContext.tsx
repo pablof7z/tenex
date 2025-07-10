@@ -7,7 +7,6 @@ interface NavigationContextType {
     location: ReturnType<typeof useLocation>;
     goBack: () => void;
     goToProject: (project: NDKEvent) => void;
-    goToProjectSettings: (project: NDKEvent) => void;
     goToTask: (project: NDKEvent, taskId: string) => void;
     goToThread: (project: NDKEvent, threadId: string) => void;
     goToNewThread: (project: NDKEvent, title?: string, agentPubkeys?: string[]) => void;
@@ -35,7 +34,6 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
         location,
         goBack: () => navigate(-1),
         goToProject: (project) => navigate(`/project/${project.encode()}`),
-        goToProjectSettings: (project) => navigate(`/project/${project.encode()}/edit`),
         goToTask: (project, taskId) => navigate(`/project/${project.encode()}/task/${taskId}`),
         goToThread: (project, threadId) =>
             navigate(`/project/${project.encode()}/thread/${threadId}`),
