@@ -2,7 +2,7 @@
 
 >  Orchestrate the orchestrators.
 
-![readme](./images/readme.png)
+![readme](./docs/images/readme.png)
 
 If LLMs represent a paradigm-shift in software development, is the text editor still the tool we use to build software?
 
@@ -42,7 +42,7 @@ bun run dev
 2. **VS Code Extension**: Install the Roo Executor extension from the VS Code marketplace:
    - [Roo Executor Extension](https://marketplace.visualstudio.com/items?itemName=pablof7z.roo-executor)
 
-![screenshot](./images/screenshot.png)
+![screenshot](./docs/images/screenshot.png)
 
 ### Author
 
