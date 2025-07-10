@@ -39,6 +39,9 @@ export class ClaudeBackend implements ExecutionBackend {
     const taskPublisher = new TaskPublisher(ndk, context.agent);
     const orchestrator = new ClaudeTaskOrchestrator(taskPublisher);
 
+    // Create abort controller for this execution
+    const abortController = new AbortController();
+
     // Execute Claude Code directly
     const result = await orchestrator.execute({
       prompt,
@@ -47,7 +50,7 @@ export class ClaudeBackend implements ExecutionBackend {
       title: `Claude Code Execution (via ${context.agent.name})`,
       conversationRootEventId: context.conversation.id,
       conversation: context.conversation,
-      abortSignal: undefined, // Could be passed from context if available
+      abortSignal: abortController.signal,
     });
 
     if (!result.success) {

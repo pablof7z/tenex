@@ -9,6 +9,7 @@ import { ChatsPage } from "../ChatsPage";
 import { DesktopLayout } from "../DesktopLayout";
 import { DocsPage } from "../DocsPage";
 import { InstructionsPage } from "../InstructionsPage";
+import { MCPToolsPage } from "../MCPToolsPage";
 import { ProjectSettings } from "../ProjectSettings";
 import { SettingsPage } from "../SettingsPage";
 import { DocumentationView } from "../documentation/DocumentationView";
@@ -144,6 +145,12 @@ export function SettingsPageWrapper() {
 export function AgentsPageWrapper() {
     const { goBack } = useNavigation();
     return <AgentsPage onBack={goBack} />;
+}
+
+// MCP Tools page
+export function MCPToolsPageWrapper() {
+    const { goBack } = useNavigation();
+    return <MCPToolsPage onBack={goBack} />;
 }
 
 // Instructions page

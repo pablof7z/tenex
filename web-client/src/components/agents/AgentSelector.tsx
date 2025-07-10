@@ -7,14 +7,20 @@ import { AgentCard } from "./AgentCard";
 interface AgentSelectorProps {
     selectedAgents: NDKAgent[];
     onAgentsChange: (agents: NDKAgent[]) => void;
+    filterType?: 'all' | 'agent' | 'mcp-server';
 }
 
-export function AgentSelector({ selectedAgents, onAgentsChange }: AgentSelectorProps) {
-    const { events: agentEvents } = useSubscribe<NDKAgent>(
+export function AgentSelector({ selectedAgents, onAgentsChange, filterType = 'agent' }: AgentSelectorProps) {
+    const { events: allEvents } = useSubscribe<NDKAgent>(
         [{ kinds: [NDKAgent.kind], limit: 100 }],
         { wrap: true },
         []
     );
+
+    // Filter events by type
+    const agentEvents = filterType === 'all' 
+        ? allEvents 
+        : allEvents.filter(event => event.type === filterType);
 
     const handleAgentSelect = (agent: NDKAgent) => {
         if (!selectedAgents.find((a) => a.id === agent.id)) {

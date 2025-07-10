@@ -2,7 +2,7 @@ import type { Agent } from "@/agents/types";
 import { getProjectContext } from "@/services";
 import { logger } from "@/utils/logger";
 import type NDK from "@nostr-dev-kit/ndk";
-import { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk";
+import { NDKTask } from "@nostr-dev-kit/ndk";
 
 export interface TaskCreationOptions {
   title: string;
@@ -64,6 +64,9 @@ export class TaskPublisher {
 
     // Store the task instance for future operations
     this.currentTask = task;
+    
+    // Immediately publish a status update to mark as "progress" when execution starts
+    await this.publishTaskProgress("Starting task execution...");
 
     return task;
   }
@@ -76,14 +79,19 @@ export class TaskPublisher {
     const task = this.currentTask;
     const projectCtx = getProjectContext();
 
+    // Determine if this is an interruption
+    const isInterrupted = options.error?.toLowerCase().includes("interrupted");
+
     // Create a completion status update as a reply to the task
     const statusUpdate = task.reply();
     statusUpdate.content = success
       ? "✅ Task completed successfully"
+      : isInterrupted
+      ? "⚠️ Task interrupted by user"
       : `❌ Task failed${options.error ? `: ${options.error}` : ""}`;
 
     // Add status and metadata tags
-    statusUpdate.tags.push(["status", success ? "completed" : "failed"]);
+    statusUpdate.tags.push(["status", success ? "completed" : isInterrupted ? "interrupted" : "failed"]);
 
     if (options.sessionId) {
       statusUpdate.tags.push(["claude-session", options.sessionId]);
@@ -114,7 +122,7 @@ export class TaskPublisher {
     });
   }
 
-  async publishTaskProgress(content: string): Promise<void> {
+  async publishTaskProgress(content: string, sessionId?: string): Promise<void> {
     if (!this.currentTask) {
       throw new Error("No current task for progress updates. Call createTask first.");
     }
@@ -127,6 +135,11 @@ export class TaskPublisher {
     progressUpdate.content = content;
     progressUpdate.tags.push(["status", "progress"]);
 
+    // Add session ID if available
+    if (sessionId) {
+      progressUpdate.tags.push(["claude-session", sessionId]);
+    }
+
     // Add project tag
     progressUpdate.tag(projectCtx.project);
 
@@ -137,6 +150,7 @@ export class TaskPublisher {
     logger.debug("Published task progress", {
       taskId: task.id,
       contentLength: content.length,
+      sessionId,
     });
   }
 }

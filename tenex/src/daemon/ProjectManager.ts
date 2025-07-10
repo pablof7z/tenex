@@ -11,10 +11,12 @@ import { ensureTenexInGitignore, initializeGitRepository } from "@/utils/git";
 import { logger } from "@/utils/logger";
 import { toKebabCase } from "@/utils/string";
 import { fetchAgentDefinition } from "@/utils/agentFetcher";
+import { installMCPServerFromEvent } from "@/services/mcp/mcpInstaller";
 // createAgent functionality has been moved to AgentRegistry
 import type NDK from "@nostr-dev-kit/ndk";
 import { NDKEvent, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type { NDKProject } from "@nostr-dev-kit/ndk";
+import { NDKMCPTool } from "@/events/NDKMCPTool";
 import chalk from "chalk";
 
 const execAsync = promisify(exec);
@@ -28,6 +30,7 @@ export interface ProjectData {
   repoUrl?: string;
   hashtags: string[];
   agentEventIds: string[];
+  mcpEventIds: string[];
   createdAt?: number;
   updatedAt?: number;
 }
@@ -76,8 +79,8 @@ export class ProjectManager implements IProjectManager {
       // Fetch the project - but don't set context yet
       const ndkProject = await this.fetchProject(naddr, ndk);
 
-      // Fetch and save agent definitions
-      await this.fetchAndSaveAgentDefinitions(projectPath, projectData, ndk, ndkProject);
+      // Fetch and save agent and MCP definitions
+      await this.fetchAndSaveCapabilities(projectPath, projectData, ndk, ndkProject);
 
       // Load all agents including built-ins, passing ndkProject
       await agentRegistry.loadFromProject(ndkProject);
@@ -120,6 +123,7 @@ export class ProjectManager implements IProjectManager {
         repoUrl: config.repoUrl || undefined,
         hashtags: [], // This should come from NDKProject
         agentEventIds: [],
+        mcpEventIds: [],
         createdAt: undefined, // This should come from NDKProject
         updatedAt: undefined, // This should come from NDKProject
       };
@@ -217,6 +221,11 @@ export class ProjectManager implements IProjectManager {
       .map((t) => t[1])
       .filter(Boolean) as string[];
 
+    const mcpTags = project.tags
+      .filter((t) => t[0] === "mcp")
+      .map((t) => t[1])
+      .filter(Boolean) as string[];
+
     return {
       identifier: project.dTag || "",
       pubkey: project.pubkey,
@@ -226,6 +235,7 @@ export class ProjectManager implements IProjectManager {
       repoUrl: repoTag,
       hashtags: hashtagTags,
       agentEventIds: agentTags,
+      mcpEventIds: mcpTags,
       createdAt: project.created_at,
       updatedAt: project.created_at,
     };
@@ -264,7 +274,7 @@ export class ProjectManager implements IProjectManager {
     logger.info("Created project structure with config", { projectPath });
   }
 
-  private async fetchAndSaveAgentDefinitions(
+  private async fetchAndSaveCapabilities(
     projectPath: string,
     project: ProjectData,
     ndk: NDK,
@@ -278,6 +288,7 @@ export class ProjectManager implements IProjectManager {
     const agentRegistry = new AgentRegistry(projectPath, false);
     await agentRegistry.loadFromProject(ndkProject);
 
+    // Process agent tags
     for (const eventId of project.agentEventIds) {
       try {
         const agent = await fetchAgentDefinition(eventId, ndk);
@@ -303,6 +314,20 @@ export class ProjectManager implements IProjectManager {
         }
       } catch (error) {
         logger.error("Failed to fetch agent definition", { error, eventId });
+      }
+    }
+
+    // Process MCP tags
+    for (const eventId of project.mcpEventIds) {
+      try {
+        const event = await ndk.fetchEvent(eventId);
+        if (event) {
+          const mcpTool = NDKMCPTool.from(event);
+          await installMCPServerFromEvent(projectPath, mcpTool);
+          logger.info("Installed MCP server", { eventId, name: mcpTool.name });
+        }
+      } catch (error) {
+        logger.error("Failed to fetch or install MCP server", { error, eventId });
       }
     }
   }

@@ -3,8 +3,9 @@ import type { Conversation } from "@/conversations/types";
 import type { TaskPublisher } from "@/nostr/TaskPublisher";
 import { logger } from "@/utils/logger";
 import type { ContentBlock, TextBlock } from "@anthropic-ai/sdk/resources/messages/messages";
-import type { NDKTask } from "@nostr-dev-kit/ndk";
+import type { NDKTask, NDKEvent, NDKSubscription } from "@nostr-dev-kit/ndk";
 import { ClaudeCodeExecutor } from "./executor";
+import { getNDK } from "@/nostr/ndkClient";
 
 export interface ClaudeTaskOptions {
   prompt: string;
@@ -54,6 +55,34 @@ export class ClaudeTaskOrchestrator {
       abortSignal: options.abortSignal,
     });
 
+    // Set up abort event subscription
+    let abortSubscription: NDKSubscription | undefined;
+    const ndk = getNDK();
+    
+    if (ndk) {
+      // Subscribe to ephemeral abort events targeting this task
+      abortSubscription = ndk.subscribe(
+        {
+          kinds: [24133], // Ephemeral event for task abort
+          "#e": [task.id], // Events e-tagging this task
+        },
+        {
+          closeOnEose: false,
+          groupable: false,
+        }
+      );
+
+      abortSubscription.on("event", async (event: NDKEvent) => {
+        logger.info("Received abort request for task", { taskId: task.id });
+        
+        // Abort the executor
+        executor.kill();
+        
+        // Update task status to interrupted
+        await this.taskPublisher.publishTaskProgress("Task interrupted by user request");
+      });
+    }
+
     try {
       // Start execution timing
       if (options.conversation) {
@@ -62,6 +91,7 @@ export class ClaudeTaskOrchestrator {
 
       // Track the last assistant message for final response
       let lastAssistantMessage: string = "";
+      let sessionId: string | undefined;
 
       // Execute and stream messages
       const generator = executor.execute();
@@ -78,8 +108,6 @@ export class ClaudeTaskOrchestrator {
           if (options.conversation) {
             stopExecutionTime(options.conversation);
           }
-
-          console.log("completing task", executionResult);
 
           // Complete task
           await this.taskPublisher.completeTask(executionResult.success, {
@@ -103,6 +131,12 @@ export class ClaudeTaskOrchestrator {
           break;
         }
 
+        // Capture session ID when it becomes available
+        if (message && message.session_id && !sessionId) {
+          sessionId = message.session_id;
+          logger.debug("Captured Claude session ID", { sessionId });
+        }
+
         // Process SDK message and publish progress updates
         if (message && message.type === "assistant" && message.message?.content) {
           const textContent = message.message.content
@@ -113,8 +147,8 @@ export class ClaudeTaskOrchestrator {
           if (textContent) {
             lastAssistantMessage = textContent;
 
-            // Publish progress update using TaskPublisher
-            await this.taskPublisher.publishTaskProgress(textContent);
+            // Publish progress update using TaskPublisher with session ID
+            await this.taskPublisher.publishTaskProgress(textContent, sessionId);
           }
         }
       }
@@ -130,11 +164,18 @@ export class ClaudeTaskOrchestrator {
       }
 
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      // Check if this was an abort
+      const isAborted = errorMessage.includes("aborted") || errorMessage.includes("interrupted");
 
-      // Mark task as failed
-      await this.taskPublisher.completeTask(false, { error: errorMessage });
+      // Mark task as failed or interrupted
+      if (isAborted) {
+        await this.taskPublisher.completeTask(false, { error: "Task interrupted by user" });
+      } else {
+        await this.taskPublisher.completeTask(false, { error: errorMessage });
+      }
 
-      logger.error("Claude task execution failed", { error: errorMessage });
+      logger.error("Claude task execution failed", { error: errorMessage, isAborted });
 
       return {
         task,
@@ -144,6 +185,11 @@ export class ClaudeTaskOrchestrator {
         success: false,
         error: errorMessage,
       };
+    } finally {
+      // Clean up abort subscription
+      if (abortSubscription) {
+        abortSubscription.stop();
+      }
     }
   }
 }

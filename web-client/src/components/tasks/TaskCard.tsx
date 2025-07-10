@@ -1,12 +1,14 @@
 import type { NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { StringUtils } from "../../lib/types.js";
-import { Circle, Code2 } from "lucide-react";
+import { Circle, Code2, Square } from "lucide-react";
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
-import { NDKKind, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind, useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { Button } from "../ui/button";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 
 interface TaskCardProps {
     task: NDKTask;
@@ -48,10 +50,42 @@ export const TaskCard = memo(
         const isCodeTask = isClaudeCodeTask();
         const agentName = getAgentName();
 
+        const { ndk } = useNDK();
+
         const { events: updates } = useSubscribe([
             { kinds: [NDKKind.GenericReply], ...task.filter(), limit: 1 },
         ]);
         const latestUpdate = updates.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0];
+
+        // Get task status from the latest update's status tag
+        const getTaskStatus = () => {
+            if (!latestUpdate) return "pending";
+            return latestUpdate.tags?.find((tag) => tag[0] === "status")?.[1] || "pending";
+        };
+
+        const taskStatus = getTaskStatus();
+        const isRunning = taskStatus === "progress";
+
+        // Handle abort button click
+        const handleAbort = async (e: React.MouseEvent) => {
+            e.stopPropagation(); // Prevent card click
+            
+            if (!ndk) return;
+
+            // Create ephemeral abort event
+            const abortEvent = new NDKEvent(ndk);
+            abortEvent.kind = 24133; // Ephemeral event for task abort
+            abortEvent.tags = [
+                ["e", task.id, "", "task"], // Reference the task to abort
+            ];
+            abortEvent.content = "abort";
+
+            try {
+                await abortEvent.publish();
+            } catch (error) {
+                console.error("Failed to publish abort event:", error);
+            }
+        };
 
         return (
             <Card
@@ -71,6 +105,17 @@ export const TaskCard = memo(
                             <h4 className="text-sm font-medium text-foreground flex-1">
                                 {getTaskTitle()}
                             </h4>
+                            {isRunning && (
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={handleAbort}
+                                    className="h-6 px-2 text-xs"
+                                >
+                                    <Square className="w-3 h-3 mr-1" />
+                                    Stop
+                                </Button>
+                            )}
                             {agentName && (
                                 <span className="text-sm px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
                                     {agentName}
@@ -99,6 +144,9 @@ export const TaskCard = memo(
                             </p>
                         )}
                         <div className="flex items-center gap-2 text-xs">
+                            <span className="px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
+                                Status: {taskStatus}
+                            </span>
                             {complexity && (
                                 <span className="px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
                                     Complexity: {complexity}/10

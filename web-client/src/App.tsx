@@ -15,6 +15,7 @@ import {
     DocsPageWrapper,
     DocumentationViewPage,
     InstructionsPageWrapper,
+    MCPToolsPageWrapper,
     ProjectDetailPage,
     ProjectListPage,
     ProjectSettingsPage,
@@ -77,6 +78,7 @@ function AppContent() {
                         <Route path="/chats" element={<ChatsPageWrapper />} />
                         <Route path="/settings" element={<SettingsPageWrapper />} />
                         <Route path="/agents" element={<AgentsPageWrapper />} />
+                        <Route path="/mcp-tools" element={<MCPToolsPageWrapper />} />
                         <Route path="/instructions" element={<InstructionsPageWrapper />} />
                         <Route path="/agent-requests" element={<AgentRequestsPageWrapper />} />
                         <Route path="/project/:projectId" element={<ProjectDetailPage />} />

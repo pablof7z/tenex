@@ -1,8 +1,9 @@
 import { NDKProject, useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, FileText, Info, Settings, Users } from "lucide-react";
+import { ArrowLeft, FileText, Info, Server, Settings, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import { AgentsSettings } from "./settings/AgentsSettings";
+import { MCPToolsSettings } from "./settings/MCPToolsSettings";
 import { MetadataSettings } from "./settings/MetadataSettings";
 import { RulesSettings } from "./settings/RulesSettings";
 import { Button } from "./ui/button";
@@ -13,7 +14,7 @@ interface ProjectSettingsProps {
     onProjectUpdated?: () => void;
 }
 
-type SettingsTab = "metadata" | "agents" | "rules";
+type SettingsTab = "metadata" | "agents" | "mcp" | "rules";
 
 export function ProjectSettings({ project, onBack, onProjectUpdated }: ProjectSettingsProps) {
     const { ndk } = useNDK();
@@ -42,6 +43,7 @@ export function ProjectSettings({ project, onBack, onProjectUpdated }: ProjectSe
     const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
         { id: "metadata", label: "Metadata", icon: <Info className="w-4 h-4" /> },
         { id: "agents", label: "Agents", icon: <Users className="w-4 h-4" /> },
+        { id: "mcp", label: "MCP Tools", icon: <Server className="w-4 h-4" /> },
         { id: "rules", label: "Rules", icon: <FileText className="w-4 h-4" /> },
     ];
 
@@ -82,6 +84,14 @@ export function ProjectSettings({ project, onBack, onProjectUpdated }: ProjectSe
             case "agents":
                 return (
                     <AgentsSettings
+                        project={project}
+                        editedProject={editedProject}
+                        onProjectChanged={() => setHasChanges(true)}
+                    />
+                );
+            case "mcp":
+                return (
+                    <MCPToolsSettings
                         project={project}
                         editedProject={editedProject}
                         onProjectChanged={() => setHasChanges(true)}

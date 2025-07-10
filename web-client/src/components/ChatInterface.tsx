@@ -40,6 +40,7 @@ interface ChatInterfaceProps {
     threadTitle?: string;
     initialAgentPubkeys?: string[];
     onBack?: () => void;
+    disableTaskClick?: boolean; // Disable task click handler when in drawer
 }
 
 // Memoized message list component
@@ -105,6 +106,7 @@ export function ChatInterface({
     threadTitle,
     initialAgentPubkeys = [],
     onBack,
+    disableTaskClick = false,
 }: ChatInterfaceProps) {
     const { ndk } = useNDK();
     const currentUserPubkey = useNDKCurrentPubkey();
@@ -610,7 +612,7 @@ export function ChatInterface({
                         threadMessages && threadMessages.length > 0 && project ? (
                             <MessageList
                                 messages={threadMessages}
-                                onTaskClick={(task) => setSelectedTask(task)}
+                                onTaskClick={disableTaskClick ? undefined : (task) => setSelectedTask(task)}
                                 project={project}
                             />
                         ) : threadId && threadId !== "new" && !currentThreadEvent ? (
@@ -636,7 +638,7 @@ export function ChatInterface({
                     ) : statusUpdates.length > 0 && project ? (
                         <MessageList
                             messages={statusUpdates}
-                            onTaskClick={(task) => setSelectedTask(task)}
+                            onTaskClick={disableTaskClick ? undefined : (task) => setSelectedTask(task)}
                             project={project}
                         />
                     ) : (

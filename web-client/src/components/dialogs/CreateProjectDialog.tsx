@@ -9,6 +9,7 @@ import type {
 import { AgentSelectionStep } from "../create-project/AgentSelectionStep";
 import { ConfirmationStep } from "../create-project/ConfirmationStep";
 import { InstructionSelectionStep } from "../create-project/InstructionSelectionStep";
+import { MCPSelectionStep } from "../create-project/MCPSelectionStep";
 import { ProjectDetailsStep } from "../create-project/ProjectDetailsStep";
 import { TemplateSelectionStep } from "../create-project/TemplateSelectionStep";
 import { Button } from "../ui/button";
@@ -42,6 +43,7 @@ export function CreateProjectDialog({
             imageUrl: "",
             selectedTemplate: undefined,
             selectedAgents: [],
+            selectedMCPTools: [],
             selectedInstructions: [],
         });
         setIsCreating(false);
@@ -64,6 +66,8 @@ export function CreateProjectDialog({
         } else if (step === "template") {
             setStep("agents");
         } else if (step === "agents") {
+            setStep("mcp");
+        } else if (step === "mcp") {
             setStep("instructions");
         } else if (step === "instructions") {
             setStep("confirm");
@@ -79,8 +83,10 @@ export function CreateProjectDialog({
             } else {
                 setStep("details");
             }
-        } else if (step === "instructions") {
+        } else if (step === "mcp") {
             setStep("agents");
+        } else if (step === "instructions") {
+            setStep("mcp");
         } else if (step === "confirm") {
             setStep("instructions");
         }
@@ -123,6 +129,12 @@ export function CreateProjectDialog({
                 }
             }
 
+            if (formData.selectedMCPTools && formData.selectedMCPTools.length > 0) {
+                for (const tool of formData.selectedMCPTools) {
+                    project.tags.push(["mcp", tool.id]);
+                }
+            }
+
             if (formData.selectedInstructions && formData.selectedInstructions.length > 0) {
                 for (const instruction of formData.selectedInstructions) {
                     if (instruction.assignedAgents && instruction.assignedAgents.length > 0) {
@@ -162,6 +174,8 @@ export function CreateProjectDialog({
                 return "Choose Template";
             case "agents":
                 return "Select Agents";
+            case "mcp":
+                return "Select MCP Tools";
             case "instructions":
                 return "Select Instructions";
             case "confirm":
@@ -201,6 +215,14 @@ export function CreateProjectDialog({
                     />
                 );
 
+            case "mcp":
+                return (
+                    <MCPSelectionStep
+                        formData={formData}
+                        onFormDataChange={handleFormDataChange}
+                    />
+                );
+
             case "instructions":
                 return (
                     <InstructionSelectionStep
@@ -218,7 +240,7 @@ export function CreateProjectDialog({
     };
 
     const getDialogMaxWidth = () => {
-        return step === "template" || step === "agents" || step === "instructions"
+        return step === "template" || step === "agents" || step === "mcp" || step === "instructions"
             ? "max-w-4xl"
             : "max-w-lg";
     };

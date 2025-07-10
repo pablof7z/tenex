@@ -79,7 +79,7 @@ export class ClaudeCodeExecutor {
         options: {
           cwd: this.options.projectPath,
           permissionMode: "bypassPermissions",
-          customSystemPrompt: this.options.systemPrompt,
+          appendSystemPrompt: this.options.systemPrompt,
         },
       })) {
         // Extract metrics from messages

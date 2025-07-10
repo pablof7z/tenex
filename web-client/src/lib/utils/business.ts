@@ -91,6 +91,7 @@ export const StatusUtils = {
             error: "border-red-500/20 bg-red-500/5 text-red-700",
             in_progress: "border-blue-500/20 bg-blue-500/5 text-blue-700",
             pending: "border-yellow-500/20 bg-yellow-500/5 text-yellow-700",
+            interrupted: "border-orange-500/20 bg-orange-500/5 text-orange-700",
             default: "border-gray-300/20 bg-gray-100/5 text-gray-600",
         };
         return colorMap[status] || colorMap.default || "";

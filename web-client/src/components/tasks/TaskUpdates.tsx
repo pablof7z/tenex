@@ -191,6 +191,7 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
                     inputPlaceholder={inputPlaceholder}
                     allowInput={true}
                     className={embedded ? "h-full" : "h-full min-h-screen"}
+                    disableTaskClick={true}
                 />
             </div>
         </div>

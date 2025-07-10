@@ -1,6 +1,6 @@
 import { NDKEvent, type NDKProject, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
-import { Bot, Circle, FileText, Moon, Plus, Settings, Sun, Users } from "lucide-react";
+import { Bot, Circle, FileText, Moon, Plus, Server, Settings, Sun, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
 import { onlineBackendsAtom } from "../../lib/store";
@@ -203,6 +203,10 @@ export function ProjectSidebar({
                         <DropdownMenuItem onClick={() => navigate("/agents")}>
                             <Bot className="w-4 h-4 mr-2" />
                             Agents
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/mcp-tools")}>
+                            <Server className="w-4 h-4 mr-2" />
+                            MCP Tools
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate("/instructions")}>
                             <FileText className="w-4 h-4 mr-2" />

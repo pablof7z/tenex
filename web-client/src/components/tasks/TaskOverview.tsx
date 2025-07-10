@@ -1,7 +1,7 @@
 import type { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { ProfileUtils, StatusUtils, TaskUtils } from "../../lib/utils/business";
-import { AlertCircle, CheckCircle2, Circle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 
@@ -46,29 +46,24 @@ export function TaskOverview({ task, statusUpdates, onClick }: TaskOverviewProps
         return <span className="text-xs text-muted-foreground">{getAgentName()}</span>;
     };
 
-    // Determine task status based on latest update
+    // Get task status from tag
     const getTaskStatus = () => {
-        if (!latestUpdate) return "pending";
-
-        const content = latestUpdate.content.toLowerCase();
-        if (
-            content.includes("completed") ||
-            content.includes("done") ||
-            content.includes("finished")
-        ) {
-            return "completed";
+        const statusTag = task.tags?.find((tag) => tag[0] === "status")?.[1];
+        
+        // Map status values to display states
+        switch (statusTag) {
+            case "completed":
+                return "completed";
+            case "failed":
+                return "error";
+            case "progress":
+                return "in_progress";
+            case "interrupted":
+                return "interrupted";
+            case "pending":
+            default:
+                return "pending";
         }
-        if (content.includes("error") || content.includes("failed") || content.includes("issue")) {
-            return "error";
-        }
-        if (
-            content.includes("working") ||
-            content.includes("progress") ||
-            content.includes("started")
-        ) {
-            return "in_progress";
-        }
-        return "pending";
     };
 
     const status = getTaskStatus();
@@ -79,6 +74,7 @@ export function TaskOverview({ task, statusUpdates, onClick }: TaskOverviewProps
             completed: <CheckCircle2 className="w-4 h-4 text-green-500" />,
             error: <AlertCircle className="w-4 h-4 text-red-500" />,
             in_progress: <Clock className="w-4 h-4 text-blue-500" />,
+            interrupted: <XCircle className="w-4 h-4 text-orange-500" />,
         };
         return iconMap[status] || <Circle className="w-4 h-4 text-gray-400" />;
     };

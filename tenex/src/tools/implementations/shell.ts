@@ -1,5 +1,5 @@
 import type { Tool } from "../types";
-import { success, error, createZodSchema } from "../types";
+import { success, failure, createZodSchema } from "../types";
 import { z } from "zod";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -32,7 +32,7 @@ export const shellTool: Tool<{
 
     // Safety check - only project-manager can use this tool
     if (context.agent.slug !== "project-manager") {
-      return error("Shell tool is restricted to project-manager agent only");
+      return failure({ kind: "validation", field: "agent", message: "Shell tool is restricted to project-manager agent only" });
     }
 
     const workingDir = cwd || context.projectPath;
@@ -73,7 +73,7 @@ export const shellTool: Tool<{
         error: errorMessage,
       });
 
-      return error(`Command failed: ${errorMessage}`);
+      return failure({ kind: "execution", tool: "shell", message: `Command failed: ${errorMessage}` });
     }
   },
 };

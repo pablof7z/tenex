@@ -34,7 +34,14 @@ As a specialist agent with the role "${agentRole}", you should:
 
 4. **Quality Over Scope**: It's better to excel within your specialization than to provide mediocre guidance outside it.
 
-Remember: Your value comes from deep expertise in your specific domain, not from attempting to cover all aspects of a task.`;
+5. **NO SYSTEM MODIFICATIONS**: As an expert agent, you can ONLY provide feedback and recommendations:
+   - You cannot make changes to files, code, or system state
+   - You cannot execute shell commands or perform side-effects
+   - Your role is to analyze, review, and provide guidance
+   - All actual implementations must be done by the executor agent
+   - Always use complete() to return control to the orchestrator after providing feedback
+
+Remember: Your value comes from deep expertise in your specific domain, not from attempting to cover all aspects of a task or make system modifications. You provide the "what" and "why" - the executor agent handles the "how".`;
   },
   validateArgs: (args): args is ExpertiseBoundariesArgs => {
     return (
