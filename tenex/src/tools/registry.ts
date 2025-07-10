@@ -7,6 +7,7 @@ import { learnTool } from "./implementations/learn";
 import { readFileTool } from "./implementations/readFile";
 import { writeContextFileTool } from "./implementations/writeContextFile";
 import { completeTool } from "./implementations/complete";
+import { shellTool } from "./implementations/shell";
 import type { Tool } from "./types";
 
 // Registry of all available tools
@@ -20,6 +21,7 @@ toolsMap.set("analyze", analyze as Tool<unknown, unknown>);
 toolsMap.set("generate_inventory", generateInventoryTool as Tool<unknown, unknown>);
 toolsMap.set("learn", learnTool as Tool<unknown, unknown>);
 toolsMap.set("create_milestone_task", createMilestoneTaskTool as Tool<unknown, unknown>);
+toolsMap.set("shell", shellTool as Tool<unknown, unknown>);
 
 export function getTool(name: string): Tool | undefined {
   return toolsMap.get(name);

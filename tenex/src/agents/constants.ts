@@ -7,6 +7,7 @@ import { learnTool } from "../tools/implementations/learn";
 import { readFileTool } from "../tools/implementations/readFile";
 import { writeContextFileTool } from "@/tools/implementations/writeContextFile";
 import { completeTool } from "../tools/implementations/complete";
+import { shellTool } from "../tools/implementations/shell";
 
 /**
  * Get all available tools for an agent based on their role
@@ -31,6 +32,7 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
       if (agent.slug === "project-manager") {
         tools.push(generateInventoryTool.name);
         tools.push(writeContextFileTool.name);
+        tools.push(shellTool.name);
       }
     }
   } else {
