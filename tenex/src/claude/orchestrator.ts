@@ -25,6 +25,7 @@ export interface ClaudeTaskResult {
   duration: number;
   success: boolean;
   error?: string;
+  finalResponse?: string;
 }
 
 /**
@@ -59,8 +60,8 @@ export class ClaudeTaskOrchestrator {
         startExecutionTime(options.conversation);
       }
 
-      // Collect all assistant messages for final response
-      const assistantMessages: string[] = [];
+      // Track the last assistant message for final response
+      let lastAssistantMessage: string = "";
 
       // Execute and stream messages
       const generator = executor.execute();
@@ -97,6 +98,7 @@ export class ClaudeTaskOrchestrator {
             duration: executionResult.duration,
             success: executionResult.success,
             error: executionResult.error,
+            finalResponse: lastAssistantMessage,
           };
           break;
         }
@@ -109,7 +111,7 @@ export class ClaudeTaskOrchestrator {
             .join("");
 
           if (textContent) {
-            assistantMessages.push(textContent);
+            lastAssistantMessage = textContent;
 
             // Publish progress update using TaskPublisher
             await this.taskPublisher.publishTaskProgress(textContent);

@@ -35,6 +35,7 @@ export const completeTool: Tool<{
       agent: context.agent,
       conversationId: context.conversationId,
       publisher: context.publisher,
+      triggeringEvent: context.triggeringEvent,
     });
 
     // Return success with the completion

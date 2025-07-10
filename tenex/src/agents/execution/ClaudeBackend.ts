@@ -54,8 +54,8 @@ export class ClaudeBackend implements ExecutionBackend {
       throw new Error(`Claude code execution failed: ${result.error || "Unknown error"}`);
     }
 
-    // Extract the comprehensive report from the last assistant message
-    const claudeReport = result.task.content || "Task completed successfully";
+    // Use Claude's final response instead of the original task content
+    const claudeReport = result.finalResponse || result.task.content || "Task completed successfully";
 
     // Use the same completion handler as the complete() tool
     // This will publish the completion event
@@ -65,6 +65,7 @@ export class ClaudeBackend implements ExecutionBackend {
       agent: context.agent,
       conversationId: context.conversation.id,
       publisher,
+      triggeringEvent: context.triggeringEvent,
     });
   }
 }

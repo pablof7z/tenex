@@ -165,7 +165,7 @@ export class LLMRouter implements LLMService {
       );
       response = await llm.complete(model, request.messages, {
         usage: true,
-        caching: config.enableCaching ?? true,
+        caching: true,
       });
 
       // Model metadata is available in the model object if needed for future use
