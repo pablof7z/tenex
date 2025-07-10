@@ -1,8 +1,0 @@
-{
-  "credentials": {
-    "openrouter": {
-      "apiKey": "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",
-      "baseUrl": "https://openrouter.ai/api/v1"
-    }
-  }
-}

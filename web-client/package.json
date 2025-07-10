@@ -33,6 +33,7 @@
         "@radix-ui/react-separator": "^1.1.7",
         "@radix-ui/react-slot": "^1.2.3",
         "@radix-ui/react-switch": "^1.1.7",
+        "@radix-ui/react-tabs": "^1.1.12",
         "@tenex/cli": "file:../tenex",
         "@types/react-syntax-highlighter": "^15.5.13",
         "buffer": "^6.0.3",
