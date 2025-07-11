@@ -39,13 +39,6 @@ export interface ConversationMetadata {
   last_user_message?: string; // Last message from the user
 }
 
-export interface PhaseContext {
-  phase: Phase;
-  startedAt: number;
-  completedAt?: number;
-  summary: string;
-}
-
 export interface PhaseTransition {
   from: Phase;
   to: Phase;

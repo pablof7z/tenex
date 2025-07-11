@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { learnTool } from "../learn";
-import type { ToolExecutionContext } from "../../types";
+import type { ExecutionContext } from "../../types";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 import { NDKAgentLesson } from "@/events/NDKAgentLesson";
@@ -49,7 +49,7 @@ import { getProjectContext } from "@/services/ProjectContext";
 import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
 
 describe("Learn Tool", () => {
-    let mockContext: ToolExecutionContext;
+    let mockContext: ExecutionContext;
     let mockNDK: any;
     let mockProjectContext: any;
     let mockSigner: NDKSigner;
@@ -81,17 +81,14 @@ describe("Learn Tool", () => {
                 name: "dev-senior",
                 pubkey: "agent-pubkey-123",
                 eventId: "agent-event-id",
+                signer: mockSigner,
             } as Agent,
-            agentName: "dev-senior",
-            agentSigner: mockSigner,
             phase: "building",
             conversationId: "conv-123",
-            conversation: {
-                executionTime: {
-                    totalSeconds: 42,
-                    isActive: false,
-                },
-            } as Conversation,
+            projectPath: "/test/project",
+            triggeringEvent: {} as any,
+            publisher: {} as any,
+            conversationManager: {} as any,
         };
 
         // Setup mocks
@@ -369,7 +366,7 @@ describe("Learn Tool", () => {
                     agentPubkey: "agent-pubkey-123",
                     title: "Failed Lesson",
                     phase: "building",
-                    conversationId: "conv-123",
+                    conversationId: mockContext.conversationId,
                 })
             );
         });

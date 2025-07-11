@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { ToolExecutionContext, ToolExecutionResult, ToolError } from "./types";
+import type { ExecutionContext, ToolExecutionResult, ToolError } from "./types";
 
 export interface ToolCallLogEntry {
   timestamp: string;
@@ -75,7 +75,7 @@ export class ToolCallLogger {
   async logToolCall(
     toolName: string,
     args: Record<string, unknown>,
-    context: ToolExecutionContext,
+    context: ExecutionContext,
     result: ToolExecutionResult,
     performance: { startTime: number; endTime: number },
     trace?: {

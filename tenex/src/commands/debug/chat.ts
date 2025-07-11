@@ -1,7 +1,7 @@
 import * as readline from "node:readline";
 import { AgentRegistry } from "@/agents/AgentRegistry";
 import { AgentExecutor } from "@/agents/execution/AgentExecutor";
-import type { AgentExecutionContext } from "@/agents/execution/types";
+import type { ExecutionContext } from "@/agents/execution/types";
 import type { Agent } from "@/agents/types";
 import { ConversationManager } from "@/conversations/ConversationManager";
 import type { Phase } from "@/conversations/phases";
@@ -146,12 +146,19 @@ export async function runDebugChat(
       ];
 
       // Create execution context
-      const context: AgentExecutionContext = {
+      const context: ExecutionContext = {
         agent,
-        conversation,
+        conversationId: conversation.id,
         phase: "chat" as Phase,
         projectPath,
         triggeringEvent: mockEvent,
+        publisher: new (await import("@/nostr/NostrPublisher")).NostrPublisher({
+          conversationId: conversation.id,
+          agent,
+          triggeringEvent: mockEvent,
+          conversationManager: _conversationManager,
+        }),
+        conversationManager: _conversationManager,
       };
 
       // Execute using AgentExecutor without parent tracing context
@@ -251,12 +258,19 @@ export async function runDebugChat(
         ];
 
         // Create execution context
-        const context: AgentExecutionContext = {
+        const context: ExecutionContext = {
           agent,
-          conversation,
+          conversationId: conversation.id,
           phase: "chat" as Phase,
           projectPath,
           triggeringEvent: mockEvent,
+          publisher: new (await import("@/nostr/NostrPublisher")).NostrPublisher({
+            conversationId: conversation.id,
+            agent,
+            triggeringEvent: mockEvent,
+            conversationManager: _conversationManager,
+          }),
+          conversationManager: _conversationManager,
         };
 
         // Execute using AgentExecutor without parent tracing context

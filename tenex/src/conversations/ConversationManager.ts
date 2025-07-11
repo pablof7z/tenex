@@ -116,17 +116,6 @@ export class ConversationManager {
 
     const previousPhase = conversation.phase;
 
-    logger.info("[PHASE_TRANSITION] Starting phase update", {
-      conversationId: id,
-      fromPhase: previousPhase,
-      toPhase: phase,
-      agentName,
-      agentPubkey,
-      messagePreview: `${message.substring(0, 100)}...`,
-      hasReason: !!reason,
-      hasSummary: !!summary,
-    });
-
     // Create transition record even for same-phase handoffs
     // This ensures handoff information is always persisted
     const transition: PhaseTransition = {
@@ -142,20 +131,8 @@ export class ConversationManager {
 
     // Update conversation phase if it changed
     if (previousPhase !== phase) {
-      logger.info("[CONVERSATION_MANAGER] Updating phase in conversation object", {
-        conversationId: id,
-        previousPhase,
-        newPhase: phase,
-      });
-      
       conversation.phase = phase;
       conversation.phaseStartedAt = Date.now();
-      
-      logger.info("[CONVERSATION_MANAGER] Phase updated in memory", {
-        conversationId: id,
-        updatedPhase: conversation.phase,
-        phaseStartedAt: conversation.phaseStartedAt,
-      });
 
       // Clear readFiles when transitioning from REFLECTION back to CHAT
       // This starts a new conversation cycle with fresh file tracking

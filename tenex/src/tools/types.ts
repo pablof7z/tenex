@@ -14,14 +14,5 @@ export * from "./core";
 export * from "./executor";
 export * from "./zod-schema";
 
-// Tool execution context
-export interface ToolExecutionContext {
-  projectPath: string;
-  conversationId: string;
-  phase: Phase;
-  agent: Agent;
-  conversation: Conversation;
-  publisher: NostrPublisher;
-  triggeringEvent?: NDKEvent;
-  conversationManager: ConversationManager;
-}
+// Re-export unified ExecutionContext from agents
+export type { ExecutionContext } from "@/agents/execution/types";

@@ -61,7 +61,7 @@ export const generateInventoryTool: Tool<GenerateInventoryInput, GenerateInvento
         const options = { 
           focusFiles,
           agent: context.agent,
-          conversationRootEventId: context.conversation.id
+          conversationRootEventId: context.conversationId
         };
 
         // Generate the inventory

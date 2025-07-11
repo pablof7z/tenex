@@ -52,10 +52,17 @@ export const handleNewConversation = async (
     // Execute with the appropriate agent
     await context.agentExecutor.execute({
       agent: targetAgent,
-      conversation,
+      conversationId: conversation.id,
       phase: conversation.phase,
       projectPath: process.cwd(),
       triggeringEvent: event,
+      publisher: new (await import("@/nostr/NostrPublisher")).NostrPublisher({
+        conversationId: conversation.id,
+        agent: targetAgent,
+        triggeringEvent: event,
+        conversationManager: context.conversationManager,
+      }),
+      conversationManager: context.conversationManager,
     });
 
     logInfo(chalk.green("✅ Conversation routed successfully"));

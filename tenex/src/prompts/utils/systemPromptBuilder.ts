@@ -18,7 +18,6 @@ export interface BuildSystemPromptOptions {
   conversation?: Conversation;
   agentLessons?: Map<string, NDKAgentLesson[]>;
   mcpTools?: Tool[];
-  claudeCodeReport?: string;
 }
 
 /**
@@ -35,7 +34,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
     conversation,
     agentLessons,
     mcpTools = [],
-    claudeCodeReport,
   } = options;
 
   // Build system prompt with all agent and phase context
@@ -88,19 +86,12 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
     .add("mcp-tools", {
       tools: mcpTools,
     })
-    .add("tool-use", {});
+    // .add("tool-use", {});
 
   // Add orchestrator-specific routing instructions for orchestrator agents
   if (agent.isOrchestrator) {
     systemPromptBuilder
       .add("orchestrator-routing-instructions", {})
-
-    // Add Claude Code report fragment if we have one
-    if (claudeCodeReport) {
-      systemPromptBuilder.add("claude-code-report", {
-        claudeCodeReport,
-      });
-    }
   } else {
     // Add expertise boundaries for non-orchestrator agents
     systemPromptBuilder.add("expertise-boundaries", {

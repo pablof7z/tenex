@@ -51,22 +51,15 @@ export class TaskPublisher {
       task.tags.push(["e", options.conversationRootEventId, "", "reply"]);
     }
 
-    // Add tool and status tags
-    task.tags.push(["tool", "claude_code"], ["status", "pending"]);
-
     // Sign with the agent's signer
     await task.sign(this.agent.signer);
 
     // we want to allow any message that prefaces the creation of this task to be published
     // setTimeout(task.publish, 500);
     await task.publish();
-    logger.info("Published task", { taskId: task.id, title: task.title });
 
     // Store the task instance for future operations
     this.currentTask = task;
-    
-    // Immediately publish a status update to mark as "progress" when execution starts
-    await this.publishTaskProgress("Starting task execution...");
 
     return task;
   }
@@ -135,6 +128,9 @@ export class TaskPublisher {
     progressUpdate.content = content;
     progressUpdate.tags.push(["status", "progress"]);
 
+    // remove all p tags
+    progressUpdate.tags = progressUpdate.tags.filter(t => t[0] !== 'p')
+
     // Add session ID if available
     if (sessionId) {
       progressUpdate.tags.push(["claude-session", sessionId]);
@@ -145,7 +141,16 @@ export class TaskPublisher {
 
     // Sign with the agent's signer
     await progressUpdate.sign(this.agent.signer);
-    await progressUpdate.publish();
+    try {
+      await progressUpdate.publish();
+    } catch (e) {
+      logger.debug("Error publishing update: " + e.message, {
+        taskId: task.id,
+        contentLength: content.length,
+        sessionId,
+      });
+      return;
+    }
 
     logger.debug("Published task progress", {
       taskId: task.id,

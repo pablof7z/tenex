@@ -17,10 +17,7 @@ import { Message } from "multi-llm-ts";
 import { ReasonActLoop } from "./ReasonActLoop";
 import { ClaudeBackend } from "./ClaudeBackend";
 import type { ExecutionBackend } from "./ExecutionBackend";
-import type {
-  AgentExecutionContext,
-  AgentExecutionContextWithHandoff,
-} from "./types";
+import type { ExecutionContext } from "./types";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/orchestrator-routing";
 import "@/prompts/fragments/expertise-boundaries";
@@ -52,14 +49,14 @@ export class AgentExecutor {
    * Execute an agent's assignment for a conversation with streaming
    */
   async execute(
-    context: AgentExecutionContext,
+    context: ExecutionContext,
     parentTracingContext?: TracingContext
   ): Promise<void> {
     // Create agent execution tracing context
     const tracingContext = parentTracingContext
       ? createAgentExecutionContext(parentTracingContext, context.agent.name)
       : createAgentExecutionContext(
-          createTracingContext(context.conversation.id),
+          createTracingContext(context.conversationId),
           context.agent.name
         );
 
@@ -69,46 +66,52 @@ export class AgentExecutor {
       phase: context.phase,
     });
 
-    // Create NostrPublisher for ReasonActLoop to handle publishing
-    const publisher = new NostrPublisher({
-      conversationId: context.conversation.id,
-      agent: context.agent,
-      triggeringEvent: context.triggeringEvent,
-      conversationManager: this.conversationManager,
-    });
+    // Ensure context has publisher and conversationManager
+    const fullContext: ExecutionContext = {
+      ...context,
+      publisher: context.publisher || new NostrPublisher({
+        conversationId: context.conversationId,
+        agent: context.agent,
+        triggeringEvent: context.triggeringEvent,
+        conversationManager: this.conversationManager,
+      }),
+      conversationManager: context.conversationManager || this.conversationManager,
+    };
 
     try {
+      // Get fresh conversation data for execution time tracking
+      const conversation = context.conversationManager.getConversation(context.conversationId);
+      if (!conversation) {
+        throw new Error(`Conversation ${context.conversationId} not found`);
+      }
+      
       // Start execution time tracking
-      startExecutionTime(context.conversation);
+      startExecutionTime(conversation);
 
       // 1. Build the agent's messages
-      const messages = await this.buildMessages(context, context.triggeringEvent);
+      const messages = await this.buildMessages(fullContext, fullContext.triggeringEvent);
 
       // 2. Publish typing indicator start
-      await publisher.publishTypingIndicator("start");
-
-      // Ensure context has all required fields
-      const fullContext: AgentExecutionContext = {
-        ...context,
-        projectPath: context.projectPath || process.cwd(),
-      };
+      await fullContext.publisher.publishTypingIndicator("start");
 
       await this.executeWithStreaming(
         fullContext,
         messages,
-        tracingContext,
-        publisher
+        tracingContext
       );
 
       // Conversation updates are now handled by NostrPublisher
     } catch (error) {
       // Stop execution time tracking even on error
-      stopExecutionTime(context.conversation);
+      const conversation = context.conversationManager.getConversation(context.conversationId);
+      if (conversation) {
+        stopExecutionTime(conversation);
+      }
 
       // Conversation saving is now handled by NostrPublisher
 
       // Ensure typing indicator is stopped even on error
-      await publisher.publishTypingIndicator("stop");
+      await fullContext.publisher.publishTypingIndicator("stop");
 
       tracingLogger.failOperation("agent_execution", error, {
         agentName: context.agent.name,
@@ -122,11 +125,17 @@ export class AgentExecutor {
    * Build the messages array for the agent execution
    */
   private async buildMessages(
-    context: AgentExecutionContext,
+    context: ExecutionContext,
     triggeringEvent: NDKEvent
   ): Promise<Message[]> {
     const projectCtx = getProjectContext();
     const project = projectCtx.project;
+    
+    // Get fresh conversation data
+    const conversation = context.conversationManager.getConversation(context.conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation ${context.conversationId} not found`);
+    }
 
     // Create tag map for efficient lookup
     const tagMap = new Map<string, string>();
@@ -148,30 +157,36 @@ export class AgentExecutor {
     const mcpTools = await mcpService.getAvailableTools();
 
     // Build system prompt using the shared function
+    // Only pass the current agent's lessons
+    const agentLessonsMap = new Map<string, import("@/events/NDKAgentLesson").NDKAgentLesson[]>();
+    const currentAgentLessons = projectCtx.getLessonsForAgent(context.agent.pubkey);
+    if (currentAgentLessons.length > 0) {
+      agentLessonsMap.set(context.agent.pubkey, currentAgentLessons);
+    }
+    
     const systemPrompt = buildSystemPrompt({
       agent: context.agent,
       phase: context.phase,
       projectTitle: tagMap.get("title") || "Untitled Project",
       projectRepository: tagMap.get("repo"),
       availableAgents,
-      conversation: context.conversation,
-      agentLessons: projectCtx.agentLessons,
+      conversation,
+      agentLessons: agentLessonsMap,
       mcpTools,
-      claudeCodeReport: context.additionalContext?.claudeCodeReport,
     });
 
     messages.push(new Message("system", systemPrompt));
 
     // Use agent's isolated context instead of full history
-    let agentContext = this.conversationManager.getAgentContext(
-      context.conversation.id,
+    let agentContext = context.conversationManager.getAgentContext(
+      context.conversationId,
       context.agent.slug
     );
 
     // If no context exists, this agent is being invoked for the first time
     if (!agentContext) {
-        // Check if this is a handoff from another agent (will be set in execute method)
-        const handoff = (context as AgentExecutionContextWithHandoff).handoff;
+        // Check if this is a handoff from another agent
+        const handoff = context.handoff;
 
         if (handoff) {
           logger.info("[AGENT_EXECUTOR] Creating context from handoff", {
@@ -181,19 +196,20 @@ export class AgentExecutor {
           });
 
           // Create context with handoff information
-          agentContext = this.conversationManager.createAgentContext(
-            context.conversation.id,
+          agentContext = context.conversationManager.createAgentContext(
+            context.conversationId,
             context.agent.slug,
             handoff
           );
         } else {
           logger.info("[AGENT_EXECUTOR] Bootstrapping context for direct invocation", {
             agentSlug: context.agent.slug,
+            systemPrompt,
           });
 
           // Bootstrap context for direct invocation (e.g., p-tag mention)
-          agentContext = await this.conversationManager.bootstrapAgentContext(
-            context.conversation.id,
+          agentContext = await context.conversationManager.bootstrapAgentContext(
+            context.conversationId,
             context.agent.slug,
             context.triggeringEvent
           );
@@ -205,8 +221,8 @@ export class AgentExecutor {
           currentMessages: agentContext.messages.length,
         });
 
-        await this.conversationManager.synchronizeAgentContext(
-          context.conversation.id,
+        await context.conversationManager.synchronizeAgentContext(
+          context.conversationId,
           context.agent.slug,
           context.triggeringEvent
         );
@@ -232,10 +248,9 @@ export class AgentExecutor {
    * Execute with streaming support
    */
   private async executeWithStreaming(
-    context: AgentExecutionContext,
+    context: ExecutionContext,
     messages: Message[],
-    tracingContext: TracingContext,
-    publisher: NostrPublisher
+    tracingContext: TracingContext
   ): Promise<void> {
     const tracingLogger = createTracingLogger(tracingContext, "agent");
 
@@ -253,7 +268,7 @@ export class AgentExecutor {
     const backend = this.getBackend(context.agent);
 
     // Execute using the backend - all backends now use the same interface
-    await backend.execute(messages, allTools, context, publisher);
+    await backend.execute(messages, allTools, context, context.publisher);
 
     tracingLogger.info("[AGENT_EXECUTOR] Backend execution completed", {
       agent: context.agent.name,

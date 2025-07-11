@@ -92,6 +92,13 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
       }
 
       // Build system prompt using the shared function - exactly as production does
+      // Only pass the current agent's lessons
+      const agentLessonsMap = new Map<string, import("@/events/NDKAgentLesson").NDKAgentLesson[]>();
+      const currentAgentLessons = projectCtx.getLessonsForAgent(agent.pubkey);
+      if (currentAgentLessons.length > 0) {
+        agentLessonsMap.set(agent.pubkey, currentAgentLessons);
+      }
+      
       const systemPrompt = buildSystemPrompt({
         agent,
         phase,
@@ -99,9 +106,8 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         projectRepository: repoTag?.[1],
         availableAgents,
         conversation: undefined, // No conversation in debug mode
-        agentLessons: projectCtx.agentLessons,
+        agentLessons: agentLessonsMap,
         mcpTools,
-        claudeCodeReport: undefined, // No Claude Code report in debug mode
       });
 
       // Format and display the system prompt with enhancements

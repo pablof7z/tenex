@@ -12,6 +12,7 @@ import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 import type { ConversationManager } from "@/conversations/ConversationManager";
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 
 // ============================================================================
 // Core Result Type
@@ -26,20 +27,8 @@ export type Result<E, A> =
 // Simple Tool Interface
 // ============================================================================
 
-/**
- * Simplified execution context without redundant fields
- * All agent-related data is available through the agent object
- * All project-related data is available through getProjectContext()
- */
-export interface ExecutionContext {
-  readonly projectPath: string;
-  readonly conversationId: string;
-  readonly phase: Phase;
-  readonly agent: Agent;
-  readonly conversation: Conversation;
-  readonly publisher: NostrPublisher;
-  readonly conversationManager: ConversationManager;
-}
+// Import unified ExecutionContext
+import type { ExecutionContext } from "@/agents/execution/types";
 
 // ============================================================================
 // Tool Type Definition
@@ -60,11 +49,6 @@ export interface Tool<Input = unknown, Output = unknown> {
 // Control Flow and Termination Types
 // ============================================================================
 
-/**
- * Control flow decisions that affect execution
- */
-export type ControlFlow = ContinueFlow;
-
 export interface ContinueFlow {
   readonly type: "continue";
   readonly routing: RoutingDecision;
@@ -74,7 +58,7 @@ export interface RoutingDecision {
   readonly phase?: Phase;
   readonly agents: NonEmptyArray<string>; // Agent pubkeys
   readonly reason: string;
-  readonly message: string;
+  readonly messageToAgents: string;
   readonly context?: Readonly<Record<string, unknown>>;
 }
 

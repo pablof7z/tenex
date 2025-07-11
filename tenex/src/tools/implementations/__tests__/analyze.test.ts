@@ -1,5 +1,5 @@
 import { analyze } from "../analyze";
-import type { ToolExecutionContext } from "@/tools/types";
+import type { ExecutionContext } from "@/tools/types";
 import { logger } from "@/utils/logger";
 import { generateRepomixOutput } from "@/utils/repomix";
 import { loadLLMRouter } from "@/llm";
@@ -14,7 +14,7 @@ vi.mock("@/nostr/NostrPublisher");
 vi.mock("@/llm/types");
 
 describe("analyze tool", () => {
-  let mockContext: ToolExecutionContext;
+  let mockContext: ExecutionContext;
   let mockPublish: any;
   let mockSign: any;
 
@@ -39,16 +39,14 @@ describe("analyze tool", () => {
         tools: [],
         slug: "test-agent"
       },
-      conversation: {
-        id: "test-conversation",
-        title: "Test Conversation",
-        phase: "execution",
-        history: []
-      } as any,
       triggeringEvent: {
         id: "test-event",
         pubkey: "test-pubkey"
-      } as any
+      } as any,
+      publisher: {
+        publishTypingIndicator: mockPublish
+      } as any,
+      conversationManager: {} as any
     };
   });
 

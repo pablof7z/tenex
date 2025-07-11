@@ -99,6 +99,7 @@ export class ClaudeTaskOrchestrator {
 
       while (true) {
         const { value: message, done } = await generator.next();
+        console.log('Claude Orc', { message, done });
 
         if (done) {
           // The value is the final ClaudeCodeResult

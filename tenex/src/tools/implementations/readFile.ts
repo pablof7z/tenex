@@ -46,7 +46,8 @@ export const readFileTool: Tool<ReadFileInput, ReadFileOutput> = {
 
       // Track file read in conversation metadata if path starts with context/
       if (path.startsWith("context/") && context.conversationManager) {
-        const currentMetadata = context.conversation.metadata;
+        const conversation = context.conversationManager.getConversation(context.conversationId);
+        const currentMetadata = conversation?.metadata || {};
         const readFiles = currentMetadata.readFiles || [];
         
         // Only add if not already tracked

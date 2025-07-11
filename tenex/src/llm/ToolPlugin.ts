@@ -1,7 +1,7 @@
 import { getToolLogger } from "@/tools/toolLogger";
 import type {
   Tool,
-  ToolExecutionContext,
+  ExecutionContext,
   ToolExecutor,
   ToolError,
   ToolExecutionResult,
@@ -24,20 +24,10 @@ export class ToolPlugin extends Plugin {
 
   constructor(
     private readonly tool: Tool,
-    private readonly tenexContext: ToolExecutionContext
+    private readonly tenexContext: ExecutionContext
   ) {
     super();
-    // Map ToolExecutionContext to ExecutionContext
-    const executionContext = {
-      projectPath: tenexContext.projectPath,
-      conversationId: tenexContext.conversationId,
-      phase: tenexContext.phase,
-      agent: tenexContext.agent,
-      conversation: tenexContext.conversation,
-      publisher: tenexContext.publisher,
-      conversationManager: tenexContext.conversationManager,
-    };
-    this.executor = createToolExecutor(executionContext);
+    this.executor = createToolExecutor(tenexContext);
   }
 
   serializeInTools(): boolean {

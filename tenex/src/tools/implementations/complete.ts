@@ -4,7 +4,7 @@ import { z } from "zod";
 import { handleAgentCompletion } from "@/agents/execution/completionHandler";
 
 const completeSchema = z.object({
-  response: z.string().describe("Detailed report of what was accomplished and the results achieved"),
+  response: z.string().describe("Your main answer or a detailed report of what was accomplished and the results achieved."),
   summary: z
     .string()
     .optional()
@@ -22,6 +22,9 @@ export const completeTool: Tool<{
 }, Termination> = {
   name: "complete",
   description: "Signal that you have completed your assigned task and report results to the orchestrator",
+  promptFragment: `-When asked a question, use this tool as the ONLY way to FINALLY respond the question.
+- When tasked with building a plan, provide the FULL plan using this tool.
+- When tasked with creating something, provide the FULL report of what was built, using this tool.`,
 
   parameters: createZodSchema(completeSchema),
 

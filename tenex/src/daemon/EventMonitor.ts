@@ -1,4 +1,3 @@
-import path from "node:path";
 import { getNDK } from "@/nostr/ndkClient";
 import { logger } from "@/utils/logger";
 import type { NDKEvent, NDKFilter, NDKSubscription } from "@nostr-dev-kit/ndk";
@@ -13,7 +12,6 @@ export interface IEventMonitor {
 
 export class EventMonitor implements IEventMonitor {
   private subscription: NDKSubscription | null = null;
-  private whitelistedPubkeys: Set<string> = new Set();
 
   constructor(
     private projectManager: IProjectManager,
@@ -21,9 +19,6 @@ export class EventMonitor implements IEventMonitor {
   ) {}
 
   async start(whitelistedPubkeys: string[]): Promise<void> {
-    this.whitelistedPubkeys = new Set(whitelistedPubkeys);
-
-    // Subscribe to all events from whitelisted pubkeys
     const filter: NDKFilter = {
       authors: whitelistedPubkeys,
       limit: 0,

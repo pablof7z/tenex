@@ -65,7 +65,8 @@ describe("ReasonActLoop - Orchestrator Reminder", () => {
                   routing: {
                     agents: ["executor"],
                     phase: "execute",
-                    reason: "Need to check implementation"
+                    reason: "Need to check implementation",
+                    messageToAgents: "@executor, check the implementation status"
                   }
                 }
               }

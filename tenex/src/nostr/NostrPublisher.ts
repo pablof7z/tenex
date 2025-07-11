@@ -368,10 +368,7 @@ export class NostrPublisher {
       event.tag(["routing-reason", routing.reason]);
     }
 
-    // Add routing message (instructions for next agent)
-    if (routing.message) {
-      event.tag(["routing-message", routing.message]);
-    }
+    // Routing message no longer exists - content is used instead
 
     // Add routing context summary if provided
     if (routing.context && typeof routing.context.summary === "string") {

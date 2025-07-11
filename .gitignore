@@ -53,3 +53,4 @@ cli-client/dist shared/dist tenex/dist web-client/dist
 
 # TENEX project files
 .tenex/
+web-client/public/worker.js

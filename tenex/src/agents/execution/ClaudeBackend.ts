@@ -1,6 +1,6 @@
 import type { Tool } from "@/tools/types";
 import type { ExecutionBackend } from "./ExecutionBackend";
-import type { AgentExecutionContext } from "./types";
+import type { ExecutionContext } from "./types";
 import { handleAgentCompletion } from "./completionHandler";
 import { ClaudeTaskOrchestrator } from "@/claude/orchestrator";
 import { TaskPublisher } from "@/nostr/TaskPublisher";
@@ -16,7 +16,7 @@ export class ClaudeBackend implements ExecutionBackend {
   async execute(
     messages: Array<import("multi-llm-ts").Message>,
     tools: Tool[],
-    context: AgentExecutionContext,
+    context: ExecutionContext,
     publisher: NostrPublisher
   ): Promise<void> {
     // Extract the system prompt from messages
@@ -48,8 +48,8 @@ export class ClaudeBackend implements ExecutionBackend {
       systemPrompt,
       projectPath: context.projectPath || "",
       title: `Claude Code Execution (via ${context.agent.name})`,
-      conversationRootEventId: context.conversation.id,
-      conversation: context.conversation,
+      conversationRootEventId: context.conversationId,
+      conversation: context.conversationManager.getConversation(context.conversationId),
       abortSignal: abortController.signal,
     });
 
@@ -66,7 +66,7 @@ export class ClaudeBackend implements ExecutionBackend {
       response: claudeReport,
       summary: `Claude Code execution completed. Task ID: ${result.task.id}`,
       agent: context.agent,
-      conversationId: context.conversation.id,
+      conversationId: context.conversationId,
       publisher,
       triggeringEvent: context.triggeringEvent,
     });

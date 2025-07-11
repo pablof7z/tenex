@@ -4,9 +4,9 @@
 
 import type {
   Tool,
-  ExecutionContext,
   ToolError,
 } from "./core";
+import type { ExecutionContext } from "./types";
 import { logger } from "@/utils/logger";
 
 /**

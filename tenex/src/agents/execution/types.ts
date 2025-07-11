@@ -3,19 +3,16 @@ import type { Phase } from "@/conversations/phases";
 import type { Conversation, PhaseTransition } from "@/conversations/types";
 import type { ToolExecutionResult } from "@/tools/types";
 
-export interface AgentExecutionContext {
+export interface ExecutionContext {
   agent: Agent;
-  conversation: Conversation;
+  conversationId: string;
   phase: Phase;
-  previousPhase?: Phase;
-  projectContext?: Record<string, unknown>;
   projectPath: string;
   triggeringEvent: import("@nostr-dev-kit/ndk").NDKEvent;
-  additionalContext?: {
-    claudeCodeReport?: string;
-    claudeCodeSuccess?: boolean;
-    directExecution?: boolean;
-  };
+  publisher: import("@/nostr/NostrPublisher").NostrPublisher;
+  conversationManager: import("@/conversations/ConversationManager").ConversationManager;
+  previousPhase?: Phase;
+  handoff?: PhaseTransition;
 }
 
 export interface AgentExecutionResult {
@@ -25,7 +22,4 @@ export interface AgentExecutionResult {
   error?: string;
 }
 
-export interface AgentExecutionContextWithHandoff extends AgentExecutionContext {
-  handoff?: PhaseTransition;
-}
 

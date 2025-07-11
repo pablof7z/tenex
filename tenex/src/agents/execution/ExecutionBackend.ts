@@ -1,4 +1,4 @@
-import type { AgentExecutionContext } from "./types";
+import type { ExecutionContext } from "./types";
 import type { Tool } from "@/tools/types";
 import type { NostrPublisher } from "@/nostr/NostrPublisher";
 
@@ -18,7 +18,7 @@ export interface ExecutionBackend {
   execute(
     messages: Array<import("multi-llm-ts").Message>,
     tools: Tool[],
-    context: AgentExecutionContext,
+    context: ExecutionContext,
     publisher: NostrPublisher
   ): Promise<void>;
 }

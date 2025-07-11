@@ -32,15 +32,15 @@ export interface ModelInfo {
 }
 
 // Import and re-export tool types
-import type { Tool, ToolExecutionContext } from "@/tools/types";
-export type { Tool, ToolExecutionContext };
+import type { Tool, ExecutionContext } from "@/tools/types";
+export type { Tool, ExecutionContext };
 
 // Simplified completion request that uses multi-llm-ts types
 export interface CompletionRequest {
   messages: Message[];
   options?: CompletionOptions;
   tools?: Tool[];
-  toolContext?: ToolExecutionContext;
+  toolContext?: ExecutionContext;
 }
 
 // Streaming types

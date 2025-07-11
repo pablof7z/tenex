@@ -3,6 +3,9 @@ import * as path from "node:path";
 import { z } from "zod";
 import type { Tool } from "../types";
 import { createZodSchema } from "../types";
+import { NDKArticle } from "@nostr-dev-kit/ndk";
+import { getNDK } from "@/nostr";
+import { logger } from "@/utils/logger";
 
 const WriteContextFileArgsSchema = z.object({
   filename: z.string().min(1, "filename must be a non-empty string"),
@@ -26,7 +29,7 @@ export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileO
   parameters: createZodSchema(WriteContextFileArgsSchema),
 
   execute: async (input, context) => {
-    console.log('write_context_file called', input);
+    logger.debug('write_context_file called', { input });
     
       const { filename, content } = input.value;
 
@@ -63,7 +66,8 @@ export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileO
         const fullPath = path.join(contextDir, filename);
 
         // Check if this file was recently read from persisted conversation metadata
-        const readFiles = context.conversation.metadata.readFiles || [];
+        const conversation = context.conversationManager.getConversation(context.conversationId);
+        const readFiles = conversation?.metadata?.readFiles || [];
         const contextPath = `context/${filename}`;
         const wasRecentlyRead = readFiles.includes(contextPath);
 
@@ -94,6 +98,29 @@ export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileO
 
         // Write the file
         await writeFile(fullPath, content, "utf-8");
+
+        // Publish NDKArticle for this context file update
+        try {
+          const article = new NDKArticle(getNDK());
+          
+          // Use the filename without .md extension as the dTag
+          const dTag = filename.replace(/\.md$/, '');
+          article.dTag = dTag;
+          
+          // Set article properties
+          article.title = `Context: ${dTag}`;
+          article.content = content;
+          article.published_at = Math.floor(Date.now() / 1000);
+          
+          // Sign with the agent's signer
+          await article.sign(context.agent.signer);
+          await article.publish();
+          
+          logger.debug('Published NDKArticle for context file', { filename, dTag });
+        } catch (error) {
+          // Log error but don't fail the tool execution
+          logger.error('Failed to publish NDKArticle', { error: error instanceof Error ? error.message : String(error) });
+        }
 
         return {
           ok: true,

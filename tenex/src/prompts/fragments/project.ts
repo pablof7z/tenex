@@ -258,38 +258,5 @@ ${contextFiles.map((f) => `- context/${f}`).join("\n")}`);
   },
 };
 
-// Claude Code report processing fragment for PM agents
-interface ClaudeCodeReportArgs {
-  claudeCodeReport?: string;
-}
-
-export const claudeCodeReportFragment: PromptFragment<ClaudeCodeReportArgs> = {
-  id: "claude-code-report",
-  priority: 30,
-  template: ({ claudeCodeReport }) => {
-    if (!claudeCodeReport) {
-      return "";
-    }
-
-    return `
-## Claude Code Report
-
-Claude Code has completed the following work:
-
-${claudeCodeReport}
-
-Your role now is to:
-1. Review the work completed
-2. Identify any gaps or issues
-3. Coordinate with other agents as needed
-4. Determine next steps
-`;
-  },
-  validateArgs: (args): args is ClaudeCodeReportArgs => {
-    return typeof args === "object" && args !== null;
-  },
-};
-
 // Register fragments
 fragmentRegistry.register(inventoryContextFragment);
-fragmentRegistry.register(claudeCodeReportFragment);

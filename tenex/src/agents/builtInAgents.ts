@@ -20,6 +20,7 @@ export const PROJECT_MANAGER_BUILT_IN: BuiltInAgentDefinition = {
   role: PROJECT_MANAGER_AGENT_DEFINITION.role,
   instructions: PROJECT_MANAGER_AGENT_DEFINITION.instructions || "",
   llmConfig: PROJECT_MANAGER_AGENT_DEFINITION.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+  useCriteria: PROJECT_MANAGER_AGENT_DEFINITION.useCriteria,
 };
 
 export const ORCHESTRATOR_BUILT_IN: BuiltInAgentDefinition = {

@@ -35,7 +35,7 @@ Key behaviors:
 - In VERIFICATION phase, route to an agent (like project-manager) to functionally test the changes
 - Forward all feedback verbatim when routing back for fixes
 - Use end_conversation() only when all phases are done to end the conversation with a comprehensive summary
-- ALWAYS write a response message when routing - use continue as a separate tool call, not inline text
+- NEVER write a message when using continue(); you just need to route, not chit-chat with the user.
 `,
   llmConfig: "orchestrator",
 };

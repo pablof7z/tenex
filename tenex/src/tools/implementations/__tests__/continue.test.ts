@@ -2,7 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { Agent } from "@/agents/types";
 import type { Conversation } from "@/conversations/types";
 import { continueTool } from "../continue";
-import type { ExecutionContext, ControlFlow } from "@/tools/types";
+import type { ExecutionContext } from "@/tools/types";
 import type { ToolExecutionResult } from "@/tools/executor";
 import { createToolExecutor } from "@/tools/executor";
 
@@ -67,26 +67,37 @@ describe("continueTool - Agent routing", () => {
     agent: mockOrchestrator,
     
     // Required fields
-    conversation: mockConversation,
     publisher: {
       publishResponse: mock(),
     } as any,
+    conversationManager: {} as any,
     triggeringEvent: undefined,
   };
 
   // Helper function to execute tool and get result
-  async function executeControl(input: any): Promise<ToolExecutionResult<ControlFlow>> {
+  async function executeControl(input: any): Promise<ToolExecutionResult> {
     const executor = createToolExecutor(context);
     const result = await executor.execute(continueTool, input);
     return result;
   }
 
-  describe("Required agents parameter", () => {
+  describe("Required parameters", () => {
+    it("should fail when messageToAgents is missing", async () => {
+      const result = await executeControl({
+        agents: ["planner"],
+        phase: "plan",
+        reason: "Need to plan the architecture",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.kind).toBe("validation");
+      expect(result.error?.message).toBe("Required");
+    });
     it("should fail when no agents specified", async () => {
       const result = await executeControl({
         phase: "plan",
         reason: "Need to plan the architecture",
-        message: "Design the authentication system",
+        messageToAgents: "@planner, plan the architecture",
       });
 
       expect(result.success).toBe(false);
@@ -98,7 +109,7 @@ describe("continueTool - Agent routing", () => {
       const result = await executeControl({
         agents: [],
         reason: "Test routing",
-        message: "Test message",
+        messageToAgents: "Test message",
       });
 
       expect(result.success).toBe(false);
@@ -111,7 +122,7 @@ describe("continueTool - Agent routing", () => {
         agents: ["planner"],
         phase: "plan",
         reason: "Need to plan the architecture",
-        message: "Design the authentication system",
+        messageToAgents: "@planner, plan the architecture for this feature",
       });
 
       expect(result.success).toBe(true);
@@ -119,7 +130,7 @@ describe("continueTool - Agent routing", () => {
       expect(result.output?.routing.agents).toEqual(["planner-pubkey"]);
       expect(result.output?.routing.phase).toBe("plan");
       expect(result.output?.routing.reason).toBe("Need to plan the architecture");
-      expect(result.output?.routing.message).toBe("Design the authentication system");
+      expect(result.output?.routing.messageToAgents).toBe("@planner, plan the architecture for this feature");
     });
   });
 
@@ -129,7 +140,7 @@ describe("continueTool - Agent routing", () => {
         phase: "execute",
         agents: ["frontend-expert", "backend-expert"],
         reason: "Need expert review",
-        message: "Review this implementation",
+        messageToAgents: "@frontend-expert @backend-expert, please review the implementation",
       });
 
       expect(result.success).toBe(true);
@@ -140,14 +151,13 @@ describe("continueTool - Agent routing", () => {
       ]);
       expect(result.output?.routing.phase).toBe("execute");
       expect(result.output?.routing.reason).toBe("Need expert review");
-      expect(result.output?.routing.message).toBe("Review this implementation");
     });
 
     it("should validate agent slugs", async () => {
       const result = await executeControl({
         agents: ["invalid-agent"],
         reason: "Test routing",
-        message: "Test message",
+        messageToAgents: "Test message",
       });
 
       expect(result.success).toBe(false);
@@ -160,7 +170,7 @@ describe("continueTool - Agent routing", () => {
       const result = await executeControl({
         agents: ["orchestrator"],
         reason: "Test self routing",
-        message: "Test message",
+        messageToAgents: "Test message",
       });
 
       expect(result.success).toBe(false);
@@ -169,14 +179,13 @@ describe("continueTool - Agent routing", () => {
     });
   });
 
-  describe("Enhanced handoff fields", () => {
-    it("should include summary in metadata when provided", async () => {
+  describe("Agent routing", () => {
+    it("should route to executor for implementation", async () => {
       const result = await executeControl({
         agents: ["executor"],
         phase: "execute",
         reason: "Implementing feature",
-        message: "Build the authentication system",
-        summary: "User wants JWT-based auth",
+        messageToAgents: "@executor, implement the user authentication feature",
       });
 
       expect(result.success).toBe(true);
@@ -185,10 +194,7 @@ describe("continueTool - Agent routing", () => {
         phase: "execute",
         agents: ["executor-pubkey"],
         reason: "Implementing feature",
-        message: "Build the authentication system",
-        context: {
-          summary: "User wants JWT-based auth",
-        },
+        messageToAgents: "@executor, implement the user authentication feature",
       });
     });
   });
@@ -209,7 +215,7 @@ describe("continueTool - Agent routing", () => {
         agents: ["executor"],
         phase: "execute",
         reason: "Test",
-        message: "Test",
+        messageToAgents: "Test message",
       });
 
       expect(result.success).toBe(false);
@@ -225,7 +231,7 @@ describe("continueTool - Agent routing", () => {
         agents: ["executor"],
         phase: "CHORES" as any,
         reason: "Here is why I decided this path: Testing uppercase",
-        message: "Test message",
+        messageToAgents: "@executor, perform maintenance tasks",
       });
 
       expect(result.success).toBe(true);
@@ -240,7 +246,7 @@ describe("continueTool - Agent routing", () => {
         agents: ["planner"],
         phase: "ReFlEcTiOn" as any,
         reason: "Here is why I decided this path: Testing mixed case",
-        message: "Test message",
+        messageToAgents: "@planner, reflect on the implementation",
       });
 
       expect(result.success).toBe(true);
@@ -255,7 +261,7 @@ describe("continueTool - Agent routing", () => {
         agents: ["executor"],
         phase: "INVALID_PHASE" as any,
         reason: "Here is why I decided this path: Testing invalid",
-        message: "Test message",
+        messageToAgents: "Test message",
       });
 
       expect(result.success).toBe(false);
