@@ -1,5 +1,4 @@
 import { isAbsolute, relative, resolve } from "node:path";
-import type { z } from "zod";
 
 /**
  * Resolves and validates a file path to ensure it stays within the project boundaries.

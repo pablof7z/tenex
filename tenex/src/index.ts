@@ -3,4 +3,3 @@ export * from "./commands/daemon";
 export * from "./commands/project/index";
 export * from "./commands/setup/index";
 export * from "./events";
-export { NDKAgent } from "./events/NDKAgent";
