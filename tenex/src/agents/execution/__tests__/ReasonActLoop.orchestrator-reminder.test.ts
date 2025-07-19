@@ -6,195 +6,225 @@ import type { Conversation } from "@/conversations/types";
 import { Message } from "multi-llm-ts";
 
 describe("ReasonActLoop - Orchestrator Reminder", () => {
-  let reasonActLoop: ReasonActLoop;
-  let mockLLMService: LLMService;
-  let mockAgent: Agent;
-  let mockConversation: Conversation;
+    let reasonActLoop: ReasonActLoop;
+    let mockLLMService: LLMService;
+    let mockAgent: Agent;
+    let mockConversation: Conversation;
 
-  beforeEach(() => {
-    mockLLMService = {
-      stream: vi.fn(),
-    } as unknown as LLMService;
+    beforeEach(() => {
+        mockLLMService = {
+            stream: vi.fn(),
+        } as unknown as LLMService;
 
-    mockAgent = {
-      name: "orchestrator",
-      pubkey: "orchestrator-pubkey",
-      isOrchestrator: true,
-      description: "Test orchestrator",
-      prompt: "Test prompt",
-    };
-
-    mockConversation = {
-      id: "test-conversation",
-      history: [{
-        pubkey: "orchestrator-pubkey",
-        content: "test",
-        createdAt: new Date(),
-      }],
-      metadata: {},
-    } as unknown as Conversation;
-
-    reasonActLoop = new ReasonActLoop(mockLLMService);
-  });
-
-  it("should remind orchestrator to use continue/end_conversation in non-chat/brainstorm phases", async () => {
-    const messages = [new Message("user", "What's the status?")];
-    
-    // First call returns content without terminal tools
-    const firstStream: AsyncIterable<StreamEvent> = {
-      async *[Symbol.asyncIterator]() {
-        yield { type: "content", content: "Here's the status update." };
-        yield { type: "done", response: { type: "text", content: "Here's the status update.", toolCalls: [] } };
-      }
-    };
-
-    // Second call (reminder) should use continue
-    const reminderStream: AsyncIterable<StreamEvent> = {
-      async *[Symbol.asyncIterator]() {
-        yield { type: "content", content: "I'll route this to the appropriate agent." };
-        yield { 
-          type: "tool_complete", 
-          tool: "continue",
-          result: {
-            __typedResult: {
-              success: true,
-              duration: 10,
-              data: {
-                output: {
-                  type: "continue",
-                  routing: {
-                    agents: ["executor"],
-                    phase: "execute",
-                    reason: "Need to check implementation",
-                    messageToAgents: "@executor, check the implementation status"
-                  }
-                }
-              }
-            }
-          }
+        mockAgent = {
+            name: "orchestrator",
+            pubkey: "orchestrator-pubkey",
+            isOrchestrator: true,
+            description: "Test orchestrator",
+            prompt: "Test prompt",
         };
-        yield { type: "done", response: { type: "text", content: "I'll route this to the appropriate agent.", toolCalls: [] } };
-      }
-    };
 
-    mockLLMService.stream = vi.fn()
-      .mockReturnValueOnce(firstStream)
-      .mockReturnValueOnce(reminderStream);
+        mockConversation = {
+            id: "test-conversation",
+            history: [
+                {
+                    pubkey: "orchestrator-pubkey",
+                    content: "test",
+                    createdAt: new Date(),
+                },
+            ],
+            metadata: {},
+        } as unknown as Conversation;
 
-    const context = {
-      projectPath: "/test",
-      conversationId: "test-conversation",
-      phase: "execute", // Non-chat/brainstorm phase
-      llmConfig: "test-config",
-      agent: mockAgent,
-      conversation: mockConversation,
-    };
+        reasonActLoop = new ReasonActLoop(mockLLMService);
+    });
 
-    const result = reasonActLoop.executeStreaming(
-      context,
-      messages,
-      { spanId: "test-span" },
-      undefined,
-      []
-    );
+    it("should remind orchestrator to use continue/end_conversation in non-chat/brainstorm phases", async () => {
+        const messages = [new Message("user", "What's the status?")];
 
-    const events = [];
-    for await (const event of result) {
-      events.push(event);
-    }
+        // First call returns content without terminal tools
+        const firstStream: AsyncIterable<StreamEvent> = {
+            async *[Symbol.asyncIterator]() {
+                yield { type: "content", content: "Here's the status update." };
+                yield {
+                    type: "done",
+                    response: { type: "text", content: "Here's the status update.", toolCalls: [] },
+                };
+            },
+        };
 
-    // Verify LLM was called twice (original + reminder)
-    expect(mockLLMService.stream).toHaveBeenCalledTimes(2);
-    
-    // Check reminder message was added
-    const secondCall = mockLLMService.stream.mock.calls[1];
-    const reminderMessages = secondCall[0].messages;
-    expect(reminderMessages).toHaveLength(3); // Original + assistant response + reminder
-    expect(reminderMessages[2].content).toContain("you haven't used the 'continue' or 'end_conversation' tool yet");
-    
-    // Verify final result has continue flow
-    const finalEvent = events[events.length - 1];
-    expect(finalEvent.continueFlow).toBeDefined();
-    expect(finalEvent.continueFlow?.routing.agents).toEqual(["executor"]);
-  });
+        // Second call (reminder) should use continue
+        const reminderStream: AsyncIterable<StreamEvent> = {
+            async *[Symbol.asyncIterator]() {
+                yield { type: "content", content: "I'll route this to the appropriate agent." };
+                yield {
+                    type: "tool_complete",
+                    tool: "continue",
+                    result: {
+                        __typedResult: {
+                            success: true,
+                            duration: 10,
+                            data: {
+                                output: {
+                                    type: "continue",
+                                    routing: {
+                                        agents: ["executor"],
+                                        phase: "execute",
+                                        reason: "Need to check implementation",
+                                        messageToAgents:
+                                            "@executor, check the implementation status",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                };
+                yield {
+                    type: "done",
+                    response: {
+                        type: "text",
+                        content: "I'll route this to the appropriate agent.",
+                        toolCalls: [],
+                    },
+                };
+            },
+        };
 
-  it("should NOT remind orchestrator in chat phase", async () => {
-    const messages = [new Message("user", "What can you help me with?")];
-    
-    const stream: AsyncIterable<StreamEvent> = {
-      async *[Symbol.asyncIterator]() {
-        yield { type: "content", content: "I can help you with various tasks." };
-        yield { type: "done", response: { type: "text", content: "I can help you with various tasks.", toolCalls: [] } };
-      }
-    };
+        mockLLMService.stream = vi
+            .fn()
+            .mockReturnValueOnce(firstStream)
+            .mockReturnValueOnce(reminderStream);
 
-    mockLLMService.stream = vi.fn().mockReturnValue(stream);
+        const context = {
+            projectPath: "/test",
+            conversationId: "test-conversation",
+            phase: "execute", // Non-chat/brainstorm phase
+            llmConfig: "test-config",
+            agent: mockAgent,
+            conversation: mockConversation,
+        };
 
-    const context = {
-      projectPath: "/test",
-      conversationId: "test-conversation",
-      phase: "chat", // Chat phase - no reminder
-      llmConfig: "test-config",
-      agent: mockAgent,
-      conversation: mockConversation,
-    };
+        const result = reasonActLoop.executeStreaming(
+            context,
+            messages,
+            { spanId: "test-span" },
+            undefined,
+            []
+        );
 
-    const result = reasonActLoop.executeStreaming(
-      context,
-      messages,
-      { spanId: "test-span" },
-      undefined,
-      []
-    );
+        const events = [];
+        for await (const event of result) {
+            events.push(event);
+        }
 
-    const events = [];
-    for await (const event of result) {
-      events.push(event);
-    }
+        // Verify LLM was called twice (original + reminder)
+        expect(mockLLMService.stream).toHaveBeenCalledTimes(2);
 
-    // Should only be called once (no reminder)
-    expect(mockLLMService.stream).toHaveBeenCalledTimes(1);
-  });
+        // Check reminder message was added
+        const secondCall = mockLLMService.stream.mock.calls[1];
+        const reminderMessages = secondCall[0].messages;
+        expect(reminderMessages).toHaveLength(3); // Original + assistant response + reminder
+        expect(reminderMessages[2].content).toContain(
+            "you haven't used the 'continue' or 'end_conversation' tool yet"
+        );
 
-  it("should auto-end conversation if orchestrator doesn't comply after reminder", async () => {
-    const messages = [new Message("user", "Complete the task")];
-    
-    // Both calls return content without terminal tools
-    const stream: AsyncIterable<StreamEvent> = {
-      async *[Symbol.asyncIterator]() {
-        yield { type: "content", content: "Task completed successfully." };
-        yield { type: "done", response: { type: "text", content: "Task completed successfully.", toolCalls: [] } };
-      }
-    };
+        // Verify final result has continue flow
+        const finalEvent = events[events.length - 1];
+        expect(finalEvent.continueFlow).toBeDefined();
+        expect(finalEvent.continueFlow?.routing.agents).toEqual(["executor"]);
+    });
 
-    mockLLMService.stream = vi.fn().mockReturnValue(stream);
+    it("should NOT remind orchestrator in chat phase", async () => {
+        const messages = [new Message("user", "What can you help me with?")];
 
-    const context = {
-      projectPath: "/test",
-      conversationId: "test-conversation",
-      phase: "verification", // Non-chat/brainstorm phase
-      llmConfig: "test-config",
-      agent: mockAgent,
-      conversation: mockConversation,
-    };
+        const stream: AsyncIterable<StreamEvent> = {
+            async *[Symbol.asyncIterator]() {
+                yield { type: "content", content: "I can help you with various tasks." };
+                yield {
+                    type: "done",
+                    response: {
+                        type: "text",
+                        content: "I can help you with various tasks.",
+                        toolCalls: [],
+                    },
+                };
+            },
+        };
 
-    const result = reasonActLoop.executeStreaming(
-      context,
-      messages,
-      { spanId: "test-span" },
-      undefined,
-      []
-    );
+        mockLLMService.stream = vi.fn().mockReturnValue(stream);
 
-    const events = [];
-    for await (const event of result) {
-      events.push(event);
-    }
+        const context = {
+            projectPath: "/test",
+            conversationId: "test-conversation",
+            phase: "chat", // Chat phase - no reminder
+            llmConfig: "test-config",
+            agent: mockAgent,
+            conversation: mockConversation,
+        };
 
-    // Verify auto-completion
-    const finalEvent = events[events.length - 1];
-    expect(finalEvent.termination).toBeDefined();
-    expect(finalEvent.termination?.type).toBe("end_conversation");
-    expect(finalEvent.termination?.result?.summary).toContain("[Auto-ended by system]");
-  });
+        const result = reasonActLoop.executeStreaming(
+            context,
+            messages,
+            { spanId: "test-span" },
+            undefined,
+            []
+        );
+
+        const events = [];
+        for await (const event of result) {
+            events.push(event);
+        }
+
+        // Should only be called once (no reminder)
+        expect(mockLLMService.stream).toHaveBeenCalledTimes(1);
+    });
+
+    it("should auto-end conversation if orchestrator doesn't comply after reminder", async () => {
+        const messages = [new Message("user", "Complete the task")];
+
+        // Both calls return content without terminal tools
+        const stream: AsyncIterable<StreamEvent> = {
+            async *[Symbol.asyncIterator]() {
+                yield { type: "content", content: "Task completed successfully." };
+                yield {
+                    type: "done",
+                    response: {
+                        type: "text",
+                        content: "Task completed successfully.",
+                        toolCalls: [],
+                    },
+                };
+            },
+        };
+
+        mockLLMService.stream = vi.fn().mockReturnValue(stream);
+
+        const context = {
+            projectPath: "/test",
+            conversationId: "test-conversation",
+            phase: "verification", // Non-chat/brainstorm phase
+            llmConfig: "test-config",
+            agent: mockAgent,
+            conversation: mockConversation,
+        };
+
+        const result = reasonActLoop.executeStreaming(
+            context,
+            messages,
+            { spanId: "test-span" },
+            undefined,
+            []
+        );
+
+        const events = [];
+        for await (const event of result) {
+            events.push(event);
+        }
+
+        // Verify auto-completion
+        const finalEvent = events[events.length - 1];
+        expect(finalEvent.termination).toBeDefined();
+        expect(finalEvent.termination?.type).toBe("end_conversation");
+        expect(finalEvent.termination?.result?.summary).toContain("[Auto-ended by system]");
+    });
 });

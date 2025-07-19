@@ -1,11 +1,16 @@
 import type { NDKArticle, NDKProject } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, Calendar, Clock, Copy, Edit3, Hash } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Copy, Edit3, Hash, MessageSquare, Quote } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
+import { useState, useEffect, useRef } from "react";
+import { useSubscribe, NDKSubscriptionCacheUsage } from "@nostr-dev-kit/ndk-hooks";
+import { useProject } from "../../hooks/useProject";
+import { ArticleChatSidebar, ArticleChatSheet } from "./ArticleChatSidebar";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 interface DocumentationViewProps {
     project: NDKProject;
@@ -17,6 +22,77 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
     const { formatDateOnly, formatTimeOnly } = useTimeFormat({
         use24Hour: true,
     });
+    const [showChat, setShowChat] = useState(false);
+    const [selectedText, setSelectedText] = useState<string | null>(null);
+    const [showSelectionPopup, setShowSelectionPopup] = useState(false);
+    const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+    const isDesktop = useMediaQuery("(min-width: 1024px)");
+    const projectData = useProject(project.tagId());
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    // Debug selected text
+    useEffect(() => {
+        console.log('selectedText changed to:', selectedText);
+    }, [selectedText]);
+
+    // Handle text selection
+    const handleTextSelection = () => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim().length > 5) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            // Position popup above the selection
+            setPopupPosition({
+                x: rect.left + rect.width / 2,
+                y: rect.top - 10
+            });
+            setShowSelectionPopup(true);
+        } else {
+            setShowSelectionPopup(false);
+        }
+    };
+
+    // Handle quote action
+    const handleQuoteSelection = () => {
+        const selection = window.getSelection();
+        if (selection) {
+            const text = selection.toString().trim();
+            console.log('Setting selected text:', text);
+            setSelectedText(text);
+            setShowChat(true);
+            setShowSelectionPopup(false);
+            selection.removeAllRanges();
+        }
+    };
+
+    // Hide popup when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (showSelectionPopup && !contentRef.current?.contains(e.target as Node)) {
+                setShowSelectionPopup(false);
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showSelectionPopup]);
+
+    // Subscribe to real-time article updates
+    const { events: articleUpdates } = useSubscribe([{
+        kinds: [30023],
+        authors: [article.pubkey],
+        "#d": [article.dTag]
+    }], {
+        cacheUsage: NDKSubscriptionCacheUsage.PARALLEL,
+        groupable: false,
+        closeOnEose: false // Keep subscription open for real-time updates
+    });
+
+    // Update article content when new versions arrive
+    const currentArticle = articleUpdates && articleUpdates.length > 0 
+        ? articleUpdates.sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0] as NDKArticle
+        : article;
 
     const formatDate = (timestamp?: number) => {
         if (!timestamp) return "Unknown date";
@@ -47,9 +123,9 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
     };
 
     return (
-        <div className="h-full flex flex-col bg-background">
-            {/* Header */}
-            <div className="bg-card border-b border-border backdrop-blur-xl bg-card/95 flex-shrink-0">
+        <div className="h-full bg-background relative">
+            {/* Fixed Header */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border backdrop-blur-xl bg-card/95">
                 <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
                     <div className="flex items-center gap-2 sm:gap-3">
                         <Button
@@ -67,6 +143,15 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowChat(!showChat)}
+                            className={`w-8 h-8 sm:w-9 sm:h-9 text-foreground hover:bg-accent ${showChat ? 'bg-accent' : ''}`}
+                            title="Chat with author"
+                        >
+                            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -88,8 +173,38 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                 </div>
             </div>
 
-            {/* Scrollable Article Content */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Selection Popup */}
+            {showSelectionPopup && (
+                <div 
+                    className="fixed z-50"
+                    style={{ 
+                        left: `${popupPosition.x}px`, 
+                        top: `${popupPosition.y}px`,
+                        transform: 'translate(-50%, -100%)'
+                    }}
+                >
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        className="shadow-lg border bg-background"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuoteSelection();
+                        }}
+                        onMouseDown={(e) => e.preventDefault()}
+                    >
+                        <Quote className="w-4 h-4 mr-1" />
+                        Ask about this
+                    </Button>
+                </div>
+            )}
+
+            {/* Scrollable Article Content - with padding top for fixed header and right for sidebar */}
+            <div 
+                ref={contentRef}
+                className={`h-full overflow-y-auto pt-16 ${isDesktop && showChat ? 'pr-96' : ''}`}
+                onMouseUp={handleTextSelection}
+            >
                 <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
                     {/* Title */}
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4">
@@ -265,6 +380,32 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
                     </div>
                 </article>
             </div>
+
+            {/* Fixed Chat Sidebar - Desktop */}
+            {isDesktop && projectData && (
+                <div className={`fixed top-16 right-0 bottom-0 w-96 bg-background border-l transition-transform duration-300 ${showChat ? 'translate-x-0' : 'translate-x-full'}`}>
+                    <ArticleChatSidebar
+                        project={projectData}
+                        article={currentArticle}
+                        isOpen={true}
+                        onOpenChange={setShowChat}
+                        initialQuotedText={selectedText}
+                        onQuoteHandled={() => setSelectedText(null)}
+                    />
+                </div>
+            )}
+
+            {/* Chat Sheet - Mobile */}
+            {!isDesktop && projectData && (
+                <ArticleChatSheet
+                    project={projectData}
+                    article={currentArticle}
+                    isOpen={showChat}
+                    onOpenChange={setShowChat}
+                    initialQuotedText={selectedText}
+                    onQuoteHandled={() => setSelectedText(null)}
+                />
+            )}
         </div>
     );
 }

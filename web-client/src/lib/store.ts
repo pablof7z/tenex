@@ -1,4 +1,4 @@
-import type { NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKEvent, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import type { BackendInfo } from "./types.js";
 import { atom } from "jotai";
 
@@ -13,9 +13,6 @@ export const selectedTaskAtom = atom<NDKTask | null>(null);
 
 // Selected thread for desktop split-screen view
 export const selectedThreadAtom = atom<NDKEvent | null>(null);
-
-// Selected project for desktop drawer view
-export const selectedProjectAtom = atom<NDKProject | null>(null);
 
 // Theme state with localStorage persistence
 const getInitialTheme = () => {

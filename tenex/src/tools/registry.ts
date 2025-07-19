@@ -24,13 +24,15 @@ toolsMap.set("create_milestone_task", createMilestoneTaskTool as Tool<unknown, u
 toolsMap.set("shell", shellTool as Tool<unknown, unknown>);
 
 export function getTool(name: string): Tool | undefined {
-  return toolsMap.get(name);
+    return toolsMap.get(name);
 }
 
 export function getTools(names: string[]): Tool[] {
-  return names.map((name) => toolsMap.get(name)).filter((tool): tool is Tool => tool !== undefined);
+    return names
+        .map((name) => toolsMap.get(name))
+        .filter((tool): tool is Tool => tool !== undefined);
 }
 
 export function getAllTools(): Tool[] {
-  return Array.from(toolsMap.values());
+    return Array.from(toolsMap.values());
 }

@@ -98,7 +98,7 @@ describe("MCPService Integration Tests", () => {
 
         // Create test directories
         await fs.mkdir(projectPath, { recursive: true });
-        
+
         // Create test MCP server
         await createTestMCPServer(serverPath);
     });
@@ -138,7 +138,7 @@ describe("MCPService Integration Tests", () => {
             expect(tools).toHaveLength(2);
 
             // Check tool details
-            const echoTool = tools.find(t => t.name === "test-integration/echo");
+            const echoTool = tools.find((t) => t.name === "test-integration/echo");
             expect(echoTool).toBeDefined();
             expect(echoTool?.description).toBe("Echoes back the input");
             expect(echoTool?.parameters).toHaveLength(1);
@@ -149,7 +149,7 @@ describe("MCPService Integration Tests", () => {
                 required: true,
             });
 
-            const addTool = tools.find(t => t.name === "test-integration/add");
+            const addTool = tools.find((t) => t.name === "test-integration/add");
             expect(addTool).toBeDefined();
             expect(addTool?.description).toBe("Adds two numbers");
             expect(addTool?.parameters).toHaveLength(2);
@@ -204,12 +204,12 @@ describe("MCPService Integration Tests", () => {
             // Get the process and kill it externally
             const client = (service as any).clients.get("test-integration");
             expect(client).toBeDefined();
-            
+
             // Kill the process
             client.process.kill("SIGKILL");
 
             // Wait a bit for the process to die
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
 
             // Server should no longer be running
             expect(service.isServerRunning("test-integration")).toBe(false);
@@ -227,11 +227,11 @@ describe("MCPService Integration Tests", () => {
 
             const mockConfig: TenexMCP = {
                 servers: {
-                    "server1": {
+                    server1: {
                         command: "node",
                         args: [serverPath],
                     },
-                    "server2": {
+                    server2: {
                         command: "node",
                         args: [server2Path],
                     },
@@ -330,7 +330,7 @@ process.stdin.on('data', () => {
         it("should enforce path restrictions in real server", async () => {
             const allowedPath = path.join(testDir, "allowed");
             const disallowedProject = path.join(testDir, "disallowed");
-            
+
             await fs.mkdir(allowedPath, { recursive: true });
             await fs.mkdir(disallowedProject, { recursive: true });
 

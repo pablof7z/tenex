@@ -104,13 +104,13 @@ export function EditProjectModal({
 
             // Set metadata properties
             updatedProject.title = editState.title.trim();
-            updatedProject.content = editState.content.trim() || `A TENEX project: ${editState.title}`;
+            updatedProject.content = editState.content.trim();
             updatedProject.hashtags = editState.hashtags;
             updatedProject.repo = editState.repo;
             updatedProject.picture = editState.picture;
 
             // Publish the updated project
-            await updatedProject.publish();
+            await updatedProject.publishReplaceable();
 
             setHasChanges(false);
             onProjectUpdated?.();

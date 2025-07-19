@@ -4,6 +4,7 @@ import { Bot, Circle, FileText, Moon, Plus, Server, Settings, Sun, Users } from 
 import { useNavigate } from "react-router-dom";
 import { usePendingAgentRequests } from "../../hooks/useAppSubscriptions";
 import { onlineBackendsAtom } from "../../lib/store";
+import { ProjectHoverCard } from "../common/ProjectHoverCard";
 import { SearchIconButton } from "../common/SearchBar";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
@@ -104,25 +105,27 @@ export function ProjectSidebar({
 
                         return (
                             <div key={projectId} className="relative">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={`w-12 h-12 rounded-xl group relative ${
-                                        isInFilteredList
-                                            ? "bg-primary/10 text-primary"
-                                            : "hover:bg-accent"
-                                    }`}
-                                    onClick={() => onProjectToggle(projectId)}
-                                >
-                                    <Avatar className="w-8 h-8">
-                                        <AvatarImage src={getProjectAvatar(project)} alt={title} />
-                                        <AvatarFallback
-                                            className={`text-primary-foreground font-semibold text-xs ${getAvatarColors(title)}`}
-                                        >
-                                            {getInitials(title)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </Button>
+                                <ProjectHoverCard project={project} isOnline={isOnline}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`w-12 h-12 rounded-xl group relative ${
+                                            isInFilteredList
+                                                ? "bg-primary/10 text-primary"
+                                                : "hover:bg-accent"
+                                        }`}
+                                        onClick={() => onProjectToggle(projectId)}
+                                    >
+                                        <Avatar className="w-8 h-8">
+                                            <AvatarImage src={getProjectAvatar(project)} alt={title} />
+                                            <AvatarFallback
+                                                className={`text-primary-foreground font-semibold text-xs ${getAvatarColors(title)}`}
+                                            >
+                                                {getInitials(title)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Button>
+                                </ProjectHoverCard>
                                 <div
                                     className="absolute bottom-1 right-1"
                                     title={

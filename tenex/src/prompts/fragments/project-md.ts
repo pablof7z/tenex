@@ -1,7 +1,7 @@
-import { fragmentRegistry } from '@/prompts/core/FragmentRegistry';
-import type { PromptFragment } from '@/prompts/core/types';
-import fs from 'node:fs';
-import path from 'node:path';
+import { fragmentRegistry } from "@/prompts/core/FragmentRegistry";
+import type { PromptFragment } from "@/prompts/core/types";
+import fs from "node:fs";
+import path from "node:path";
 
 const description = `
 ## PROJECT SPEC
@@ -27,35 +27,36 @@ PROJECT.md is NOT the place for code, for architectural choices or modules, its 
 `;
 
 interface ProjectMdArgs {
-  projectPath?: string;
+    projectPath?: string;
 }
 
 export const projectMdFragment: PromptFragment<ProjectMdArgs> = {
-  id: 'project-md',
-  priority: 30,
-  template: () => {
-    const projectMdPath = path.join('context', 'PROJECT.md');
-    let content = "The PROJECT.md file doesn't exist yet. If this is not a new project you should suggest to the user if they want to kickstart the creation of the PROJECT.md -- for this, you can use the `analyze` tool. Since this is such a critical moment, you should validate your understanding and iterate with the user, ask clarifying questions and try to nail down the specifics, it's better to underdefine the project spec than to proceed with incorrect assumptions.";
-    
-    try {
-      if (fs.existsSync(projectMdPath)) {
-        content = fs.readFileSync(projectMdPath, 'utf-8');
-      }
-    } catch {
-      // Ignore errors
-    }
+    id: "project-md",
+    priority: 30,
+    template: () => {
+        const projectMdPath = path.join("context", "PROJECT.md");
+        let content =
+            "The PROJECT.md file doesn't exist yet. If this is not a new project you should suggest to the user if they want to kickstart the creation of the PROJECT.md -- for this, you can use the `analyze` tool. Since this is such a critical moment, you should validate your understanding and iterate with the user, ask clarifying questions and try to nail down the specifics, it's better to underdefine the project spec than to proceed with incorrect assumptions.";
 
-    return `${description}
+        try {
+            if (fs.existsSync(projectMdPath)) {
+                content = fs.readFileSync(projectMdPath, "utf-8");
+            }
+        } catch {
+            // Ignore errors
+        }
+
+        return `${description}
 
 <PROJECT.md>
 ${content}
 </PROJECT.md>`;
-  },
+    },
 
-  validateArgs: (args): args is ProjectMdArgs => {
-    return true;
-  },
-  expectedArgs: '{ projectPath?: string, currentAgent?: { id: string, slug?: string } }',
+    validateArgs: (args): args is ProjectMdArgs => {
+        return true;
+    },
+    expectedArgs: "{ projectPath?: string, currentAgent?: { id: string, slug?: string } }",
 };
 
 // Register the fragment

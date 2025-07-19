@@ -9,10 +9,10 @@ describe("Tool assignment", () => {
             const mockAgent = {
                 isOrchestrator: true,
                 isBuiltIn: true,
-                slug: "orchestrator"
+                slug: "orchestrator",
             } as any;
             const tools = getDefaultToolsForAgent(mockAgent);
-            
+
             expect(tools).not.toContain("complete");
             expect(tools).not.toContain("analyze");
             expect(tools).toContain("end_conversation");
@@ -24,17 +24,17 @@ describe("Tool assignment", () => {
             const mockExecutor = {
                 isOrchestrator: false,
                 isBuiltIn: true,
-                slug: "executor"
+                slug: "executor",
             } as any;
             const mockPlanner = {
                 isOrchestrator: false,
                 isBuiltIn: true,
-                slug: "planner"
+                slug: "planner",
             } as any;
-            
+
             const executorTools = getDefaultToolsForAgent(mockExecutor);
             const plannerTools = getDefaultToolsForAgent(mockPlanner);
-            
+
             // Both agents get default tools from constants.ts
             expect(executorTools).toContain("complete");
             expect(executorTools).toContain("read_file");
@@ -42,7 +42,7 @@ describe("Tool assignment", () => {
             expect(executorTools).toContain("analyze");
             expect(executorTools).not.toContain("end_conversation");
             expect(executorTools).not.toContain("continue");
-            
+
             // Planner gets the same default tools
             expect(plannerTools).toContain("complete");
             expect(plannerTools).toContain("read_file");
@@ -50,7 +50,7 @@ describe("Tool assignment", () => {
             expect(plannerTools).toContain("analyze");
             expect(plannerTools).not.toContain("end_conversation");
             expect(plannerTools).not.toContain("continue");
-            
+
             // Note: AgentRegistry.ts will remove all tools from these agents
             // since they use claude backend, but getDefaultToolsForAgent
             // returns the default set for non-orchestrator built-in agents
@@ -60,10 +60,10 @@ describe("Tool assignment", () => {
             const mockCustomAgent = {
                 isOrchestrator: false,
                 isBuiltIn: false,
-                slug: "custom-agent"
+                slug: "custom-agent",
             } as any;
             const tools = getDefaultToolsForAgent(mockCustomAgent);
-            
+
             expect(tools).toContain("complete");
             expect(tools).not.toContain("end_conversation");
             expect(tools).not.toContain("continue");
@@ -73,10 +73,10 @@ describe("Tool assignment", () => {
             const mockProjectManager = {
                 isOrchestrator: false,
                 isBuiltIn: true,
-                slug: "project-manager"
+                slug: "project-manager",
             } as any;
             const tools = getDefaultToolsForAgent(mockProjectManager);
-            
+
             expect(tools).toContain("complete");
             expect(tools).toContain("generate_inventory");
             expect(tools).toContain("write_context_file");
@@ -89,14 +89,14 @@ describe("Tool assignment", () => {
         it("should determine isBuiltIn before assigning tools", () => {
             // This test verifies that when creating an agent,
             // the isBuiltIn status is determined BEFORE calling getDefaultToolsForAgent
-            
-            const builtInSlugs = getBuiltInAgents().map(a => a.slug);
-            
+
+            const builtInSlugs = getBuiltInAgents().map((a) => a.slug);
+
             // Verify orchestrator is in built-in agents
             expect(builtInSlugs).toContain("orchestrator");
             expect(builtInSlugs).toContain("executor");
             expect(builtInSlugs).toContain("planner");
-            
+
             // The fix in AgentRegistry.ts line 212 ensures isBuiltIn is determined before tool assignment
             const isBuiltIn = builtInSlugs.includes("orchestrator");
             expect(isBuiltIn).toBe(true);

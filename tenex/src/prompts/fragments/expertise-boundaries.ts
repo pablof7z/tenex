@@ -3,20 +3,20 @@ import type { PromptFragment } from "../core/types";
 
 // Fragment for specialized agents to understand their expertise boundaries
 interface ExpertiseBoundariesArgs {
-  agentRole: string;
-  isOrchestrator: boolean;
+    agentRole: string;
+    isOrchestrator: boolean;
 }
 
 export const expertiseBoundariesFragment: PromptFragment<ExpertiseBoundariesArgs> = {
-  id: "expertise-boundaries",
-  priority: 20,
-  template: ({ agentRole, isOrchestrator }) => {
-    // Only provide boundaries guidance for non-orchestrator agents
-    if (isOrchestrator) {
-      return "";
-    }
+    id: "expertise-boundaries",
+    priority: 20,
+    template: ({ agentRole, isOrchestrator }) => {
+        // Only provide boundaries guidance for non-orchestrator agents
+        if (isOrchestrator) {
+            return "";
+        }
 
-    return `## Expertise Boundaries
+        return `## Expertise Boundaries
 
 As a specialist agent with the role "${agentRole}", you should:
 
@@ -42,15 +42,15 @@ As a specialist agent with the role "${agentRole}", you should:
    - Always use complete() to return control to the orchestrator after providing feedback
 
 Remember: Your value comes from deep expertise in your specific domain, not from attempting to cover all aspects of a task or make system modifications. You provide the "what" and "why" - the executor agent handles the "how".`;
-  },
-  validateArgs: (args): args is ExpertiseBoundariesArgs => {
-    return (
-      typeof args === "object" &&
-      args !== null &&
-      typeof (args as ExpertiseBoundariesArgs).agentRole === "string" &&
-      typeof (args as ExpertiseBoundariesArgs).isOrchestrator === "boolean"
-    );
-  },
+    },
+    validateArgs: (args): args is ExpertiseBoundariesArgs => {
+        return (
+            typeof args === "object" &&
+            args !== null &&
+            typeof (args as ExpertiseBoundariesArgs).agentRole === "string" &&
+            typeof (args as ExpertiseBoundariesArgs).isOrchestrator === "boolean"
+        );
+    },
 };
 
 // Register the fragment

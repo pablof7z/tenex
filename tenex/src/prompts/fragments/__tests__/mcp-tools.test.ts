@@ -99,16 +99,16 @@ describe("mcp-tools fragment", () => {
 
         // Check that we have one analytics server section
         expect(result).toContain("### analytics");
-        
+
         // The tool names contain "analytics" too, so let's be more specific
-        const lines = result.split('\n');
-        const serverHeaderCount = lines.filter(line => line === "### analytics").length;
+        const lines = result.split("\n");
+        const serverHeaderCount = lines.filter((line) => line === "### analytics").length;
         expect(serverHeaderCount).toBe(1);
-        
+
         // Should have both tools
         expect(result).toContain("#### analytics/query");
         expect(result).toContain("#### analytics/export");
-        
+
         // Should show parameter requirements correctly
         expect(result).toContain("metric (string) *required*:");
         expect(result).toContain("format (string):");
@@ -144,7 +144,7 @@ describe("mcp-tools fragment", () => {
         // Should have two server sections
         expect(result).toContain("### server1");
         expect(result).toContain("### server2");
-        
+
         // server1 should have 2 tools
         const server1Section = result.substring(
             result.indexOf("### server1"),
@@ -152,7 +152,7 @@ describe("mcp-tools fragment", () => {
         );
         expect(server1Section).toContain("#### server1/tool1");
         expect(server1Section).toContain("#### server1/tool2");
-        
+
         // server2 should have 1 tool
         const server2Section = result.substring(result.indexOf("### server2"));
         expect(server2Section).toContain("#### server2/tool1");

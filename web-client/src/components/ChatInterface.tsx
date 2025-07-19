@@ -1,4 +1,4 @@
-import { NDKKind, NDKSubscriptionCacheUsage, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import {
     NDKEvent,
     type NDKProject,
@@ -41,6 +41,9 @@ interface ChatInterfaceProps {
     initialAgentPubkeys?: string[];
     onBack?: () => void;
     disableTaskClick?: boolean; // Disable task click handler when in drawer
+    onThreadCreated?: (threadEvent: NDKEvent) => void; // Callback when a new thread is created
+    initialThreadEvent?: NDKEvent; // Pre-configured thread event
+    initialMessage?: string; // Initial message content
 }
 
 // Memoized message list component
@@ -107,6 +110,9 @@ export function ChatInterface({
     initialAgentPubkeys = [],
     onBack,
     disableTaskClick = false,
+    onThreadCreated,
+    initialThreadEvent,
+    initialMessage = "",
 }: ChatInterfaceProps) {
     const { ndk } = useNDK();
     const currentUserPubkey = useNDKCurrentPubkey();
@@ -137,12 +143,12 @@ export function ChatInterface({
         return null;
     }, [isThreadMode, threadId, threadTitle, task?.id]);
 
-    // Initialize message input from drafts
+    // Initialize message input from drafts or initialMessage
     const [messageInput, setMessageInput] = useState(() => {
         if (rootEventId) {
-            return messageDrafts.get(rootEventId) || "";
+            return messageDrafts.get(rootEventId) || initialMessage;
         }
-        return "";
+        return initialMessage;
     });
 
     // State for new thread detection
@@ -420,26 +426,33 @@ export function ChatInterface({
                     }
                 } else if (!kind11Event) {
                     // This is the first message, create a new thread (kind 11)
-                    event = new NDKEvent(ndk);
-                    event.kind = EVENT_KINDS.CHAT;
-                    event.content = cleanContent;
+                    if (initialThreadEvent) {
+                        // Use the pre-configured thread event
+                        event = initialThreadEvent;
+                        event.ndk = ndk;
+                        event.content = cleanContent;
+                    } else {
+                        event = new NDKEvent(ndk);
+                        event.kind = EVENT_KINDS.CHAT;
+                        event.content = cleanContent;
 
-                    // Generate title if this is a new thread
-                    let finalTitle = threadTitle;
-                    if (isNewThread) {
-                        try {
-                            finalTitle = await generateThreadTitle(messageInput);
-                        } catch (error) {
-                            console.warn("Failed to generate thread title:", error);
-                            // Fallback to a simple title based on first few words
-                            finalTitle = `${messageInput.trim().split(" ").slice(0, 4).join(" ").slice(0, 30)}...`;
+                        // Generate title if this is a new thread
+                        let finalTitle = threadTitle;
+                        if (isNewThread) {
+                            try {
+                                finalTitle = await generateThreadTitle(messageInput);
+                            } catch (error) {
+                                console.warn("Failed to generate thread title:", error);
+                                // Fallback to a simple title based on first few words
+                                finalTitle = `${messageInput.trim().split(" ").slice(0, 4).join(" ").slice(0, 30)}...`;
+                            }
                         }
-                    }
 
-                    event.tags = [
-                        ["title", finalTitle || "New Thread"],
-                        ["a", project?.tagId()],
-                    ];
+                        event.tags = [
+                            ["title", finalTitle || "New Thread"],
+                            ["a", project?.tagId()],
+                        ];
+                    }
 
                     // Add initial agents as p-tags
                     if (initialAgentPubkeys.length > 0) {
@@ -468,6 +481,11 @@ export function ChatInterface({
                     // Publish the event
                     await event.publish();
                     setMessageInput("");
+
+                    // Notify parent component about thread creation
+                    if (onThreadCreated) {
+                        onThreadCreated(event);
+                    }
 
                     // Clean up draft for new thread since it now has a real ID
                     if (rootEventId?.startsWith("new-")) {
@@ -511,11 +529,18 @@ export function ChatInterface({
                     ? sortedUpdates.find((update) => update.pubkey !== currentUserPubkey)
                     : sortedUpdates[0];
 
-                const claudeSessionId = statusUpdates
-                    .find((s) => !!s.hasTag("claude-session-id"))
-                    ?.tagValue("claude-session-id");
+                // Find claude-session tag in status updates
+                // Filter out any pseudo-events (like task description) that don't have proper tags
+                const realStatusUpdates = statusUpdates.filter(s => 
+                    s.tags && !s.tags.some(tag => tag[0] === "task-description")
+                );
+                
+                const claudeSessionId = realStatusUpdates
+                    .find((s) => !!s.hasTag("claude-session"))
+                    ?.tagValue("claude-session");
+                
                 if (!claudeSessionId) {
-                    alert("No claude-session-id found in status updates. This is a bug");
+                    alert("No claude-session found in status updates. This is a bug");
                     return;
                 }
 
@@ -530,8 +555,8 @@ export function ChatInterface({
                     event.tags.push(["p", mostRecentNonUserUpdate.pubkey]);
                 }
 
-                // Always add claude-session-id for routing
-                event.tags.push(["claude-session-id", claudeSessionId]);
+                // Always add claude-session for routing
+                event.tags.push(["claude-session", claudeSessionId]);
             } else {
                 // This shouldn't happen due to the check above, but TypeScript needs this
                 return;

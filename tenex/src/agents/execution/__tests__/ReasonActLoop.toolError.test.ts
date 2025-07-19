@@ -11,12 +11,17 @@ describe("ReasonActLoop - Tool Error Publishing", () => {
             publishTypingIndicator: vi.fn().mockResolvedValue({}),
         } as any as NostrPublisher;
 
-        const tracingLogger = createTracingLogger({ traceId: "test", operationName: "test" }, "test");
+        const tracingLogger = createTracingLogger(
+            { traceId: "test", operationName: "test" },
+            "test"
+        );
 
         const reasonActLoop = new ReasonActLoop({} as any, {} as any);
-        
+
         // Use reflection to access private method
-        const handleToolCompleteEvent = (reasonActLoop as any).handleToolCompleteEvent.bind(reasonActLoop);
+        const handleToolCompleteEvent = (reasonActLoop as any).handleToolCompleteEvent.bind(
+            reasonActLoop
+        );
 
         // Simulate a tool_complete event with an error
         const event = {
@@ -27,7 +32,8 @@ describe("ReasonActLoop - Tool Error Publishing", () => {
                     duration: 100,
                     error: {
                         kind: "ValidationError",
-                        message: "Agents not found: user. Available agents: executor, planner, project-manager, orchestrator, yagni",
+                        message:
+                            "Agents not found: user. Available agents: executor, planner, project-manager, orchestrator, yagni",
                     },
                 }),
             },
@@ -69,12 +75,17 @@ describe("ReasonActLoop - Tool Error Publishing", () => {
             publishTypingIndicator: vi.fn().mockResolvedValue({}),
         } as any as NostrPublisher;
 
-        const tracingLogger = createTracingLogger({ traceId: "test", operationName: "test" }, "test");
+        const tracingLogger = createTracingLogger(
+            { traceId: "test", operationName: "test" },
+            "test"
+        );
 
         const reasonActLoop = new ReasonActLoop({} as any, {} as any);
-        
+
         // Use reflection to access private method
-        const handleToolCompleteEvent = (reasonActLoop as any).handleToolCompleteEvent.bind(reasonActLoop);
+        const handleToolCompleteEvent = (reasonActLoop as any).handleToolCompleteEvent.bind(
+            reasonActLoop
+        );
 
         // Simulate a tool_complete event with success
         const event = {

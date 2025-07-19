@@ -86,7 +86,8 @@ describe("AgentRegistry", () => {
             (fs.readFile as any).mockImplementation(async (path: string) => {
                 if (path.includes("developer.json")) {
                     return JSON.stringify(developerDefinition);
-                }if (path.includes("reviewer.json")) {
+                }
+                if (path.includes("reviewer.json")) {
                     return JSON.stringify(reviewerDefinition);
                 }
                 return "{}";
@@ -108,7 +109,7 @@ describe("AgentRegistry", () => {
             expect(developer).toBeDefined();
             expect(developer?.name).toBe("Developer");
             expect(developer?.role).toBe("Software Developer");
-            expect(developer?.tools.map(t => t.name)).toEqual(["read_file", "analyze"]);
+            expect(developer?.tools.map((t) => t.name)).toEqual(["read_file", "analyze"]);
 
             // Ensure agent reviewer
             const reviewer = await registry.ensureAgent("reviewer", {
@@ -262,7 +263,7 @@ describe("AgentRegistry", () => {
             // Check that writeJsonFile was called for the tester agent
             const calls = (fs.writeJsonFile as any).mock.calls;
             expect(calls.length).toBe(1);
-            
+
             const [filePath, content] = calls[0];
             expect(filePath).toContain("tester.json");
             expect(content).toMatchObject({
@@ -462,5 +463,4 @@ describe("AgentRegistry", () => {
             expect(agent).toBeNull();
         });
     });
-
 });

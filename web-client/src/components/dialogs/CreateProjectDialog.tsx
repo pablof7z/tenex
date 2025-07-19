@@ -148,7 +148,7 @@ export function CreateProjectDialog({
             }
 
             // No need to sign explicitly - publish() will sign with the current user's key
-            project.publish();
+            project.publishReplaceable();
 
             resetForm();
             onOpenChange(false);

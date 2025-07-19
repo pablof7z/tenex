@@ -7,10 +7,10 @@ import type { PromptFragment } from "../core/types";
  * This fragment is accessible to all agents so they understand the phase structure and expectations
  */
 export const phaseDefinitionsFragment: PromptFragment = {
-  id: "phase-definitions",
-  priority: 15, // Higher priority to ensure it appears early in the prompt
-  template: () => {
-    return `## Phase Definitions
+    id: "phase-definitions",
+    priority: 15, // Higher priority to ensure it appears early in the prompt
+    template: () => {
+        return `## Phase Definitions
 
 - **${PHASES.CHAT.toUpperCase()}**: ${PHASE_DEFINITIONS.chat.description}
   - Goal: ${PHASE_DEFINITIONS.chat.goal}
@@ -32,7 +32,7 @@ export const phaseDefinitionsFragment: PromptFragment = {
   
 - **${PHASES.REFLECTION.toUpperCase()}**: ${PHASE_DEFINITIONS.reflection.description}
   - Goal: ${PHASE_DEFINITIONS.reflection.goal}`;
-  },
+    },
 };
 
 // Register the fragment

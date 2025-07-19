@@ -14,31 +14,27 @@ import { shellTool } from "../tools/implementations/shell";
  * All agents now have access to all tools except orchestrator-only tools
  */
 export function getDefaultToolsForAgent(agent: Agent): string[] {
-  let tools = [readFileTool.name, learnTool.name, analyze.name];
+    let tools = [readFileTool.name, learnTool.name, analyze.name];
 
-  // Built-in agents
-  if (agent.isBuiltIn) {
-    if (agent.isOrchestrator) {
-      // Orchestrator agents get limited tools (no claude_code or shell)
-      tools = [
-        endConversationTool.name,
-        continueTool.name,
-        learnTool.name,
-      ];
+    // Built-in agents
+    if (agent.isBuiltIn) {
+        if (agent.isOrchestrator) {
+            // Orchestrator agents get limited tools (no claude_code or shell)
+            tools = [endConversationTool.name, continueTool.name, learnTool.name];
+        } else {
+            // Other non-orchestrator agents use complete tool to signal task completion
+            tools.push(completeTool.name);
+
+            if (agent.slug === "project-manager") {
+                tools.push(generateInventoryTool.name);
+                tools.push(writeContextFileTool.name);
+                tools.push(shellTool.name);
+            }
+        }
     } else {
-      // Other non-orchestrator agents use complete tool to signal task completion
-      tools.push(completeTool.name);
-
-      if (agent.slug === "project-manager") {
-        tools.push(generateInventoryTool.name);
-        tools.push(writeContextFileTool.name);
-        tools.push(shellTool.name);
-      }
+        // Custom agents default to complete tool
+        tools.push(completeTool.name);
     }
-  } else {
-    // Custom agents default to complete tool
-    tools.push(completeTool.name);
-  }
 
-  return tools;
+    return tools;
 }

@@ -20,8 +20,8 @@ import { NDKEvent } from "@nostr-dev-kit/ndk";
 
 // Result type for fallible operations
 export type Result<E, A> =
-  | { readonly ok: true; readonly value: A }
-  | { readonly ok: false; readonly error: E };
+    | { readonly ok: true; readonly value: A }
+    | { readonly ok: false; readonly error: E };
 
 // ============================================================================
 // Simple Tool Interface
@@ -38,11 +38,14 @@ import type { ExecutionContext } from "@/agents/execution/types";
  * Simple, unified tool interface
  */
 export interface Tool<Input = unknown, Output = unknown> {
-  readonly name: string;
-  readonly description: string;
-  readonly parameters: ParameterSchema<Input>;
-  readonly promptFragment?: string;
-  readonly execute: (input: Validated<Input>, context: ExecutionContext) => Promise<Result<ToolError, Output>>;
+    readonly name: string;
+    readonly description: string;
+    readonly parameters: ParameterSchema<Input>;
+    readonly promptFragment?: string;
+    readonly execute: (
+        input: Validated<Input>,
+        context: ExecutionContext
+    ) => Promise<Result<ToolError, Output>>;
 }
 
 // ============================================================================
@@ -50,16 +53,16 @@ export interface Tool<Input = unknown, Output = unknown> {
 // ============================================================================
 
 export interface ContinueFlow {
-  readonly type: "continue";
-  readonly routing: RoutingDecision;
+    readonly type: "continue";
+    readonly routing: RoutingDecision;
 }
 
 export interface RoutingDecision {
-  readonly phase?: Phase;
-  readonly agents: NonEmptyArray<string>; // Agent pubkeys
-  readonly reason: string;
-  readonly messageToAgents: string;
-  readonly context?: Readonly<Record<string, unknown>>;
+    readonly phase?: Phase;
+    readonly agents: NonEmptyArray<string>; // Agent pubkeys
+    readonly reason: string;
+    readonly messageToAgents: string;
+    readonly context?: Readonly<Record<string, unknown>>;
 }
 
 /**
@@ -68,26 +71,26 @@ export interface RoutingDecision {
 export type Termination = Complete | EndConversation;
 
 export interface Complete {
-  readonly type: "complete";
-  readonly completion: CompletionSummary;
+    readonly type: "complete";
+    readonly completion: CompletionSummary;
 }
 
 export interface EndConversation {
-  readonly type: "end_conversation";
-  readonly result: ConversationResult;
+    readonly type: "end_conversation";
+    readonly result: ConversationResult;
 }
 
 export interface CompletionSummary {
-  readonly response: string;
-  readonly summary: string;
-  readonly nextAgent: string;
+    readonly response: string;
+    readonly summary: string;
+    readonly nextAgent: string;
 }
 
 export interface ConversationResult {
-  readonly response: string;
-  readonly summary: string;
-  readonly success: boolean;
-  readonly artifacts?: ReadonlyArray<string>;
+    readonly response: string;
+    readonly summary: string;
+    readonly success: boolean;
+    readonly artifacts?: ReadonlyArray<string>;
 }
 
 // ============================================================================
@@ -95,21 +98,26 @@ export interface ConversationResult {
 // ============================================================================
 
 export interface ParameterSchema<T> {
-  readonly shape: SchemaShape;
-  readonly validate: (input: unknown) => Result<ValidationError, Validated<T>>;
+    readonly shape: SchemaShape;
+    readonly validate: (input: unknown) => Result<ValidationError, Validated<T>>;
 }
 
 export type SchemaShape =
-  | { type: "string"; description: string; enum?: ReadonlyArray<string>; required?: boolean }
-  | { type: "number"; description: string; min?: number; max?: number; required?: boolean }
-  | { type: "boolean"; description: string; required?: boolean }
-  | { type: "array"; description: string; items: SchemaShape; required?: boolean }
-  | { type: "object"; description: string; properties: Readonly<Record<string, SchemaShape>>; required?: ReadonlyArray<string> };
+    | { type: "string"; description: string; enum?: ReadonlyArray<string>; required?: boolean }
+    | { type: "number"; description: string; min?: number; max?: number; required?: boolean }
+    | { type: "boolean"; description: string; required?: boolean }
+    | { type: "array"; description: string; items: SchemaShape; required?: boolean }
+    | {
+          type: "object";
+          description: string;
+          properties: Readonly<Record<string, SchemaShape>>;
+          required?: ReadonlyArray<string>;
+      };
 
 // Branded type for validated input
 export interface Validated<T> {
-  readonly _brand: "validated";
-  readonly value: T;
+    readonly _brand: "validated";
+    readonly value: T;
 }
 
 // ============================================================================
@@ -119,22 +127,22 @@ export interface Validated<T> {
 export type ToolError = ValidationError | ExecutionError | SystemError;
 
 export interface ValidationError {
-  readonly kind: "validation";
-  readonly field: string;
-  readonly message: string;
+    readonly kind: "validation";
+    readonly field: string;
+    readonly message: string;
 }
 
 export interface ExecutionError {
-  readonly kind: "execution";
-  readonly tool: string;
-  readonly message: string;
-  readonly cause?: unknown;
+    readonly kind: "execution";
+    readonly tool: string;
+    readonly message: string;
+    readonly cause?: unknown;
 }
 
 export interface SystemError {
-  readonly kind: "system";
-  readonly message: string;
-  readonly stack?: string;
+    readonly kind: "system";
+    readonly message: string;
+    readonly stack?: string;
 }
 
 // ============================================================================
@@ -143,23 +151,23 @@ export interface SystemError {
 
 // Non-empty array type
 export interface NonEmptyArray<T> extends ReadonlyArray<T> {
-  readonly 0: T;
+    readonly 0: T;
 }
 
 // Helper type guards
 export const isNonEmptyArray = <T>(array: ReadonlyArray<T>): array is NonEmptyArray<T> =>
-  array.length > 0;
+    array.length > 0;
 
 // ============================================================================
 // Result Constructors
 // ============================================================================
 
 export const success = <A>(value: A): Result<never, A> => ({
-  ok: true,
-  value,
+    ok: true,
+    value,
 });
 
 export const failure = <E>(error: E): Result<E, never> => ({
-  ok: false,
-  error,
+    ok: false,
+    error,
 });

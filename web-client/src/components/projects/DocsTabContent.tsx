@@ -21,7 +21,7 @@ export function DocsTabContent({
                     <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 sm:mb-3">
-                    No documentation yet
+                    No documentation yet2
                 </h3>
                 <p className="text-muted-foreground mb-6 sm:mb-8 max-w-sm leading-relaxed text-sm sm:text-base">
                     Documentation articles will appear here when published by agents.

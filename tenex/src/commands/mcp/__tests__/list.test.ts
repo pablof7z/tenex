@@ -23,7 +23,7 @@ describe("MCP list command", () => {
     let program: Command;
     let mockGlobalConfig: Partial<TenexConfig>;
     let mockProjectConfig: Partial<TenexConfig>;
-    
+
     // Helper to set up configService mocks
     async function setupConfigServiceMocks() {
         const { configService } = await import("@/services/ConfigService");
@@ -77,8 +77,7 @@ describe("MCP list command", () => {
         // Create commander program
         program = new Command();
         program.exitOverride();
-        const mcpCommand = new Command("mcp")
-            .description("Manage MCP servers");
+        const mcpCommand = new Command("mcp").description("Manage MCP servers");
         mcpCommand.addCommand(listCommand);
         program.addCommand(mcpCommand);
     });
@@ -98,37 +97,37 @@ describe("MCP list command", () => {
                 .mockResolvedValueOnce(mockProjectConfig.mcp); // Project MCP
 
             await program.parseAsync(["node", "test", "mcp", "list"]);
-            
+
             // Check that logger.info was called
             expect(mockConsoleLog).toHaveBeenCalled();
-            
+
             // Get the actual calls and convert to plain text
-            const allOutput = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+            const allOutput = mockConsoleLog.mock.calls.map((call) => call[0]).join("\n");
 
             // Check that key information is present in the output
             expect(allOutput).toContain("Configured MCP Servers");
             expect(allOutput).toContain("Global servers");
             expect(allOutput).toContain("Project servers");
-            
+
             // Check global servers
             expect(allOutput).toContain("global-server1");
             expect(allOutput).toContain("Command:");
             expect(allOutput).toContain("node global1.js");
             expect(allOutput).toContain("Description: Global server 1");
-            
+
             expect(allOutput).toContain("global-server2");
             expect(allOutput).toContain("python global2.py");
             expect(allOutput).toContain("Allowed paths: /global/path");
-            
+
             // Check project servers
             expect(allOutput).toContain("project-server1");
             expect(allOutput).toContain("bun project1.ts");
             expect(allOutput).toContain("Environment: API_KEY");
-            
+
             expect(allOutput).toContain("project-server2");
             expect(allOutput).toContain("deno run project2.ts");
             expect(allOutput).toContain("Allowed paths: /project/path1, /project/path2");
-            
+
             // Check status footer
             expect(allOutput).toContain("MCP enabled:");
             expect(allOutput).toContain("Total servers:");
@@ -142,19 +141,13 @@ describe("MCP list command", () => {
 
             await program.parseAsync(["node", "test", "mcp", "list"]);
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                chalk.bold.cyan("\nGlobal MCP Servers:")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(chalk.bold.cyan("\nGlobal MCP Servers:"));
             expect(mockConsoleLog).not.toHaveBeenCalledWith(
                 chalk.bold.cyan("\nProject MCP Servers:")
             );
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("global-server1")
-            );
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("global-server2")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("global-server1"));
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("global-server2"));
         });
 
         it("should show message when no servers configured", async () => {
@@ -179,7 +172,7 @@ describe("MCP list command", () => {
             const configService = await setupConfigServiceMocks();
             (configService.projectConfigExists as any).mockResolvedValue(true);
             (configService.getProjectPath as any).mockReturnValue("/test/project");
-            
+
             const disabledGlobalConfig = {
                 ...mockGlobalConfig,
                 mcp: {
@@ -197,16 +190,14 @@ describe("MCP list command", () => {
             expect(mockConsoleLog).toHaveBeenCalledWith(
                 chalk.yellow("No MCP servers configured globally")
             );
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("project-server1")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("project-server1"));
         });
 
         it("should handle empty server lists", async () => {
             const configService = await setupConfigServiceMocks();
             (configService.projectConfigExists as any).mockResolvedValue(true);
             (configService.getProjectPath as any).mockReturnValue("/test/project");
-            
+
             const emptyConfig = {
                 mcp: {
                     servers: {},
@@ -238,16 +229,12 @@ describe("MCP list command", () => {
 
             await program.parseAsync(["node", "test", "mcp", "list", "--global"]);
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                chalk.bold.cyan("\nGlobal MCP Servers:")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(chalk.bold.cyan("\nGlobal MCP Servers:"));
             expect(mockConsoleLog).not.toHaveBeenCalledWith(
                 chalk.bold.cyan("\nProject MCP Servers:")
             );
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("global-server1")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("global-server1"));
             expect(mockConsoleLog).not.toHaveBeenCalledWith(
                 expect.stringContaining("project-server1")
             );
@@ -266,13 +253,9 @@ describe("MCP list command", () => {
             expect(mockConsoleLog).not.toHaveBeenCalledWith(
                 chalk.bold.cyan("\nGlobal MCP Servers:")
             );
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                chalk.bold.cyan("\nProject MCP Servers:")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(chalk.bold.cyan("\nProject MCP Servers:"));
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("project-server1")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("project-server1"));
             expect(mockConsoleLog).not.toHaveBeenCalledWith(
                 expect.stringContaining("global-server1")
             );
@@ -296,7 +279,7 @@ describe("MCP list command", () => {
             const configService = await setupConfigServiceMocks();
             (configService.projectConfigExists as any).mockResolvedValue(false);
             (configService.getProjectPath as any).mockReturnValue(undefined);
-            
+
             const minimalConfig = {
                 mcp: {
                     servers: {
@@ -313,13 +296,11 @@ describe("MCP list command", () => {
 
             await program.parseAsync(["node", "test", "mcp", "list"]);
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("minimal-server")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("minimal-server"));
             expect(mockConsoleLog).toHaveBeenCalledWith(
                 expect.stringContaining("Command: node server.js")
             );
-            
+
             // Should not show these optional fields
             expect(mockConsoleLog).not.toHaveBeenCalledWith(
                 expect.stringContaining("Description:")
@@ -336,7 +317,7 @@ describe("MCP list command", () => {
             const configService = await setupConfigServiceMocks();
             (configService.projectConfigExists as any).mockResolvedValue(false);
             (configService.getProjectPath as any).mockReturnValue(undefined);
-            
+
             const envConfig = {
                 mcp: {
                     servers: {
@@ -367,7 +348,7 @@ describe("MCP list command", () => {
             const configService = await setupConfigServiceMocks();
             (configService.projectConfigExists as any).mockResolvedValue(false);
             (configService.getProjectPath as any).mockReturnValue(undefined);
-            
+
             const noArgsConfig = {
                 mcp: {
                     servers: {
@@ -408,7 +389,7 @@ describe("MCP list command", () => {
             const configService = await setupConfigServiceMocks();
             (configService.projectConfigExists as any).mockResolvedValue(false);
             (configService.getProjectPath as any).mockReturnValue(undefined);
-            
+
             const malformedConfig = {
                 mcp: {
                     servers: {
@@ -425,9 +406,7 @@ describe("MCP list command", () => {
 
             await program.parseAsync(["node", "test", "mcp", "list"]);
 
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                expect.stringContaining("Command: node")
-            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Command: node"));
         });
     });
 });

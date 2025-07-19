@@ -12,7 +12,6 @@ import type { ProjectAgent } from "../stores/project/hooks";
 import { useUserProjects } from "../hooks/useUserProjects";
 import { useOnlineProjects } from "../stores/project/hooks";
 import {
-    selectedProjectAtom,
     selectedTaskAtom,
     selectedThreadAtom,
     themeAtom,
@@ -26,6 +25,7 @@ import { VoiceRecorderDialog } from "./dialogs/VoiceRecorderDialog";
 
 export function DesktopLayout() {
     const currentUser = useNDKCurrentUser();
+    const { goToProjectProfile } = useNavigation();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
     const [showVoiceRecorderDialog, setShowVoiceRecorderDialog] = useState(false);
@@ -33,7 +33,6 @@ export function DesktopLayout() {
     const [manuallyToggled, setManuallyToggled] = useState<Map<string, boolean>>(new Map());
     const [selectedTask, setSelectedTask] = useAtom(selectedTaskAtom);
     const [selectedThread, setSelectedThread] = useAtom(selectedThreadAtom);
-    const [selectedProject, setSelectedProject] = useAtom(selectedProjectAtom);
     const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null);
     const onlineProjects = useOnlineProjects();
     const theme = useAtomValue(themeAtom);
@@ -129,7 +128,7 @@ export function DesktopLayout() {
             <ProjectDashboard
                 projects={projects}
                 filteredProjects={filteredProjects}
-                onProjectClick={setSelectedProject}
+                onProjectClick={goToProjectProfile}
                 onTaskCreate={handleCreateAction}
                 onVoiceRecord={handleVoiceRecording}
                 onThreadClick={handleThreadClick}
@@ -157,39 +156,10 @@ export function DesktopLayout() {
             <LayoutDrawers
                 selectedTask={selectedTask}
                 selectedThread={selectedThread}
-                selectedProject={selectedProject}
                 selectedArticle={selectedArticle}
                 onTaskClose={() => setSelectedTask(null)}
                 onThreadClose={() => setSelectedThread(null)}
-                onProjectClose={() => setSelectedProject(null)}
                 onArticleClose={() => setSelectedArticle(null)}
-                onTaskSelect={(_, taskId) => {
-                    // Task will be fetched by the drawer component itself
-                    setSelectedTask({ id: taskId } as NDKTask);
-                }}
-                onThreadStart={(project, threadTitle, selectedAgents) => {
-                    // Create a temporary thread object to open the chat interface
-                    // No event is published yet - that happens when the first message is sent
-                    const tempThread = {
-                        id: "new",
-                        content: "",
-                        tags: [
-                            ["title", threadTitle],
-                            ["a", project.tagId()],
-                        ],
-                        selectedAgents, // Store agents temporarily on the object
-                    } as NDKEvent & { selectedAgents?: ProjectAgent[] };
-
-                    // Set the thread as selected to open in drawer
-                    setSelectedThread(tempThread);
-                }}
-                onThreadSelect={(_, threadId) => {
-                    // Thread will be fetched by the drawer component itself
-                    setSelectedThread({ id: threadId } as NDKEvent);
-                }}
-                onArticleSelect={(_, article) => {
-                    setSelectedArticle(article);
-                }}
             />
         </div>
     );

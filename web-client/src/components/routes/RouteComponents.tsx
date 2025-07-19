@@ -12,8 +12,8 @@ import { InstructionsPage } from "../InstructionsPage";
 import { MCPToolsPage } from "../MCPToolsPage";
 import { SettingsPage } from "../SettingsPage";
 import { DocumentationView } from "../documentation/DocumentationView";
-import { ProjectDetail } from "../projects/ProjectDetail";
 import { ProjectList } from "../projects/ProjectList";
+import { ProjectProfile } from "../profile/ProjectProfile";
 import { TaskUpdates } from "../tasks/TaskUpdates";
 
 // Loading component
@@ -31,30 +31,27 @@ export function ProjectListPage() {
     return <ProjectList />;
 }
 
-// Project detail page
+// Project detail page - redirects to profile
 export function ProjectDetailPage() {
     const { projectId } = useParams();
     const project = useProject(projectId);
-    const { goBack, goToTask, goToNewThread, goToThread, goToArticle } =
-        useNavigation();
+    const { goToProjectProfile } = useNavigation();
+    
+    // Redirect to profile page when project is loaded
+    if (project) {
+        goToProjectProfile(project);
+    }
 
     if (!project) {
         return <LoadingScreen />;
     }
 
-    return (
-        <ProjectDetail
-            project={project}
-            onBack={goBack}
-            onTaskSelect={(project, taskId) => goToTask(project, taskId)}
-            onThreadStart={(project, threadTitle, selectedAgents) => {
-                const agentPubkeys = selectedAgents?.map((a) => a.pubkey) || [];
-                goToNewThread(project, threadTitle, agentPubkeys);
-            }}
-            onThreadSelect={goToThread}
-            onArticleSelect={goToArticle}
-        />
-    );
+    return null;
+}
+
+// Project profile page
+export function ProjectProfilePage() {
+    return <ProjectProfile />;
 }
 
 // Task updates page

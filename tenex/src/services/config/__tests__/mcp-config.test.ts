@@ -144,11 +144,11 @@ describe("MCP Configuration Types", () => {
         it("should validate MCP config with multiple servers", () => {
             const config: TenexMCP = {
                 servers: {
-                    "server1": {
+                    server1: {
                         command: "node",
                         args: ["server1.js"],
                     },
-                    "server2": {
+                    server2: {
                         command: "python",
                         args: ["server2.py"],
                         description: "Python server",
@@ -172,7 +172,7 @@ describe("MCP Configuration Types", () => {
         it("should default enabled to true if not specified", () => {
             const config = {
                 servers: {
-                    "test": {
+                    test: {
                         command: "node",
                         args: ["test.js"],
                     },
@@ -189,7 +189,7 @@ describe("MCP Configuration Types", () => {
         it("should accept disabled MCP", () => {
             const config: TenexMCP = {
                 servers: {
-                    "test": {
+                    test: {
                         command: "node",
                         args: ["test.js"],
                     },
@@ -235,11 +235,11 @@ describe("MCP Configuration Types", () => {
         it("should handle server names with various characters", () => {
             const config: TenexMCP = {
                 servers: {
-                    "simple": { command: "node", args: ["1.js"] },
+                    simple: { command: "node", args: ["1.js"] },
                     "with-dashes": { command: "node", args: ["2.js"] },
-                    "with_underscores": { command: "node", args: ["3.js"] },
-                    "WITH_CAPS": { command: "node", args: ["4.js"] },
-                    "numbers123": { command: "node", args: ["5.js"] },
+                    with_underscores: { command: "node", args: ["3.js"] },
+                    WITH_CAPS: { command: "node", args: ["4.js"] },
+                    numbers123: { command: "node", args: ["5.js"] },
                     "mix-123_ABC": { command: "node", args: ["6.js"] },
                 },
                 enabled: true,

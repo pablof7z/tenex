@@ -70,20 +70,20 @@ describe("Tool Registry", () => {
         const completeTool = getTool("complete");
         expect(completeTool?.parameters).toBeDefined();
         expect(completeTool?.parameters.shape).toBeDefined();
-        
+
         // The shape for a ZodObject has type "object" and properties
         expect(completeTool?.parameters.shape.type).toBe("object");
         expect(completeTool?.parameters.shape.properties).toBeDefined();
         expect(completeTool?.parameters.shape.properties?.response).toBeDefined();
-        
+
         // Test validation
         const result = completeTool?.parameters.validate({
             response: "Test response",
         });
         expect(result?.ok).toBe(true);
-        
+
         const invalidResult = completeTool?.parameters.validate({
-            invalidField: "test"
+            invalidField: "test",
         });
         expect(invalidResult?.ok).toBe(false);
     });

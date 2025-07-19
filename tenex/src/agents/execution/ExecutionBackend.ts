@@ -8,17 +8,17 @@ import type { NostrPublisher } from "@/nostr/NostrPublisher";
  * (e.g., reason-act loops, direct tool execution, etc.)
  */
 export interface ExecutionBackend {
-  /**
-   * Execute the agent's task
-   * @param messages - The messages to send to the LLM
-   * @param tools - The tools available to the agent
-   * @param context - The execution context
-   * @param publisher - The NostrPublisher for publishing events
-   */
-  execute(
-    messages: Array<import("multi-llm-ts").Message>,
-    tools: Tool[],
-    context: ExecutionContext,
-    publisher: NostrPublisher
-  ): Promise<void>;
+    /**
+     * Execute the agent's task
+     * @param messages - The messages to send to the LLM
+     * @param tools - The tools available to the agent
+     * @param context - The execution context
+     * @param publisher - The NostrPublisher for publishing events
+     */
+    execute(
+        messages: Array<import("multi-llm-ts").Message>,
+        tools: Tool[],
+        context: ExecutionContext,
+        publisher: NostrPublisher
+    ): Promise<void>;
 }

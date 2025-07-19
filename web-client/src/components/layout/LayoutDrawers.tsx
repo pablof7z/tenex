@@ -1,9 +1,7 @@
-import type { NDKArticle, NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import type { ProjectAgent } from "../../stores/project/hooks";
+import type { NDKArticle, NDKEvent, NDKTask } from "@nostr-dev-kit/ndk-hooks";
 import { useUserProjects } from "../../hooks/useUserProjects";
 import { ChatInterface } from "../ChatInterface";
 import { DocumentationView } from "../documentation/DocumentationView";
-import { ProjectDetail } from "../projects/ProjectDetail";
 import { TaskUpdates } from "../tasks/TaskUpdates";
 import { Sheet, SheetContent } from "../ui/sheet";
 
@@ -11,39 +9,21 @@ interface LayoutDrawersProps {
     // Selected items
     selectedTask: NDKTask | null;
     selectedThread: NDKEvent | null;
-    selectedProject: NDKProject | null;
     selectedArticle: NDKArticle | null;
 
     // Setters
     onTaskClose: () => void;
     onThreadClose: () => void;
-    onProjectClose: () => void;
     onArticleClose: () => void;
-
-    // Event handlers
-    onTaskSelect: (project: NDKProject, taskId: string) => void;
-    onThreadStart: (
-        project: NDKProject,
-        threadTitle: string,
-        selectedAgents: ProjectAgent[]
-    ) => void;
-    onThreadSelect: (project: NDKProject, threadId: string) => void;
-    onArticleSelect: (project: NDKProject, article: NDKArticle) => void;
 }
 
 export function LayoutDrawers({
     selectedTask,
     selectedThread,
-    selectedProject,
     selectedArticle,
     onTaskClose,
     onThreadClose,
-    onProjectClose,
     onArticleClose,
-    onTaskSelect,
-    onThreadStart,
-    onThreadSelect,
-    onArticleSelect,
 }: LayoutDrawersProps) {
     // Fetch projects only when needed to find the project for a task/thread
     const projects = useUserProjects();
@@ -141,32 +121,35 @@ export function LayoutDrawers({
                 </SheetContent>
             </Sheet>
 
-            {/* Project Detail Drawer */}
-            <Sheet open={!!selectedProject} onOpenChange={(open) => !open && onProjectClose()}>
-                <SheetContent side="right" className="p-0">
-                    {selectedProject && (
-                        <ProjectDetail
-                            project={selectedProject}
-                            onBack={onProjectClose}
-                            onTaskSelect={onTaskSelect}
-                            onThreadStart={onThreadStart}
-                            onThreadSelect={onThreadSelect}
-                            onArticleSelect={onArticleSelect}
-                        />
-                    )}
-                </SheetContent>
-            </Sheet>
-
             {/* Documentation Drawer */}
             <Sheet open={!!selectedArticle} onOpenChange={(open) => !open && onArticleClose()}>
                 <SheetContent side="right" className="p-0">
-                    {selectedArticle && selectedProject && (
-                        <DocumentationView
-                            project={selectedProject}
-                            article={selectedArticle}
-                            onBack={onArticleClose}
-                        />
-                    )}
+                    {selectedArticle && (() => {
+                        // Find the project for this article
+                        const project = projects.find((p) => {
+                            const projectRef = selectedArticle.tags?.find(
+                                (tag) => tag[0] === "a"
+                            )?.[1];
+                            if (projectRef) {
+                                const parts = projectRef.split(":");
+                                if (parts.length >= 3) {
+                                    const projectTagId = parts[2];
+                                    return p.tagValue("d") === projectTagId;
+                                }
+                            }
+                            return false;
+                        });
+
+                        if (!project) return null;
+
+                        return (
+                            <DocumentationView
+                                project={project}
+                                article={selectedArticle}
+                                onBack={onArticleClose}
+                            />
+                        );
+                    })()}
                 </SheetContent>
             </Sheet>
         </>

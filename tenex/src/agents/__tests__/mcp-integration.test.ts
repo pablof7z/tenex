@@ -91,7 +91,10 @@ describe("Agent-MCP Integration", () => {
                                 required: true,
                             },
                         },
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -117,7 +120,10 @@ describe("Agent-MCP Integration", () => {
                                 required: false,
                             },
                         },
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -135,9 +141,9 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should include both native and MCP tools
-            expect(tools.some(t => t.name === "read_file")).toBe(true); // Native tool
-            expect(tools.some(t => t.name === "mcp__test-server__database-query")).toBe(true);
-            expect(tools.some(t => t.name === "mcp__test-server__api-call")).toBe(true);
+            expect(tools.some((t) => t.name === "read_file")).toBe(true); // Native tool
+            expect(tools.some((t) => t.name === "mcp__test-server__database-query")).toBe(true);
+            expect(tools.some((t) => t.name === "mcp__test-server__api-call")).toBe(true);
         });
 
         it("should handle when MCP is disabled", async () => {
@@ -161,8 +167,8 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should only have native tools
-            expect(tools.some(t => t.name === "read_file")).toBe(true);
-            expect(tools.every(t => !t.name.startsWith("mcp__"))).toBe(true); // No MCP tools
+            expect(tools.some((t) => t.name === "read_file")).toBe(true);
+            expect(tools.every((t) => !t.name.startsWith("mcp__"))).toBe(true); // No MCP tools
         });
     });
 
@@ -181,7 +187,10 @@ describe("Agent-MCP Integration", () => {
                             required: true,
                         },
                     },
-                    validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                    validate: (input: unknown) => ({
+                        ok: true,
+                        value: { _brand: "validated", value: input },
+                    }),
                 },
                 execute: async (args: any) => ({
                     kind: "effect",
@@ -209,9 +218,7 @@ describe("Agent-MCP Integration", () => {
                 ],
             });
 
-            const messages = [
-                { role: "user" as const, content: "Process this data: Hello MCP" },
-            ];
+            const messages = [{ role: "user" as const, content: "Process this data: Hello MCP" }];
 
             const response = await executor.chat(messages, {});
 
@@ -226,7 +233,10 @@ describe("Agent-MCP Integration", () => {
                 description: "A tool that fails",
                 parameters: {
                     shape: {},
-                    validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                    validate: (input: unknown) => ({
+                        ok: true,
+                        value: { _brand: "validated", value: input },
+                    }),
                 },
                 execute: async () => {
                     throw new Error("MCP tool error");
@@ -250,9 +260,7 @@ describe("Agent-MCP Integration", () => {
                 ],
             });
 
-            const messages = [
-                { role: "user" as const, content: "Try the failing tool" },
-            ];
+            const messages = [{ role: "user" as const, content: "Try the failing tool" }];
 
             const response = await executor.chat(messages, {});
 
@@ -273,7 +281,10 @@ describe("Agent-MCP Integration", () => {
                                 required: true,
                             },
                         },
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async (args: any) => ({
                         kind: "effect",
@@ -293,7 +304,10 @@ describe("Agent-MCP Integration", () => {
                                 required: true,
                             },
                         },
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async (args: any) => ({
                         kind: "effect",
@@ -332,12 +346,11 @@ describe("Agent-MCP Integration", () => {
 
             // Second LLM call (after tools)
             mockChat.mockResolvedValueOnce({
-                content: "Both tools executed successfully. Tool1 returned: Tool1: test, Tool2 returned: Tool2: 42",
+                content:
+                    "Both tools executed successfully. Tool1 returned: Tool1: test, Tool2 returned: Tool2: 42",
             });
 
-            const messages = [
-                { role: "user" as const, content: "Use both MCP tools" },
-            ];
+            const messages = [{ role: "user" as const, content: "Use both MCP tools" }];
 
             const response = await executor.chat(messages, {});
 
@@ -356,7 +369,10 @@ describe("Agent-MCP Integration", () => {
                     description: "Server read file command",
                     parameters: {
                         shape: {},
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -373,8 +389,8 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should have both tools with different names
-            const nativeReadFile = tools.find(t => t.name === "read_file");
-            const mcpReadFile = tools.find(t => t.name === "mcp__server__read_file");
+            const nativeReadFile = tools.find((t) => t.name === "read_file");
+            const mcpReadFile = tools.find((t) => t.name === "mcp__server__read_file");
 
             expect(nativeReadFile).toBeDefined();
             expect(mcpReadFile).toBeDefined();
@@ -389,7 +405,10 @@ describe("Agent-MCP Integration", () => {
                     description: "Valid tool",
                     parameters: {
                         shape: {},
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -404,7 +423,10 @@ describe("Agent-MCP Integration", () => {
                     description: "Another valid tool",
                     parameters: {
                         shape: {},
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -421,9 +443,9 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // All MCP tools should have namespace format
-            const mcpTools = tools.filter(t => t.name.startsWith("mcp__"));
+            const mcpTools = tools.filter((t) => t.name.startsWith("mcp__"));
             expect(mcpTools).toHaveLength(2);
-            mcpTools.forEach(tool => {
+            mcpTools.forEach((tool) => {
                 expect(tool.name).toMatch(/^mcp__[^_]+__[^_]+$/);
             });
         });
@@ -449,7 +471,10 @@ describe("Agent-MCP Integration", () => {
                                 required: false,
                             },
                         },
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -473,7 +498,7 @@ describe("Agent-MCP Integration", () => {
             await executor.chat([{ role: "user", content: "Hello" }], {});
 
             // Check that system message includes MCP tools
-            const systemMessage = capturedMessages.find(m => m.role === "system");
+            const systemMessage = capturedMessages.find((m) => m.role === "system");
             expect(systemMessage).toBeDefined();
             expect(systemMessage.content).toContain("mcp__analytics__query");
             expect(systemMessage.content).toContain("Query analytics data");
@@ -489,7 +514,10 @@ describe("Agent-MCP Integration", () => {
                     description: "Server 1 Tool 1",
                     parameters: {
                         shape: {},
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -504,7 +532,10 @@ describe("Agent-MCP Integration", () => {
                     description: "Server 1 Tool 2",
                     parameters: {
                         shape: {},
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -519,7 +550,10 @@ describe("Agent-MCP Integration", () => {
                     description: "Server 2 Tool 1",
                     parameters: {
                         shape: {},
-                        validate: (input: unknown) => ({ ok: true, value: { _brand: "validated", value: input } }),
+                        validate: (input: unknown) => ({
+                            ok: true,
+                            value: { _brand: "validated", value: input },
+                        }),
                     },
                     execute: async () => ({
                         kind: "effect",
@@ -541,8 +575,8 @@ describe("Agent-MCP Integration", () => {
 
             await executor.chat([{ role: "user", content: "Hello" }], {});
 
-            const systemMessage = capturedMessages.find(m => m.role === "system");
-            
+            const systemMessage = capturedMessages.find((m) => m.role === "system");
+
             // Tools should be grouped by server in the prompt
             expect(systemMessage.content).toContain("server1");
             expect(systemMessage.content).toContain("server2");

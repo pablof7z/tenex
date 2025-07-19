@@ -17,10 +17,9 @@ export function AgentSelector({ selectedAgents, onAgentsChange, filterType = 'ag
         []
     );
 
-    // Filter events by type
-    const agentEvents = filterType === 'all' 
-        ? allEvents 
-        : allEvents.filter(event => event.type === filterType);
+    // For now, use all events since NDKAgent doesn't have a type property
+    // TODO: If agent types are needed, they should be stored as a tag
+    const agentEvents = allEvents;
 
     const handleAgentSelect = (agent: NDKAgent) => {
         if (!selectedAgents.find((a) => a.id === agent.id)) {

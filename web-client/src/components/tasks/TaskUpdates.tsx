@@ -88,8 +88,8 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
         const mostRecentUpdate = sortedUpdates[sortedUpdates.length - 1];
         if (!mostRecentUpdate) return false;
 
-        // Check if it has a claude-session-id tag
-        const sessionIdTag = mostRecentUpdate.tags?.find((tag) => tag[0] === "claude-session-id");
+        // Check if it has a claude-session tag
+        const sessionIdTag = mostRecentUpdate.tags?.find((tag) => tag[0] === "claude-session");
         return !!sessionIdTag?.[1];
     }, [sortedUpdates]);
 

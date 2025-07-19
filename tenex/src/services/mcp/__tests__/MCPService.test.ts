@@ -34,10 +34,10 @@ describe("MCPService", () => {
     beforeEach(() => {
         // Reset all mocks
         mock.restore();
-        
+
         // Reset singleton instance
         (MCPService as any).instance = undefined;
-        
+
         // Create mock process
         mockProcess = {
             stdout: { on: mock() },
@@ -97,7 +97,7 @@ describe("MCPService", () => {
         (StdioClientTransport as any).mockReset();
         (Client as any).mockReset();
         (configService.loadConfig as any).mockReset();
-        
+
         // Setup mocks
         (StdioClientTransport as any).mockImplementation((options: any) => {
             // Store the options for verification
@@ -108,7 +108,7 @@ describe("MCPService", () => {
 
         service = MCPService.getInstance();
     });
-    
+
     afterEach(async () => {
         // Clean up the service after each test
         if (service) {
@@ -228,12 +228,12 @@ describe("MCPService", () => {
         it("should allow bidirectional path containment", async () => {
             const mockConfig: TenexMCP = {
                 servers: {
-                    "server1": {
+                    server1: {
                         command: "node",
                         args: ["server.js"],
                         allowedPaths: ["/home/user"],
                     },
-                    "server2": {
+                    server2: {
                         command: "node",
                         args: ["server2.js"],
                         allowedPaths: ["/home/user/project/data"],
@@ -319,8 +319,8 @@ describe("MCPService", () => {
             const tool = tools[0];
 
             expect(tool.parameters).toHaveLength(3);
-            
-            const inputParam = tool.parameters.find(p => p.name === "input");
+
+            const inputParam = tool.parameters.find((p) => p.name === "input");
             expect(inputParam).toEqual({
                 name: "input",
                 type: "string",
@@ -328,7 +328,7 @@ describe("MCPService", () => {
                 required: true,
             });
 
-            const countParam = tool.parameters.find(p => p.name === "count");
+            const countParam = tool.parameters.find((p) => p.name === "count");
             expect(countParam).toEqual({
                 name: "count",
                 type: "number",
@@ -336,7 +336,7 @@ describe("MCPService", () => {
                 required: false,
             });
 
-            const enabledParam = tool.parameters.find(p => p.name === "enabled");
+            const enabledParam = tool.parameters.find((p) => p.name === "enabled");
             expect(enabledParam).toEqual({
                 name: "enabled",
                 type: "boolean",
@@ -382,15 +382,15 @@ describe("MCPService", () => {
             const tools = await service.getAvailableTools();
             const tool = tools[0];
 
-            const nestedParam = tool.parameters.find(p => p.name === "nested");
+            const nestedParam = tool.parameters.find((p) => p.name === "nested");
             expect(nestedParam?.type).toBe("object");
             expect(nestedParam?.required).toBe(true);
 
-            const itemsParam = tool.parameters.find(p => p.name === "items");
+            const itemsParam = tool.parameters.find((p) => p.name === "items");
             expect(itemsParam?.type).toBe("array");
             expect(itemsParam?.required).toBe(true);
 
-            const choiceParam = tool.parameters.find(p => p.name === "choice");
+            const choiceParam = tool.parameters.find((p) => p.name === "choice");
             expect(choiceParam?.type).toBe("string");
             expect(choiceParam?.required).toBe(false);
         });
@@ -439,24 +439,24 @@ describe("MCPService", () => {
                 params: {
                     name: "test-tool",
                     arguments: { input: "test input" },
-                }
+                },
             });
             expect(result).toBe("Tool result");
         });
 
         it("should throw error for unknown server", async () => {
-            await expect(
-                service.executeTool("unknown-server", "test-tool", {})
-            ).rejects.toThrow("Server 'unknown-server' not found");
+            await expect(service.executeTool("unknown-server", "test-tool", {})).rejects.toThrow(
+                "Server 'unknown-server' not found"
+            );
         });
 
         it("should throw error if server is not running", async () => {
             // Kill the process to simulate server crash
             (service as any).clients.get("test-server").process.killed = true;
 
-            await expect(
-                service.executeTool("test-server", "test-tool", {})
-            ).rejects.toThrow("Server 'test-server' is not running");
+            await expect(service.executeTool("test-server", "test-tool", {})).rejects.toThrow(
+                "Server 'test-server' is not running"
+            );
         });
 
         it("should handle tool execution errors", async () => {
@@ -467,9 +467,9 @@ describe("MCPService", () => {
                 return Promise.reject(new Error("Unknown method"));
             });
 
-            await expect(
-                service.executeTool("test-server", "test-tool", {})
-            ).rejects.toThrow("Tool failed");
+            await expect(service.executeTool("test-server", "test-tool", {})).rejects.toThrow(
+                "Tool failed"
+            );
         });
 
         it("should handle non-text content responses", async () => {
@@ -494,11 +494,11 @@ describe("MCPService", () => {
         beforeEach(async () => {
             const mockConfig: TenexMCP = {
                 servers: {
-                    "server1": {
+                    server1: {
                         command: "node",
                         args: ["server1.js"],
                     },
-                    "server2": {
+                    server2: {
                         command: "node",
                         args: ["server2.js"],
                     },
@@ -542,7 +542,7 @@ describe("MCPService", () => {
             const shutdownPromise = service.shutdown();
 
             // Wait a bit but don't call exit callback
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
 
             // Force the timeout
             await shutdownPromise;
@@ -631,7 +631,7 @@ describe("MCPService", () => {
             });
 
             await service.initialize("/test/project");
-            
+
             // Should allow since /test/project starts with /test
             expect(StdioClientTransport).toHaveBeenCalled();
         });
@@ -653,7 +653,7 @@ describe("MCPService", () => {
             });
 
             await service.initialize("/test/project");
-            
+
             expect(StdioClientTransport).toHaveBeenCalled();
         });
     });

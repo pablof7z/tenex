@@ -7,10 +7,10 @@ const DEFAULT_RELAY_URLS = ["wss://relay.primal.net"];
  * Get relay URLs for NDK connection
  */
 export function getRelayUrls(): string[] {
-  const relaysEnv = process.env.RELAYS;
-  if (relaysEnv) {
-    return relaysEnv.split(",").map((url) => url.trim());
-  }
+    const relaysEnv = process.env.RELAYS;
+    if (relaysEnv) {
+        return relaysEnv.split(",").map((url) => url.trim());
+    }
 
-  return DEFAULT_RELAY_URLS;
+    return DEFAULT_RELAY_URLS;
 }

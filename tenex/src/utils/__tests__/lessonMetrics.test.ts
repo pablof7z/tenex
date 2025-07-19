@@ -27,17 +27,17 @@ function createMockLesson(params: {
     createdAt?: number;
 }): NDKAgentLesson {
     const tags: string[][] = [];
-    
+
     if (params.phase) {
         tags.push(["phase", params.phase]);
     }
-    
+
     if (params.keywords) {
-        params.keywords.forEach(keyword => {
+        params.keywords.forEach((keyword) => {
             tags.push(["t", keyword]);
         });
     }
-    
+
     return {
         id: params.id,
         pubkey: params.pubkey,
@@ -50,9 +50,12 @@ function createMockLesson(params: {
 }
 
 // Helper to create mock ProjectContext
-function createMockProjectContext(lessons: NDKAgentLesson[], agents: { name: string; pubkey: string }[]): ProjectContext {
-    const agentsMap = new Map(agents.map(a => [a.pubkey, a]));
-    
+function createMockProjectContext(
+    lessons: NDKAgentLesson[],
+    agents: { name: string; pubkey: string }[]
+): ProjectContext {
+    const agentsMap = new Map(agents.map((a) => [a.pubkey, a]));
+
     return {
         getAllLessons: () => lessons,
         agents: agentsMap,
@@ -68,7 +71,7 @@ describe("Lesson Metrics", () => {
         it("should calculate basic metrics for empty lesson set", () => {
             const projectCtx = createMockProjectContext([], []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.totalLessons).toBe(0);
             expect(metrics.lessonsByAgent.size).toBe(0);
             expect(metrics.lessonsByPhase.size).toBe(0);
@@ -86,16 +89,16 @@ describe("Lesson Metrics", () => {
                 createMockLesson({ id: "4", pubkey: "agent3", title: "L4", lesson: "Test" }),
                 createMockLesson({ id: "5", pubkey: "agent1", title: "L5", lesson: "Test" }),
             ];
-            
+
             const agents = [
                 { name: "dev-senior", pubkey: "agent1" },
                 { name: "pm", pubkey: "agent2" },
                 { name: "reviewer", pubkey: "agent3" },
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, agents);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.totalLessons).toBe(5);
             expect(metrics.lessonsByAgent.get("dev-senior")).toBe(3);
             expect(metrics.lessonsByAgent.get("pm")).toBe(1);
@@ -106,25 +109,49 @@ describe("Lesson Metrics", () => {
             const lessons = [
                 createMockLesson({ id: "1", pubkey: "unknown-agent", title: "L1", lesson: "Test" }),
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.lessonsByAgent.get("Unknown")).toBe(1);
         });
 
         it("should count lessons by phase", () => {
             const lessons = [
-                createMockLesson({ id: "1", pubkey: "a1", title: "L1", lesson: "Test", phase: "planning" }),
-                createMockLesson({ id: "2", pubkey: "a1", title: "L2", lesson: "Test", phase: "building" }),
-                createMockLesson({ id: "3", pubkey: "a1", title: "L3", lesson: "Test", phase: "building" }),
-                createMockLesson({ id: "4", pubkey: "a1", title: "L4", lesson: "Test", phase: "planning" }),
+                createMockLesson({
+                    id: "1",
+                    pubkey: "a1",
+                    title: "L1",
+                    lesson: "Test",
+                    phase: "planning",
+                }),
+                createMockLesson({
+                    id: "2",
+                    pubkey: "a1",
+                    title: "L2",
+                    lesson: "Test",
+                    phase: "building",
+                }),
+                createMockLesson({
+                    id: "3",
+                    pubkey: "a1",
+                    title: "L3",
+                    lesson: "Test",
+                    phase: "building",
+                }),
+                createMockLesson({
+                    id: "4",
+                    pubkey: "a1",
+                    title: "L4",
+                    lesson: "Test",
+                    phase: "planning",
+                }),
                 createMockLesson({ id: "5", pubkey: "a1", title: "L5", lesson: "Test" }), // No phase
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.lessonsByPhase.get("planning")).toBe(2);
             expect(metrics.lessonsByPhase.get("building")).toBe(2);
             expect(metrics.lessonsByPhase.get("unknown")).toBe(1);
@@ -132,16 +159,46 @@ describe("Lesson Metrics", () => {
 
         it("should count and rank keywords", () => {
             const lessons = [
-                createMockLesson({ id: "1", pubkey: "a1", title: "L1", lesson: "Test", keywords: ["typescript", "async"] }),
-                createMockLesson({ id: "2", pubkey: "a1", title: "L2", lesson: "Test", keywords: ["typescript", "react"] }),
-                createMockLesson({ id: "3", pubkey: "a1", title: "L3", lesson: "Test", keywords: ["async", "promises"] }),
-                createMockLesson({ id: "4", pubkey: "a1", title: "L4", lesson: "Test", keywords: ["typescript"] }),
-                createMockLesson({ id: "5", pubkey: "a1", title: "L5", lesson: "Test", keywords: ["git", "rebase"] }),
+                createMockLesson({
+                    id: "1",
+                    pubkey: "a1",
+                    title: "L1",
+                    lesson: "Test",
+                    keywords: ["typescript", "async"],
+                }),
+                createMockLesson({
+                    id: "2",
+                    pubkey: "a1",
+                    title: "L2",
+                    lesson: "Test",
+                    keywords: ["typescript", "react"],
+                }),
+                createMockLesson({
+                    id: "3",
+                    pubkey: "a1",
+                    title: "L3",
+                    lesson: "Test",
+                    keywords: ["async", "promises"],
+                }),
+                createMockLesson({
+                    id: "4",
+                    pubkey: "a1",
+                    title: "L4",
+                    lesson: "Test",
+                    keywords: ["typescript"],
+                }),
+                createMockLesson({
+                    id: "5",
+                    pubkey: "a1",
+                    title: "L5",
+                    lesson: "Test",
+                    keywords: ["git", "rebase"],
+                }),
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.mostCommonKeywords).toHaveLength(6);
             expect(metrics.mostCommonKeywords[0]).toEqual({ keyword: "typescript", count: 3 });
             expect(metrics.mostCommonKeywords[1]).toEqual({ keyword: "async", count: 2 });
@@ -152,31 +209,38 @@ describe("Lesson Metrics", () => {
             const lessons = [];
             // Create lessons with 15 unique keywords
             for (let i = 0; i < 15; i++) {
-                lessons.push(createMockLesson({
-                    id: `${i}`,
-                    pubkey: "a1",
-                    title: `L${i}`,
-                    lesson: "Test",
-                    keywords: [`keyword${i}`],
-                }));
+                lessons.push(
+                    createMockLesson({
+                        id: `${i}`,
+                        pubkey: "a1",
+                        title: `L${i}`,
+                        lesson: "Test",
+                        keywords: [`keyword${i}`],
+                    })
+                );
             }
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.mostCommonKeywords).toHaveLength(10);
         });
 
         it("should calculate average lesson length", () => {
             const lessons = [
                 createMockLesson({ id: "1", pubkey: "a1", title: "L1", lesson: "Short" }), // 5 chars
-                createMockLesson({ id: "2", pubkey: "a1", title: "L2", lesson: "A bit longer lesson" }), // 19 chars
+                createMockLesson({
+                    id: "2",
+                    pubkey: "a1",
+                    title: "L2",
+                    lesson: "A bit longer lesson",
+                }), // 19 chars
                 createMockLesson({ id: "3", pubkey: "a1", title: "L3", lesson: "Medium length" }), // 13 chars
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             // (5 + 19 + 13) / 3 = 37 / 3 = 12.33... rounds to 12
             expect(metrics.averageLessonLength).toBe(12);
         });
@@ -189,25 +253,49 @@ describe("Lesson Metrics", () => {
                 content: "Content instead of lesson", // 25 chars
                 tags: [],
             } as NDKAgentLesson;
-            
+
             const projectCtx = createMockProjectContext([lesson], []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.averageLessonLength).toBe(25);
         });
 
         it("should track oldest and newest lessons", () => {
             const now = Date.now() / 1000; // Current time in seconds
             const lessons = [
-                createMockLesson({ id: "1", pubkey: "a1", title: "L1", lesson: "Test", createdAt: now - 86400 }), // 1 day ago
-                createMockLesson({ id: "2", pubkey: "a1", title: "L2", lesson: "Test", createdAt: now - 3600 }), // 1 hour ago
-                createMockLesson({ id: "3", pubkey: "a1", title: "L3", lesson: "Test", createdAt: now - 7200 }), // 2 hours ago
-                createMockLesson({ id: "4", pubkey: "a1", title: "L4", lesson: "Test", createdAt: now }), // Now
+                createMockLesson({
+                    id: "1",
+                    pubkey: "a1",
+                    title: "L1",
+                    lesson: "Test",
+                    createdAt: now - 86400,
+                }), // 1 day ago
+                createMockLesson({
+                    id: "2",
+                    pubkey: "a1",
+                    title: "L2",
+                    lesson: "Test",
+                    createdAt: now - 3600,
+                }), // 1 hour ago
+                createMockLesson({
+                    id: "3",
+                    pubkey: "a1",
+                    title: "L3",
+                    lesson: "Test",
+                    createdAt: now - 7200,
+                }), // 2 hours ago
+                createMockLesson({
+                    id: "4",
+                    pubkey: "a1",
+                    title: "L4",
+                    lesson: "Test",
+                    createdAt: now,
+                }), // Now
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.oldestLesson).toBeDefined();
             expect(metrics.newestLesson).toBeDefined();
             expect(metrics.oldestLesson!.getTime()).toBe((now - 86400) * 1000);
@@ -217,12 +305,18 @@ describe("Lesson Metrics", () => {
         it("should handle lessons without timestamps", () => {
             const lessons = [
                 createMockLesson({ id: "1", pubkey: "a1", title: "L1", lesson: "Test" }), // No timestamp
-                createMockLesson({ id: "2", pubkey: "a1", title: "L2", lesson: "Test", createdAt: 0 }), // Zero timestamp
+                createMockLesson({
+                    id: "2",
+                    pubkey: "a1",
+                    title: "L2",
+                    lesson: "Test",
+                    createdAt: 0,
+                }), // Zero timestamp
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, []);
             const metrics = calculateLessonMetrics(projectCtx);
-            
+
             expect(metrics.oldestLesson).toBeUndefined();
             expect(metrics.newestLesson).toBeUndefined();
         });
@@ -234,17 +328,17 @@ describe("Lesson Metrics", () => {
                 { id: "3", pubkey: "malformed2", tags: [] } as any, // Has pubkey but minimal data
                 createMockLesson({ id: "4", pubkey: "a2", title: "L2", lesson: "Another valid" }),
             ];
-            
+
             const agents = [
                 { name: "agent1", pubkey: "a1" },
                 { name: "agent2", pubkey: "a2" },
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, agents);
-            
+
             // Should not throw
             expect(() => calculateLessonMetrics(projectCtx)).not.toThrow();
-            
+
             const metrics = calculateLessonMetrics(projectCtx);
             expect(metrics.totalLessons).toBe(4); // All lessons counted, even malformed ones
             expect(metrics.lessonsByAgent.get("Unknown")).toBe(2); // Malformed lessons counted as Unknown (no matching agent)
@@ -253,14 +347,14 @@ describe("Lesson Metrics", () => {
         });
 
         it("should skip lessons with null or undefined tags", () => {
-            const validLesson = createMockLesson({ 
-                id: "1", 
-                pubkey: "a1", 
-                title: "Valid", 
+            const validLesson = createMockLesson({
+                id: "1",
+                pubkey: "a1",
+                title: "Valid",
                 lesson: "Valid lesson",
                 keywords: ["test"],
             });
-            
+
             // Create lessons with various malformed structures
             const lessons = [
                 validLesson,
@@ -268,14 +362,14 @@ describe("Lesson Metrics", () => {
                 { id: "3", tags: undefined } as any, // undefined tags
                 { id: "4" } as any, // no tags property at all
             ];
-            
+
             // We need to update the implementation to handle this gracefully
             // For now, let's create a wrapper that filters out truly malformed lessons
             const safeProjectCtx = {
-                getAllLessons: () => lessons.filter(l => l.tags && Array.isArray(l.tags)),
+                getAllLessons: () => lessons.filter((l) => l.tags && Array.isArray(l.tags)),
                 agents: new Map([["a1", { name: "agent1", pubkey: "a1" }]]),
             } as ProjectContext;
-            
+
             const metrics = calculateLessonMetrics(safeProjectCtx);
             expect(metrics.totalLessons).toBe(1); // Only the valid lesson
             expect(metrics.mostCommonKeywords).toEqual([{ keyword: "test", count: 1 }]);
@@ -285,35 +379,35 @@ describe("Lesson Metrics", () => {
     describe("logLessonMetrics", () => {
         it("should log comprehensive metrics", () => {
             const lessons = [
-                createMockLesson({ 
-                    id: "1", 
-                    pubkey: "agent1", 
-                    title: "L1", 
+                createMockLesson({
+                    id: "1",
+                    pubkey: "agent1",
+                    title: "L1",
                     lesson: "Test lesson content",
                     phase: "planning",
                     keywords: ["typescript", "async"],
                     createdAt: 1000000,
                 }),
-                createMockLesson({ 
-                    id: "2", 
-                    pubkey: "agent2", 
-                    title: "L2", 
+                createMockLesson({
+                    id: "2",
+                    pubkey: "agent2",
+                    title: "L2",
                     lesson: "Another lesson",
                     phase: "building",
                     keywords: ["react", "typescript"],
                     createdAt: 2000000,
                 }),
             ];
-            
+
             const agents = [
                 { name: "dev-senior", pubkey: "agent1" },
                 { name: "pm", pubkey: "agent2" },
             ];
-            
+
             const projectCtx = createMockProjectContext(lessons, agents);
-            
+
             logLessonMetrics(projectCtx);
-            
+
             expect(logger.info).toHaveBeenCalledWith(
                 "📊 Lesson System Metrics",
                 expect.objectContaining({
@@ -321,11 +415,11 @@ describe("Lesson Metrics", () => {
                     averageLessonLength: expect.any(Number),
                     lessonsByAgent: expect.objectContaining({
                         "dev-senior": 1,
-                        "pm": 1,
+                        pm: 1,
                     }),
                     lessonsByPhase: expect.objectContaining({
-                        "planning": 1,
-                        "building": 1,
+                        planning: 1,
+                        building: 1,
                     }),
                     topKeywords: expect.stringContaining("typescript(2)"),
                     dateRange: expect.objectContaining({
@@ -339,9 +433,9 @@ describe("Lesson Metrics", () => {
 
         it("should handle empty lesson set", () => {
             const projectCtx = createMockProjectContext([], []);
-            
+
             logLessonMetrics(projectCtx);
-            
+
             expect(logger.info).toHaveBeenCalledWith(
                 "📊 Lesson System Metrics",
                 expect.objectContaining({
@@ -368,9 +462,9 @@ describe("Lesson Metrics", () => {
                     keywords: ["react", "performance"],
                 },
             ];
-            
+
             logLessonUsage("pm", "pm-pubkey-123", lessonsShown);
-            
+
             expect(logger.info).toHaveBeenCalledWith(
                 "📖 Lesson usage tracking",
                 expect.objectContaining({
@@ -398,7 +492,7 @@ describe("Lesson Metrics", () => {
 
         it("should handle empty lessons array", () => {
             logLessonUsage("agent", "pubkey", []);
-            
+
             expect(logger.info).toHaveBeenCalledWith(
                 "📖 Lesson usage tracking",
                 expect.objectContaining({
@@ -418,16 +512,16 @@ describe("Lesson Metrics", () => {
                 lesson: "Always use async/await for better error handling and readability",
                 keywords: ["typescript", "async", "error-handling"],
             });
-            
+
             const context = {
                 phase: "building",
                 conversationId: "conv-456",
                 totalLessonsForAgent: 5,
                 totalLessonsInProject: 20,
             };
-            
+
             logLessonCreationPattern(lesson, "dev-senior", context);
-            
+
             expect(logger.info).toHaveBeenCalledWith(
                 "🎓 Lesson creation pattern",
                 expect.objectContaining({
@@ -453,16 +547,16 @@ describe("Lesson Metrics", () => {
                 title: "Quick Fix",
                 lesson: "Fixed the bug",
             });
-            
+
             const context = {
                 phase: "debugging",
                 conversationId: "conv-789",
                 totalLessonsForAgent: 1,
                 totalLessonsInProject: 10,
             };
-            
+
             logLessonCreationPattern(lesson, "debugger", context);
-            
+
             expect(logger.info).toHaveBeenCalledWith(
                 "🎓 Lesson creation pattern",
                 expect.objectContaining({

@@ -7,9 +7,9 @@ import type { StoredAgentData } from "../types";
  * Tools are assigned dynamically in AgentRegistry based on isOrchestrator flag
  */
 export const ORCHESTRATOR_AGENT_DEFINITION: StoredAgentData = {
-  name: "Orchestrator",
-  role: "Coordinates complex workflows by delegating tasks to specialized agents.",
-  instructions: `Your ONLY responsibilities:
+    name: "Orchestrator",
+    role: "Coordinates complex workflows by delegating tasks to specialized agents.",
+    instructions: `Your ONLY responsibilities:
 - Route user requests to the appropriate specialist agents
 - Pass along EXACTLY what the user said - nothing more, nothing less
 - Manage phase transitions (chat → plan/execute → verification → chores → reflection)
@@ -37,5 +37,5 @@ Key behaviors:
 - Use end_conversation() only when all phases are done to end the conversation with a comprehensive summary
 - NEVER write a message when using continue(); you just need to route, not chit-chat with the user.
 `,
-  llmConfig: "orchestrator",
+    llmConfig: "orchestrator",
 };

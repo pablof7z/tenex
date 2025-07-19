@@ -46,7 +46,7 @@ describe("Execution Time Tracking", () => {
         it("should initialize execution time structure correctly", () => {
             const conversation = createTestConversation("test-conv-1");
             initializeExecutionTime(conversation);
-            
+
             expect(conversation.executionTime).toBeDefined();
             expect(conversation.executionTime.totalSeconds).toBe(0);
             expect(conversation.executionTime.currentSessionStart).toBeUndefined();
@@ -66,13 +66,13 @@ describe("Execution Time Tracking", () => {
 
         it("should not restart if already active", () => {
             const conversation = createTestConversation("test-conv-3");
-            
+
             startExecutionTime(conversation);
             const firstStart = conversation.executionTime.currentSessionStart;
-            
+
             mockTime += 1000;
             startExecutionTime(conversation); // Try to start again
-            
+
             // Should not change the start time
             expect(conversation.executionTime.currentSessionStart).toBe(firstStart);
         });
@@ -111,19 +111,19 @@ describe("Execution Time Tracking", () => {
 
         it("should correctly check if execution is active", () => {
             const conversation = createTestConversation("test-conv-7");
-            
+
             expect(isExecutionActive(conversation)).toBe(false);
-            
+
             startExecutionTime(conversation);
             expect(isExecutionActive(conversation)).toBe(true);
-            
+
             stopExecutionTime(conversation);
             expect(isExecutionActive(conversation)).toBe(false);
         });
 
         it("should handle stop when not active", () => {
             const conversation = createTestConversation("test-conv-8");
-            
+
             const duration = stopExecutionTime(conversation);
             expect(duration).toBe(0);
             expect(conversation.executionTime.totalSeconds).toBe(0);
@@ -156,7 +156,7 @@ describe("Execution Time Tracking", () => {
 
         it("should handle very large time values without overflow", () => {
             const conversation = createTestConversation("test-conv-10");
-            
+
             startExecutionTime(conversation);
             mockTime += 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
             stopExecutionTime(conversation);
@@ -167,7 +167,7 @@ describe("Execution Time Tracking", () => {
 
         it("should round seconds correctly", () => {
             const conversation = createTestConversation("test-conv-11");
-            
+
             startExecutionTime(conversation);
             mockTime += 1499; // Just under 1.5 seconds
             stopExecutionTime(conversation);
@@ -193,7 +193,7 @@ describe("Execution Time Tracking", () => {
             };
 
             ensureExecutionTimeInitialized(conversation);
-            
+
             expect(conversation.executionTime).toBeDefined();
             expect(conversation.executionTime.totalSeconds).toBe(0);
             expect(conversation.executionTime.isActive).toBe(false);
@@ -206,7 +206,7 @@ describe("Execution Time Tracking", () => {
             conversation.executionTime.lastUpdated = mockTime - 45 * 60 * 1000;
 
             ensureExecutionTimeInitialized(conversation);
-            
+
             expect(conversation.executionTime.isActive).toBe(false);
             expect(conversation.executionTime.currentSessionStart).toBeUndefined();
             expect(conversation.executionTime.lastUpdated).toBe(mockTime);
@@ -219,7 +219,7 @@ describe("Execution Time Tracking", () => {
             conversation.executionTime.lastUpdated = mockTime - 10 * 60 * 1000;
 
             ensureExecutionTimeInitialized(conversation);
-            
+
             expect(conversation.executionTime.isActive).toBe(true); // Still active
             expect(conversation.executionTime.currentSessionStart).toBe(mockTime - 10 * 60 * 1000);
         });
@@ -239,7 +239,7 @@ describe("Execution Time Tracking", () => {
             };
 
             ensureExecutionTimeInitialized(conversation);
-            
+
             expect(conversation.executionTime.totalSeconds).toBe(100); // Preserved
             expect(conversation.executionTime.currentSessionStart).toBeUndefined();
             // lastUpdated is only set if we need to reset stale sessions
@@ -262,7 +262,7 @@ describe("Execution Time Tracking", () => {
 
         it("should handle rapid start/stop cycles", () => {
             const conversation = createTestConversation("rapid-1");
-            
+
             // Simulate rapid tool executions with longer durations
             for (let i = 0; i < 5; i++) {
                 startExecutionTime(conversation);

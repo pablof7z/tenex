@@ -3,9 +3,9 @@ import type { PromptFragment } from "../core/types";
 
 // Orchestrator Agent routing decision instructions
 export const orchestratorRoutingInstructionsFragment: PromptFragment<Record<string, never>> = {
-  id: "orchestrator-routing-instructions",
-  priority: 25,
-  template: () => `## Orchestrator Agent Routing Instructions
+    id: "orchestrator-routing-instructions",
+    priority: 25,
+    template: () => `## Orchestrator Agent Routing Instructions
 
 As an Orchestrator agent, you route work to the appropriate phases and agents. You have access to the 'continue' tool for delegation.
 
@@ -104,9 +104,9 @@ Collect these summaries to build context for subsequent routing decisions.
 
 // Orchestrator Agent handoff guidance
 export const orchestratorHandoffGuidanceFragment: PromptFragment<Record<string, never>> = {
-  id: "orchestrator-handoff-guidance",
-  priority: 26,
-  template: () => `## Orchestrator Handoff Guidance
+    id: "orchestrator-handoff-guidance",
+    priority: 26,
+    template: () => `## Orchestrator Handoff Guidance
 
 ### Agent Capabilities Match
 Route tasks to agents based on their specialized domain expertise and available capabilities.

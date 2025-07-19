@@ -4,8 +4,8 @@
 
 export { ConfigService, configService } from "./ConfigService";
 export {
-  ProjectContext,
-  getProjectContext,
-  setProjectContext,
-  isProjectContextInitialized,
+    ProjectContext,
+    getProjectContext,
+    setProjectContext,
+    isProjectContextInitialized,
 } from "./ProjectContext";
