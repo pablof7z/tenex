@@ -233,7 +233,32 @@ This is just a map for you to be quickly situated.
                 parts.push(`## Project Context
 This is a fresh project with no files yet.`);
             } else {
-                parts.push(`## Project Context
+                // Count total files to determine if we should strongly recommend inventory generation
+                const totalFileCount = countTotalFiles(process.cwd());
+                
+                if (totalFileCount > 15) {
+                    parts.push(`## Project Context
+
+⚠️ **IMPORTANT: Project Inventory Recommended**
+
+This project contains ${totalFileCount} files but lacks a proper inventory. For optimal results, we strongly recommend having the @project-manager agent explore and familiarize itself with the codebase first.
+
+**To generate an inventory, ask:** "@project-manager please explore this project and generate an initial inventory"
+
+This will help all agents better understand:
+- Project structure and architecture
+- Key files and their purposes
+- Technology stack and dependencies
+- Coding patterns and conventions
+
+**Current file structure:**
+
+\`\`\`
+${tree}
+\`\`\`
+`);
+                } else {
+                    parts.push(`## Project Context
 
 A proper project inventory does not exist yet. The @project-manager agent can generate a comprehensive inventory to improve results.
 
@@ -243,13 +268,14 @@ Here is a basic file structure we created for you:
 ${tree}
 \`\`\`
 `);
+                }
             }
         }
 
         // Add context files listing if available
         if (contextFiles && contextFiles.length > 0) {
             parts.push(`### Additional Context Files
-The following documentation files are available in the context/ directory and can be read using the read_file tool:
+The following documentation files are available in the context/ directory and can be read using the read_path tool:
 ${contextFiles.map((f) => `- context/${f}`).join("\n")}`);
         }
 
