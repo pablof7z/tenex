@@ -65,7 +65,7 @@ describe("AgentRegistry", () => {
                 role: "Software Developer",
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
-                tools: ["read_file", "analyze"],
+                tools: ["read_path", "analyze"],
                 llmConfig: "default",
             };
 
@@ -74,7 +74,7 @@ describe("AgentRegistry", () => {
                 role: "Code Reviewer",
                 expertise: "Code quality",
                 instructions: "Review code thoroughly",
-                tools: ["read_file"],
+                tools: ["read_path"],
                 llmConfig: "fast",
             };
 
@@ -102,14 +102,14 @@ describe("AgentRegistry", () => {
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
                 nsec: "",
-                tools: ["read_file", "analyze"],
+                tools: ["read_path", "analyze"],
                 llmConfig: "default",
             });
 
             expect(developer).toBeDefined();
             expect(developer?.name).toBe("Developer");
             expect(developer?.role).toBe("Software Developer");
-            expect(developer?.tools.map((t) => t.name)).toEqual(["read_file", "analyze"]);
+            expect(developer?.tools.map((t) => t.name)).toEqual(["read_path", "analyze"]);
 
             // Ensure agent reviewer
             const reviewer = await registry.ensureAgent("reviewer", {
@@ -118,7 +118,7 @@ describe("AgentRegistry", () => {
                 expertise: "Code quality",
                 instructions: "Review code thoroughly",
                 nsec: "",
-                tools: ["read_file"],
+                tools: ["read_path"],
                 llmConfig: "fast",
             });
 
@@ -254,7 +254,7 @@ describe("AgentRegistry", () => {
                 expertise: "Testing",
                 instructions: "Test everything",
                 nsec: "",
-                tools: ["read_file", "analyze"],
+                tools: ["read_path", "analyze"],
                 llmConfig: "fast",
             };
 
@@ -270,7 +270,7 @@ describe("AgentRegistry", () => {
                 name: "TestAgent",
                 role: "Tester",
                 instructions: "Test everything",
-                tools: ["read_file", "analyze"],
+                tools: ["read_path", "analyze"],
                 llmConfig: "fast",
             });
 
@@ -414,7 +414,7 @@ describe("AgentRegistry", () => {
                 role: "Software Developer",
                 expertise: "Full-stack development",
                 instructions: "Write clean code",
-                tools: ["read_file", "analyze"],
+                tools: ["read_path", "analyze"],
                 llmConfig: "default",
             };
 

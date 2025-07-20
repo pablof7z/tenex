@@ -4,13 +4,13 @@ import { getTool } from "@/tools/registry";
 describe("Tool Registry", () => {
     test("should have tools with structured parameters", () => {
         // Test that the tool registry has proper structure
-        const readFileTool = getTool("read_file");
-        expect(readFileTool).toBeDefined();
-        expect(readFileTool?.description).toContain("Read a file from the filesystem");
-        expect(readFileTool?.parameters).toBeDefined();
-        expect(readFileTool?.parameters.shape).toBeDefined();
-        expect(readFileTool?.parameters.validate).toBeInstanceOf(Function);
-        expect(readFileTool?.execute).toBeInstanceOf(Function);
+        const readPathTool = getTool("read_path");
+        expect(readPathTool).toBeDefined();
+        expect(readPathTool?.description).toContain("Read a file or directory from the filesystem");
+        expect(readPathTool?.parameters).toBeDefined();
+        expect(readPathTool?.parameters.shape).toBeDefined();
+        expect(readPathTool?.parameters.validate).toBeInstanceOf(Function);
+        expect(readPathTool?.execute).toBeInstanceOf(Function);
 
         const analyzeTool = getTool("analyze");
         expect(analyzeTool).toBeDefined();
@@ -42,7 +42,7 @@ describe("Tool Registry", () => {
 
     test("tool registry should have all expected tools with proper structure", () => {
         const expectedTools = [
-            "read_file",
+            "read_path",
             "write_context_file",
             "continue",
             "complete",

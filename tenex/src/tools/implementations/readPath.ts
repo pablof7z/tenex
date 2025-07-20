@@ -5,22 +5,22 @@ import { createZodSchema } from "../types";
 import { resolveAndValidatePath } from "../utils";
 import { z } from "zod";
 
-const readFileSchema = z.object({
-    path: z.string().describe("The file path to read (absolute or relative to project root)"),
+const readPathSchema = z.object({
+    path: z.string().describe("The file or directory path to read (absolute or relative to project root)"),
 });
 
-type ReadFileInput = z.infer<typeof readFileSchema>;
-type ReadFileOutput = string;
+type ReadPathInput = z.infer<typeof readPathSchema>;
+type ReadPathOutput = string;
 
 /**
- * Read file tool - effect tool that reads files from filesystem
+ * Read path tool - effect tool that reads files or directories from filesystem
  * Performs I/O side effects
  */
-export const readFileTool: Tool<ReadFileInput, ReadFileOutput> = {
-    name: "read_file",
-    description: "Read a file from the filesystem",
+export const readPathTool: Tool<ReadPathInput, ReadPathOutput> = {
+    name: "read_path",
+    description: "Read a file or directory from the filesystem. Returns file contents for files, or directory listing for directories.",
 
-    parameters: createZodSchema(readFileSchema),
+    parameters: createZodSchema(readPathSchema),
 
     execute: async (input, context) => {
         const { path } = input.value;
@@ -79,7 +79,7 @@ export const readFileTool: Tool<ReadFileInput, ReadFileOutput> = {
                         ok: false,
                         error: {
                             kind: "execution" as const,
-                            tool: "read_file",
+                            tool: "read_path",
                             message: `Failed to read ${path}: ${error.message}`,
                             cause: error,
                         },
@@ -91,7 +91,7 @@ export const readFileTool: Tool<ReadFileInput, ReadFileOutput> = {
                 ok: false,
                 error: {
                     kind: "execution" as const,
-                    tool: "read_file",
+                    tool: "read_path",
                     message: `Failed to read ${path}: ${error instanceof Error ? error.message : "Unknown error"}`,
                     cause: error,
                 },

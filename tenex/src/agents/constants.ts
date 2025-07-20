@@ -4,7 +4,7 @@ import { continueTool } from "../tools/implementations/continue";
 import { endConversationTool } from "../tools/implementations/endConversation";
 import { generateInventoryTool } from "../tools/implementations/generateInventory";
 import { learnTool } from "../tools/implementations/learn";
-import { readFileTool } from "../tools/implementations/readFile";
+import { readPathTool } from "../tools/implementations/readPath";
 import { writeContextFileTool } from "@/tools/implementations/writeContextFile";
 import { completeTool } from "../tools/implementations/complete";
 import { shellTool } from "../tools/implementations/shell";
@@ -14,7 +14,7 @@ import { shellTool } from "../tools/implementations/shell";
  * All agents now have access to all tools except orchestrator-only tools
  */
 export function getDefaultToolsForAgent(agent: Agent): string[] {
-    let tools = [readFileTool.name, learnTool.name, analyze.name];
+    let tools = [readPathTool.name, learnTool.name, analyze.name];
 
     // Built-in agents
     if (agent.isBuiltIn) {

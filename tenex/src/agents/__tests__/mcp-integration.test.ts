@@ -44,7 +44,7 @@ describe("Agent-MCP Integration", () => {
             instructions: "Test MCP tools",
             signer,
             pubkey: (await signer.user()).pubkey,
-            tools: ["read_file"], // Native tool
+            tools: ["read_path"], // Native tool
             llmConfig: "default",
             slug: "test-agent",
         };
@@ -141,7 +141,7 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should include both native and MCP tools
-            expect(tools.some((t) => t.name === "read_file")).toBe(true); // Native tool
+            expect(tools.some((t) => t.name === "read_path")).toBe(true); // Native tool
             expect(tools.some((t) => t.name === "mcp__test-server__database-query")).toBe(true);
             expect(tools.some((t) => t.name === "mcp__test-server__api-call")).toBe(true);
         });
@@ -167,7 +167,7 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should only have native tools
-            expect(tools.some((t) => t.name === "read_file")).toBe(true);
+            expect(tools.some((t) => t.name === "read_path")).toBe(true);
             expect(tools.every((t) => !t.name.startsWith("mcp__"))).toBe(true); // No MCP tools
         });
     });
@@ -365,7 +365,7 @@ describe("Agent-MCP Integration", () => {
             const mockMCPTools: Tool[] = [
                 {
                     brand: { _brand: "effect" },
-                    name: "mcp__server__read_file", // Namespaced to avoid conflict with native "read_file"
+                    name: "mcp__server__read_file", // Namespaced to avoid conflict with native "read_path"
                     description: "Server read file command",
                     parameters: {
                         shape: {},
@@ -389,12 +389,12 @@ describe("Agent-MCP Integration", () => {
             const tools = await executor.getAvailableTools();
 
             // Should have both tools with different names
-            const nativeReadFile = tools.find((t) => t.name === "read_file");
+            const nativeReadPath = tools.find((t) => t.name === "read_path");
             const mcpReadFile = tools.find((t) => t.name === "mcp__server__read_file");
 
-            expect(nativeReadFile).toBeDefined();
+            expect(nativeReadPath).toBeDefined();
             expect(mcpReadFile).toBeDefined();
-            expect(nativeReadFile).not.toBe(mcpReadFile);
+            expect(nativeReadPath).not.toBe(mcpReadFile);
         });
 
         it("should validate tool names match namespace pattern", async () => {

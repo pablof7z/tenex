@@ -4,7 +4,7 @@ import { createMilestoneTaskTool } from "./implementations/createMilestoneTask";
 import { endConversationTool } from "./implementations/endConversation";
 import { generateInventoryTool } from "./implementations/generateInventory";
 import { learnTool } from "./implementations/learn";
-import { readFileTool } from "./implementations/readFile";
+import { readPathTool } from "./implementations/readPath";
 import { writeContextFileTool } from "./implementations/writeContextFile";
 import { completeTool } from "./implementations/complete";
 import { shellTool } from "./implementations/shell";
@@ -12,7 +12,7 @@ import type { Tool } from "./types";
 
 // Registry of all available tools
 const toolsMap = new Map<string, Tool<unknown, unknown>>();
-toolsMap.set("read_file", readFileTool as Tool<unknown, unknown>);
+toolsMap.set("read_path", readPathTool as Tool<unknown, unknown>);
 toolsMap.set("write_context_file", writeContextFileTool as Tool<unknown, unknown>);
 toolsMap.set("continue", continueTool as Tool<unknown, unknown>);
 toolsMap.set("complete", completeTool as Tool<unknown, unknown>);

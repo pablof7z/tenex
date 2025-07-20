@@ -22,5 +22,5 @@ When asked about the project, provide comprehensive answers that demonstrate you
     useCriteria:
         "ALWAYS during REFLECTION phase to analyze and learn from implementations. Also when users or other agents need to understand overall goals of the project.\nALWAYS during VERIFICATION phase.",
     llmConfig: "agents",
-    tools: ["read_file", "write_context_file", "analyze", "learn", "shell"],
+    tools: ["read_path", "write_context_file", "analyze", "learn", "shell"],
 };

@@ -15,7 +15,7 @@ describe("Agent Execution Prompt Fragments", () => {
                 name: "TestAgent",
                 role: "Developer",
                 instructions: "Test instructions",
-                tools: ["read_file", "analyze"],
+                tools: ["read_path", "analyze"],
                 pubkey: "test-pubkey",
                 signer: {} as any,
                 llmConfig: "test-config",

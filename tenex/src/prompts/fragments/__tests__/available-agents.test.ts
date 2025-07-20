@@ -22,7 +22,7 @@ describe("Available Agents Fragment", () => {
             isOrchestrator: false,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["read_file"],
+            tools: ["read_path"],
         },
         {
             name: "Backend Developer",
@@ -31,7 +31,7 @@ describe("Available Agents Fragment", () => {
             slug: "backend-dev",
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["read_file", "claude_code"],
+            tools: ["read_path", "claude_code"],
         },
     ];
 

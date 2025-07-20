@@ -23,7 +23,7 @@ describe("Agent Routing Integration", () => {
             isOrchestrator: false,
             signer: {} as any,
             llmConfig: "gpt-4",
-            tools: ["read_file"],
+            tools: ["read_path"],
         },
     ];
 

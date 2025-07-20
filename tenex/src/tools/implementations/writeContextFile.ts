@@ -93,7 +93,7 @@ export const writeContextFileTool: Tool<WriteContextFileInput, WriteContextFileO
                     error: {
                         kind: "validation" as const,
                         field: "filename",
-                        message: `You must read the file 'context/${filename}' before writing to it. Use the read_file tool first.`,
+                        message: `You must read the file 'context/${filename}' before writing to it. Use the read_path tool first.`,
                     },
                 };
             }

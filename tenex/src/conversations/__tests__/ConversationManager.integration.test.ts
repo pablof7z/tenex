@@ -344,7 +344,7 @@ describe("ConversationManager Integration Tests", () => {
             // Add various metadata
             await manager.updateMetadata("conv-meta", {
                 plan: "Build a web application",
-                tools_used: ["read_file", "analyze"],
+                tools_used: ["read_path", "analyze"],
                 agent_notes: {
                     developer: "Started implementation",
                     reviewer: "Code looks good",
@@ -360,7 +360,7 @@ describe("ConversationManager Integration Tests", () => {
 
             const loaded = newManager.getConversation("conv-meta");
             expect(loaded?.metadata.plan).toBe("Build a web application");
-            expect(loaded?.metadata.tools_used).toEqual(["read_file", "analyze"]);
+            expect(loaded?.metadata.tools_used).toEqual(["read_path", "analyze"]);
             expect(loaded?.metadata.agent_notes).toEqual({
                 developer: "Started implementation",
                 reviewer: "Code looks good",
