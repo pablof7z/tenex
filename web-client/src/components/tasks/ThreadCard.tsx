@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Clock, MessageCircle, Timer } from "lucide-react";
+import { useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { Clock, MessageCircle, Timer, Target, Play, CheckCircle, Settings } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 
@@ -12,6 +12,37 @@ interface ThreadOverviewProps {
 
 export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
     const { formatRelativeTime, formatDuration } = useTimeFormat({ relativeFormat: "short" });
+
+    // Subscribe to status updates (kind:1111) for this thread
+    const { events: statusUpdates } = useSubscribe(
+        thread
+            ? [
+                  {
+                      kinds: [1111],
+                      "#e": [thread.id],
+                  },
+              ]
+            : false,
+        {},
+        [thread.id]
+    );
+
+    // Get the most recent status update with a phase tag
+    const latestPhase = useMemo(() => {
+        if (!statusUpdates || statusUpdates.length === 0) return null;
+        
+        // Sort by created_at descending and find the first one with a phase tag
+        const sortedUpdates = [...statusUpdates].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+        
+        for (const update of sortedUpdates) {
+            const phase = update.tagValue("phase") || update.tagValue("new-phase");
+            if (phase) {
+                return phase;
+            }
+        }
+        
+        return null;
+    }, [statusUpdates]);
 
     // Get thread title
     const getThreadTitle = () => {
@@ -44,6 +75,36 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
         const netTimeTag = latestActivity.tags?.find((tag) => tag[0] === "net-time")?.[1];
         return netTimeTag ? parseInt(netTimeTag, 10) : null;
     }, [latestActivity]);
+
+    // Get phase icon and color
+    const getPhaseIcon = (phase: string | null) => {
+        if (!phase) return null;
+
+        const phaseIcons = {
+            chat: MessageCircle,
+            plan: Target,
+            execute: Play,
+            review: CheckCircle,
+            chores: Settings,
+        };
+
+        const IconComponent = phaseIcons[phase as keyof typeof phaseIcons];
+        return IconComponent ? <IconComponent className="w-3 h-3" /> : null;
+    };
+
+    const getPhaseColor = (phase: string | null) => {
+        if (!phase) return "bg-gray-500";
+
+        const phaseColors = {
+            chat: "bg-blue-500",
+            plan: "bg-purple-500",
+            execute: "bg-green-500",
+            review: "bg-orange-500",
+            chores: "bg-gray-500",
+        };
+
+        return phaseColors[phase as keyof typeof phaseColors] || "bg-gray-500";
+    };
 
     // Get author info
     const AuthorInfo = ({ pubkey }: { pubkey: string }) => {
@@ -92,7 +153,16 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
         >
             <div className="flex items-start gap-3">
                 <div className="mt-0.5">
-                    <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                    {latestPhase ? (
+                        <div
+                            className={`flex items-center justify-center w-6 h-6 rounded-full ${getPhaseColor(latestPhase)} text-white`}
+                            title={`Phase: ${latestPhase}`}
+                        >
+                            {getPhaseIcon(latestPhase)}
+                        </div>
+                    ) : (
+                        <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                    )}
                 </div>
                 <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-foreground mb-1">{getThreadTitle()}</h4>

@@ -10,6 +10,26 @@ interface InventoryContextArgs {
     phase: Phase;
 }
 
+// Helper function to count total files recursively
+function countTotalFiles(dir: string): number {
+    let count = 0;
+    try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
+                if (entry.isDirectory()) {
+                    count += countTotalFiles(path.join(dir, entry.name));
+                } else {
+                    count += 1;
+                }
+            }
+        }
+    } catch (error) {
+        logger.debug(`Could not count files in ${dir}`, { error });
+    }
+    return count;
+}
+
 // Helper function to get project files (excluding dot files/dirs)
 function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } {
     const projectFiles: string[] = [];
@@ -28,26 +48,6 @@ function getProjectFiles(): { files: string[]; isEmpty: boolean; tree: string } 
                     !entry.isDirectory()
                 ) {
                     count += 1;
-                }
-            }
-        } catch (error) {
-            logger.debug(`Could not count files in ${dir}`, { error });
-        }
-        return count;
-    }
-
-    // Helper function to count total files recursively
-    function countTotalFiles(dir: string): number {
-        let count = 0;
-        try {
-            const entries = fs.readdirSync(dir, { withFileTypes: true });
-            for (const entry of entries) {
-                if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
-                    if (entry.isDirectory()) {
-                        count += countTotalFiles(path.join(dir, entry.name));
-                    } else {
-                        count += 1;
-                    }
                 }
             }
         } catch (error) {
