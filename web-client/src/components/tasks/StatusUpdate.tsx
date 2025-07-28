@@ -35,6 +35,8 @@ import {
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { isAudioEvent } from "../../utils/audioEvents";
+import { VoiceMessage } from "../chat/VoiceMessage";
 
 interface StatusUpdateProps {
     event: NDKEvent;
@@ -606,11 +608,17 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                     </div>
 
                     {/* Message content */}
-                    <div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                            {processedContent.content}
-                        </ReactMarkdown>
-                    </div>
+                    {isAudioEvent(event) ? (
+                        <div className="mb-2">
+                            <VoiceMessage event={event} isFromCurrentUser={false} />
+                        </div>
+                    ) : (
+                        <div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                {processedContent.content}
+                            </ReactMarkdown>
+                        </div>
+                    )}
 
                     {/* Footer with commit info */}
                     {getCommitHash() && (

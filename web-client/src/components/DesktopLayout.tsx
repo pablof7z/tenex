@@ -4,6 +4,7 @@ import {
     type NDKTask,
     type NDKProject,
     useNDKCurrentUser,
+    useNDK,
 } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
@@ -21,15 +22,17 @@ import { LayoutDialogs } from "./layout/LayoutDialogs";
 import { LayoutDrawers } from "./layout/LayoutDrawers";
 import { ProjectDashboard } from "./layout/ProjectDashboard";
 import { ProjectSidebar } from "./layout/ProjectSidebar";
-import { VoiceRecorderDialog } from "./dialogs/VoiceRecorderDialog";
+import { VoiceDialog } from "./dialogs/VoiceDialog";
+import { toast } from "sonner";
 
 export function DesktopLayout() {
+    const { ndk } = useNDK();
     const currentUser = useNDKCurrentUser();
     const { goToProjectProfile } = useNavigation();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
-    const [showVoiceRecorderDialog, setShowVoiceRecorderDialog] = useState(false);
-    const [voiceRecorderProject, setVoiceRecorderProject] = useState<NDKProject | null>(null);
+    const [showVoiceDialog, setShowVoiceDialog] = useState(false);
+    const [voiceProject, setVoiceProject] = useState<NDKProject | null>(null);
     const [manuallyToggled, setManuallyToggled] = useState<Map<string, boolean>>(new Map());
     const [selectedTask, setSelectedTask] = useAtom(selectedTaskAtom);
     const [selectedThread, setSelectedThread] = useAtom(selectedThreadAtom);
@@ -96,8 +99,8 @@ export function DesktopLayout() {
     };
 
     const handleVoiceRecording = (project: NDKProject) => {
-        setVoiceRecorderProject(project);
-        setShowVoiceRecorderDialog(true);
+        setVoiceProject(project);
+        setShowVoiceDialog(true);
     };
 
     if (!currentUser) {
@@ -143,12 +146,52 @@ export function DesktopLayout() {
                 onSearchDialogChange={setShowSearchDialog}
             />
 
-            {/* Voice Recorder Dialog */}
-            {showVoiceRecorderDialog && voiceRecorderProject && (
-                <VoiceRecorderDialog
-                    open={showVoiceRecorderDialog}
-                    onOpenChange={setShowVoiceRecorderDialog}
-                    project={voiceRecorderProject}
+            {/* Voice Dialog */}
+            {showVoiceDialog && voiceProject && (
+                <VoiceDialog
+                    open={showVoiceDialog}
+                    onOpenChange={setShowVoiceDialog}
+                    onComplete={async (data) => {
+                        try {
+                            // Determine content type based on duration
+                            const isLongRecording = data.duration > 600; // 10 minutes
+
+                            if (isLongRecording) {
+                                // Create NDKArticle
+                                const article = new NDKArticle(ndk!);
+                                article.title = data.transcription.split("\n")[0]?.substring(0, 100) || "Voice Recording";
+                                article.content = data.transcription;
+                                article.tags.push(["a", voiceProject.tagId()]);
+
+                                // Add audio attachment if available
+                                if (data.audioUrl) {
+                                    article.tags.push(["audio", data.audioUrl]);
+                                }
+
+                                await article.publish();
+                                toast.success("Article created successfully");
+                            } else {
+                                // Create kind:11 thread
+                                const thread = new NDKEvent(ndk!);
+                                thread.kind = 11;
+                                thread.content = data.transcription;
+                                thread.tags.push(["a", voiceProject.tagId()]);
+
+                                // Add audio attachment if available
+                                if (data.audioUrl) {
+                                    thread.tags.push(["audio", data.audioUrl]);
+                                }
+
+                                await thread.publish();
+                                toast.success("Thread created successfully");
+                            }
+
+                            setShowVoiceDialog(false);
+                        } catch (error) {
+                            console.error("Error creating content:", error);
+                            toast.error("Failed to create content");
+                        }
+                    }}
                 />
             )}
 

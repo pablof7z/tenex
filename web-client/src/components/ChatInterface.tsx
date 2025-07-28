@@ -21,7 +21,7 @@ import { ChatDebugDialog } from "./chat/ChatDebugDialog";
 import { ChatHeader } from "./chat/ChatHeader";
 import { ChatInputArea } from "./chat/ChatInputArea";
 import { ChatTypingIndicator } from "./chat/ChatTypingIndicator";
-import { VoiceMessageDialog } from "./dialogs/VoiceMessageDialog";
+import { VoiceDialog } from "./dialogs/VoiceDialog";
 import { AgentDiscoveryCard } from "./common/AgentDiscoveryCard";
 import { CommandExecutionCard } from "./common/CommandExecutionCard";
 import { MessageWithReplies } from "./MessageWithReplies";
@@ -756,17 +756,21 @@ export function ChatInterface({
                     }}
                 />
             )}
-            {/* Voice Message Dialog */}
+            {/* Voice Dialog */}
             {showVoiceDialog && project && (
-                <VoiceMessageDialog
+                <VoiceDialog
                     open={showVoiceDialog}
                     onOpenChange={setShowVoiceDialog}
-                    onTranscriptionComplete={(text) => {
-                        setMessageInput(text);
+                    onComplete={(data) => {
+                        // Just set the transcription, the audio event is published separately
+                        setMessageInput(data.transcription);
                         setShowVoiceDialog(false);
                         // Focus the textarea after setting the text
                         setTimeout(() => textareaRef.current?.focus(), 100);
                     }}
+                    conversationId={rootEventId || undefined}
+                    projectId={project.tagId()}
+                    publishAudioEvent={true}
                 />
             )}
         </div>
