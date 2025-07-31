@@ -91,6 +91,9 @@ export class ProjectManager implements IProjectManager {
             // Now set the project context once with all agents loaded
             setProjectContext(project, loadedAgents);
 
+            // Republish kind:0 events for all agents
+            await agentRegistry.republishAllAgentProfiles(project);
+
             // Check if LLM configuration is needed
             await this.checkAndRunLLMConfigWizard(projectPath);
 
@@ -188,6 +191,9 @@ export class ProjectManager implements IProjectManager {
 
             // Initialize ProjectContext
             setProjectContext(project, loadedAgents);
+
+            // Republish kind:0 events for all agents on project load
+            await agentRegistry.republishAllAgentProfiles(project);
 
             // Initialize tool logger for tracing tool executions
             initializeToolLogger(projectPath);

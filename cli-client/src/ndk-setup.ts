@@ -3,11 +3,7 @@ import { logger } from "./logger.js";
 
 // Default Nostr relay URLs for TENEX
 const DEFAULT_RELAY_URLS = [
-    "wss://relay.damus.io",
-    "wss://relay.primal.net",
-    "wss://relay.nostr.band",
-    "wss://nos.lol",
-    "wss://relay.snort.social",
+    "wss://tenex.chat",
 ];
 
 /**

@@ -17,6 +17,7 @@ import { ensureExecutionTimeInitialized } from "./executionTime";
 import { FileSystemAdapter } from "./persistence";
 import type { Conversation, ConversationMetadata } from "./types";
 import { getNDK } from "@/nostr";
+import { createExecutionLogger, type ExecutionLogger } from "@/logging/ExecutionLogger";
 
 export class ConversationManager {
     private conversations: Map<string, Conversation> = new Map();
@@ -53,6 +54,16 @@ export class ConversationManager {
         this.conversationContexts.set(id, tracingContext);
 
         const tracingLogger = createTracingLogger(tracingContext, "conversation");
+        const executionLogger = createExecutionLogger(tracingContext, "conversation");
+        
+        // Log conversation start
+        executionLogger.logEvent({
+            type: "conversation_start",
+            conversationId: id,
+            title,
+            userMessage: event.content || "",
+            eventId: event.id
+        });
 
         // Check for 30023 tags (NDKArticle references)
         let referencedArticle: ConversationMetadata["referencedArticle"] | undefined;
@@ -124,13 +135,6 @@ export class ConversationManager {
 
         this.conversations.set(id, conversation);
 
-        tracingLogger.info(`Created new conversation: ${title}`, {
-            title,
-            phase: "chat",
-            event: "conversation_created",
-            hasReferencedArticle: !!referencedArticle,
-        });
-
         // Save immediately after creation
         await this.persistence.save(conversation);
 
@@ -165,8 +169,30 @@ export class ConversationManager {
         // Create phase execution context
         const phaseContext = createPhaseExecutionContext(tracingContext, phase);
         const tracingLogger = createTracingLogger(phaseContext, "conversation");
+        const executionLogger = createExecutionLogger(phaseContext, "conversation");
 
         const previousPhase = conversation.phase;
+        
+        // Log phase transition trigger
+        executionLogger.logEvent({
+            type: "phase_transition_trigger",
+            conversationId: id,
+            currentPhase: previousPhase,
+            trigger: "agent_request",
+            triggerAgent: agentName,
+            signal: `${previousPhase} → ${phase}`
+        });
+        
+        // Log phase transition decision
+        executionLogger.logEvent({
+            type: "phase_transition_decision",
+            conversationId: id,
+            from: previousPhase,
+            to: phase,
+            decisionBy: agentName,
+            reason: reason || "Phase transition requested",
+            confidence: 0.9
+        });
 
         // Create transition record even for same-phase handoffs
         // This ensures handoff information is always persisted
@@ -199,11 +225,6 @@ export class ConversationManager {
                     }
                 );
             }
-
-            tracingLogger.logTransition(previousPhase, phase, {
-                message: `${message.substring(0, 100)}...`, // Log preview
-                conversationTitle: conversation.title,
-            });
         } else {
             // Log handoff within same phase
             tracingLogger.info(`[CONVERSATION] Handoff within phase "${phase}"`, {
@@ -219,12 +240,29 @@ export class ConversationManager {
 
         // Save after phase update
         await this.persistence.save(conversation);
-
-        logger.info("[CONVERSATION_MANAGER] Phase update complete", {
+        
+        // Log phase transition executed
+        const duration = Date.now() - transition.timestamp;
+        executionLogger.logEvent({
+            type: "phase_transition_executed",
             conversationId: id,
-            finalPhase: conversation.phase,
-            wasTransition: previousPhase !== phase,
+            from: previousPhase,
+            to: phase,
+            handoffTo: agentName,
+            handoffMessage: message,
+            duration
         });
+        
+        // Log agent handoff if within same phase
+        if (previousPhase === phase) {
+            executionLogger.logEvent({
+                type: "agent_handoff",
+                from: agentName,
+                to: agentName, // This could be improved to track actual handoff target
+                task: message,
+                phase: phase
+            });
+        }
     }
 
     async incrementContinueCallCount(conversationId: string, phase: Phase): Promise<void> {
@@ -581,12 +619,6 @@ export class ConversationManager {
         // Find the timestamp of when this agent was last updated
         const lastUpdateTime = context.lastUpdate.getTime();
 
-        logger.info("[AGENT_CONTEXT] Synchronizing context for agent", {
-            agentSlug,
-            lastUpdate: context.lastUpdate.toISOString(),
-            currentMessages: context.messages.length,
-        });
-
         // Find all events that occurred after the agent's last update
         const missedEvents: NDKEvent[] = [];
 
@@ -606,11 +638,6 @@ export class ConversationManager {
                 missedEvents.push(triggeringEvent);
             }
         }
-
-        logger.info(`[AGENT_CONTEXT] Found ${missedEvents.length} missed events`, {
-            agentSlug,
-            missedEventIds: missedEvents.map((e) => e.id),
-        });
 
         // Convert missed events to messages and add to context
         for (const event of missedEvents) {
@@ -656,12 +683,6 @@ export class ConversationManager {
 
         // Update the last update time
         context.lastUpdate = new Date();
-
-        logger.info("[AGENT_CONTEXT] Context synchronized", {
-            agentSlug,
-            totalMessages: context.messages.length,
-            newMessages: missedEvents.length,
-        });
 
         // Save the updated conversation
         await this.persistence.save(conversation);

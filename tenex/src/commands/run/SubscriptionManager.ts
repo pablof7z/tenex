@@ -10,7 +10,6 @@ import { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { EVENT_KINDS } from "@/llm/types";
 import { getNDK } from "@/nostr/ndkClient";
 import { getProjectContext } from "@/services";
-import { logLessonMetrics } from "@/utils/lessonMetrics";
 import { logger } from "@/utils/logger";
 import {
     type NDKEvent,
@@ -78,11 +77,8 @@ export class SubscriptionManager {
         const agentPubkeys = Array.from(projectCtx.agents.values()).map((agent) => agent.pubkey);
 
         if (agentPubkeys.length === 0) {
-            logger.warn("No agents found, skipping lesson subscription");
             return;
         }
-
-        logger.info(chalk.blue("  • Setting up agent lessons subscription..."));
 
         // Create filter for agent lessons
         const lessonFilter: NDKFilter = {
@@ -90,14 +86,6 @@ export class SubscriptionManager {
             authors: agentPubkeys,
             "#a": [project.tagId()], // Scoped to this project
         };
-
-        logger.debug("📚 Agent lessons subscription filter:", {
-            kinds: lessonFilter.kinds,
-            authorCount: agentPubkeys.length,
-            authors: agentPubkeys,
-            projectId: project.tagId(),
-            projectName: project.tagValue("title") || "Untitled",
-        });
 
         const lessonSubscription = ndk.subscribe(lessonFilter, {
             closeOnEose: false,
@@ -112,28 +100,6 @@ export class SubscriptionManager {
                 // Add to project context
                 if (lesson.pubkey) {
                     projectCtx.addLesson(lesson.pubkey, lesson);
-
-                    // Find agent name for better logging
-                    const agentName =
-                        Array.from(projectCtx.agents.values()).find(
-                            (a) => a.pubkey === lesson.pubkey
-                        )?.name || "Unknown";
-
-                    logger.info("📚 Received and stored agent lesson", {
-                        agent: agentName,
-                        agentPubkey: lesson.pubkey,
-                        title: lesson.title,
-                        eventId: lesson.id,
-                        phase: lesson.tags.find((tag) => tag[0] === "phase")?.[1],
-                        keywords:
-                            lesson.tags
-                                .filter((tag) => tag[0] === "t")
-                                .map((tag) => tag[1])
-                                .join(", ") || "none",
-                        createdAt: new Date((lesson.created_at || 0) * 1000).toISOString(),
-                        totalLessonsForAgent: projectCtx.getLessonsForAgent(lesson.pubkey).length,
-                        totalLessonsInProject: projectCtx.getAllLessons().length,
-                    });
                 }
             } catch (error) {
                 logger.error("Error processing agent lesson:", error);
@@ -157,13 +123,6 @@ export class SubscriptionManager {
                 );
                 const name = agent?.name || "Unknown";
                 distribution.set(name, lessons.length);
-            }
-
-            if (totalLessons > 0) {
-                logger.debug("📊 Lesson distribution by agent:", Object.fromEntries(distribution));
-
-                // Log comprehensive metrics
-                logLessonMetrics(projectCtx);
             }
         });
 

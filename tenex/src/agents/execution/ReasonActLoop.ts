@@ -12,6 +12,8 @@ import { deserializeToolResult, isSerializedToolResult } from "@/llm/ToolResult"
 import { getProjectContext } from "@/services/ProjectContext";
 import type { ExecutionBackend } from "./ExecutionBackend";
 import type { ExecutionContext } from "./types";
+import { logger } from "@/utils/logger";
+import { createExecutionLogger, type ExecutionLogger } from "@/logging/ExecutionLogger";
 
 interface StreamingState {
     allToolResults: ToolExecutionResult[];
@@ -42,9 +44,7 @@ function isRoutingDecision(routing: unknown): routing is RoutingDecision {
         Array.isArray(routing.agents) &&
         routing.agents.length > 0 &&
         "reason" in routing &&
-        typeof routing.reason === "string" &&
-        "messageToAgents" in routing &&
-        typeof routing.messageToAgents === "string"
+        typeof routing.reason === "string"
     );
 }
 
@@ -98,6 +98,7 @@ function isConversationResult(result: unknown): result is ConversationResult {
 
 export class ReasonActLoop implements ExecutionBackend {
     private static readonly MAX_TERMINATION_ATTEMPTS = 2;
+    private executionLogger?: ExecutionLogger;
 
     constructor(
         private llmService: LLMService,
@@ -117,6 +118,9 @@ export class ReasonActLoop implements ExecutionBackend {
     ): Promise<void> {
         // Create tracing context
         const tracingContext = createTracingContext(context.conversationId);
+        
+        // Create execution logger for structured event logging
+        this.executionLogger = createExecutionLogger(tracingContext, "agent");
 
         // Execute the streaming loop and collect results
         const generator = this.executeStreamingInternal(
@@ -150,8 +154,8 @@ export class ReasonActLoop implements ExecutionBackend {
 
         try {
             // Check if this agent requires termination enforcement
-            const isChat = context.phase === "chat";
-            const isBrainstormPhase = context.phase === "brainstorm";
+            const isChat = context.phase.toLowerCase() === "chat";
+            const isBrainstormPhase = context.phase.toLowerCase() === "brainstorm";
             const requiresTerminationEnforcement = !isChat && !isBrainstormPhase;
 
             tracingLogger.info("🚀 Starting executeStreaming with termination enforcement check", {
@@ -174,7 +178,6 @@ export class ReasonActLoop implements ExecutionBackend {
                     {
                         agent: context.agent.name,
                         phase: context.phase,
-                        isOrchestrator: context.agent.isOrchestrator,
                         requiresTerminationEnforcement,
                         messageCount: currentMessages.length,
                     }
@@ -182,6 +185,7 @@ export class ReasonActLoop implements ExecutionBackend {
 
                 // Create stream for this attempt
                 const stream = this.createLLMStream(context, currentMessages, tools, publisher);
+                
                 const streamPublisher =
                     attempt === 1
                         ? this.setupStreamPublisher(publisher, tracingLogger, context)
@@ -224,27 +228,8 @@ export class ReasonActLoop implements ExecutionBackend {
                 // Check if termination is correct
                 const hasTerminated = state.termination || state.continueFlow;
 
-                tracingLogger.info("📊 Termination check after attempt", {
-                    attempt,
-                    hasTerminated,
-                    hasTermination: !!state.termination,
-                    hasContinueFlow: !!state.continueFlow,
-                    terminationType: state.termination?.type,
-                    continueAgents: state.continueFlow?.routing?.agents,
-                    requiresTerminationEnforcement,
-                    contentLength: state.fullContent.length,
-                    toolCallCount: state.allToolResults.length,
-                });
-
                 // If terminated properly, we're done
                 if (hasTerminated || !requiresTerminationEnforcement) {
-                    tracingLogger.info("✅ Termination successful or not required", {
-                        hasTerminated,
-                        requiresTerminationEnforcement,
-                        reason: hasTerminated
-                            ? "Agent called terminal tool"
-                            : "Termination not enforced for this context",
-                    });
                     break;
                 }
 
@@ -381,9 +366,6 @@ export class ReasonActLoop implements ExecutionBackend {
         if (!publisher) return undefined;
 
         const streamPublisher = new StreamPublisher(publisher);
-        tracingLogger.info("Stream publisher initialized", {
-            agent: context.agent.name,
-        });
         return streamPublisher;
     }
 
@@ -402,7 +384,7 @@ export class ReasonActLoop implements ExecutionBackend {
 
             switch (event.type) {
                 case "content":
-                    this.handleContentEvent(event, state, streamPublisher);
+                    this.handleContentEvent(event, state, streamPublisher, context);
                     break;
 
                 case "tool_start":
@@ -411,7 +393,8 @@ export class ReasonActLoop implements ExecutionBackend {
                         publisher,
                         event.tool,
                         event.args,
-                        tracingLogger
+                        tracingLogger,
+                        context
                     );
                     break;
 
@@ -425,33 +408,21 @@ export class ReasonActLoop implements ExecutionBackend {
                         context
                     );
 
-                    // If this was a terminal tool, check if it's a continue() tool
+                    // If this was a terminal tool, we should stop processing
                     if (isTerminal) {
-                        // For continue() tools, we collect metadata but don't publish immediately
-                        // The final event will handle the publishing with all metadata
-                        if (event.tool === "continue") {
-                            tracingLogger.info(
-                                "Continue tool detected - collecting metadata for final event",
-                                {
-                                    tool: event.tool,
-                                    agents: state.continueFlow?.routing?.agents,
-                                }
-                            );
-                            // Continue processing - don't return yet, let the stream finish normally
-                        } else {
-                            // For other terminal tools (complete, end_conversation), publish immediately
-                            tracingLogger.info(
-                                "Terminal tool detected - event already published by tool",
-                                {
-                                    tool: event.tool,
-                                    type: state.continueFlow ? "routing" : "completion",
-                                }
-                            );
+                        tracingLogger.info(
+                            "Terminal tool detected - stopping stream processing",
+                            {
+                                tool: event.tool,
+                                type: event.tool === "continue" ? "routing" : "completion",
+                                agents: state.continueFlow?.routing?.agents,
+                            }
+                        );
 
-                            // Don't finalize - routing tools publish directly
-                            yield this.createFinalEvent(state);
-                            return;
-                        }
+                        // All terminal tools should stop processing here
+                        // The continue() tool will execute agents in finalizeStream
+                        yield this.createFinalEvent(state);
+                        return;
                     }
                     break;
                 }
@@ -461,7 +432,7 @@ export class ReasonActLoop implements ExecutionBackend {
                     break;
 
                 case "error":
-                    this.handleErrorEvent(event, state, streamPublisher, tracingLogger);
+                    this.handleErrorEvent(event, state, streamPublisher, tracingLogger, context);
                     break;
             }
         }
@@ -470,10 +441,87 @@ export class ReasonActLoop implements ExecutionBackend {
     private handleContentEvent(
         event: { content: string },
         state: StreamingState,
-        streamPublisher?: StreamPublisher
+        streamPublisher?: StreamPublisher,
+        context?: ExecutionContext
     ): void {
         state.fullContent += event.content;
-        streamPublisher?.addContent(event.content);
+        
+        // Extract and log reasoning if present
+        this.extractAndLogReasoning(state.fullContent, context);
+        
+        // Orchestrator should remain silent - don't add content to stream
+        if (!context?.agent.isOrchestrator) {
+            streamPublisher?.addContent(event.content);
+        } else {
+            logger.info("[StreamPublisher] Skipping content for orchestrator", {
+                content: event.content,
+                agent: context?.agent.name,
+            });
+        }
+    }
+    
+    private extractAndLogReasoning(content: string, context?: ExecutionContext): void {
+        if (!this.executionLogger || !context) return;
+        
+        // Extract thinking content
+        const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/g);
+        if (!thinkingMatch) return;
+        
+        // Process each thinking block (in case there are multiple)
+        thinkingMatch.forEach(block => {
+            const contentMatch = block.match(/<thinking>([\s\S]*?)<\/thinking>/);
+            if (!contentMatch) return;
+            
+            const thinkingContent = contentMatch[1].trim();
+            
+            // Parse structured reasoning
+            const reasoningData = this.parseReasoningContent(thinkingContent);
+            
+            // Log agent thinking
+            this.executionLogger?.agentThinking(
+                context.agent.name,
+                reasoningData.reasoning || thinkingContent,
+                {
+                    userMessage: reasoningData.currentSituation,
+                    considerations: reasoningData.options,
+                    leaningToward: reasoningData.decision,
+                    confidence: reasoningData.confidence
+                }
+            );
+        });
+    }
+    
+    private parseReasoningContent(content: string): {
+        currentSituation?: string;
+        options?: string[];
+        decision?: string;
+        confidence?: number;
+        reasoning?: string;
+    } {
+        const lines = content.split('\n').map(line => line.trim()).filter(Boolean);
+        const result: any = {};
+        
+        lines.forEach(line => {
+            if (line.startsWith('- Current situation:')) {
+                result.currentSituation = line.substring('- Current situation:'.length).trim();
+            } else if (line.startsWith('- Options considered:')) {
+                result.options = line.substring('- Options considered:'.length).trim().split(',').map(o => o.trim());
+            } else if (line.startsWith('- Decision:')) {
+                result.decision = line.substring('- Decision:'.length).trim();
+            } else if (line.startsWith('- Confidence:')) {
+                const confStr = line.substring('- Confidence:'.length).trim();
+                result.confidence = parseFloat(confStr);
+            } else if (line.startsWith('- Reasoning:')) {
+                result.reasoning = line.substring('- Reasoning:'.length).trim();
+            }
+        });
+        
+        // If no structured reasoning found, use the whole content
+        if (Object.keys(result).length === 0) {
+            result.reasoning = content;
+        }
+        
+        return result;
     }
 
     private async handleToolStartEvent(
@@ -481,8 +529,13 @@ export class ReasonActLoop implements ExecutionBackend {
         publisher: NostrPublisher | undefined,
         toolName: string,
         toolArgs: Record<string, unknown>,
-        tracingLogger: TracingLogger
+        tracingLogger: TracingLogger,
+        context?: ExecutionContext
     ): Promise<void> {
+        // Log tool execution start with ExecutionLogger
+        if (this.executionLogger && context) {
+            this.executionLogger.toolStart(context.agent.name, toolName, toolArgs);
+        }
         if (toolName !== "continue") {
             await streamPublisher?.flush();
         }
@@ -548,6 +601,22 @@ export class ReasonActLoop implements ExecutionBackend {
 
         const toolResult = this.parseToolResult(event);
         state.allToolResults.push(toolResult);
+        
+        // Log tool execution complete with ExecutionLogger
+        if (this.executionLogger) {
+            // We don't have the exact start time, so use a reasonable estimate
+            const duration = 1000; // Default 1 second, could be improved with tracking
+            this.executionLogger.toolComplete(
+                context.agent.name,
+                event.tool,
+                toolResult.success ? "success" : "error",
+                duration,
+                {
+                    result: toolResult.success && toolResult.output ? String(toolResult.output) : undefined,
+                    error: toolResult.error ? this.formatToolError(toolResult.error) : undefined
+                }
+            );
+        }
 
         // Check if tool execution failed and publish error
         if (!toolResult.success && toolResult.error && publisher) {
@@ -654,6 +723,19 @@ export class ReasonActLoop implements ExecutionBackend {
             }
 
             state.continueFlow = output;
+            
+            // Log routing decision with ExecutionLogger
+            if (this.executionLogger) {
+                this.executionLogger.routingDecision(
+                    context.agent.name,
+                    output.routing.agents,
+                    output.routing.reason,
+                    {
+                        targetPhase: output.routing.phase,
+                        confidence: 0.85 // Could be extracted from reasoning
+                    }
+                );
+            }
 
             // Increment continue call count
             if (this.conversationManager && context.conversationId && context.phase) {
@@ -672,8 +754,30 @@ export class ReasonActLoop implements ExecutionBackend {
         // Check if it's a termination (complete or end_conversation)
         if (isComplete(output)) {
             state.termination = output;
+            
+            // Log completion decision
+            if (this.executionLogger) {
+                this.executionLogger.agentDecision(
+                    context.agent.name,
+                    "completion",
+                    "complete_task",
+                    output.completion.summary || "Task completed",
+                    { confidence: 0.9 }
+                );
+            }
         } else if (isEndConversation(output)) {
             state.termination = output;
+            
+            // Log end conversation decision
+            if (this.executionLogger) {
+                this.executionLogger.agentDecision(
+                    context.agent.name,
+                    "completion",
+                    "end_conversation",
+                    output.result.summary || "Conversation ended",
+                    { confidence: 0.95 }
+                );
+            }
         }
     }
 
@@ -697,21 +801,22 @@ export class ReasonActLoop implements ExecutionBackend {
         tracingLogger: TracingLogger
     ): void {
         state.finalResponse = event.response;
-        tracingLogger.info("Stream completed", {
-            contentLength: state.fullContent.length,
-            hasResponse: !!event.response,
-        });
     }
 
     private handleErrorEvent(
         event: { error: string },
         state: StreamingState,
         streamPublisher: StreamPublisher | undefined,
-        tracingLogger: TracingLogger
+        tracingLogger: TracingLogger,
+        context?: ExecutionContext
     ): void {
         tracingLogger.error("Stream error", { error: event.error });
         state.fullContent += `\n\nError: ${event.error}`;
-        streamPublisher?.addContent(`\n\nError: ${event.error}`);
+        
+        // Orchestrator should remain silent - don't add error content to stream
+        if (!context?.agent.isOrchestrator) {
+            streamPublisher?.addContent(`\n\nError: ${event.error}`);
+        }
     }
 
     private async finalizeStream(
@@ -728,27 +833,57 @@ export class ReasonActLoop implements ExecutionBackend {
             ? await buildLLMMetadata(state.finalResponse, messages)
             : undefined;
 
-        // Handle continue() flow - publish routing event with messageToAgents as content
-        if (state.continueFlow && publisher) {
-            tracingLogger.info("Publishing routing event for continue() flow", {
+        // Handle continue flow by executing target agents
+        if (state.continueFlow && context.agent.isOrchestrator) {
+            tracingLogger.info("Orchestrator continue flow detected - executing target agents", {
                 agents: state.continueFlow.routing.agents,
                 phase: state.continueFlow.routing.phase,
-                messageToAgents: state.continueFlow.routing.messageToAgents,
-            });
-
-            // Log the continue metadata for debugging
-            console.log("Continue metadata:", {
-                phase: state.continueFlow.routing.phase,
-                agents: state.continueFlow.routing.agents,
-                messageToAgents: state.continueFlow.routing.messageToAgents,
                 reason: state.continueFlow.routing.reason,
             });
 
-            await publisher.publishResponse({
-                content: state.continueFlow.routing.messageToAgents,
-                destinationPubkeys: Array.from(state.continueFlow.routing.agents),
-                continueMetadata: state.continueFlow,
-            });
+            // Get the AgentExecutor from context
+            const agentExecutor = context.agentExecutor;
+            if (agentExecutor) {
+                const { getProjectContext } = await import("@/services/ProjectContext");
+                const { NostrPublisher } = await import("@/nostr/NostrPublisher");
+                const projectContext = getProjectContext();
+
+                // Execute each target agent
+                for (const agentPubkey of state.continueFlow.routing.agents) {
+                    // Find agent by pubkey
+                    const targetAgent = Array.from(projectContext.agents.values())
+                        .find(a => a.pubkey === agentPubkey);
+                    
+                    if (!targetAgent) {
+                        tracingLogger.warning("Target agent not found", { pubkey: agentPubkey });
+                        continue;
+                    }
+
+                    // Create a new publisher for the target agent
+                    const targetPublisher = new NostrPublisher({
+                        conversationId: context.conversationId,
+                        agent: targetAgent,
+                        triggeringEvent: context.triggeringEvent,
+                        conversationManager: context.conversationManager,
+                    });
+
+                    const targetContext = {
+                        ...context,
+                        agent: targetAgent,
+                        phase: state.continueFlow.routing.phase || context.phase,
+                        publisher: targetPublisher,
+                    };
+
+                    try {
+                        await agentExecutor.execute(targetContext);
+                    } catch (error) {
+                        tracingLogger.error("Failed to execute target agent", {
+                            agent: targetAgent.name,
+                            error: error instanceof Error ? error.message : String(error),
+                        });
+                    }
+                }
+            }
         }
 
         // Convert flow/termination to metadata for finalization
@@ -763,26 +898,54 @@ export class ReasonActLoop implements ExecutionBackend {
             }
         }
 
-        await streamPublisher.finalize({
-            llmMetadata,
-            ...metadata,
-        });
-
-        tracingLogger.info("Stream finalized", {
-            hasLLMMetadata: !!llmMetadata,
-            hasContinueFlow: !!state.continueFlow,
-            hasTermination: !!state.termination,
-        });
+        // Orchestrator should remain silent - only finalize if there's metadata (terminal tools)
+        // Skip finalization if orchestrator only has content with no terminal tool
+        if (!context.agent.isOrchestrator || state.continueFlow || state.termination) {
+            await streamPublisher.finalize({
+                llmMetadata,
+                ...metadata,
+            });
+        }
     }
 
     private getReminderMessage(context: ExecutionContext): string {
         if (context.agent.isOrchestrator) {
-            return `I see you've finished responding, but you haven't used the 'continue' or 'end_conversation' tool yet. As the orchestrator in the ${context.phase} phase, you MUST either:
-- Use the 'continue' tool to route to appropriate agents for the next task
-- Use the 'end_conversation' tool if all work is complete and you're ready to end the conversation
-Please use one of these tools now.`;
+            return `I see you've finished processing, but you haven't used the 'continue' tool yet. As the orchestrator, you MUST use the 'continue' tool to route to appropriate agents for the next task. Remember: you are a silent router - use continue() to route, never speak to users directly.`;
         } else {
             return "I see you've finished responding, but you haven't used the 'complete' tool yet. As a non-orchestrator agent, you MUST use the 'complete' tool to signal that your work is done and report back to the orchestrator. Please use the 'complete' tool now with a summary of what you accomplished.";
+        }
+    }
+
+    private formatToolError(error: unknown): string {
+        if (typeof error === "string") {
+            return error;
+        } else if (error && typeof error === "object" && "message" in error) {
+            return (error as { message: string }).message;
+        } else if (error && typeof error === "object") {
+            // Try to extract meaningful properties from the error object
+            const errorObj = error as Record<string, unknown>;
+            const parts: string[] = [];
+            
+            // Common error properties
+            if ("kind" in errorObj) parts.push(`kind: ${errorObj.kind}`);
+            if ("field" in errorObj) parts.push(`field: ${errorObj.field}`);
+            if ("tool" in errorObj) parts.push(`tool: ${errorObj.tool}`);
+            if ("code" in errorObj) parts.push(`code: ${errorObj.code}`);
+            if ("statusCode" in errorObj) parts.push(`statusCode: ${errorObj.statusCode}`);
+            
+            // If we found specific properties, use them
+            if (parts.length > 0) {
+                return parts.join(", ");
+            }
+            
+            // Otherwise, try to stringify the object
+            try {
+                return JSON.stringify(error);
+            } catch {
+                return "[Complex Error Object]";
+            }
+        } else {
+            return String(error);
         }
     }
 
@@ -804,15 +967,14 @@ Please use one of these tools now.`;
         const autoCompleteContent = state.fullContent || "Task completed";
 
         if (context.agent.isOrchestrator) {
-            // For orchestrator, we'll auto-end the conversation
-            state.termination = {
-                type: "end_conversation",
-                result: {
-                    response: autoCompleteContent,
-                    summary: `Orchestrator in ${context.phase} phase completed its turn but failed to call continue or end_conversation after a reminder. [Auto-ended by system]`,
-                    success: true,
-                },
-            };
+            // For orchestrator, we need to auto-route somewhere
+            // This is a fallback - orchestrator should always use continue()
+            tracingLogger.error("Orchestrator failed to route - this should not happen", {
+                agent: context.agent.name,
+                phase: context.phase,
+            });
+            // We can't auto-complete for orchestrator since it needs to route
+            throw new Error("Orchestrator must use continue() tool to route messages");
         } else {
             // For non-orchestrator, complete back to orchestrator
             const projectContext = getProjectContext();

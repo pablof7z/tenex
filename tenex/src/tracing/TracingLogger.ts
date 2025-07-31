@@ -126,18 +126,6 @@ export class TracingLogger {
     }
 
     /**
-     * Log a state transition
-     */
-    logTransition(from: string, to: string, additionalContext?: Record<string, unknown>): void {
-        this.info(`Transition: ${from} → ${to}`, {
-            event: "state_transition",
-            fromState: from,
-            toState: to,
-            ...additionalContext,
-        });
-    }
-
-    /**
      * Log an event publication
      */
     logEventPublished(

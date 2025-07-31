@@ -386,39 +386,55 @@ export class NostrPublisher {
 
 export class StreamPublisher {
     private pendingContent = ""; // Content waiting to be published
+    private accumulatedContent = ""; // Total content accumulated so far
     private sequence = 0;
     private hasFinalized = false;
     private flushTimeout: NodeJS.Timeout | null = null;
     private scheduledContent = "";
     private static readonly FLUSH_DELAY_MS = 100; // Delay before actually publishing
+    private static readonly SENTENCE_ENDINGS = /[.!?](?:\s|$)/; // Regex to detect sentence endings
+    private lastFlushTime = Date.now();
 
     constructor(private readonly publisher: NostrPublisher) {}
 
     addContent(content: string): void {
-        // If we have scheduled content and new content is arriving,
-        // immediately publish the scheduled content to prioritize low latency
-        if (this.flushTimeout && this.scheduledContent) {
-            this.cancelScheduledFlush();
-            // Fire-and-forget to avoid blocking new content. The method handles its own errors.
-            this.publishScheduledContent().catch((error) => {
-                logger.error("Failed to publish scheduled content on new content arrival", {
-                    error: error instanceof Error ? error.message : String(error),
-                    agent: this.publisher.context.agent.name,
-                });
-            });
-        }
-
+        // Add content to buffers
         this.pendingContent += content;
+        this.accumulatedContent += content;
+        
+        // Check if we should flush based on sentence endings
+        const shouldFlushForSentence = this.shouldFlushAtSentenceEnd();
+        
+        // If no flush is scheduled, schedule one automatically
+        if (!this.flushTimeout && !this.hasFinalized) {
+            if (shouldFlushForSentence) {
+                this.flush();
+            } else {
+                this.flush();
+            }
+        } else if (shouldFlushForSentence && this.flushTimeout) {
+            // If we have a sentence ending and there's already a scheduled flush,
+            // cancel it and flush immediately
+            this.cancelScheduledFlush();
+            this.flush();
+        }
+    }
+
+    private shouldFlushAtSentenceEnd(): boolean {
+        // Check if the pending content ends with a sentence ending
+        const hasSentenceEnding = StreamPublisher.SENTENCE_ENDINGS.test(this.pendingContent);
+        
+        // Only flush at sentence endings if enough time has passed since last flush
+        // This prevents too frequent flushing for rapid short sentences
+        const timeSinceLastFlush = Date.now() - this.lastFlushTime;
+        const enoughTimePassed = timeSinceLastFlush >= StreamPublisher.FLUSH_DELAY_MS;
+        
+        return hasSentenceEnding && enoughTimePassed;
     }
 
     async flush(): Promise<void> {
         // Skip if no content to flush or already finalized
         if (!this.pendingContent.trim() || this.hasFinalized) {
-            logger.debug("Skipping flush - no content or already finalized", {
-                hasContent: !!this.pendingContent.trim(),
-                hasFinalized: this.hasFinalized,
-                sequence: this.sequence,
-            });
             return;
         }
 
@@ -437,12 +453,6 @@ export class StreamPublisher {
         this.scheduledContent = this.pendingContent;
         this.pendingContent = "";
 
-        logger.debug("Scheduling flush", {
-            contentLength: this.scheduledContent.length,
-            delay: StreamPublisher.FLUSH_DELAY_MS,
-            agent: this.publisher.context.agent.name,
-        });
-
         this.flushTimeout = setTimeout(async () => {
             if (!this.hasFinalized && this.scheduledContent) {
                 await this.publishScheduledContent();
@@ -459,6 +469,9 @@ export class StreamPublisher {
         try {
             // Cancel any pending flush timeout
             if (this.flushTimeout) {
+                logger.info("[StreamPublisher] Cancelling pending flush in finalize", {
+                    agent: this.publisher.context.agent.name,
+                });
                 this.cancelScheduledFlush();
             }
 
@@ -470,17 +483,20 @@ export class StreamPublisher {
 
             this.hasFinalized = true;
 
-            if (this.pendingContent.trim().length > 0) {
+            // Use accumulated content for the final reply, not just pending content
+            const finalContent = this.accumulatedContent.trim();
+            if (finalContent.length > 0) {
                 // StreamPublisher only handles text streaming, not terminal tool publishing
                 // Terminal tools publish their own events directly
                 const finalEvent = await this.publisher.publishResponse({
-                    content: this.pendingContent,
+                    content: finalContent,
                     ...metadata,
                 });
 
                 logger.debug("Finalized streaming response", {
                     totalSequences: this.sequence,
                     agent: this.publisher.context.agent.name,
+                    finalContentLength: finalContent.length,
                 });
 
                 return finalEvent;
@@ -531,24 +547,31 @@ export class StreamPublisher {
         this.scheduledContent = "";
 
         try {
-            const reply = this.publisher.createBaseReply();
-
-            // Add streaming tags
+            // Create streaming response event (ephemeral kind 21111)
+            const streamingEvent = new NDKEvent(getNDK());
+            streamingEvent.kind = EVENT_KINDS.STREAMING_RESPONSE; // Ephemeral streaming response kind
+            streamingEvent.content = this.accumulatedContent; // Send complete status, not just the delta
+            
+            // Tag the conversation
+            // First try lowercase 'e', then uppercase 'E' for legacy support
+            const conversationTag = this.publisher.context.triggeringEvent.tagValue("e") || 
+                                   this.publisher.context.triggeringEvent.tagValue("E") || 
+                                   this.publisher.context.triggeringEvent.id;
+            streamingEvent.tag(["e", conversationTag]);
+            
+            // Add agent identifier
+            streamingEvent.tag(["p", this.publisher.context.agent.pubkey]);
+            
+            // Add streaming metadata
             this.sequence++;
-            reply.tag(["streaming", "true"]);
-            reply.tag(["partial", "true"]);
-            reply.tag(["sequence", this.sequence.toString()]);
+            streamingEvent.tag(["streaming", "true"]);
+            streamingEvent.tag(["sequence", this.sequence.toString()]);
 
-            reply.content = contentToPublish;
+            await streamingEvent.sign(this.publisher.context.agent.signer);
+            await streamingEvent.publish();
 
-            await reply.sign(this.publisher.context.agent.signer);
-            await reply.publish();
-
-            logger.debug("Published scheduled streaming content", {
-                sequence: this.sequence,
-                contentLength: contentToPublish.length,
-                agent: this.publisher.context.agent.name,
-            });
+            // Update last flush time after successful publish
+            this.lastFlushTime = Date.now();
         } catch (error) {
             // On failure, prepend content to the start of the pending buffer to be retried
             this.pendingContent = contentToPublish + this.pendingContent;

@@ -161,6 +161,7 @@ async function handleReplyLogic(
         logInfo(chalk.gray("Passing claude-session to execution context: ") + chalk.cyan(claudeSessionId));
     }
 
+
     // Execute with the appropriate agent
     const executionContext: ExecutionContext = {
         agent: targetAgent,
@@ -176,6 +177,7 @@ async function handleReplyLogic(
         }),
         conversationManager,
         claudeSessionId,
+        agentExecutor, // Pass the executor so continue() can use it
     };
 
     // Add handoff if available

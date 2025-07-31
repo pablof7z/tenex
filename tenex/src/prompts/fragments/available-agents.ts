@@ -55,16 +55,36 @@ export const availableAgentsFragment: PromptFragment<AvailableAgentsArgs> = {
             ? `
 
 As Orchestrator:
-- You coordinate work between specialist agents
-- Don't implement solutions yourself - delegate to them using the continue tool
-- Focus on routing, not solving technical problems
-- Let specialists handle implementation details`
+- You coordinate work between different types of agents
+- Implementation work MUST go to the Executor agent
+- Planning work goes to the Planner agent
+- Domain expertise comes from specialist agents (advisory only)
+- Don't implement solutions yourself - delegate using the continue tool
+- Remember: Only the Executor can modify the system`
+            : currentAgentObj?.slug === 'executor'
+            ? `
+
+As the Executor:
+- You are the ONLY agent that can modify files and system state
+- You implement plans from the Planner
+- You execute recommendations from expert agents
+- Focus on implementation quality and following project conventions`
+            : currentAgentObj?.slug === 'planner'
+            ? `
+
+As the Planner:
+- You create architectural plans and strategies
+- You CANNOT modify any files - only create plans
+- Your plans will be implemented by the Executor
+- Focus on breaking down complex tasks into clear steps`
             : `
 
-As a Specialist:
+As a Specialist/Expert:
+- You provide domain expertise and recommendations ONLY
+- You CANNOT modify files or system state
+- Your advice will be implemented by the Executor agent
 - Focus on your area of expertise
-- When you need help outside your domain, defer to other specialists or the orchestrator agent
-- Use the complete tool when you finish your work or need to hand off to another agent`;
+- Use the complete tool when you finish providing feedback`;
 
         return `## Available Agents
 ${preface}

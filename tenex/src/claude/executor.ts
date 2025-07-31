@@ -91,7 +91,6 @@ export class ClaudeCodeExecutor {
                 resume: this.options.resumeSessionId,
               },
             })) {
-              logger.info("[ClaudeCodeExecutor] Message", message);
               // Extract metrics from messages
               if (!metrics.sessionId && message.session_id) {
                 metrics.sessionId = message.session_id;

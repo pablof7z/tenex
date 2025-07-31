@@ -24,15 +24,13 @@ export interface CompletionOptions {
  * This is the core logic extracted from the complete() tool
  */
 export async function handleAgentCompletion(options: CompletionOptions): Promise<Complete> {
-    const { response, summary, agent, conversationId, publisher, triggeringEvent } = options;
+    const { response, summary, agent, conversationId, publisher } = options;
 
     const projectContext = getProjectContext();
     const orchestratorAgent = projectContext.getProjectAgent();
 
-    // Determine who to respond to:
-    // If we have a triggering event, respond to its author
-    // Otherwise fall back to the orchestrator
-    const respondToPubkey = triggeringEvent?.pubkey || orchestratorAgent.pubkey;
+    // Always route completions to the orchestrator for phase control
+    const respondToPubkey = orchestratorAgent.pubkey;
 
     // Publish the completion event
     await publisher.publishResponse({
@@ -47,22 +45,7 @@ export async function handleAgentCompletion(options: CompletionOptions): Promise
             },
         },
     });
-
-    logger.info("Completion event published", {
-        to: respondToPubkey,
-        agent: agent.name,
-        isOrchestrator: respondToPubkey === orchestratorAgent.pubkey,
-    });
-
-    // Log the completion
-    logger.info("✅ Task completion signaled", {
-        agent: agent.name,
-        agentId: agent.pubkey,
-        returningTo: respondToPubkey,
-        hasResponse: !!response,
-        conversationId: conversationId,
-    });
-
+    
     // Return the Complete termination
     return {
         type: "complete",

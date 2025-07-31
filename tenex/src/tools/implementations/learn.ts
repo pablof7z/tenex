@@ -2,8 +2,6 @@ import { NDKAgentLesson } from "@/events/NDKAgentLesson";
 import { getNDK } from "@/nostr";
 import { getProjectContext } from "@/services/ProjectContext";
 import { logger } from "@/utils/logger";
-import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
-import { EXECUTION_TAGS } from "@/nostr/tags";
 import { z } from "zod";
 import type { Tool } from "../types";
 import { createZodSchema } from "../types";
@@ -31,9 +29,31 @@ export const learnTool: Tool<LearnInput, LearnOutput> = {
 
     promptFragment: `When you encounter important insights or lessons during your work, use the learn tool to record them. These lessons will be available in future conversations to help avoid similar issues.
 
+## Metacognition Check - Ask Yourself:
+Before recording a lesson, engage in metacognition:
+1. "Is this actually trivial or obvious?"
+2. "Will my behavior genuinely improve if I remember this forever?"
+3. "Is this specific to this codebase/context, or just general programming knowledge?"
+4. "Would a competent developer already know this?"
+5. "Does this represent a real insight that prevents future mistakes?"
+
+## What NOT to learn:
+- Generic programming practices (e.g., "always validate input")
+- Obvious facts (e.g., "config files contain configuration")
+- Basic tool usage (e.g., "grep searches for patterns")
+- Standard conventions everyone follows
+- Temporary workarounds that will be obsolete
+
+## What TO learn:
+- Non-obvious architectural decisions specific to this project
+- Hidden dependencies or coupling that caused real issues
+- Counter-intuitive behaviors that waste significant time
+- Project-specific gotchas that violate normal expectations
+- Patterns that repeatedly cause problems in THIS codebase
+
 Domain Boundaries: Only record lessons within your role's sphere of control and expertise. You have access to the list of agents working with you in this project; while pondering whether to record a lesson, think: "is this specific lesson better suited for the domain expertise of another agent?"
 
-In <thinking> tags, reason why you are the right agent to record this lesson and why this lesson is important and specific enough.`,
+In <thinking> tags, perform the metacognition check and explain why this lesson passes the quality bar and is worth preserving permanently.`,
 
     parameters: createZodSchema(learnSchema),
 
@@ -50,7 +70,47 @@ In <thinking> tags, reason why you are the right agent to record this lesson and
         });
 
         const agentSigner = context.agent.signer;
+        if (!agentSigner) {
+            const error = "Agent signer not available";
+            logger.error("❌ Learn tool failed", {
+                error,
+                agent: context.agent.name,
+                agentPubkey: context.agent.pubkey,
+                title,
+                phase: context.phase,
+                conversationId: context.conversationId,
+            });
+            return {
+                ok: false,
+                error: {
+                    kind: "execution" as const,
+                    tool: "learn",
+                    message: error,
+                },
+            };
+        }
+
         const ndk = getNDK();
+        if (!ndk) {
+            const error = "NDK instance not available";
+            logger.error("❌ Learn tool failed", {
+                error,
+                agent: context.agent.name,
+                agentPubkey: context.agent.pubkey,
+                title,
+                phase: context.phase,
+                conversationId: context.conversationId,
+            });
+            return {
+                ok: false,
+                error: {
+                    kind: "execution" as const,
+                    tool: "learn",
+                    message: error,
+                },
+            };
+        }
+
         const projectCtx = getProjectContext();
 
         try {

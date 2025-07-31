@@ -27,6 +27,7 @@ import { CommandExecutionCard } from "./common/CommandExecutionCard";
 import { MessageWithReplies } from "./MessageWithReplies";
 import { TaskCard } from "./tasks/TaskCard";
 import { Button } from "./ui/button";
+import { useStreamingResponses } from "../hooks/useStreamingResponses";
 
 interface ChatInterfaceProps {
     statusUpdates?: NDKEvent[];
@@ -281,6 +282,9 @@ export function ChatInterface({
         {},
         [currentThreadEvent?.id, task?.id]
     );
+
+    // Subscribe to streaming responses for the current thread
+    const { streamingResponses } = useStreamingResponses(currentThreadEvent?.id || null);
 
     // Process typing indicators - only keep latest per pubkey
     const activeTypingIndicators = useMemo(() => {

@@ -1,14 +1,19 @@
 import { z } from "zod";
 
-const PhaseSchema = z.enum([
-    "chat",
-    "brainstorm",
-    "plan",
-    "execute",
-    "verification",
-    "chores",
-    "reflection",
-]);
+const PhaseSchema = z
+    .string()
+    .transform((val) => val.toLowerCase())
+    .pipe(
+        z.enum([
+            "chat",
+            "brainstorm",
+            "plan",
+            "execute",
+            "verification",
+            "chores",
+            "reflection",
+        ])
+    );
 
 export const PhaseTransitionSchema = z.object({
     from: PhaseSchema,

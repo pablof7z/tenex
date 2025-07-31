@@ -61,7 +61,6 @@ export interface RoutingDecision {
     readonly phase?: Phase;
     readonly agents: NonEmptyArray<string>; // Agent pubkeys
     readonly reason: string;
-    readonly messageToAgents: string;
     readonly context?: Readonly<Record<string, unknown>>;
 }
 

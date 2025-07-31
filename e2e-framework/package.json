@@ -16,7 +16,7 @@
         "cli": "bun run src/cli.ts"
     },
     "dependencies": {
-        "@nostr-dev-kit/ndk": "^2.10.5",
+        "@nostr-dev-kit/ndk": "^2.14.33",
         "nostr-tools": "^2.10.4",
         "@noble/hashes": "^1.5.0",
         "commander": "^11.1.0"

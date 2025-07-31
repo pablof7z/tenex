@@ -72,6 +72,15 @@ debug
         );
     });
 
+debug
+    .command("timeline [conversationId]")
+    .description("Display a timeline of all events in a conversation")
+    .action((conversationId) => {
+        import("./commands/debug/timeline").then(({ timeline }) => {
+            timeline.handler({ conversationId, _: [], $0: "" });
+        });
+    });
+
 // Initialize NDK before parsing commands
 export async function main(): Promise<void> {
     await initNDK();

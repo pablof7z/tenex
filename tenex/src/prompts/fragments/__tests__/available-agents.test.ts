@@ -92,8 +92,8 @@ describe("Available Agents Fragment", () => {
             .build();
 
         expect(prompt).toContain("As Orchestrator");
-        expect(prompt).toContain("delegate to them using the");
-        expect(prompt).toContain("Let specialists handle implementation details");
+        expect(prompt).toContain("delegate using the continue tool");
+        expect(prompt).toContain("Only the Executor can modify the system");
     });
 
     it("should provide specialist-specific guidance for non-orchestrator agents", () => {
@@ -104,8 +104,8 @@ describe("Available Agents Fragment", () => {
             })
             .build();
 
-        expect(prompt).toContain("As a Specialist");
-        expect(prompt).toContain("Focus on your area of expertise");
-        expect(prompt).toContain("defer to other specialists or the orchestrator agent");
+        expect(prompt).toContain("As a Specialist/Expert");
+        expect(prompt).toContain("You CANNOT modify files or system state");
+        expect(prompt).toContain("Your advice will be implemented by the Executor agent");
     });
 });

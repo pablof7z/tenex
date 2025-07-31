@@ -50,52 +50,59 @@ import { getTotalExecutionTimeSeconds } from "@/conversations/executionTime";
 
 describe("Learn Tool", () => {
     let mockContext: ExecutionContext;
-    let mockNDK: any;
-    let mockProjectContext: any;
-    let mockSigner: NDKSigner;
+    let mockAgent: Agent;
+    let mockConversation: Conversation;
+    let mockNDK: NDK;
     let mockLesson: any;
 
     beforeEach(() => {
         // Reset all mocks
-        mock.restore();
+        (logger.info as any).mockReset();
+        (logger.warn as any).mockReset();
+        (logger.error as any).mockReset();
+        (getNDK as any).mockReset();
+        (getProjectContext as any).mockReset();
 
-        mockSigner = {
-            sign: mock(),
-            user: async () => ({ pubkey: "agent-pubkey" }),
-        } as any;
+        // Setup mock agent
+        mockAgent = {
+            name: "dev-senior",
+            pubkey: "mock-agent-pubkey",
+            eventId: "mock-agent-event-id",
+            signer: {
+                pubkey: () => "mock-signer-pubkey",
+                sign: mock(),
+            } as unknown as NDKSigner,
+        } as Agent;
 
-        mockNDK = {
-            signer: mockSigner,
-        };
+        // Setup mock conversation
+        mockConversation = {
+            id: "mock-conversation-id",
+        } as Conversation;
 
-        mockProjectContext = {
-            project: {
-                tagId: () => "project-123",
-            },
-            getLessonsForAgent: mock(() => []),
-            getAllLessons: mock(() => []),
-        };
-
+        // Setup mock context
         mockContext = {
-            agent: {
-                name: "dev-senior",
-                pubkey: "agent-pubkey-123",
-                eventId: "agent-event-id",
-                signer: mockSigner,
-            } as Agent,
-            phase: "building",
-            conversationId: "conv-123",
-            projectPath: "/test/project",
-            triggeringEvent: {} as any,
-            publisher: {} as any,
-            conversationManager: {} as any,
-        };
+            agent: mockAgent,
+            phase: "reflection",
+            conversationId: "mock-conversation-id",
+            conversation: mockConversation,
+        } as ExecutionContext;
 
-        // Setup mocks
+        // Setup NDK mock
+        mockNDK = {
+            fetchEvent: mock().mockResolvedValue({
+                id: "mock-agent-event-id",
+                pubkey: "mock-agent-pubkey",
+            }),
+        } as unknown as NDK;
+
         (getNDK as any).mockReturnValue(mockNDK);
-        (getProjectContext as any).mockReturnValue(mockProjectContext);
 
-        // Create a fresh mock lesson for each test
+        // Setup project context mock
+        (getProjectContext as any).mockReturnValue({
+            project: { id: "mock-project-id" },
+        });
+
+        // Setup NDKAgentLesson mock
         mockLesson = {
             title: undefined,
             lesson: undefined,
@@ -105,170 +112,155 @@ describe("Learn Tool", () => {
             tag: mock(),
             sign: mock().mockResolvedValue(undefined),
             publish: mock().mockResolvedValue(undefined),
+            encode: mock().mockReturnValue("mock-encoded-event"),
         };
 
         (NDKAgentLesson as any).mockImplementation(() => mockLesson);
     });
 
     describe("Parameter Validation", () => {
-        it("should validate required fields", async () => {
-            const result = await learnTool.execute({}, mockContext);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain("Required");
+        it("should validate required fields", () => {
+            const validation = learnTool.parameters.validate({});
+            expect(validation.ok).toBe(false);
+            if (!validation.ok) {
+                expect(validation.error.kind).toBe("validation");
+            }
         });
 
-        it("should require title field", async () => {
-            const result = await learnTool.execute(
-                {
-                    lesson: "Test lesson content",
-                },
-                mockContext
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain("Required");
+        it("should require title field", () => {
+            const validation = learnTool.parameters.validate({
+                lesson: "Test lesson content",
+            });
+            expect(validation.ok).toBe(false);
+            if (!validation.ok) {
+                expect(validation.error.kind).toBe("validation");
+                expect(validation.error.field).toBe("title");
+                expect(validation.error.message).toContain("Required");
+            }
         });
 
-        it("should require lesson field", async () => {
-            const result = await learnTool.execute(
-                {
-                    title: "Test Title",
-                },
-                mockContext
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain("Required");
+        it("should require lesson field", () => {
+            const validation = learnTool.parameters.validate({
+                title: "Test Title",
+            });
+            expect(validation.ok).toBe(false);
+            if (!validation.ok) {
+                expect(validation.error.kind).toBe("validation");
+                expect(validation.error.field).toBe("lesson");
+                expect(validation.error.message).toContain("Required");
+            }
         });
 
         it("should accept valid parameters", async () => {
             const params = {
                 title: "Async TypeScript Best Practices",
                 lesson: "Always use async/await instead of callbacks for better error handling",
-                keywords: ["typescript", "async", "promises"],
             };
 
-            const result = await learnTool.execute(params, mockContext);
-
-            expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalledWith(
-                "🎓 Agent recording new lesson",
-                expect.objectContaining({
-                    agent: "dev-senior",
-                    title: "Async TypeScript Best Practices",
-                })
-            );
-        });
-
-        it("should handle keywords as optional", async () => {
-            const params = {
-                title: "Git Rebase Strategy",
-                lesson: "Use interactive rebase to clean up commit history before merging",
-            };
-
-            const result = await learnTool.execute(params, mockContext);
-
-            expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalledWith(
-                "🎓 Agent recording new lesson",
-                expect.objectContaining({
-                    keywordCount: 0,
-                    keywords: "none",
-                })
-            );
-        });
-
-        it("should normalize keywords to lowercase and trim", async () => {
-            const params = {
-                title: "Test Title",
-                lesson: "Test lesson",
-                keywords: ["  TypeScript  ", "ASYNC", "promises"],
-            };
-
-            await learnTool.execute(params, mockContext);
-
-            // Check that tags were added with normalized keywords
-            const addedTags = mockLesson.tags.filter((tag: string[]) => tag[0] === "t");
-            expect(addedTags).toEqual([
-                ["t", "typescript"],
-                ["t", "async"],
-                ["t", "promises"],
-            ]);
+            const validation = learnTool.parameters.validate(params);
+            expect(validation.ok).toBe(true);
+            
+            if (validation.ok) {
+                const result = await learnTool.execute(validation.value, mockContext);
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toMatchObject({
+                        message: expect.stringContaining("Lesson recorded"),
+                        eventId: expect.any(String),
+                        title: params.title,
+                    });
+                }
+            }
         });
     });
 
     describe("Execution Logic", () => {
         it("should handle missing agent signer", async () => {
-            mockContext.agentSigner = undefined;
-
-            const result = await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe("Agent signer not available for publishing lesson");
-            expect(logger.warn).toHaveBeenCalled();
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            expect(validation.ok).toBe(true);
+            
+            if (validation.ok) {
+                mockContext.agent.signer = undefined as any;
+                const result = await learnTool.execute(validation.value, mockContext);
+                
+                expect(result.ok).toBe(false);
+                if (!result.ok) {
+                    expect(result.error.kind).toBe("execution");
+                    expect(result.error.message).toContain("Agent signer not available");
+                }
+                expect(logger.error).toHaveBeenCalled();
+            }
         });
 
         it("should handle missing NDK instance", async () => {
-            (getNDK as any).mockReturnValue(null);
-
-            const result = await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe("NDK instance not available");
-            expect(logger.error).toHaveBeenCalled();
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            expect(validation.ok).toBe(true);
+            
+            if (validation.ok) {
+                (getNDK as any).mockReturnValue(null);
+                const result = await learnTool.execute(validation.value, mockContext);
+                
+                expect(result.ok).toBe(false);
+                if (!result.ok) {
+                    expect(result.error.kind).toBe("execution");
+                    expect(result.error.message).toContain("NDK instance not available");
+                }
+                expect(logger.error).toHaveBeenCalled();
+            }
         });
 
         it("should handle event publishing failures", async () => {
-            mockLesson.publish.mockRejectedValue(new Error("Network error"));
-
-            const result = await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe("Network error");
-            expect(logger.error).toHaveBeenCalledWith(
-                "❌ Learn tool failed",
-                expect.objectContaining({
-                    error: "Network error",
-                })
-            );
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            expect(validation.ok).toBe(true);
+            
+            if (validation.ok) {
+                mockLesson.publish.mockRejectedValue(new Error("Network error"));
+                const result = await learnTool.execute(validation.value, mockContext);
+                
+                expect(result.ok).toBe(false);
+                if (!result.ok) {
+                    expect(result.error.kind).toBe("execution");
+                    expect(result.error.message).toContain("Network error");
+                }
+                expect(logger.error).toHaveBeenCalled();
+            }
         });
 
         it("should successfully create and publish lesson", async () => {
             const params = {
-                title: "React Performance Tips",
-                lesson: "Use React.memo for expensive components to prevent unnecessary re-renders",
-                keywords: ["react", "performance", "optimization"],
+                title: "Performance Optimization",
+                lesson: "Use React.memo for expensive component renders",
             };
-
-            const result = await learnTool.execute(params, mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result.output).toContain("✅ Lesson recorded");
-            expect(result.output).toContain("React Performance Tips");
-            expect(result.metadata).toEqual({
-                eventId: "mock-lesson-id",
-                title: "React Performance Tips",
-                lessonLength: params.lesson.length,
-            });
+            
+            const validation = learnTool.parameters.validate(params);
+            expect(validation.ok).toBe(true);
+            
+            if (validation.ok) {
+                const result = await learnTool.execute(validation.value, mockContext);
+                
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.message).toContain("Lesson recorded");
+                    expect(result.value.title).toBe(params.title);
+                    expect(mockLesson.sign).toHaveBeenCalledWith(mockAgent.signer);
+                    expect(mockLesson.publish).toHaveBeenCalled();
+                }
+            }
         });
     });
 
@@ -277,196 +269,137 @@ describe("Learn Tool", () => {
             const params = {
                 title: "Test Title",
                 lesson: "Test lesson content",
-                keywords: ["test", "example"],
             };
-
-            await learnTool.execute(params, mockContext);
-
-            expect(mockLesson.title).toBe("Test Title");
-            expect(mockLesson.lesson).toBe("Test lesson content");
-            expect(mockLesson.agent).toEqual({ id: "agent-event-id" });
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(NDKAgentLesson).toHaveBeenCalledWith(mockNDK);
+                expect(mockLesson.title).toBe(params.title);
+                expect(mockLesson.lesson).toBe(params.lesson);
+            }
         });
 
         it("should add project tag", async () => {
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            expect(mockLesson.tag).toHaveBeenCalledWith(mockProjectContext.project);
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(mockLesson.tag).toHaveBeenCalledWith({ id: "mock-project-id" });
+            }
         });
 
-        it("should add phase tag", async () => {
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            const phaseTags = mockLesson.tags.filter((tag: string[]) => tag[0] === "phase");
-            expect(phaseTags).toEqual([["phase", "building"]]);
+        it("should add agent reference when eventId is available", async () => {
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(mockNDK.fetchEvent).toHaveBeenCalledWith("mock-agent-event-id");
+                expect(mockLesson.agent).toEqual({
+                    id: "mock-agent-event-id",
+                    pubkey: "mock-agent-pubkey",
+                });
+            }
         });
 
-        it("should add execution time tag when conversation available", async () => {
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            const timeTags = mockLesson.tags.filter((tag: string[]) => tag[0] === "net-time");
-            expect(timeTags).toEqual([["net-time", "42"]]);
-        });
-
-        it("should handle missing conversation for execution time", async () => {
-            mockContext.conversation = undefined;
-
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            const timeTags = mockLesson.tags.filter((tag: string[]) => tag[0] === "net-time");
-            expect(timeTags).toHaveLength(0);
-        });
-
-        it("should sign and publish the event", async () => {
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            expect(mockLesson.sign).toHaveBeenCalledWith(mockSigner);
-            expect(mockLesson.publish).toHaveBeenCalled();
-        });
-    });
-
-    describe("Logging and Metrics", () => {
-        it("should log lesson creation with correct metrics", async () => {
-            mockProjectContext.getLessonsForAgent.mockReturnValue([1, 2, 3]);
-            mockProjectContext.getAllLessons.mockReturnValue([1, 2, 3, 4, 5, 6, 7]);
-
-            await learnTool.execute(
-                {
-                    title: "Test Lesson",
-                    lesson: "Test content with some length",
-                    keywords: ["test", "example"],
-                },
-                mockContext
-            );
-
-            expect(logger.info).toHaveBeenCalledWith(
-                "✅ Successfully published agent lesson",
-                expect.objectContaining({
-                    agent: "dev-senior",
-                    agentPubkey: "agent-pubkey-123",
-                    eventId: "mock-lesson-id",
-                    title: "Test Lesson",
-                    keywords: 2,
-                    phase: "building",
-                    totalLessonsForAgent: 3,
-                    totalLessonsInProject: 7,
-                })
-            );
-        });
-
-        it("should include all context in error logging", async () => {
-            mockLesson.publish.mockRejectedValue(new Error("Test error"));
-
-            await learnTool.execute(
-                {
-                    title: "Failed Lesson",
-                    lesson: "This will fail",
-                },
-                mockContext
-            );
-
-            expect(logger.error).toHaveBeenCalledWith(
-                "❌ Learn tool failed",
-                expect.objectContaining({
-                    error: "Test error",
-                    agent: "dev-senior",
-                    agentPubkey: "agent-pubkey-123",
-                    title: "Failed Lesson",
-                    phase: "building",
-                    conversationId: mockContext.conversationId,
-                })
-            );
-        });
-    });
-
-    describe("Edge Cases", () => {
-        it("should handle empty keywords array", async () => {
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                    keywords: [],
-                },
-                mockContext
-            );
-
-            const keywordTags = mockLesson.tags.filter((tag: string[]) => tag[0] === "t");
-            expect(keywordTags).toHaveLength(0);
-        });
-
-        it("should filter out empty keywords", async () => {
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                    keywords: ["valid", "", "  ", "another"],
-                },
-                mockContext
-            );
-
-            const keywordTags = mockLesson.tags.filter((tag: string[]) => tag[0] === "t");
-            expect(keywordTags).toEqual([
-                ["t", "valid"],
-                ["t", "another"],
-            ]);
-        });
-
-        it("should handle agent without eventId", async () => {
+        it("should handle missing agent eventId", async () => {
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
             mockContext.agent.eventId = undefined;
-
-            await learnTool.execute(
-                {
-                    title: "Test",
-                    lesson: "Test lesson",
-                },
-                mockContext
-            );
-
-            expect(mockLesson.agent).toBeUndefined();
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(mockNDK.fetchEvent).not.toHaveBeenCalled();
+                expect(mockLesson.agent).toBeUndefined();
+            }
         });
 
-        it("should handle very long lesson content", async () => {
-            const longLesson = "A".repeat(1000);
+        it("should warn when agent event cannot be fetched", async () => {
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            mockNDK.fetchEvent.mockResolvedValue(null);
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(logger.warn).toHaveBeenCalledWith(
+                    "Could not fetch agent event for lesson",
+                    { agentEventId: "mock-agent-event-id" }
+                );
+            }
+        });
+    });
 
-            const result = await learnTool.execute(
-                {
-                    title: "Long Lesson",
-                    lesson: longLesson,
-                },
-                mockContext
-            );
+    describe("Logging", () => {
+        it("should log lesson creation with correct details", async () => {
+            const params = {
+                title: "Architecture Decision",
+                lesson: "Use event sourcing for audit trail requirements",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(logger.info).toHaveBeenCalledWith(
+                    "🎓 Agent recording new lesson",
+                    expect.objectContaining({
+                        agent: "dev-senior",
+                        agentPubkey: "mock-agent-pubkey",
+                        title: params.title,
+                        lessonLength: params.lesson.length,
+                        phase: "reflection",
+                        conversationId: "mock-conversation-id",
+                    })
+                );
+            }
+        });
 
-            expect(result.success).toBe(true);
-            expect(result.metadata?.lessonLength).toBe(1000);
+        it("should log errors with full context", async () => {
+            const params = {
+                title: "Test",
+                lesson: "Test lesson",
+            };
+            
+            const validation = learnTool.parameters.validate(params);
+            if (validation.ok) {
+                const testError = new Error("Test error");
+                mockLesson.publish.mockRejectedValue(testError);
+                
+                await learnTool.execute(validation.value, mockContext);
+                
+                expect(logger.error).toHaveBeenCalledWith(
+                    "❌ Learn tool failed",
+                    expect.objectContaining({
+                        error: "Test error",
+                        agent: "dev-senior",
+                        agentPubkey: "mock-agent-pubkey",
+                        title: params.title,
+                        phase: "reflection",
+                        conversationId: "mock-conversation-id",
+                    })
+                );
+            }
         });
     });
 });

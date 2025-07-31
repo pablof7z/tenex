@@ -32,7 +32,6 @@ export async function loadProcessedEvents(projectPath: string): Promise<void> {
                 for (const id of parsed.eventIds) {
                     processedEventIds.add(id);
                 }
-                logger.info(`Loaded ${processedEventIds.size} processed event IDs from disk`);
             } else {
                 logger.warn("Invalid processed events file format, starting fresh");
             }

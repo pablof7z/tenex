@@ -87,21 +87,6 @@ export class LLMRouter implements LLMService {
             throw new Error(`No LLM configuration found for key: ${configKey}`);
         }
 
-        // Trace request details
-        logger.info("[LLM] Starting completion request", {
-            requestedConfigName: context.configName,
-            resolvedConfigKey: configKey,
-            provider: config.provider,
-            model: config.model,
-            agentName: context.agentName,
-            messageCount: request.messages.length,
-            messages: request.messages.map((m) => ({
-                content: m.content.substring(0, 50),
-                role: m.role,
-            })),
-            requestId: `${configKey}-${Date.now()}`,
-        });
-
         // Trace system prompt if present
         const systemMessage = request.messages.find((m) => m.role === "system");
         if (systemMessage) {
@@ -160,10 +145,6 @@ export class LLMRouter implements LLMService {
             }
 
             // Execute completion with API
-            console.log(
-                "CALLING LLM ****COMPLETE****",
-                request.messages[request.messages.length - 1]?.content.substring(0, 100)
-            );
             response = await llm.complete(model, request.messages, {
                 usage: true,
                 caching: true,
@@ -173,44 +154,6 @@ export class LLMRouter implements LLMService {
             // Not mutating the response object to maintain clean types
 
             const endTime = Date.now();
-            const duration = endTime - startTime;
-
-            // Trace response details with all metadata
-            logger.info("[LLM] Completion response received", {
-                configKey,
-                duration: `${duration}ms`,
-                responseType: typeof response,
-                content: response.content,
-                contentLength: response.content?.length || 0,
-                hasToolCalls: !!response.toolCalls?.length,
-                toolCallCount: response.toolCalls?.length || 0,
-                usage: response.usage,
-            });
-
-            // Log complete response metadata
-            logger.info("[LLM] Complete response metadata", {
-                configKey,
-                fullResponse: JSON.stringify(response, null, 2),
-                responseKeys: Object.keys(response),
-                type: response.type,
-                originalPrompt: response.original_prompt,
-                revisedPrompt: response.revised_prompt,
-                url: response.url,
-                usage: response.usage
-                    ? {
-                          promptTokens: response.usage.prompt_tokens,
-                          completionTokens: response.usage.completion_tokens,
-                          totalTokens: response.usage.total_tokens,
-                          cacheCreationInputTokens: response.usage.cache_creation_input_tokens,
-                          cacheReadInputTokens: response.usage.cache_read_input_tokens,
-                      }
-                    : undefined,
-                toolCalls: response.toolCalls?.map((tc) => ({
-                    name: tc.name,
-                    params: tc.params,
-                    rawParams: JSON.stringify(tc.params),
-                })),
-            });
 
             // Trace response content
             if (response.content) {
@@ -281,15 +224,6 @@ export class LLMRouter implements LLMService {
         }
 
         const startTime = Date.now();
-        logger.info("ℹ️ [LLM] Starting streaming request", {
-            model: config.model,
-            agentName: request.options?.agentName,
-            messageCount: request.messages.length,
-            messages: request.messages.map((m) => ({
-                content: m.content.substring(0, 50),
-                role: m.role,
-            })),
-        });
 
         try {
             const llmConfig = {
@@ -371,57 +305,12 @@ export class LLMRouter implements LLMService {
                         usage: chunk.usage,
                         toolCalls: [],
                     } as CompletionResponse;
-
-                    // Log usage chunk details
-                    logger.info("[LLM] Usage chunk metadata", {
-                        configKey,
-                        usageChunk: JSON.stringify(chunk, null, 2),
-                        usage: chunk.usage,
-                    });
                 }
             }
 
-            // Log all chunk metadata
-            logger.info("[LLM] Stream chunk summary", {
-                configKey,
-                totalChunks: chunkMetadata.length,
-                chunkTypes: chunkMetadata.map((c) => c.type),
-                firstFewChunks: chunkMetadata.slice(0, 5),
-            });
-
             const endTime = Date.now();
-            const duration = endTime - startTime;
 
             if (lastResponse) {
-                logger.info("✅ [LLM] Streaming completed", {
-                    configKey,
-                    duration: `${duration}ms`,
-                    promptTokens: lastResponse.usage?.prompt_tokens,
-                    completionTokens: lastResponse.usage?.completion_tokens,
-                    contentLength: fullContent.length,
-                });
-
-                // Log complete response metadata
-                logger.info("[LLM] Complete streaming response metadata", {
-                    configKey,
-                    fullResponse: JSON.stringify(lastResponse, null, 2),
-                    responseKeys: Object.keys(lastResponse),
-                    type: lastResponse.type,
-                    originalPrompt: lastResponse.original_prompt,
-                    revisedPrompt: lastResponse.revised_prompt,
-                    url: lastResponse.url,
-                    usage: lastResponse.usage
-                        ? {
-                              promptTokens: lastResponse.usage.prompt_tokens,
-                              completionTokens: lastResponse.usage.completion_tokens,
-                              totalTokens: lastResponse.usage.total_tokens,
-                              cacheCreationInputTokens:
-                                  lastResponse.usage.cache_creation_input_tokens,
-                              cacheReadInputTokens: lastResponse.usage.cache_read_input_tokens,
-                          }
-                        : undefined,
-                });
-
                 // Log to comprehensive JSONL logger
                 const llmLogger = getLLMLogger();
                 if (llmLogger) {

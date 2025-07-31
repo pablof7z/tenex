@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Clock, MessageCircle, Timer, Target, Play, CheckCircle, Settings } from "lucide-react";
+import { Clock, MessageCircle, Timer } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 
@@ -76,22 +76,7 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
         return netTimeTag ? parseInt(netTimeTag, 10) : null;
     }, [latestActivity]);
 
-    // Get phase icon and color
-    const getPhaseIcon = (phase: string | null) => {
-        if (!phase) return null;
-
-        const phaseIcons = {
-            chat: MessageCircle,
-            plan: Target,
-            execute: Play,
-            review: CheckCircle,
-            chores: Settings,
-        };
-
-        const IconComponent = phaseIcons[phase as keyof typeof phaseIcons];
-        return IconComponent ? <IconComponent className="w-3 h-3" /> : null;
-    };
-
+    // Get phase color
     const getPhaseColor = (phase: string | null) => {
         if (!phase) return "bg-gray-500";
 
@@ -155,11 +140,9 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
                 <div className="mt-0.5">
                     {latestPhase ? (
                         <div
-                            className={`flex items-center justify-center w-6 h-6 rounded-full ${getPhaseColor(latestPhase)} text-white`}
+                            className={`w-2 h-2 rounded-full ${getPhaseColor(latestPhase)}`}
                             title={`Phase: ${latestPhase}`}
-                        >
-                            {getPhaseIcon(latestPhase)}
-                        </div>
+                        />
                     ) : (
                         <MessageCircle className="w-4 h-4 text-muted-foreground" />
                     )}

@@ -129,6 +129,7 @@ export async function runDebugSystemPrompt(options: DebugSystemPromptOptions) {
         console.log(chalk.cyan("===================\n"));
 
         logInfo("System prompt displayed successfully");
+        process.exit(0);
     } catch (err) {
         const errorMessage = formatError(err);
         logError(`Failed to generate system prompt: ${errorMessage}`);

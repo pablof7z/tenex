@@ -55,25 +55,6 @@ export const retrievedLessonsFragment: PromptFragment<RetrievedLessonsArgs> = {
             })
             .join("\n");
 
-        // Log which lessons are being shown
-        logger.info("📖 Injecting lessons into agent prompt", {
-            agent: agent.name,
-            agentPubkey: agent.pubkey,
-            phase,
-            conversationId: conversation.id,
-            lessonsShown: lessonsToShow.length,
-            lessonTitles: lessonsToShow.map((l) => ({
-                title: l.title || "Untitled",
-                phase: l.tags.find((tag) => tag[0] === "phase")?.[1],
-                keywords:
-                    l.tags
-                        .filter((tag) => tag[0] === "t")
-                        .map((tag) => tag[1])
-                        .join(", ") || "none",
-                eventId: l.id,
-            })),
-        });
-
         return `## Key Lessons Learned
 
 Review these lessons from past experiences to guide your actions:

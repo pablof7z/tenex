@@ -1,7 +1,7 @@
 /**
  * Default Nostr relay URLs for TENEX
  */
-const DEFAULT_RELAY_URLS = ["wss://relay.primal.net"];
+const DEFAULT_RELAY_URLS = ["wss://tenex.chat"];
 
 /**
  * Get relay URLs for NDK connection

@@ -12,7 +12,7 @@ import { logger } from "@/utils/logger";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { getBuiltInAgents } from "./builtInAgents";
 import { getDefaultToolsForAgent } from "./constants";
-import { isClaudeBackend } from "./utils";
+import { isToollessBackend } from "./utils";
 
 export class AgentRegistry {
     private agents: Map<string, Agent> = new Map();
@@ -232,9 +232,24 @@ export class AgentRegistry {
         const signer = new NDKPrivateKeySigner(registryEntry.nsec);
         const pubkey = signer.pubkey;
 
-        // Determine agent name - use project name for orchestrator agents
+        // Determine agent name - use project name for project-manager agent
         let agentName = agentDefinition.name;
-        if (registryEntry.orchestratorAgent) {
+        const isProjectManager = name === "project-manager";
+        
+        if (isProjectManager) {
+            try {
+                const { getProjectContext } = await import("@/services");
+                const projectCtx = getProjectContext();
+                const projectTitle = projectCtx.project.tagValue("title");
+                if (projectTitle) {
+                    agentName = projectTitle;
+                }
+            } catch {
+                // If project context not available, use default name
+                agentName = agentDefinition.name;
+            }
+        } else if (registryEntry.orchestratorAgent && name !== "orchestrator") {
+            // Keep support for custom orchestrator agents using project name
             try {
                 const { getProjectContext } = await import("@/services");
                 const projectCtx = getProjectContext();
@@ -272,8 +287,8 @@ export class AgentRegistry {
 
         // Set tools - use explicit tools if configured, otherwise use defaults
         let toolNames: string[];
-        if (isClaudeBackend(agent)) {
-            // Claude backend agents don't use tools through the traditional tool system
+        if (isToollessBackend(agent)) {
+            // Claude and routing backend agents don't use tools through the traditional tool system
             toolNames = [];
         } else {
             toolNames =
@@ -605,6 +620,7 @@ export class AgentRegistry {
                     instructions: def.instructions || "",
                     llmConfig: def.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
                     mcp: !isOrchestrator, // Default: true for all agents except orchestrator
+                    backend: def.backend,
                 },
                 ndkProject
             );
@@ -624,5 +640,69 @@ export class AgentRegistry {
                 logger.error(`Failed to load built-in agent: ${def.slug}`);
             }
         }
+    }
+
+    /**
+     * Republish kind:0 events for all agents
+     * This is called when the project boots to ensure agents are discoverable
+     */
+    async republishAllAgentProfiles(ndkProject?: import("@nostr-dev-kit/ndk").NDKProject): Promise<void> {
+        logger.info("Republishing kind:0 events for all agents", {
+            agentCount: this.agents.size,
+        });
+
+        let projectName: string;
+        let projectPubkey: string;
+
+        // Use passed NDKProject if available, otherwise fall back to ProjectContext
+        if (ndkProject) {
+            projectName = ndkProject.tagValue("title") || "Unknown Project";
+            projectPubkey = ndkProject.pubkey;
+        } else {
+            // Check if project context is initialized
+            if (!isProjectContextInitialized()) {
+                logger.warn(
+                    "ProjectContext not initialized and no NDKProject provided, skipping agent profile republishing"
+                );
+                return;
+            }
+
+            // Get project context for project pubkey and name
+            const projectCtx = getProjectContext();
+            projectName = projectCtx.project.tagValue("title") || "Unknown Project";
+            projectPubkey = projectCtx.project.pubkey;
+        }
+
+        const ndk = getNDK();
+        const publisher = new AgentPublisher(ndk);
+
+        // Republish kind:0 for each agent
+        for (const [slug, agent] of this.agents) {
+            try {
+                logger.debug(`Republishing kind:0 for agent: ${slug}`, {
+                    agentName: agent.name,
+                    agentRole: agent.role,
+                    pubkey: agent.pubkey,
+                });
+
+                await publisher.publishAgentProfile(
+                    agent.signer,
+                    agent.name,
+                    agent.role,
+                    projectName,
+                    projectPubkey
+                );
+
+                logger.info(`Successfully republished kind:0 for agent: ${slug}`);
+            } catch (error) {
+                logger.error(`Failed to republish kind:0 for agent: ${slug}`, {
+                    error,
+                    agentName: agent.name,
+                });
+                // Continue with other agents even if one fails
+            }
+        }
+
+        logger.info("Completed republishing kind:0 events for all agents");
     }
 }

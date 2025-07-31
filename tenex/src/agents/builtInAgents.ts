@@ -10,7 +10,7 @@ export interface BuiltInAgentDefinition {
     role: string;
     instructions: string;
     llmConfig?: string;
-    backend?: "reason-act-loop" | "claude";
+    backend?: "reason-act-loop" | "claude" | "routing";
     useCriteria?: string;
 }
 
@@ -29,6 +29,7 @@ export const ORCHESTRATOR_BUILT_IN: BuiltInAgentDefinition = {
     role: ORCHESTRATOR_AGENT_DEFINITION.role,
     instructions: ORCHESTRATOR_AGENT_DEFINITION.instructions || "",
     llmConfig: ORCHESTRATOR_AGENT_DEFINITION.llmConfig || DEFAULT_AGENT_LLM_CONFIG,
+    backend: ORCHESTRATOR_AGENT_DEFINITION.backend,
 };
 
 export function getBuiltInAgents(): BuiltInAgentDefinition[] {

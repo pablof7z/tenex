@@ -113,9 +113,35 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         }).length;
     }, [directReplies, event.id]);
 
+    // Get conversation ID from the event's e tag or use the event ID itself
+    const conversationId = useMemo(() => {
+        // For kind 11 (thread/chat events), use the event ID itself as conversation ID
+        if (event.kind === 11) {
+            console.log("[MessageWithReplies] Using thread event ID as conversationId:", {
+                eventId: event.id,
+                eventKind: event.kind,
+            });
+            return event.id;
+        }
+        
+        // For replies, try to find the root conversation
+        let eTag = event.tagValue("e");
+        if (!eTag) {
+            eTag = event.tagValue("E");
+        }
+        const result = eTag || event.id;
+        console.log("[MessageWithReplies] Calculated conversationId for reply:", {
+            eventId: event.id,
+            eTag,
+            conversationId: result,
+            eventKind: event.kind,
+        });
+        return result;
+    }, [event]);
+
     return (
         <div className="group">
-            <StatusUpdate event={event} onReply={() => handleReply(event)} />
+            <StatusUpdate event={event} onReply={() => handleReply(event)} conversationId={conversationId} />
             
             {/* Reply count and toggle - Slack style */}
             {replyCount > 0 && (

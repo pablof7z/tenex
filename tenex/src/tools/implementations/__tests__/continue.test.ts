@@ -33,7 +33,13 @@ describe("continueTool - Agent routing", () => {
         id: "test-conversation",
         title: "Test Conversation",
         phase: "chat",
-        history: [],
+        history: [
+            {
+                id: "user-event-1",
+                pubkey: "user-pubkey",
+                content: "Previous user message",
+            } as any,
+        ],
         agentContexts: new Map(),
         phaseStartedAt: Date.now(),
         metadata: {},
@@ -70,8 +76,15 @@ describe("continueTool - Agent routing", () => {
         publisher: {
             publishResponse: mock(),
         } as any,
-        conversationManager: {} as any,
-        triggeringEvent: undefined,
+        conversationManager: {
+            updatePhase: mock(),
+            getConversation: mock(() => mockConversation),
+        } as any,
+        triggeringEvent: {
+            pubkey: "user-pubkey",
+            content: "Test user message",
+            id: "test-event-id",
+        } as any,
     };
 
     // Helper function to execute tool and get result
@@ -82,22 +95,10 @@ describe("continueTool - Agent routing", () => {
     }
 
     describe("Required parameters", () => {
-        it("should fail when messageToAgents is missing", async () => {
-            const result = await executeControl({
-                agents: ["planner"],
-                phase: "plan",
-                reason: "Need to plan the architecture",
-            });
-
-            expect(result.success).toBe(false);
-            expect(result.error?.kind).toBe("validation");
-            expect(result.error?.message).toBe("Required");
-        });
         it("should fail when no agents specified", async () => {
             const result = await executeControl({
                 phase: "plan",
                 reason: "Need to plan the architecture",
-                messageToAgents: "@planner, plan the architecture",
             });
 
             expect(result.success).toBe(false);
@@ -109,7 +110,6 @@ describe("continueTool - Agent routing", () => {
             const result = await executeControl({
                 agents: [],
                 reason: "Test routing",
-                messageToAgents: "Test message",
             });
 
             expect(result.success).toBe(false);
@@ -122,17 +122,17 @@ describe("continueTool - Agent routing", () => {
                 agents: ["planner"],
                 phase: "plan",
                 reason: "Need to plan the architecture",
-                messageToAgents: "@planner, plan the architecture for this feature",
             });
+
+            if (!result.success) {
+                console.log("Test failed with error:", result.error);
+            }
 
             expect(result.success).toBe(true);
             expect(result.output?.type).toBe("continue");
             expect(result.output?.routing.agents).toEqual(["planner-pubkey"]);
             expect(result.output?.routing.phase).toBe("plan");
             expect(result.output?.routing.reason).toBe("Need to plan the architecture");
-            expect(result.output?.routing.messageToAgents).toBe(
-                "@planner, plan the architecture for this feature"
-            );
         });
     });
 
@@ -142,8 +142,6 @@ describe("continueTool - Agent routing", () => {
                 phase: "execute",
                 agents: ["frontend-expert", "backend-expert"],
                 reason: "Need expert review",
-                messageToAgents:
-                    "@frontend-expert @backend-expert, please review the implementation",
             });
 
             expect(result.success).toBe(true);
@@ -157,7 +155,6 @@ describe("continueTool - Agent routing", () => {
             const result = await executeControl({
                 agents: ["invalid-agent"],
                 reason: "Test routing",
-                messageToAgents: "Test message",
             });
 
             expect(result.success).toBe(false);
@@ -170,7 +167,6 @@ describe("continueTool - Agent routing", () => {
             const result = await executeControl({
                 agents: ["orchestrator"],
                 reason: "Test self routing",
-                messageToAgents: "Test message",
             });
 
             expect(result.success).toBe(false);
@@ -185,7 +181,6 @@ describe("continueTool - Agent routing", () => {
                 agents: ["executor"],
                 phase: "execute",
                 reason: "Implementing feature",
-                messageToAgents: "@executor, implement the user authentication feature",
             });
 
             expect(result.success).toBe(true);
@@ -194,7 +189,6 @@ describe("continueTool - Agent routing", () => {
                 phase: "execute",
                 agents: ["executor-pubkey"],
                 reason: "Implementing feature",
-                messageToAgents: "@executor, implement the user authentication feature",
             });
         });
     });
@@ -215,7 +209,6 @@ describe("continueTool - Agent routing", () => {
                 agents: ["executor"],
                 phase: "execute",
                 reason: "Test",
-                messageToAgents: "Test message",
             });
 
             expect(result.success).toBe(false);
@@ -231,7 +224,6 @@ describe("continueTool - Agent routing", () => {
                 agents: ["executor"],
                 phase: "CHORES" as any,
                 reason: "Here is why I decided this path: Testing uppercase",
-                messageToAgents: "@executor, perform maintenance tasks",
             });
 
             expect(result.success).toBe(true);
@@ -246,7 +238,6 @@ describe("continueTool - Agent routing", () => {
                 agents: ["planner"],
                 phase: "ReFlEcTiOn" as any,
                 reason: "Here is why I decided this path: Testing mixed case",
-                messageToAgents: "@planner, reflect on the implementation",
             });
 
             expect(result.success).toBe(true);
@@ -261,7 +252,6 @@ describe("continueTool - Agent routing", () => {
                 agents: ["executor"],
                 phase: "INVALID_PHASE" as any,
                 reason: "Here is why I decided this path: Testing invalid",
-                messageToAgents: "Test message",
             });
 
             expect(result.success).toBe(false);

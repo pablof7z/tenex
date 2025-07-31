@@ -4,6 +4,7 @@ import type { Conversation } from "@/conversations/types";
 import { fragmentRegistry } from "../core/FragmentRegistry";
 import type { PromptFragment } from "../core/types";
 import { buildAgentPrompt } from "./agent-common";
+import { agentCompletionGuidanceFragment } from "./agent-completion-guidance";
 
 // ========================================================================
 // EXECUTION & SYSTEM PROMPT FRAGMENTS
@@ -22,15 +23,39 @@ export const agentSystemPromptFragment: PromptFragment<AgentSystemPromptArgs> = 
     template: ({ agent, phase, projectTitle }) => {
         const parts: string[] = [];
 
-        // Use shared agent prompt builder
-        parts.push(
-            buildAgentPrompt({
-                name: agent.name,
-                role: agent.role,
-                instructions: agent.instructions || "",
-                projectName: projectTitle,
-            })
-        );
+        // Orchestrator should not have identity section - it's invisible
+        if (agent.isOrchestrator) {
+            // Only add instructions for orchestrator, no identity
+            if (agent.instructions) {
+                parts.push(`## Your Instructions\n${agent.instructions}`);
+            }
+            
+            // Add project context
+            if (projectTitle) {
+                parts.push(`## Project Context\n- Project Name: "${projectTitle}"`);
+            }
+        } else {
+            // Use shared agent prompt builder for non-orchestrator agents
+            parts.push(
+                buildAgentPrompt({
+                    name: agent.name,
+                    role: agent.role,
+                    instructions: agent.instructions || "",
+                    projectName: projectTitle,
+                })
+            );
+        }
+
+        // Add completion guidance for non-orchestrator agents
+        if (!agent.isOrchestrator) {
+            const completionGuidance = agentCompletionGuidanceFragment.template({
+                phase,
+                isOrchestrator: false
+            });
+            if (completionGuidance) {
+                parts.push(completionGuidance);
+            }
+        }
 
         return parts.join("\n\n");
     },

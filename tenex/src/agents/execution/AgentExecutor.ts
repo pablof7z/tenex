@@ -16,12 +16,15 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { Message } from "multi-llm-ts";
 import { ReasonActLoop } from "./ReasonActLoop";
 import { ClaudeBackend } from "./ClaudeBackend";
+import { RoutingBackend } from "./RoutingBackend";
 import type { ExecutionBackend } from "./ExecutionBackend";
 import type { ExecutionContext } from "./types";
 import "@/prompts/fragments/available-agents";
 import "@/prompts/fragments/orchestrator-routing";
 import "@/prompts/fragments/expertise-boundaries";
+import "@/prompts/fragments/domain-expert-guidelines";
 import { startExecutionTime, stopExecutionTime } from "@/conversations/executionTime";
+import { createExecutionLogger, type ExecutionLogger } from "@/logging/ExecutionLogger";
 
 export class AgentExecutor {
     constructor(
@@ -39,6 +42,8 @@ export class AgentExecutor {
         switch (backendType) {
             case "claude":
                 return new ClaudeBackend();
+            case "routing":
+                return new RoutingBackend(this.llmService, this.conversationManager);
             case "reason-act-loop":
             default:
                 return new ReasonActLoop(this.llmService, this.conversationManager);
@@ -56,14 +61,8 @@ export class AgentExecutor {
                   createTracingContext(context.conversationId),
                   context.agent.name
               );
-
-        const tracingLogger = createTracingLogger(tracingContext, "agent");
-
-        tracingLogger.startOperation("agent_execution", {
-          phase: context.phase,
-          agentName: context.agent.name,
-          triggeringEventId: context.triggeringEvent.id
-        });
+        
+        const executionLogger = createExecutionLogger(tracingContext, "agent");
 
         // Ensure context has publisher and conversationManager
         const fullContext: ExecutionContext = {
@@ -77,6 +76,7 @@ export class AgentExecutor {
                     conversationManager: this.conversationManager,
                 }),
             conversationManager: context.conversationManager || this.conversationManager,
+            agentExecutor: this, // Pass this AgentExecutor instance for continue() tool
         };
 
         try {
@@ -90,6 +90,13 @@ export class AgentExecutor {
 
             // Start execution time tracking
             startExecutionTime(conversation);
+            
+            // Log execution flow start
+            executionLogger.logEvent({
+                type: "execution_flow_start",
+                conversationId: context.conversationId,
+                narrative: `Agent ${context.agent.name} starting execution in ${context.phase} phase`
+            });
 
             // 1. Build the agent's messages
             const messages = await this.buildMessages(fullContext, fullContext.triggeringEvent);
@@ -98,9 +105,24 @@ export class AgentExecutor {
             await fullContext.publisher.publishTypingIndicator("start");
 
             await this.executeWithStreaming(fullContext, messages, tracingContext);
+            
+            // Log execution flow complete
+            executionLogger.logEvent({
+                type: "execution_flow_complete",
+                conversationId: context.conversationId,
+                narrative: `Agent ${context.agent.name} completed execution successfully`,
+                success: true
+            });
 
             // Conversation updates are now handled by NostrPublisher
         } catch (error) {
+            // Log execution flow failure
+            executionLogger.logEvent({
+                type: "execution_flow_complete",
+                conversationId: context.conversationId,
+                narrative: `Agent ${context.agent.name} execution failed: ${error instanceof Error ? error.message : String(error)}`,
+                success: false
+            });
             // Stop execution time tracking even on error
             const conversation = context.conversationManager.getConversation(
                 context.conversationId
@@ -113,10 +135,6 @@ export class AgentExecutor {
 
             // Ensure typing indicator is stopped even on error
             await fullContext.publisher.publishTypingIndicator("stop");
-
-            tracingLogger.failOperation("agent_execution", error, {
-                agentName: context.agent.name,
-            });
 
             throw error;
         }
@@ -206,11 +224,6 @@ export class AgentExecutor {
                     handoff
                 );
             } else {
-                logger.info("[AGENT_EXECUTOR] Bootstrapping context for direct invocation", {
-                    agentSlug: context.agent.slug,
-                    systemPrompt,
-                });
-
                 // Bootstrap context for direct invocation (e.g., p-tag mention)
                 agentContext = await context.conversationManager.bootstrapAgentContext(
                     context.conversationId,
@@ -219,12 +232,6 @@ export class AgentExecutor {
                 );
             }
         } else {
-            // Context exists - synchronize with missed messages
-            logger.info("[AGENT_EXECUTOR] Synchronizing existing context", {
-                agentSlug: context.agent.slug,
-                currentMessages: agentContext.messages.length,
-            });
-
             await context.conversationManager.synchronizeAgentContext(
                 context.conversationId,
                 context.agent.slug,
@@ -234,15 +241,6 @@ export class AgentExecutor {
 
         // Add the agent's isolated messages
         messages.push(...agentContext.messages);
-
-        logger.info("[AGENT_EXECUTOR] Final message state for agent", {
-            agentSlug: context.agent.slug,
-            totalMessages: messages.length,
-            messages: messages.map((m) => ({
-                role: m.role,
-                contentPreview: `${m.content.substring(0, 100)}...`,
-            })),
-        });
 
         return messages;
     }
@@ -255,8 +253,6 @@ export class AgentExecutor {
         messages: Message[],
         tracingContext: TracingContext
     ): Promise<void> {
-        const tracingLogger = createTracingLogger(tracingContext, "agent");
-
         // Get tools for response processing - use agent's configured tools
         const tools = context.agent.tools || [];
 
@@ -272,10 +268,5 @@ export class AgentExecutor {
 
         // Execute using the backend - all backends now use the same interface
         await backend.execute(messages, allTools, context, context.publisher);
-
-        tracingLogger.info("[AGENT_EXECUTOR] Backend execution completed", {
-            agent: context.agent.name,
-            backend: context.agent.backend || "reason-act-loop",
-        });
     }
 }

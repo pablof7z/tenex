@@ -18,8 +18,15 @@ const completeSchema = z.object({
 });
 
 /**
- * Complete tool - non-orchestrator agents MUST use this to signal task completion
- * Implements the star topology where all agents report completion to orchestrator
+ * Complete tool - signals task completion and returns control to orchestrator
+ * 
+ * IMPORTANT: This tool ALWAYS routes to the orchestrator, regardless of who invoked you.
+ * Use this when:
+ * - You've completed your assigned task
+ * - You need the orchestrator to decide next steps or phase transitions
+ * - You've gathered enough information to move forward (e.g., requirements are clear)
+ * 
+ * DO NOT use this for conversational responses - just respond normally for those.
  * YOUR JOB IS NOT DONE UNTIL YOU EXPLICITLY USE THIS TOOL
  */
 export const completeTool: Tool<
@@ -31,10 +38,14 @@ export const completeTool: Tool<
 > = {
     name: "complete",
     description:
-        "Signal that you have completed your assigned task and report results to the orchestrator",
-    promptFragment: `-When asked a question, use this tool as the ONLY way to FINALLY respond the question.
-- When tasked with building a plan, provide the FULL plan using this tool.
-- When tasked with creating something, provide the FULL report of what was built, using this tool.`,
+        "Signal task completion and return control to the orchestrator for next steps",
+    promptFragment: `- Use this tool to signal task completion and return control to the orchestrator
+- During CHAT phase: Use when requirements are clear and ready for next phase
+- During other phases: Use when your assigned task is complete
+- Include a clear summary of what was accomplished or learned
+- DO NOT use this for conversational exchanges - just respond normally
+- Example in CHAT: complete("User wants to add authentication with OAuth providers")
+- Example in EXECUTE: complete("Implemented OAuth with Google and GitHub providers")`,
 
     parameters: createZodSchema(completeSchema),
 

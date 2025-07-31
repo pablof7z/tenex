@@ -1,6 +1,12 @@
 import { NDKEvent, type NDKRawEvent } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 
+export enum LessonQuality {
+    TRIVIAL = "trivial",
+    VALUABLE = "valuable",
+    CRITICAL = "critical"
+}
+
 export class NDKAgentLesson extends NDKEvent {
     static kind = 4129;
     static kinds = [4129];
@@ -62,5 +68,30 @@ export class NDKAgentLesson extends NDKEvent {
      */
     get agentId(): string | undefined {
         return this.tags.find((tag) => tag[0] === "e")?.[1];
+    }
+
+    /**
+     * Quality assessment of the lesson
+     */
+    get quality(): LessonQuality | undefined {
+        const qualityTag = this.tagValue("quality");
+        return qualityTag as LessonQuality | undefined;
+    }
+
+    set quality(value: LessonQuality | undefined) {
+        this.removeTag("quality");
+        if (value) this.tags.push(["quality", value]);
+    }
+
+    /**
+     * Metacognition reasoning - why this lesson is worth learning
+     */
+    get metacognition(): string | undefined {
+        return this.tagValue("metacognition");
+    }
+
+    set metacognition(value: string | undefined) {
+        this.removeTag("metacognition");
+        if (value) this.tags.push(["metacognition", value]);
     }
 }

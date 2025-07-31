@@ -1,7 +1,6 @@
 import type { Agent } from "./types";
 import { analyze } from "../tools/implementations/analyze";
 import { continueTool } from "../tools/implementations/continue";
-import { endConversationTool } from "../tools/implementations/endConversation";
 import { generateInventoryTool } from "../tools/implementations/generateInventory";
 import { learnTool } from "../tools/implementations/learn";
 import { readPathTool } from "../tools/implementations/readPath";
@@ -19,8 +18,13 @@ export function getDefaultToolsForAgent(agent: Agent): string[] {
     // Built-in agents
     if (agent.isBuiltIn) {
         if (agent.isOrchestrator) {
-            // Orchestrator agents get limited tools (no claude_code or shell)
-            tools = [endConversationTool.name, continueTool.name, learnTool.name];
+            // Orchestrator with routing backend doesn't need any tools
+            if (agent.backend === "routing") {
+                tools = [];
+            } else {
+                // Legacy orchestrator with reason-act-loop gets continue tool
+                tools = [continueTool.name];
+            }
         } else {
             // Other non-orchestrator agents use complete tool to signal task completion
             tools.push(completeTool.name);

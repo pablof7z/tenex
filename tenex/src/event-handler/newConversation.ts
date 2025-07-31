@@ -17,10 +17,6 @@ export const handleNewConversation = async (
     event: NDKEvent,
     context: EventHandlerContext
 ): Promise<void> => {
-    const title = event.tags.find((tag) => tag[0] === "title")?.[1] || "New Conversation";
-    logInfo(chalk.green(`\n🗣️  New conversation started: ${title}`));
-    logInfo(chalk.gray("Content: ") + chalk.white(event.content));
-
     try {
         // Create conversation
         const conversation = await context.conversationManager.createConversation(event);

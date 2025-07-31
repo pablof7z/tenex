@@ -5,12 +5,12 @@ describe("Orchestrator Routing Fragments", () => {
     it("should generate orchestrator routing instructions", () => {
         const prompt = new PromptBuilder().add("orchestrator-routing-instructions", {}).build();
 
-        expect(prompt).toContain("## Orchestrator Agent Routing Instructions");
-        expect(prompt).toContain("Core Routing Principles");
-        expect(prompt).toContain("Message Passing Rules");
-        expect(prompt).toContain("Request Assessment");
-        expect(prompt).toContain("Quality Control in Plan Phase");
-        expect(prompt).toContain("Quality Control in Execute Phase");
-        expect(prompt).toContain("Required Phase Sequence After Execution");
+        expect(prompt).toContain("## Silent Orchestrator Routing Instructions");
+        expect(prompt).toContain("CRITICAL: You Are Invisible");
+        expect(prompt).toContain("Pure Routing Rules");
+        expect(prompt).toContain("Phase Decision Logic");
+        expect(prompt).toContain("Quality Control Guidelines");
+        expect(prompt).toContain("EXECUTE Phase Process");
+        expect(prompt).toContain("Phase Sequence");
     });
 });

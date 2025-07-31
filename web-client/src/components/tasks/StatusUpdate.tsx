@@ -37,18 +37,61 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { isAudioEvent } from "../../utils/audioEvents";
 import { VoiceMessage } from "../chat/VoiceMessage";
+import { useStreamingResponses } from "../../hooks/useStreamingResponses";
 
 interface StatusUpdateProps {
     event: NDKEvent;
     onReply?: (event: NDKEvent) => void;
+    conversationId?: string; // To enable streaming response subscriptions
 }
 
-export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: StatusUpdateProps) {
+export const StatusUpdate = memo(function StatusUpdate({ event, onReply, conversationId }: StatusUpdateProps) {
     const profile = useProfileValue(event.pubkey);
     const { formatRelativeTime } = useTimeFormat();
     const [showMetadataDialog, setShowMetadataDialog] = useState(false);
     const [showRawEventDialog, setShowRawEventDialog] = useState(false);
     const [expandedThinkingBlocks, setExpandedThinkingBlocks] = useState<Set<number>>(new Set());
+    
+    // Subscribe to streaming responses if we have a conversationId
+    const { streamingResponses } = useStreamingResponses(conversationId || null);
+    
+    // Debug the event - only for non-user events
+    if (event.kind !== 11) {
+        console.log("[StatusUpdate] Rendering agent event:", {
+            eventId: event.id,
+            eventKind: event.kind,
+            eventPubkey: event.pubkey,
+            contentLength: event.content?.length,
+            contentPreview: event.content?.substring(0, 50) + "...",
+            conversationId,
+            hasStreamingResponses: streamingResponses?.size > 0,
+        });
+    }
+    
+    // Check if this event has a streaming response
+    const streamingResponse = useMemo(() => {
+        if (!streamingResponses || streamingResponses.size === 0) return null;
+        const response = streamingResponses.get(event.pubkey);
+        console.log("[StatusUpdate] Checking for streaming response:", {
+            eventPubkey: event.pubkey,
+            hasStreamingResponses: streamingResponses.size > 0,
+            streamingAgents: Array.from(streamingResponses.keys()),
+            foundResponse: !!response,
+            responseContent: response?.content?.substring(0, 50) + "...",
+        });
+        return response;
+    }, [streamingResponses, event.pubkey]);
+    
+    // Check if we should show streaming content
+    const shouldShowStreaming = streamingResponse && (!event.content || event.content.trim() === "");
+    
+    console.log("[StatusUpdate] Streaming decision:", {
+        eventId: event.id,
+        hasStreamingResponse: !!streamingResponse,
+        eventContentLength: event.content?.length || 0,
+        eventContentIsEmpty: !event.content || event.content.trim() === "",
+        shouldShowStreaming,
+    });
 
     // Process content for Nostr entities and thinking blocks
     const processedContent = useMemo(() => {
@@ -613,10 +656,38 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply }: Statu
                             <VoiceMessage event={event} isFromCurrentUser={false} />
                         </div>
                     ) : (
-                        <div className="text-sm text-foreground/90 leading-relaxed mb-2 prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                                {processedContent.content}
-                            </ReactMarkdown>
+                        <div className="text-sm text-foreground/90 leading-relaxed mb-2">
+                            {shouldShowStreaming ? (
+                                // Show streaming content if available
+                                <>
+                                    {console.log("[StatusUpdate] SHOWING STREAMING CONTENT:", {
+                                        contentLength: streamingResponse.content?.length,
+                                        eventPubkey: event.pubkey,
+                                    })}
+                                    <div className="whitespace-pre-wrap">
+                                        {streamingResponse.content}
+                                        <span className="inline-block w-2 h-4 bg-foreground/60 animate-pulse ml-1" />
+                                    </div>
+                                </>
+                            ) : (
+                                // Show regular content
+                                <>
+                                    {console.log("[StatusUpdate] SHOWING REGULAR CONTENT:", {
+                                        contentLength: event.content?.length,
+                                        hasStreamingResponse: !!streamingResponse,
+                                        eventPubkey: event.pubkey,
+                                    })}
+                                    <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:text-muted-foreground prose-blockquote:border-l-primary prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                            {processedContent.content}
+                                        </ReactMarkdown>
+                                    </div>
+                                    {/* Show cursor if streaming but event has content (transitioning state) */}
+                                    {streamingResponse && event.content && (
+                                        <span className="inline-block w-2 h-4 bg-foreground/60 animate-pulse ml-1" />
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
 

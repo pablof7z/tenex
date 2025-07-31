@@ -159,6 +159,9 @@ export const PHASE_DEFINITIONS: Record<Phase, PhaseDefinition> = {
             "Record project-specific knowledge for PM's understanding",
             "Be concise and specific in lessons learned",
             "Include relevant keywords for future retrieval",
+            "Apply metacognition before recording - ask 'Will this genuinely improve future behavior?'",
+            "Avoid trivial lessons like 'always test code' or 'read documentation'",
+            "Only record lessons that are specific to THIS project's unique challenges",
         ],
     },
 } as const;

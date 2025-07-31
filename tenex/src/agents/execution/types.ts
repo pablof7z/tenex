@@ -14,6 +14,7 @@ export interface ExecutionContext {
     previousPhase?: Phase;
     handoff?: PhaseTransition;
     claudeSessionId?: string;
+    agentExecutor?: import("@/agents/execution/AgentExecutor").AgentExecutor;
 }
 
 export interface AgentExecutionResult {

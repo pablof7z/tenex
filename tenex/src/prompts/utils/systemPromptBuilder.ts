@@ -6,6 +6,7 @@ import { PromptBuilder } from "@/prompts/core/PromptBuilder";
 import type { Tool } from "@/tools/types";
 import "@/prompts/fragments/phase-definitions";
 import "@/prompts/fragments/referenced-article";
+import "@/prompts/fragments/domain-expert-guidelines";
 
 export interface BuildSystemPromptOptions {
     // Required data
@@ -88,21 +89,35 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
         })
         .add("agent-tools", {
             agent,
-        })
-        .add("mcp-tools", {
-            tools: mcpTools,
         });
+    
+    // Only add MCP tools and reasoning instructions for non-orchestrator agents
+    if (!agent.isOrchestrator) {
+        systemPromptBuilder
+            .add("agent-reasoning", {}) // Add reasoning instructions for non-orchestrator agents
+            .add("mcp-tools", {
+                tools: mcpTools,
+            });
+    }
     // .add("tool-use", {});
 
-    // Add orchestrator-specific routing instructions for orchestrator agents
-    if (agent.isOrchestrator) {
-        systemPromptBuilder.add("orchestrator-routing-instructions", {});
-    } else {
+    // Add orchestrator-specific routing instructions for orchestrator agents using reason-act-loop backend
+    // The routing backend doesn't need these instructions as it uses structured output
+    if (agent.isOrchestrator && agent.backend !== "routing") {
+        systemPromptBuilder
+            .add("orchestrator-routing-instructions", {})
+            .add("orchestrator-reasoning", {}); // Add orchestrator-specific reasoning
+    } else if (!agent.isOrchestrator) {
         // Add expertise boundaries for non-orchestrator agents
         systemPromptBuilder.add("expertise-boundaries", {
             agentRole: agent.role,
             isOrchestrator: false,
         });
+        
+        // Add domain expert guidelines for all non-orchestrator agents
+        systemPromptBuilder
+            .add("domain-expert-guidelines", {})
+            .add("expert-reasoning", {}); // Add expert-specific reasoning
     }
 
     return systemPromptBuilder.build();

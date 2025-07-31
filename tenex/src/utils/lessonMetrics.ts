@@ -76,35 +76,6 @@ export function calculateLessonMetrics(projectCtx: ProjectContext): LessonMetric
 }
 
 /**
- * Log comprehensive lesson metrics
- */
-export function logLessonMetrics(projectCtx: ProjectContext): void {
-    const metrics = calculateLessonMetrics(projectCtx);
-
-    logger.info("📊 Lesson System Metrics", {
-        totalLessons: metrics.totalLessons,
-        averageLessonLength: metrics.averageLessonLength,
-        lessonsByAgent: Object.fromEntries(metrics.lessonsByAgent),
-        lessonsByPhase: Object.fromEntries(metrics.lessonsByPhase),
-        topKeywords: metrics.mostCommonKeywords
-            .slice(0, 5)
-            .map((k) => `${k.keyword}(${k.count})`)
-            .join(", "),
-        dateRange:
-            metrics.oldestLesson && metrics.newestLesson
-                ? {
-                      oldest: metrics.oldestLesson.toISOString(),
-                      newest: metrics.newestLesson.toISOString(),
-                      spanDays: Math.round(
-                          (metrics.newestLesson.getTime() - metrics.oldestLesson.getTime()) /
-                              (1000 * 60 * 60 * 24)
-                      ),
-                  }
-                : null,
-    });
-}
-
-/**
  * Track lesson usage in prompts
  */
 export function logLessonUsage(

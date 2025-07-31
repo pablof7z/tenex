@@ -25,6 +25,7 @@ export const EVENT_KINDS = {
     LLM_CONFIG_CHANGE: 24101 as NDKKind,
     TYPING_INDICATOR: 24111 as NDKKind,
     TYPING_INDICATOR_STOP: 24112 as NDKKind,
+    STREAMING_RESPONSE: 21111 as NDKKind,
 
     // Addressable events
     ARTICLE: 30023 as NDKKind,

@@ -12,17 +12,19 @@ interface ContinueInput {
     phase?: string;
     agents: string[];
     reason: string;
-    messageToAgents: string;
 }
 
 export const continueTool: Tool<ContinueInput> = {
     name: "continue",
     description:
-        "Route conversation to next phase/agent. REQUIRES 'agents' and 'messageToAgents' parameters. This is a terminal action - once called, the orchestrator's turn ends and control is transferred.",
-    promptFragment: `- The continue tool is terminal - it ends your turn immediately.
-- The messageToAgents parameter is REQUIRED and is the ONLY message that agents will see. It MUST include what the agent(s) NEED TO DO and what they NEED TO KNOW.
-- Do not add assumptions or make anything up - only provide information as you've received it.
-- The continue tool allows you to delegate to multiple agents at the same time, when you have multiple agents that have domain expertise of the plan or work involved, ping them all. Once you receive the report back from ALL the agents you pinged provide the work back to @planner or @executer agent detailing the feedback from the agents. DO NOT try to summarize or interpret the feedback, let the relevant agent you delegate to to make sense of the feedback.
+        "Route conversation to next phase/agent. REQUIRES 'agents' parameter. This is a TERMINAL action - once called, processing STOPS IMMEDIATELY and control is transferred. DO NOT call this multiple times.",
+    promptFragment: `- The continue tool is TERMINAL - it ends your turn IMMEDIATELY. DO NOT call it multiple times.
+- Once you call continue(), STOP - do not generate more content or tool calls.
+- The system will execute target agents with your triggering event.
+- Target agents receive your triggering event as if they were p-tagged originally.
+- You are a pure router - just decide WHERE to route, not WHAT to say.
+- You can delegate to multiple agents at once if they have relevant expertise.
+- When you receive reports back from multiple agents, route to the appropriate primary agent (planner/executor) without summarizing or interpreting.
 `,
 
     parameters: createZodSchema(
@@ -41,16 +43,11 @@ export const continueTool: Tool<ContinueInput> = {
                 .describe(
                     "Used for routing debugging. Provide clear reason that justify this decision, include every detail and thought you had for choosing this routing (e.g., 'Request is clear and specific', 'Need planning due to ambiguity', 'Complex task requires specialized agents'). Always start the reason with 'Here is why I decided this path'. ALWAYS."
                 ),
-            messageToAgents: z
-                .string()
-                .describe(
-                    "The message that agents will see. This MUST include what the agent(s) NEED TO DO and what they NEED TO KNOW. Be specific and clear, as this is the ONLY message agents will receive."
-                ),
         })
     ),
 
     execute: async (input, context) => {
-        const { phase, agents, reason, messageToAgents } = input.value;
+        const { phase, agents, reason } = input.value;
 
         // Runtime check for orchestrator
         if (!context.agent.isOrchestrator) {
@@ -137,6 +134,7 @@ export const continueTool: Tool<ContinueInput> = {
             );
         }
 
+
         // Return properly typed control flow
         return success({
             type: "continue",
@@ -144,7 +142,6 @@ export const continueTool: Tool<ContinueInput> = {
                 phase: targetPhase,
                 agents: targetAgentPubkeys,
                 reason,
-                messageToAgents,
             },
         });
     },
