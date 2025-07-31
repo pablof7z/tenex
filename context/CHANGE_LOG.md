@@ -8,7 +8,7 @@ This document tracks significant changes made to the TENEX project for better ma
 Fixed a critical bug where final Nostr reply events (kind: 1111) were only containing the last unflushed portion of agent responses instead of the complete accumulated content.
 
 ### Technical Details
-- **File Modified**: `tenex/src/nostr/StreamPublisher.ts`
+- **File Modified**: `backend/src/nostr/StreamPublisher.ts`
 - **Specific Changes**: 
   - In `finalize()` method (line 537): Changed from `this.pendingContent` to `this.accumulatedContent` for final reply event
   - In streaming events (line 608): Now sends complete accumulated content instead of deltas
@@ -48,7 +48,7 @@ The code was using `pendingContent` (which tracks only unflushed content) instea
 Modified the backend publishing frequency for 24010 (PROJECT_STATUS) events from 60 seconds to 15 seconds.
 
 ### Technical Details
-- **File Modified**: `tenex/src/commands/run/constants.ts`
+- **File Modified**: `backend/src/commands/run/constants.ts`
 - **Specific Change**: Updated `STATUS_INTERVAL_MS` constant
   - Previous value: `60000` (60 seconds)
   - New value: `15000` (15 seconds)

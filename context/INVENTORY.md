@@ -11,9 +11,9 @@ Recent architectural changes have refined the multi-agent system into a structur
 
 ### 2. Directory Structure
 
-The repository is a monorepo containing the main `tenex` backend, a `web-client`, a `cli-client`, and an `e2e-framework`.
+The repository is a monorepo containing the main `backend` backend, a `web-client`, a `cli-client`, and an `e2e-framework`.
 
--   `tenex/`: The core backend application.
+-   `backend/`: The core backend application.
     -   `src/agents/`: **(Heavily Modified)** Contains all agent-related logic. This is the heart of the system.
         -   `built-in/`: Definitions for core agents (`orchestrator`, `planner`, `executor`).
         -   `execution/`: The logic for running agents, including the main `ReasonActLoop`, `AgentExecutor`, and the new `RoutingBackend`.
@@ -31,27 +31,27 @@ The repository is a monorepo containing the main `tenex` backend, a `web-client`
 
 This section highlights key files, with special focus on recent changes.
 
--   **`tenex/docs/routing-system-redesign.md` (New)**: The new architectural blueprint. It describes a shift where the `Orchestrator` is a "silent router" that never speaks to users, and the system follows a strict, phase-based workflow (`CHAT` -> `PLAN` -> `EXECUTE` -> `VERIFICATION` etc.). It's the most important document for understanding the current system design.
+-   **`backend/docs/routing-system-redesign.md` (New)**: The new architectural blueprint. It describes a shift where the `Orchestrator` is a "silent router" that never speaks to users, and the system follows a strict, phase-based workflow (`CHAT` -> `PLAN` -> `EXECUTE` -> `VERIFICATION` etc.). It's the most important document for understanding the current system design.
 
--   **`tenex/src/agents/built-in/orchestrator.ts` (Modified)**: The orchestrator's instructions have been rewritten to reflect its new role as a silent, JSON-based router that uses the new `RoutingBackend`. It is explicitly forbidden from communicating with users and only uses a `continue()`-like function.
+-   **`backend/src/agents/built-in/orchestrator.ts` (Modified)**: The orchestrator's instructions have been rewritten to reflect its new role as a silent, JSON-based router that uses the new `RoutingBackend`. It is explicitly forbidden from communicating with users and only uses a `continue()`-like function.
 
--   **`tenex/src/agents/execution/RoutingBackend.ts` (New)**: A new execution backend specifically for the orchestrator. It takes a conversation, makes an LLM call to get a JSON routing decision (`{agents: [...], phase: '...', reason: '...'}`), and then delegates the task to the target agents via the `AgentExecutor`.
+-   **`backend/src/agents/execution/RoutingBackend.ts` (New)**: A new execution backend specifically for the orchestrator. It takes a conversation, makes an LLM call to get a JSON routing decision (`{agents: [...], phase: '...', reason: '...'}`), and then delegates the task to the target agents via the `AgentExecutor`.
 
--   **`tenex/src/agents/execution/ReasonActLoop.ts` (Modified)**: The primary agent execution loop. It now includes logic to enforce the new workflow, reminding non-orchestrator agents to use the `complete()` tool to hand control back, preventing conversations from stalling.
+-   **`backend/src/agents/execution/ReasonActLoop.ts` (Modified)**: The primary agent execution loop. It now includes logic to enforce the new workflow, reminding non-orchestrator agents to use the `complete()` tool to hand control back, preventing conversations from stalling.
 
--   **`tenex/src/tools/implementations/continue.ts` (Modified)** & **`complete.ts` (Modified)**: These two tools form the new control flow backbone.
+-   **`backend/src/tools/implementations/continue.ts` (Modified)** & **`complete.ts` (Modified)**: These two tools form the new control flow backbone.
     -   `continue.ts`: An orchestrator-only tool to delegate tasks to other agents and manage phase transitions.
     -   `complete.ts`: A tool for all other agents to signal that their task for the current phase is finished, returning control to the orchestrator.
 
--   **`tenex/src/prompts/fragments/orchestrator-routing.ts` (Modified)**: This fragment provides the detailed logic for the orchestrator's routing decisions, quality control cycles, and phase management, directly supporting the `routing-system-redesign.md` specification.
+-   **`backend/src/prompts/fragments/orchestrator-routing.ts` (Modified)**: This fragment provides the detailed logic for the orchestrator's routing decisions, quality control cycles, and phase management, directly supporting the `routing-system-redesign.md` specification.
 
--   **`tenex/src/prompts/fragments/agent-completion-guidance.ts` (New)**: Provides explicit, phase-specific instructions to non-orchestrator agents on when and how to use the `complete()` tool, ensuring they properly hand off control.
+-   **`backend/src/prompts/fragments/agent-completion-guidance.ts` (New)**: Provides explicit, phase-specific instructions to non-orchestrator agents on when and how to use the `complete()` tool, ensuring they properly hand off control.
 
--   **`tenex/src/prompts/fragments/domain-expert-guidelines.ts` (New)**: A critical new prompt fragment that defines the role of specialist agents as "ADVISOR ONLY". It instructs them to provide recommendations and reviews but *never* to implement changes, which is solely the `Executor`'s responsibility.
+-   **`backend/src/prompts/fragments/domain-expert-guidelines.ts` (New)**: A critical new prompt fragment that defines the role of specialist agents as "ADVISOR ONLY". It instructs them to provide recommendations and reviews but *never* to implement changes, which is solely the `Executor`'s responsibility.
 
--   **`tenex/src/conversations/phases.ts` (Modified)**: Defines the distinct phases of a conversation, each with a clear goal and constraints. This formalizes the structured workflow of the entire system.
+-   **`backend/src/conversations/phases.ts` (Modified)**: Defines the distinct phases of a conversation, each with a clear goal and constraints. This formalizes the structured workflow of the entire system.
 
--   **`tenex/src/conversations/ConversationManager.ts` (Modified)**: Manages the lifecycle of conversations, including tracking the current phase and persisting phase transition history, which is essential for the new routing logic.
+-   **`backend/src/conversations/ConversationManager.ts` (Modified)**: Manages the lifecycle of conversations, including tracking the current phase and persisting phase transition history, which is essential for the new routing logic.
 
 ### 4. Architectural Insights
 
@@ -77,11 +77,11 @@ The codebase has recently undergone a significant architectural refactoring, mov
 ### 5. High-Complexity Modules
 
 -   **Agent Execution & Routing System**
-    -   **Path**: `tenex/src/agents/execution/`
+    -   **Path**: `backend/src/agents/execution/`
     -   **Reason for Complexity**: This module is the engine of the multi-agent system. It manages the intricate dance between different agents and phases. The logic in `ReasonActLoop.ts` handles the think-act cycle, tool execution, and the new reminder system. The `RoutingBackend.ts` adds another layer of LLM-based decision-making for the orchestrator. The interactions between `AgentExecutor`, `ReasonActLoop`, `RoutingBackend`, and the `ConversationManager` create a complex state machine that must be robust to various conversation flows.
     -   **Suggested Filename**: `AGENT_EXECUTION_AND_ROUTING_GUIDE.md`
 
 -   **Conversation State Management**
-    -   **Path**: `tenex/src/conversations/`
+    -   **Path**: `backend/src/conversations/`
     -   **Reason for Complexity**: The `ConversationManager.ts` is responsible for the state of all interactions. It must persist and load conversations, manage the newly introduced `phase` and `phaseTransitions`, and handle concurrent updates from multiple agents. The interplay between the master `history` and per-agent `agentContexts` adds to the complexity, especially with ensuring data consistency and providing the correct context for each agent's turn.
     -   **Suggested Filename**: `CONVERSATION_MANAGEMENT_GUIDE.md`

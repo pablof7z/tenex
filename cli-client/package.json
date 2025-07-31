@@ -13,7 +13,7 @@
     },
     "dependencies": {
         "@nostr-dev-kit/ndk": "^2.14.33",
-        "@tenex/cli": "file:../tenex",
+        "@tenex/cli": "file:../backend",
         "chalk": "^5.3.0",
         "commander": "^11.1.0",
         "inquirer": "^9.2.0",

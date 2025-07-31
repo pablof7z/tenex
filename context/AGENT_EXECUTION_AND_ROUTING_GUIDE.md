@@ -1,4 +1,4 @@
-This document provides a comprehensive technical overview of the **Agent Execution & Routing System** module located at `tenex/src/agents/execution/`. This module is the core engine responsible for running AI agents, managing their lifecycles, and orchestrating their interactions within the TENEX ecosystem.
+This document provides a comprehensive technical overview of the **Agent Execution & Routing System** module located at `backend/src/agents/execution/`. This module is the core engine responsible for running AI agents, managing their lifecycles, and orchestrating their interactions within the TENEX ecosystem.
 
 ## 1. Module Overview
 
